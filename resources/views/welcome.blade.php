@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ config('app.name', 'SaferP') }}</title>
+    <title>{{ config('app.name', 'SAFERP') }}</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="public-shell">
@@ -29,17 +29,17 @@
             <section class="public-intro">
                 <h1>Run your business in one place.</h1>
                 <p>
-                    SaferP centralises product master data, agent orders, logistics, inventory,
+                    SAFERP centralises product master data, agent orders, logistics, inventory,
                     production, and finance so you can trace every bottle from source to shelf.
                 </p>
                 <div class="public-cta">
-                    <span class="public-hint">Access is restricted to authorised SaferPV staff.</span>
+                    <span class="public-hint">Access is restricted to authorised SAFERP staff.</span>
                 </div>
             </section>
         </main>
 
         <footer class="public-footer">
-            <small>&copy; {{ date('Y') }} SaferPV. All rights reserved.</small>
+            <small>&copy; {{ date('Y') }} SAFERP. All rights reserved.</small>
         </footer>
     </div>
 </body>

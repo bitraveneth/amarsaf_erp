@@ -3,14 +3,14 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Login | {{ config('app.name', 'SaferPV') }}</title>
+    <title>Login | {{ config('app.name', 'SAFERP') }}</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body>
     <div class="login-shell">
         <div class="login-card">
             <header>
-                <div class="login-brand">SaferPV admin</div>
+                <div class="login-brand">SAFERP admin</div>
                 <h1>Welcome back</h1>
                 <p>Sign in to continue to your control panel.</p>
             </header>

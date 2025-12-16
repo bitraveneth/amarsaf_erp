@@ -4,8 +4,15 @@
 <div class="dashboard-shell">
     <section class="panel metrics-panel">
         <div class="panel-header">
-            <h1>Admin dashboard</h1>
-            <p>Live data pulled from your application data stores.</p>
+            <div>
+                <h1>SAFERP admin overview</h1>
+                <p>Quick snapshot of users, products, and master data.</p>
+            </div>
+            <div class="button-group">
+                <a href="{{ route('admin.products.index') }}" class="button-secondary">Products</a>
+                <a href="{{ route('admin.orders.index') }}" class="button-secondary">Orders</a>
+                <a href="{{ route('admin.warehouses.index') }}" class="button-secondary">Warehouses</a>
+            </div>
         </div>
         <div class="metric-grid">
             @foreach($metrics as $metric)
@@ -18,89 +25,55 @@
         </div>
     </section>
 
-    <section class="panel master-panel">
+    <section class="panel">
         <header>
-            <h2>Product master data</h2>
-            <p>Single source of truth for SKU, packaging and taxation.</p>
+            <h2>Today at a glance</h2>
+            <p>Operational snapshot for deliveries, production, and cash.</p>
         </header>
         <div class="master-grid">
             <article>
-                <p class="metric-label">Products</p>
-                <h3>{{ number_format($masterSummary['products']) }}</h3>
-                <small>{{ $productTableReady ? 'Active catalog entries' : 'Run migrations to enable' }}</small>
+                <p class="metric-label">Orders delivering today</p>
+                <h3>{{ number_format($todayOrders) }}</h3>
+                <small>Based on order delivery date.</small>
             </article>
             <article>
-                <p class="metric-label">Packaging</p>
-                <h3>{{ number_format($masterSummary['packaging']) }}</h3>
-                <small>{{ $packagingReady ? 'Defined packaging types' : 'Add packaging types first' }}</small>
+                <p class="metric-label">Batches expiring soon</p>
+                <h3>{{ number_format($expiringSoonCount) }}</h3>
+                <small>Expiry within the next 30 days.</small>
             </article>
             <article>
-                <p class="metric-label">Tax classes</p>
-                <h3>{{ number_format($masterSummary['taxClasses']) }}</h3>
-                <small>{{ $taxReady ? 'HSN / local tax rules' : 'Create a tax table' }}</small>
+                <p class="metric-label">Approved production today</p>
+                <h3>{{ number_format($todayProductionQty) }}</h3>
+                <small>Total bottles/litres from approved runs.</small>
             </article>
             <article>
-                <p class="metric-label">Batches</p>
-                <h3>{{ number_format($masterSummary['batches']) }}</h3>
-                <small>{{ $batchCount ? 'Tracked batches' : 'Add batches when production starts' }}</small>
+                <p class="metric-label">Outstanding receivables</p>
+                <h3>{{ number_format($outstandingReceivables, 2) }}</h3>
+                <small>Open invoices net of receipts.</small>
+            </article>
+            <article>
+                <p class="metric-label">Receipts today</p>
+                <h3>{{ number_format($todayReceipts, 2) }}</h3>
+                <small>Customer payments received today.</small>
             </article>
         </div>
     </section>
 
-    <section class="panel recent-panel">
+    <section class="panel">
         <header>
-            <h2>Recent products</h2>
-            <p>Latest SKUs and their packaging/tax linkage.</p>
+            <h2>System alerts</h2>
+            <p>Things that may need attention.</p>
         </header>
-        @if(!$productTableReady)
-            <p class="panel-note">Products table is unavailable. Run `php artisan migrate` first.</p>
-        @elseif($recentProducts->isEmpty())
-            <p class="panel-note">No products have been registered yet.</p>
+        @if(empty($alerts))
+            <p class="panel-note">All clear. No current alerts.</p>
         @else
-            <div class="recent-table">
-                <div class="recent-row header">
-                    <span>SKU</span>
-                    <span>Product</span>
-                    <span>Packaging</span>
-                    <span>Price</span>
-                </div>
-                @foreach($recentProducts as $product)
-                    <div class="recent-row">
-                        <span>{{ $product->sku }}</span>
-                        <span>{{ $product->name }}</span>
-                        <span>{{ $product->packagingType->name ?? '—' }}</span>
-                        <span>{{ number_format($product->base_price ?? 0, 2) }}</span>
-                    </div>
+            <ul class="activity-list">
+                @foreach($alerts as $alert)
+                    <li>{{ $alert }}</li>
                 @endforeach
-            </div>
+            </ul>
         @endif
     </section>
 
-    <section class="panel recent-panel">
-        <header>
-            <h2>Recent batches</h2>
-            <p>Production and QC snapshots.</p>
-        </header>
-        @if($recentBatches->isEmpty())
-            <p class="panel-note">No batch data available yet.</p>
-        @else
-            <div class="recent-table">
-                <div class="recent-row header">
-                    <span>Product</span>
-                    <span>Batch</span>
-                    <span>Production</span>
-                    <span>QC status</span>
-                </div>
-                @foreach($recentBatches as $batch)
-                    <div class="recent-row">
-                        <span>{{ $batch->product->name ?? '—' }}</span>
-                        <span>{{ $batch->batch_code }}</span>
-                        <span>{{ optional($batch->production_date)->format('M d, Y') }}</span>
-                        <span>{{ ucfirst($batch->qc_status) }}</span>
-                    </div>
-                @endforeach
-            </div>
-        @endif
-    </section>
 </div>
 @endsection

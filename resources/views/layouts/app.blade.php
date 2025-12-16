@@ -3,18 +3,17 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ config('app.name', 'SaferPV') }} Admin</title>
+    <title>{{ config('app.name', 'SAFERP') }} Admin</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body>
     <div class="admin-shell">
         <header class="admin-header">
             <div class="brand">
-                <span>SaferPV</span>
+                <span>SAFERP</span>
                 <small>Admin panel</small>
             </div>
             <nav class="header-links">
-                <a href="{{ url('/') }}">Public site</a>
                 @guest
                     <a href="{{ route('login') }}">Sign in</a>
                 @endguest
