@@ -10,8 +10,9 @@
     <div class="login-shell">
         <div class="login-card">
             <header>
+                <div class="login-brand">SaferPV admin</div>
                 <h1>Welcome back</h1>
-                <p>Sign in to continue to the SaferPV admin cockpit.</p>
+                <p>Sign in to continue to your control panel.</p>
             </header>
             <form method="POST" action="{{ route('login') }}">
                 @csrf
