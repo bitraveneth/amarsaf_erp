@@ -24,9 +24,10 @@
                         <th>Parent</th>
                         <th>Credit limit</th>
                         <th>Status</th>
-                        <th></th>
-                        <th></th>
-                        <th></th>
+                        <th>Pricing</th>
+                        <th>Ledger</th>
+                        <th>Gifts</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -48,14 +49,24 @@
                                 </a>
                             </td>
                             <td>
-                                <a href="{{ route('admin.agents.edit', $agent) }}" class="button-secondary">
-                                    Edit
+                                <a href="{{ route('admin.gifts.index', ['agent_id' => $agent->id]) }}" class="button-secondary">
+                                    Gifts
                                 </a>
-                                <form action="{{ route('admin.agents.destroy', $agent) }}" method="POST" class="inline-form" style="display:inline-block" onsubmit="return confirm('Delete this agent? This cannot be undone.');">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="button-secondary">Delete</button>
-                                </form>
+                            </td>
+                            <td>
+                                <div class="button-group">
+                                    <a href="{{ route('admin.agents.show', $agent) }}" class="button-secondary">
+                                        View
+                                    </a>
+                                    <a href="{{ route('admin.agents.edit', $agent) }}" class="button-secondary">
+                                        Edit
+                                    </a>
+                                    <form action="{{ route('admin.agents.destroy', $agent) }}" method="POST" class="inline-form" onsubmit="return confirm('Delete this agent? This cannot be undone.');">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="button-secondary">Delete</button>
+                                    </form>
+                                </div>
                             </td>
                         </tr>
                     @endforeach

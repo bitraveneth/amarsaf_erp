@@ -59,7 +59,7 @@
         </div>
     </section>
 
-    <section class="panel">
+    <section class="panel" id="alerts">
         <header>
             <h2>System alerts</h2>
             <p>Things that may need attention.</p>

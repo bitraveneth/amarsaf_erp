@@ -8,7 +8,10 @@
                 <h1>Picking list · Order #{{ $order->id }}</h1>
                 <p>{{ $order->agent->name }} · Delivery {{ optional($order->delivery_date)->format('Y-m-d') ?? 'TBD' }}</p>
             </div>
-            <a href="{{ route('admin.orders.show', $order) }}" class="button-secondary">Back to order</a>
+            <div class="button-group">
+                <button type="button" class="button-secondary" onclick="window.print()">Print</button>
+                <a href="{{ route('admin.orders.show', $order) }}" class="button-secondary">Back to order</a>
+            </div>
         </header>
 
         <table class="data-table">
@@ -36,4 +39,3 @@
     </section>
 </div>
 @endsection
-

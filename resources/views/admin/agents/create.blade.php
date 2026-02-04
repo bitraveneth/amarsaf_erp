@@ -38,6 +38,16 @@
                         <label for="zone">Zone</label>
                         <input id="zone" name="zone" value="{{ old('zone') }}">
                     </div>
+                    <div>
+                        <label for="location_code">Location code</label>
+                        <input id="location_code" name="location_code" value="{{ old('location_code') }}">
+                        <small class="text-muted">Special area/dealer code for this agent.</small>
+                    </div>
+                    <div>
+                        <label for="special_code">Special code</label>
+                        <input id="special_code" name="special_code" value="{{ old('special_code') }}">
+                        <small class="text-muted">Internal SR/dealer code if needed.</small>
+                    </div>
                 </div>
             </div>
             <div class="form-section">

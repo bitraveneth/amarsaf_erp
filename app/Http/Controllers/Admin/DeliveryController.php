@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Delivery;
 use App\Models\DeliveryRoute;
 use App\Models\Order;
+use App\Models\StockEntry;
 use App\Models\Vehicle;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -18,6 +19,27 @@ class DeliveryController extends Controller
             ->orderByDesc('created_at')
             ->paginate(12);
         return view('admin.deliveries.index', compact('deliveries'));
+    }
+
+    /**
+     * Logistics‑focused Deliveries & POD view (Inventory menu).
+     */
+    public function podIndex()
+    {
+        $deliveries = Delivery::with(['order.agent', 'route', 'vehicle'])
+            ->orderByDesc('created_at')
+            ->paginate(12);
+
+        return view('admin.deliveries.pod_index', compact('deliveries'));
+    }
+
+    public function packingIndex()
+    {
+        $deliveries = Delivery::with(['order.agent', 'route', 'vehicle'])
+            ->orderByDesc('created_at')
+            ->paginate(12);
+
+        return view('admin.deliveries.packing_index', compact('deliveries'));
     }
 
     public function create()
@@ -57,11 +79,60 @@ class DeliveryController extends Controller
             'pod_photo' => 'nullable|image',
         ]);
 
+        $originalStatus = $delivery->status;
+
         if ($request->hasFile('pod_photo')) {
             $data['pod_photo'] = $request->file('pod_photo')->store('deliveries', 'public');
         }
 
         $delivery->update($data);
+
+        // If the status has just changed to delivered, update the order and adjust stock.
+        if ($originalStatus !== 'delivered' && $delivery->status === 'delivered' && $delivery->order) {
+            if ($delivery->order->status !== 'delivered') {
+                $delivery->order->update(['status' => 'delivered']);
+            }
+
+            $order = $delivery->order()->with('items')->first();
+
+            foreach ($order->items as $item) {
+                $toShip = (float) $item->quantity;
+
+                if ($toShip <= 0) {
+                    continue;
+                }
+
+                $reservedEntries = StockEntry::where('product_id', $item->product_id)
+                    ->where('status', 'reserved')
+                    ->orderBy('created_at')
+                    ->get();
+
+                foreach ($reservedEntries as $entry) {
+                    if ($toShip <= 0) {
+                        break;
+                    }
+
+                    $entryQty = (float) $entry->quantity;
+                    if ($entryQty <= 0) {
+                        continue;
+                    }
+
+                    $shipQty = min($toShip, $entryQty);
+
+                    $remaining = $entryQty - $shipQty;
+
+                    if ($remaining <= 0) {
+                        // Entire reserved entry has been shipped; remove it.
+                        $entry->delete();
+                    } else {
+                        $entry->quantity = $remaining;
+                        $entry->save();
+                    }
+
+                    $toShip -= $shipQty;
+                }
+            }
+        }
 
         return back()->with('status', 'Delivery updated.');
     }

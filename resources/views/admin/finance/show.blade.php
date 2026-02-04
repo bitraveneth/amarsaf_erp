@@ -62,6 +62,33 @@
         </table>
 
         <h2>Receipts</h2>
+        <form action="{{ route('admin.finance.receipts.store', $invoice) }}" method="POST" class="stacked-form" style="margin-bottom: 1.5rem;">
+            @csrf
+            <div class="form-row">
+                <div class="form-field">
+                    <label for="amount">Amount</label>
+                    <input type="number" step="0.01" name="amount" id="amount" value="{{ old('amount', max(0, ($invoice->net_total + $invoice->vat_amount) - $invoice->receipts->sum('amount'))) }}" required>
+                </div>
+                <div class="form-field">
+                    <label for="payment_method">Payment method</label>
+                    <input type="text" name="payment_method" id="payment_method" value="{{ old('payment_method') }}" placeholder="Bank transfer, cash, cheque">
+                </div>
+                <div class="form-field">
+                    <label for="received_at">Received at</label>
+                    <input type="date" name="received_at" id="received_at" value="{{ old('received_at', now()->toDateString()) }}">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-field" style="flex: 1;">
+                    <label for="notes">Notes</label>
+                    <input type="text" name="notes" id="notes" value="{{ old('notes') }}" placeholder="Optional reference or remarks">
+                </div>
+                <div class="form-field" style="align-self: flex-end;">
+                    <button type="submit" class="button-primary">Add receipt</button>
+                </div>
+            </div>
+        </form>
+
         @if($invoice->receipts->isNotEmpty())
             <table class="data-table">
                 <thead>

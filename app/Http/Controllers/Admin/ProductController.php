@@ -6,6 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\AgentPriceList;
 use App\Models\InvoiceItem;
 use App\Models\OrderItem;
+use App\Models\Batch;
+use App\Models\StockEntry;
+use App\Models\ProductionRun;
 use App\Models\PackagingType;
 use App\Models\Product;
 use App\Models\TaxClass;
@@ -49,7 +52,7 @@ class ProductController extends Controller
             'barcode' => 'nullable|string',
             'qr_code' => 'nullable|string',
             'image_path' => 'nullable|string',
-            'base_price' => 'nullable|numeric|min:0',
+            'base_price' => 'required|numeric|min:0',
         ]);
 
         $product = Product::create($data);
@@ -91,7 +94,7 @@ class ProductController extends Controller
             'barcode' => 'nullable|string',
             'qr_code' => 'nullable|string',
             'image_path' => 'nullable|string',
-            'base_price' => 'nullable|numeric|min:0',
+            'base_price' => 'required|numeric|min:0',
         ]);
 
         $product->update($data);
@@ -158,15 +161,63 @@ class ProductController extends Controller
         return response()->stream($callback, 200, $headers);
     }
 
+    public function priceList()
+    {
+        $products = Product::withCount('agentPriceLists')
+            ->orderBy('sku')
+            ->paginate(20);
+
+        return view('admin.products.price_list', compact('products'));
+    }
+
+    public function showPriceList(Product $product)
+    {
+        $product->load(['agentPriceLists.agent']);
+
+        $agentPrices = $product->agentPriceLists
+            ->sortBy(function ($row) {
+                return $row->agent->name ?? '';
+            });
+
+        return view('admin.products.price_list_show', [
+            'product' => $product,
+            'agentPrices' => $agentPrices,
+        ]);
+    }
+
     public function destroy(Product $product)
     {
-        if (
-            OrderItem::where('product_id', $product->id)->exists()
-            || InvoiceItem::where('product_id', $product->id)->exists()
-            || AgentPriceList::where('product_id', $product->id)->exists()
-        ) {
+        $reasons = [];
+
+        if (OrderItem::where('product_id', $product->id)->exists()) {
+            $reasons[] = 'sales orders';
+        }
+
+        if (InvoiceItem::where('product_id', $product->id)->exists()) {
+            $reasons[] = 'customer invoices';
+        }
+
+        if (AgentPriceList::where('product_id', $product->id)->exists()) {
+            $reasons[] = 'agent price lists';
+        }
+
+        if (Batch::where('product_id', $product->id)->exists()) {
+            $reasons[] = 'production batches';
+        }
+
+        if (ProductionRun::where('product_id', $product->id)->exists()) {
+            $reasons[] = 'production runs';
+        }
+
+        if (StockEntry::where('product_id', $product->id)->exists()) {
+            $reasons[] = 'stock entries';
+        }
+
+        if (! empty($reasons)) {
+            $reasonText = implode(', ', $reasons);
+
             return redirect()->route('admin.products.index')
-                ->with('status', 'Product is used in orders, invoices, or price lists and cannot be deleted.');
+                ->with('status', 'Product cannot be deleted because it is linked to: ' . $reasonText . '.');
         }
 
         if ($product->image_path) {

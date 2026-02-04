@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\StockEntry;
 use App\Models\ProductionRun;
+use App\Models\WarehouseLocation;
 use App\Models\Warehouse;
 use Illuminate\Http\Request;
 
@@ -66,6 +67,11 @@ class WarehouseController extends Controller
         if (ProductionRun::where('warehouse_id', $warehouse->id)->exists()) {
             return redirect()->route('admin.warehouses.index')
                 ->with('status', 'Warehouse is linked to production runs and cannot be deleted.');
+        }
+
+         if (WarehouseLocation::where('warehouse_id', $warehouse->id)->exists()) {
+            return redirect()->route('admin.warehouses.index')
+                ->with('status', 'Warehouse has locations configured and cannot be deleted. Delete those locations first.');
         }
 
         $warehouse->delete();

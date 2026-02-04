@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\StockEntry;
+use App\Models\StockMovement;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 
@@ -25,6 +26,11 @@ class InventoryController extends Controller
             ->with('warehouse')
             ->get();
 
-        return view('admin.inventory.index', compact('summary', 'expiringSoon'));
+        $recentMovements = StockMovement::with(['stockEntry.product', 'stockEntry.warehouse', 'order.agent'])
+            ->latest()
+            ->limit(10)
+            ->get();
+
+        return view('admin.inventory.index', compact('summary', 'expiringSoon', 'recentMovements'));
     }
 }

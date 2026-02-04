@@ -1,0 +1,1704 @@
+
+
+--- FILE: app/Models/User.php ---
+
+<?php
+
+namespace App\Models;
+
+// use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
+use Laravel\Sanctum\HasApiTokens;
+
+class User extends Authenticatable
+{
+    use HasApiTokens, HasFactory, Notifiable;
+
+    /**
+     * The attributes that are mass assignable.
+     *
+     * @var array<int, string>
+     */
+    protected $fillable = [
+        'name',
+        'email',
+        'password',
+    ];
+
+    /**
+     * The attributes that should be hidden for serialization.
+     *
+     * @var array<int, string>
+     */
+    protected $hidden = [
+        'password',
+        'remember_token',
+    ];
+
+    /**
+     * The attributes that should be cast.
+     *
+     * @var array<string, string>
+     */
+    protected $casts = [
+        'email_verified_at' => 'datetime',
+        'password' => 'hashed',
+    ];
+}
+
+
+--- FILE: app/Models/EmployeeAllowance.php ---
+
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class EmployeeAllowance extends Model
+{
+    use HasFactory;
+
+    protected $fillable = [
+        'employee_id',
+        'date',
+        'type',
+        'reference',
+        'amount',
+        'description',
+        'status',
+        'attachment_path',
+    ];
+
+    protected $casts = [
+        'date' => 'date',
+        'amount' => 'decimal:2',
+    ];
+
+    public function employee()
+    {
+        return $this->belongsTo(Employee::class);
+    }
+}
+
+
+--- FILE: app/Models/Invoice.php ---
+
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class Invoice extends Model
+{
+    use HasFactory;
+
+    protected $fillable = [
+        'order_id',
+        'number',
+        'issued_at',
+        'due_at',
+        'net_total',
+        'vat_amount',
+        'withholding',
+        'status',
+    ];
+
+    protected $casts = [
+        'issued_at' => 'date',
+        'due_at' => 'date',
+        'net_total' => 'decimal:2',
+        'vat_amount' => 'decimal:2',
+        'withholding' => 'decimal:2',
+    ];
+
+    public function items()
+    {
+        return $this->hasMany(InvoiceItem::class);
+    }
+
+    public function receipts()
+    {
+        return $this->hasMany(Receipt::class);
+    }
+
+    public function order()
+    {
+        return $this->belongsTo(Order::class);
+    }
+
+    public function creditNotes()
+    {
+        return $this->hasMany(CreditNote::class);
+    }
+}
+
+
+--- FILE: app/Models/InvoiceItem.php ---
+
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class InvoiceItem extends Model
+{
+    use HasFactory;
+
+    protected $fillable = [
+        'invoice_id',
+        'product_id',
+        'description',
+        'quantity',
+        'unit_price',
+        'line_total',
+    ];
+
+    protected $casts = [
+        'quantity' => 'integer',
+        'unit_price' => 'decimal:2',
+        'line_total' => 'decimal:2',
+    ];
+
+    public function invoice()
+    {
+        return $this->belongsTo(Invoice::class);
+    }
+
+    public function product()
+    {
+        return $this->belongsTo(Product::class);
+    }
+}
+
+
+--- FILE: app/Models/StockMovement.php ---
+
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class StockMovement extends Model
+{
+    use HasFactory;
+
+    protected $fillable = [
+        'stock_entry_id',
+        'order_id',
+        'type',
+        'quantity',
+        'notes',
+    ];
+
+    protected $casts = [
+        'quantity' => 'decimal:2',
+    ];
+
+    public function stockEntry()
+    {
+        return $this->belongsTo(StockEntry::class);
+    }
+
+    public function order()
+    {
+        return $this->belongsTo(Order::class);
+    }
+}
+
+
+--- FILE: app/Models/TaxClass.php ---
+
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class TaxClass extends Model
+{
+    use HasFactory;
+
+    protected $fillable = [
+        'name',
+        'hsn_code',
+        'local_tax_code',
+        'rate',
+    ];
+
+    public function products()
+    {
+        return $this->hasMany(Product::class);
+    }
+}
+
+
+--- FILE: app/Models/AgentCommissionRule.php ---
+
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class AgentCommissionRule extends Model
+{
+    use HasFactory;
+
+    protected $fillable = [
+        'agent_id',
+        'sku',
+        'type',
+        'value',
+        'order_type',
+        'frequency',
+    ];
+
+    public function agent()
+    {
+        return $this->belongsTo(Agent::class);
+    }
+}
+
+
+--- FILE: app/Models/Delivery.php ---
+
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class Delivery extends Model
+{
+    use HasFactory;
+
+    protected $fillable = [
+        'order_id',
+        'route_id',
+        'vehicle_id',
+        'status',
+        'sequence',
+        'pod_photo',
+        'exception_notes',
+    ];
+
+    public function order()
+    {
+        return $this->belongsTo(Order::class);
+    }
+
+    public function route()
+    {
+        return $this->belongsTo(DeliveryRoute::class, 'route_id');
+    }
+
+    public function vehicle()
+    {
+        return $this->belongsTo(Vehicle::class);
+    }
+}
+
+
+--- FILE: app/Models/LedgerEntry.php ---
+
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class LedgerEntry extends Model
+{
+    use HasFactory;
+
+    protected $fillable = [
+        'account',
+        'description',
+        'debit',
+        'credit',
+        'order_id',
+        'invoice_id',
+    ];
+
+    protected $casts = [
+        'debit' => 'decimal:2',
+        'credit' => 'decimal:2',
+    ];
+
+    public function order()
+    {
+        return $this->belongsTo(Order::class);
+    }
+
+    public function invoice()
+    {
+        return $this->belongsTo(Invoice::class);
+    }
+}
+
+
+--- FILE: app/Models/Receipt.php ---
+
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class Receipt extends Model
+{
+    use HasFactory;
+
+    protected $fillable = [
+        'invoice_id',
+        'amount',
+        'payment_method',
+        'received_at',
+        'notes',
+    ];
+
+    protected $casts = [
+        'amount' => 'decimal:2',
+        'received_at' => 'date',
+        'reconciled' => 'boolean',
+    ];
+
+    public function invoice()
+    {
+        return $this->belongsTo(Invoice::class);
+    }
+}
+
+
+--- FILE: app/Models/PurchaseBillItem.php ---
+
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class PurchaseBillItem extends Model
+{
+    use HasFactory;
+
+    protected $fillable = [
+        'purchase_bill_id',
+        'product_id',
+        'description',
+        'quantity',
+        'unit_price',
+        'line_total',
+    ];
+
+    protected $casts = [
+        'quantity' => 'integer',
+        'unit_price' => 'decimal:2',
+        'line_total' => 'decimal:2',
+    ];
+
+    public function bill()
+    {
+        return $this->belongsTo(PurchaseBill::class, 'purchase_bill_id');
+    }
+
+    public function product()
+    {
+        return $this->belongsTo(Product::class);
+    }
+}
+
+
+
+--- FILE: app/Models/EmployeeContract.php ---
+
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class EmployeeContract extends Model
+{
+    use HasFactory;
+
+    protected $fillable = [
+        'employee_id',
+        'reference',
+        'start_date',
+        'end_date',
+        'working_schedule',
+        'salary_amount',
+        'travel_allowance',
+        'dearness_allowance',
+        'bonus',
+        'status',
+    ];
+
+    protected $casts = [
+        'start_date' => 'date',
+        'end_date' => 'date',
+        'salary_amount' => 'decimal:2',
+        'travel_allowance' => 'decimal:2',
+        'dearness_allowance' => 'decimal:2',
+        'bonus' => 'decimal:2',
+    ];
+
+    public function employee()
+    {
+        return $this->belongsTo(Employee::class);
+    }
+}
+
+
+--- FILE: app/Models/PackagingType.php ---
+
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class PackagingType extends Model
+{
+    use HasFactory;
+
+    protected $fillable = [
+        'name',
+        'unit',
+        'description',
+    ];
+
+    public function products()
+    {
+        return $this->hasMany(Product::class);
+    }
+
+    public function conversionsFrom()
+    {
+        return $this->hasMany(PackagingConversion::class, 'from_packaging_type_id');
+    }
+
+    public function conversionsTo()
+    {
+        return $this->hasMany(PackagingConversion::class, 'to_packaging_type_id');
+    }
+}
+
+
+--- FILE: app/Models/Vehicle.php ---
+
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class Vehicle extends Model
+{
+    use HasFactory;
+
+    protected $fillable = ['name', 'type', 'license_plate', 'driver', 'capacity_crates'];
+
+    public function routes()
+    {
+        return $this->hasMany(DeliveryRoute::class);
+    }
+}
+
+
+--- FILE: app/Models/Employee.php ---
+
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class Employee extends Model
+{
+    use HasFactory;
+
+    protected $fillable = [
+        'name',
+        'photo_path',
+        'work_email',
+        'work_phone',
+        'work_mobile',
+        'department',
+        'job_position',
+        'work_zone',
+        'tags',
+        'cv_path',
+    ];
+
+    protected $casts = [
+        'tags' => 'array',
+    ];
+
+    public function contracts()
+    {
+        return $this->hasMany(EmployeeContract::class);
+    }
+
+    public function allowances()
+    {
+        return $this->hasMany(EmployeeAllowance::class);
+    }
+
+    public function equipment()
+    {
+        return $this->hasMany(EmployeeEquipment::class);
+    }
+
+    public function badges()
+    {
+        return $this->belongsToMany(Badge::class, 'employee_badges')
+            ->withPivot(['granted_at', 'granted_by', 'note'])
+            ->withTimestamps();
+    }
+
+    public function leaves()
+    {
+        return $this->hasMany(EmployeeLeave::class);
+    }
+
+    public function locationLogs()
+    {
+        return $this->hasMany(EmployeeLocationLog::class);
+    }
+}
+
+
+--- FILE: app/Models/WarehouseLocation.php ---
+
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class WarehouseLocation extends Model
+{
+    use HasFactory;
+
+    protected $fillable = [
+        'warehouse_id',
+        'code',
+        'description',
+    ];
+
+    public function warehouse()
+    {
+        return $this->belongsTo(Warehouse::class);
+    }
+
+    public function stockEntries()
+    {
+        return $this->hasMany(StockEntry::class, 'warehouse_location_id');
+    }
+}
+
+
+
+--- FILE: app/Models/Warehouse.php ---
+
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class Warehouse extends Model
+{
+    use HasFactory;
+
+    protected $fillable = ['name', 'address', 'type'];
+
+    public function entries()
+    {
+        return $this->hasMany(StockEntry::class);
+    }
+
+    public function locations()
+    {
+        return $this->hasMany(WarehouseLocation::class);
+    }
+}
+
+
+--- FILE: app/Models/CustomerGift.php ---
+
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class CustomerGift extends Model
+{
+    use HasFactory;
+
+    protected $fillable = [
+        'agent_id',
+        'employee_id',
+        'date',
+        'occasion',
+        'gift_type',
+        'description',
+        'amount',
+        'campaign_code',
+        'status',
+    ];
+
+    protected $casts = [
+        'date' => 'date',
+        'amount' => 'decimal:2',
+    ];
+
+    public function agent()
+    {
+        return $this->belongsTo(Agent::class);
+    }
+
+    public function employee()
+    {
+        return $this->belongsTo(Employee::class);
+    }
+}
+
+
+--- FILE: app/Models/Account.php ---
+
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class Account extends Model
+{
+    use HasFactory;
+
+    protected $fillable = [
+        'code',
+        'name',
+        'type',
+        'is_active',
+    ];
+}
+
+
+
+--- FILE: app/Models/Campaign.php ---
+
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class Campaign extends Model
+{
+    use HasFactory;
+
+    protected $fillable = [
+        'name',
+        'platform',
+        'start_date',
+        'end_date',
+        'reach',
+        'impressions',
+        'cost',
+        'status',
+        'campaign_code',
+        'attachment_path',
+        'notes',
+    ];
+
+    protected $casts = [
+        'start_date' => 'date',
+        'end_date' => 'date',
+        'reach' => 'integer',
+        'impressions' => 'integer',
+        'cost' => 'decimal:2',
+    ];
+}
+
+
+--- FILE: app/Models/OrderItem.php ---
+
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class OrderItem extends Model
+{
+    use HasFactory;
+
+    protected $fillable = [
+        'order_id',
+        'product_id',
+        'quantity',
+        'unit_price',
+        'order_type',
+        'commission_rate',
+        'commission_amount',
+    ];
+
+    protected $casts = [
+        'quantity' => 'integer',
+        'unit_price' => 'decimal:2',
+        'commission_rate' => 'decimal:2',
+        'commission_amount' => 'decimal:2',
+    ];
+
+    public function order()
+    {
+        return $this->belongsTo(Order::class);
+    }
+
+    public function product()
+    {
+        return $this->belongsTo(Product::class);
+    }
+}
+
+
+--- FILE: app/Models/Product.php ---
+
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class Product extends Model
+{
+    use HasFactory;
+
+    protected $fillable = [
+        'sku',
+        'name',
+        'description',
+        'size',
+        'volume_ml',
+        'sku_code',
+        'packaging_type_id',
+        'tax_class_id',
+        'mineral_source',
+        'ph',
+        'tds',
+        'certifications',
+        'barcode',
+        'qr_code',
+        'image_path',
+        'base_price',
+    ];
+
+    protected $casts = [
+        'volume_ml' => 'float',
+        'ph' => 'float',
+        'tds' => 'integer',
+        'base_price' => 'decimal:2',
+    ];
+
+    public function packagingType()
+    {
+        return $this->belongsTo(PackagingType::class);
+    }
+
+    public function taxClass()
+    {
+        return $this->belongsTo(TaxClass::class);
+    }
+
+    public function batches()
+    {
+        return $this->hasMany(Batch::class);
+    }
+}
+
+
+--- FILE: app/Models/Expense.php ---
+
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class Expense extends Model
+{
+    use HasFactory;
+
+    protected $fillable = [
+        'date',
+        'category',
+        'description',
+        'amount',
+        'reference',
+        'status',
+    ];
+
+    protected $casts = [
+        'date' => 'date',
+        'amount' => 'decimal:2',
+    ];
+}
+
+
+--- FILE: app/Models/AgentPriceList.php ---
+
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class AgentPriceList extends Model
+{
+    use HasFactory;
+
+    protected $fillable = [
+        'agent_id',
+        'product_id',
+        'price',
+        'notes',
+    ];
+
+    public function agent()
+    {
+        return $this->belongsTo(Agent::class);
+    }
+
+    public function product()
+    {
+        return $this->belongsTo(Product::class);
+    }
+}
+
+
+--- FILE: app/Models/EmployeeLocationLog.php ---
+
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class EmployeeLocationLog extends Model
+{
+    use HasFactory;
+
+    protected $fillable = [
+        'employee_id',
+        'logged_at',
+        'latitude',
+        'longitude',
+        'location_label',
+        'source',
+        'notes',
+    ];
+
+    protected $casts = [
+        'logged_at' => 'datetime',
+        'latitude' => 'float',
+        'longitude' => 'float',
+    ];
+
+    public function employee()
+    {
+        return $this->belongsTo(Employee::class);
+    }
+}
+
+
+--- FILE: app/Models/EmployeeLeave.php ---
+
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class EmployeeLeave extends Model
+{
+    use HasFactory;
+
+    protected $fillable = [
+        'employee_id',
+        'start_date',
+        'end_date',
+        'type',
+        'reason',
+        'status',
+        'approved_by',
+        'approved_at',
+    ];
+
+    protected $casts = [
+        'start_date' => 'date',
+        'end_date' => 'date',
+        'approved_at' => 'datetime',
+    ];
+
+    public function employee()
+    {
+        return $this->belongsTo(Employee::class);
+    }
+}
+
+
+--- FILE: app/Models/Batch.php ---
+
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class Batch extends Model
+{
+    use HasFactory;
+
+    protected $fillable = [
+        'product_id',
+        'batch_code',
+        'production_date',
+        'expiry_date',
+        'qc_status',
+        'notes',
+    ];
+
+    protected $dates = [
+        'production_date',
+        'expiry_date',
+    ];
+
+    public function product()
+    {
+        return $this->belongsTo(Product::class);
+    }
+
+    public function productionRuns()
+    {
+        return $this->hasMany(ProductionRun::class);
+    }
+
+    public function stockEntries()
+    {
+        return $this->hasMany(StockEntry::class);
+    }
+}
+
+
+--- FILE: app/Models/CreditNote.php ---
+
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class CreditNote extends Model
+{
+    use HasFactory;
+
+    protected $fillable = [
+        'invoice_id',
+        'order_id',
+        'number',
+        'issued_at',
+        'amount',
+        'reason',
+    ];
+
+    protected $casts = [
+        'issued_at' => 'date',
+        'amount' => 'decimal:2',
+    ];
+
+    public function invoice()
+    {
+        return $this->belongsTo(Invoice::class);
+    }
+
+    public function order()
+    {
+        return $this->belongsTo(Order::class);
+    }
+}
+
+
+
+--- FILE: app/Models/EmployeeBadge.php ---
+
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class EmployeeBadge extends Model
+{
+    use HasFactory;
+
+    protected $fillable = [
+        'employee_id',
+        'badge_id',
+        'granted_at',
+        'granted_by',
+        'note',
+    ];
+
+    protected $casts = [
+        'granted_at' => 'date',
+    ];
+
+    public function employee()
+    {
+        return $this->belongsTo(Employee::class);
+    }
+
+    public function badge()
+    {
+        return $this->belongsTo(Badge::class);
+    }
+}
+
+
+--- FILE: app/Models/StockAudit.php ---
+
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class StockAudit extends Model
+{
+    use HasFactory;
+
+    protected $fillable = [
+        'warehouse_id',
+        'product_id',
+        'batch_id',
+        'system_quantity',
+        'counted_quantity',
+        'variance',
+        'notes',
+    ];
+
+    public function warehouse()
+    {
+        return $this->belongsTo(Warehouse::class);
+    }
+
+    public function product()
+    {
+        return $this->belongsTo(Product::class);
+    }
+
+    public function batch()
+    {
+        return $this->belongsTo(Batch::class);
+    }
+}
+
+
+
+--- FILE: app/Models/Agent.php ---
+
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class Agent extends Model
+{
+    use HasFactory;
+
+    protected $fillable = [
+        'name',
+        'email',
+        'phone',
+        'area',
+        'zone',
+        'location_code',
+        'special_code',
+        'latitude',
+        'longitude',
+        'credit_limit',
+        'kyc_documents',
+        'is_active',
+        'parent_id',
+        'bank_details',
+    ];
+
+    protected $casts = [
+        'credit_limit' => 'decimal:2',
+        'is_active' => 'boolean',
+        'kyc_documents' => 'array',
+        'latitude' => 'float',
+        'longitude' => 'float',
+    ];
+
+    public function parent()
+    {
+        return $this->belongsTo(self::class, 'parent_id');
+    }
+
+    public function children()
+    {
+        return $this->hasMany(self::class, 'parent_id');
+    }
+
+    public function priceLists()
+    {
+        return $this->hasMany(AgentPriceList::class);
+    }
+
+    public function commissions()
+    {
+        return $this->hasMany(AgentCommissionRule::class);
+    }
+
+    public function orders()
+    {
+        return $this->hasMany(Order::class);
+    }
+}
+
+
+--- FILE: app/Models/DeliveryRoute.php ---
+
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class DeliveryRoute extends Model
+{
+    use HasFactory;
+
+    protected $fillable = ['name', 'zone', 'day', 'vehicle_id', 'driver'];
+
+    public function vehicle()
+    {
+        return $this->belongsTo(Vehicle::class);
+    }
+
+    public function deliveries()
+    {
+        return $this->hasMany(Delivery::class, 'route_id');
+    }
+}
+
+
+--- FILE: app/Models/EmployeeEquipment.php ---
+
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class EmployeeEquipment extends Model
+{
+    use HasFactory;
+
+    protected $fillable = [
+        'employee_id',
+        'effective_date',
+        'product_name',
+        'device_identifier',
+        'status',
+        'notes',
+    ];
+
+    protected $casts = [
+        'effective_date' => 'date',
+    ];
+
+    public function employee()
+    {
+        return $this->belongsTo(Employee::class);
+    }
+}
+
+
+--- FILE: app/Models/StockEntry.php ---
+
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class StockEntry extends Model
+{
+    use HasFactory;
+
+    protected $fillable = [
+        'warehouse_id',
+        'warehouse_location_id',
+        'product_id',
+        'batch_id',
+        'quantity',
+        'status',
+    ];
+
+    protected $casts = [
+        'quantity' => 'decimal:2',
+    ];
+
+    public function warehouse()
+    {
+        return $this->belongsTo(Warehouse::class);
+    }
+
+    public function location()
+    {
+        return $this->belongsTo(WarehouseLocation::class, 'warehouse_location_id');
+    }
+
+    public function product()
+    {
+        return $this->belongsTo(Product::class);
+    }
+
+    public function batch()
+    {
+        return $this->belongsTo(Batch::class);
+    }
+
+    public function movements()
+    {
+        return $this->hasMany(StockMovement::class);
+    }
+}
+
+
+--- FILE: app/Models/ProductionRun.php ---
+
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class ProductionRun extends Model
+{
+    use HasFactory;
+
+    protected $fillable = [
+        'product_id',
+        'batch_id',
+        'warehouse_id',
+        'line',
+        'shift',
+        'quantity',
+        'qc_status',
+        'notes',
+    ];
+
+    protected $casts = [
+        'quantity' => 'integer',
+    ];
+
+    public function product()
+    {
+        return $this->belongsTo(Product::class);
+    }
+
+    public function batch()
+    {
+        return $this->belongsTo(Batch::class);
+    }
+
+    public function warehouse()
+    {
+        return $this->belongsTo(Warehouse::class);
+    }
+}
+
+
+--- FILE: app/Models/Badge.php ---
+
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class Badge extends Model
+{
+    use HasFactory;
+
+    protected $fillable = [
+        'name',
+        'code',
+        'description',
+        'color',
+        'is_active',
+    ];
+
+    protected $casts = [
+        'is_active' => 'boolean',
+    ];
+
+    public function employees()
+    {
+        return $this->belongsToMany(Employee::class, 'employee_badges')
+            ->withPivot(['granted_at', 'granted_by', 'note'])
+            ->withTimestamps();
+    }
+}
+
+
+--- FILE: app/Models/OrderStatusHistory.php ---
+
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class OrderStatusHistory extends Model
+{
+    use HasFactory;
+
+    protected $table = 'order_status_history';
+
+    protected $fillable = [
+        'order_id',
+        'status',
+        'changed_at',
+    ];
+
+    protected $casts = [
+        'changed_at' => 'datetime',
+    ];
+
+    public function order()
+    {
+        return $this->belongsTo(Order::class);
+    }
+}
+
+
+--- FILE: app/Models/PurchaseBill.php ---
+
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class PurchaseBill extends Model
+{
+    use HasFactory;
+
+    protected $fillable = [
+        'supplier_id',
+        'number',
+        'bill_date',
+        'due_date',
+        'net_total',
+        'vat_amount',
+        'status',
+    ];
+
+    protected $casts = [
+        'bill_date' => 'date',
+        'due_date' => 'date',
+        'net_total' => 'decimal:2',
+        'vat_amount' => 'decimal:2',
+    ];
+
+    public function supplier()
+    {
+        return $this->belongsTo(Supplier::class);
+    }
+
+    public function items()
+    {
+        return $this->hasMany(PurchaseBillItem::class);
+    }
+
+    public function payments()
+    {
+        return $this->hasMany(BillPayment::class);
+    }
+}
+
+
+
+--- FILE: app/Models/BillPayment.php ---
+
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class BillPayment extends Model
+{
+    use HasFactory;
+
+    protected $fillable = [
+        'purchase_bill_id',
+        'amount',
+        'paid_at',
+        'method',
+    ];
+
+    protected $casts = [
+        'amount' => 'decimal:2',
+        'paid_at' => 'date',
+    ];
+
+    public function bill()
+    {
+        return $this->belongsTo(PurchaseBill::class, 'purchase_bill_id');
+    }
+}
+
+
+
+--- FILE: app/Models/PackagingConversion.php ---
+
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class PackagingConversion extends Model
+{
+    use HasFactory;
+
+    protected $fillable = [
+        'from_packaging_type_id',
+        'to_packaging_type_id',
+        'factor',
+        'notes',
+    ];
+
+    public function fromType()
+    {
+        return $this->belongsTo(PackagingType::class, 'from_packaging_type_id');
+    }
+
+    public function toType()
+    {
+        return $this->belongsTo(PackagingType::class, 'to_packaging_type_id');
+    }
+}
+
+
+--- FILE: app/Models/Order.php ---
+
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class Order extends Model
+{
+    use HasFactory;
+
+    protected $fillable = [
+        'agent_id',
+        'order_type',
+        'delivery_date',
+        'status',
+        'total',
+        'commission_total',
+        'notes',
+        'is_credit_used',
+    ];
+
+    protected $casts = [
+        'delivery_date' => 'date',
+        'total' => 'decimal:2',
+        'commission_total' => 'decimal:2',
+        'is_credit_used' => 'boolean',
+    ];
+
+    public function agent()
+    {
+        return $this->belongsTo(Agent::class);
+    }
+
+    public function items()
+    {
+        return $this->hasMany(OrderItem::class);
+    }
+
+    public function statusHistory()
+    {
+        return $this->hasMany(OrderStatusHistory::class);
+    }
+    public function delivery()
+    {
+        return $this->hasOne(Delivery::class);
+    }
+}
+
+
+--- FILE: app/Models/Supplier.php ---
+
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class Supplier extends Model
+{
+    use HasFactory;
+
+    protected $fillable = [
+        'name',
+        'contact_person',
+        'email',
+        'phone',
+        'address',
+        'tax_id',
+    ];
+
+    public function bills()
+    {
+        return $this->hasMany(PurchaseBill::class);
+    }
+}
+
+
+
+--- FILE: app/Models/AgentCommissionSettlement.php ---
+
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class AgentCommissionSettlement extends Model
+{
+    use HasFactory;
+
+    protected $fillable = [
+        'agent_id',
+        'period_start',
+        'period_end',
+        'sales_total',
+        'commission_total',
+        'status',
+    ];
+
+    protected $casts = [
+        'period_start' => 'date',
+        'period_end' => 'date',
+        'sales_total' => 'decimal:2',
+        'commission_total' => 'decimal:2',
+    ];
+
+    public function agent()
+    {
+        return $this->belongsTo(Agent::class);
+    }
+}
+
+
+
+--- FILE: app/Models/VehicleSchedule.php ---
+
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class VehicleSchedule extends Model
+{
+    use HasFactory;
+
+    protected $fillable = [
+        'vehicle_id',
+        'route_id',
+        'scheduled_date',
+        'driver',
+        'notes',
+    ];
+
+    protected $casts = [
+        'scheduled_date' => 'date',
+    ];
+
+    public function vehicle()
+    {
+        return $this->belongsTo(Vehicle::class);
+    }
+
+    public function route()
+    {
+        return $this->belongsTo(DeliveryRoute::class, 'route_id');
+    }
+}
+

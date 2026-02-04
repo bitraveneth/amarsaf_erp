@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Batch;
+use App\Models\BillOfMaterial;
 use App\Models\ProductionRun;
 use App\Models\Product;
 use App\Models\StockEntry;
@@ -65,6 +66,7 @@ class ProductionController extends Controller
         $run = ProductionRun::create($data);
 
         if ($run->qc_status === 'approved' && $run->quantity > 0 && $run->warehouse_id) {
+            // Finished goods stock
             StockEntry::create([
                 'warehouse_id' => $run->warehouse_id,
                 'product_id' => $run->product_id,
@@ -72,6 +74,52 @@ class ProductionController extends Controller
                 'quantity' => $run->quantity,
                 'status' => 'available',
             ]);
+
+            // Consume raw materials based on active BOM, if any
+            $bom = BillOfMaterial::where('product_id', $run->product_id)
+                ->where('is_active', true)
+                ->orderByDesc('id')
+                ->with('items')
+                ->first();
+
+            if ($bom && $bom->items->isNotEmpty()) {
+                foreach ($bom->items as $item) {
+                    $totalRequired = $item->quantity * $run->quantity;
+                    if ($totalRequired <= 0) {
+                        continue;
+                    }
+
+                    // Simple FEFO/FIFO: use oldest stock entries first
+                    $entries = StockEntry::where('warehouse_id', $run->warehouse_id)
+                        ->where('product_id', $item->component_product_id)
+                        ->where('status', 'available')
+                        ->orderBy('created_at')
+                        ->get();
+
+                    $remaining = $totalRequired;
+
+                    foreach ($entries as $entry) {
+                        if ($remaining <= 0) {
+                            break;
+                        }
+
+                        $consume = min($remaining, $entry->quantity);
+                        if ($consume <= 0) {
+                            continue;
+                        }
+
+                        $entry->quantity -= $consume;
+                        if ($entry->quantity <= 0) {
+                            $entry->status = 'sold'; // treated as consumed in production
+                        }
+                        $entry->save();
+
+                        $remaining -= $consume;
+                    }
+
+                    // If remaining > 0, it means negative stock; we currently keep it simple and do not create it.
+                }
+            }
         }
 
         return redirect()->route('admin.production.index')->with('status', 'Production run recorded.');

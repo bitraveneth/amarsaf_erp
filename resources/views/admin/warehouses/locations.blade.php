@@ -55,6 +55,7 @@
                         <tr>
                             <th>Code</th>
                             <th>Description</th>
+                            <th></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -62,6 +63,16 @@
                             <tr>
                                 <td>{{ $location->code }}</td>
                                 <td>{{ $location->description ?? '—' }}</td>
+                                <td>
+                                    <form action="{{ route('admin.warehouse-locations.destroy', $location) }}"
+                                          method="POST"
+                                          class="inline-form"
+                                          onsubmit="return confirm('Delete this location? This cannot be undone.');">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="button-secondary">Delete</button>
+                                    </form>
+                                </td>
                             </tr>
                         @endforeach
                     </tbody>
@@ -73,4 +84,3 @@
     </section>
 </div>
 @endsection
-

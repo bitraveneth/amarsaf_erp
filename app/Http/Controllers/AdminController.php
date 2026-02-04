@@ -182,4 +182,65 @@ class AdminController extends Controller
             'alerts'
         ));
     }
+
+    /**
+     * Show a dedicated notifications view listing all alerts.
+     */
+    public function notifications()
+    {
+        $alerts = [];
+
+        $batchReady = Schema::hasTable('batches');
+        $orderReady = Schema::hasTable('orders');
+        $deliveryReady = Schema::hasTable('deliveries');
+        $invoiceReady = Schema::hasTable('invoices');
+        $receiptReady = Schema::hasTable('receipts');
+
+        if ($batchReady) {
+            $expiringSoonCount = Batch::whereNotNull('expiry_date')
+                ->whereBetween('expiry_date', [Carbon::today(), Carbon::today()->copy()->addDays(30)])
+                ->count();
+
+            if ($expiringSoonCount > 0) {
+                $alerts[] = "{$expiringSoonCount} batches expiring within 30 days";
+            }
+        }
+
+        if ($deliveryReady) {
+            $exceptionDeliveriesToday = Delivery::where('status', 'exception')
+                ->whereDate('updated_at', Carbon::today())
+                ->count();
+
+            if ($exceptionDeliveriesToday > 0) {
+                $alerts[] = "{$exceptionDeliveriesToday} deliveries marked as exception today";
+            }
+        }
+
+        if ($orderReady) {
+            $todayOrders = Order::whereDate('delivery_date', Carbon::today())->count();
+
+            if ($todayOrders > 0) {
+                $alerts[] = "{$todayOrders} orders scheduled for delivery today";
+            }
+        }
+
+        if ($invoiceReady && $receiptReady) {
+            $openInvoices = Invoice::with('receipts')
+                ->whereIn('status', ['issued', 'adjusted'])
+                ->get();
+
+            $outstandingReceivables = $openInvoices->sum(function (Invoice $invoice) {
+                $gross = ($invoice->net_total + $invoice->vat_amount) - $invoice->withholding;
+                $paid = $invoice->receipts->sum('amount');
+
+                return max($gross - $paid, 0);
+            });
+
+            if ($outstandingReceivables > 0) {
+                $alerts[] = 'Outstanding receivables of BDT ' . number_format($outstandingReceivables, 2);
+            }
+        }
+
+        return view('admin.notifications.index', compact('alerts'));
+    }
 }

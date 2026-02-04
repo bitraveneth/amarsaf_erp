@@ -15,6 +15,10 @@ class Agent extends Model
         'phone',
         'area',
         'zone',
+        'location_code',
+        'special_code',
+        'latitude',
+        'longitude',
         'credit_limit',
         'kyc_documents',
         'is_active',
@@ -26,6 +30,8 @@ class Agent extends Model
         'credit_limit' => 'decimal:2',
         'is_active' => 'boolean',
         'kyc_documents' => 'array',
+        'latitude' => 'float',
+        'longitude' => 'float',
     ];
 
     public function parent()

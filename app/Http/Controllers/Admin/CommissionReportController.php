@@ -10,6 +10,13 @@ use Illuminate\Support\Carbon;
 
 class CommissionReportController extends Controller
 {
+    public function rules()
+    {
+        $agents = Agent::with('commissions')->orderBy('name')->get();
+
+        return view('admin.agents.commission_rules', compact('agents'));
+    }
+
     public function index(Request $request)
     {
         $month = $request->query('month')
@@ -51,4 +58,3 @@ class CommissionReportController extends Controller
         ]);
     }
 }
-

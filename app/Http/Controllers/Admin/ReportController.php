@@ -4,7 +4,14 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Account;
+use App\Models\Invoice;
 use App\Models\LedgerEntry;
+use App\Models\ProductionRun;
+use App\Models\Expense;
+use App\Models\Employee;
+use App\Models\EmployeeContract;
+use App\Models\EmployeeAllowance;
+use Illuminate\Support\Collection;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 
@@ -25,10 +32,23 @@ class ReportController extends Controller
         $returns = $entries->where('account', 'Sales Returns')->sum('debit');
         $commissions = $entries->where('account', 'Commission Expense')->sum('debit');
 
-        $netSales = $sales - $returns;
-        $profit = $netSales - $commissions;
+        // Include simple period expenses recorded in the expenses module.
+        $otherExpenses = Expense::whereBetween('date', [$from->toDateString(), $to->toDateString()])
+            ->sum('amount');
 
-        return view('admin.finance.pl', compact('from', 'to', 'sales', 'returns', 'commissions', 'netSales', 'profit'));
+        $netSales = $sales - $returns;
+        $profit = $netSales - $commissions - $otherExpenses;
+
+        return view('admin.finance.pl', compact(
+            'from',
+            'to',
+            'sales',
+            'returns',
+            'commissions',
+            'otherExpenses',
+            'netSales',
+            'profit'
+        ));
     }
 
     public function vat(Request $request)
@@ -55,7 +75,9 @@ class ReportController extends Controller
             ? Carbon::parse($request->query('date'))
             : Carbon::today();
 
-        $entries = LedgerEntry::where('created_at', '<=', $asOf)->get();
+        $endOfDay = $asOf->copy()->endOfDay();
+
+        $entries = LedgerEntry::where('created_at', '<=', $endOfDay)->get();
 
         $balances = [];
         foreach ($entries as $entry) {
@@ -107,5 +129,196 @@ class ReportController extends Controller
         $net = $cashIn - $cashOut;
 
         return view('admin.finance.cashflow', compact('from', 'to', 'cashIn', 'cashOut', 'net'));
+    }
+
+    public function agentPerformance(Request $request)
+    {
+        $from = $request->query('from')
+            ? Carbon::parse($request->query('from'))
+            : Carbon::now()->startOfMonth();
+        $to = $request->query('to')
+            ? Carbon::parse($request->query('to'))
+            : Carbon::now()->endOfMonth();
+
+        $invoices = Invoice::with(['order.agent', 'receipts', 'creditNotes'])
+            ->whereBetween('issued_at', [$from, $to])
+            ->whereHas('order.agent')
+            ->get();
+
+        $byAgent = [];
+
+        foreach ($invoices as $invoice) {
+            $agent = $invoice->order?->agent;
+
+            if (! $agent) {
+                continue;
+            }
+
+            $agentId = $agent->id;
+
+            if (! isset($byAgent[$agentId])) {
+                $byAgent[$agentId] = [
+                    'agent' => $agent,
+                    'order_ids' => [],
+                    'invoice_count' => 0,
+                    'invoiced' => 0,
+                    'credits' => 0,
+                    'receipts' => 0,
+                ];
+            }
+
+            $bucket = &$byAgent[$agentId];
+
+            $gross = ($invoice->net_total + $invoice->vat_amount) - $invoice->withholding;
+            $bucket['invoiced'] += $gross;
+            $bucket['invoice_count']++;
+
+            if ($invoice->order_id) {
+                $bucket['order_ids'][$invoice->order_id] = true;
+            }
+
+            $bucket['credits'] += $invoice->creditNotes->sum('amount');
+
+            $bucket['receipts'] += $invoice->receipts
+                ->whereBetween('received_at', [$from, $to])
+                ->sum('amount');
+        }
+
+        $rows = collect($byAgent)->map(function (array $bucket) {
+            $netSales = $bucket['invoiced'] - $bucket['credits'];
+            $outstanding = $netSales - $bucket['receipts'];
+
+            return [
+                'agent' => $bucket['agent'],
+                'order_count' => count($bucket['order_ids']),
+                'invoice_count' => $bucket['invoice_count'],
+                'invoiced' => $bucket['invoiced'],
+                'credits' => $bucket['credits'],
+                'net_sales' => $netSales,
+                'receipts' => $bucket['receipts'],
+                'outstanding' => $outstanding,
+            ];
+        })->sortByDesc('net_sales');
+
+        return view('admin.finance.agent_performance', [
+            'from' => $from,
+            'to' => $to,
+            'rows' => $rows,
+        ]);
+    }
+
+    public function productionSummary(Request $request)
+    {
+        $from = $request->query('from')
+            ? Carbon::parse($request->query('from'))
+            : Carbon::now()->startOfMonth();
+        $to = $request->query('to')
+            ? Carbon::parse($request->query('to'))
+            : Carbon::now()->endOfMonth();
+
+        $production = ProductionRun::with('product')
+            ->whereBetween('created_at', [$from, $to])
+            ->get();
+
+        $byProduct = $production->groupBy('product_id')->map(function ($runs) {
+            $product = $runs->first()->product;
+
+            return [
+                'product' => $product,
+                'runs' => $runs->count(),
+                'quantity' => $runs->sum('quantity'),
+            ];
+        });
+
+        $salesInvoices = Invoice::whereBetween('issued_at', [$from, $to])->get();
+        $salesTotal = $salesInvoices->sum(function (Invoice $invoice) {
+            return ($invoice->net_total + $invoice->vat_amount) - $invoice->withholding;
+        });
+
+        $expensesTotal = Expense::whereBetween('date', [$from, $to])->sum('amount');
+
+        return view('admin.finance.production_summary', [
+            'from' => $from,
+            'to' => $to,
+            'byProduct' => $byProduct,
+            'salesTotal' => $salesTotal,
+            'expensesTotal' => $expensesTotal,
+            'approxProfit' => $salesTotal - $expensesTotal,
+        ]);
+    }
+
+    public function payrollSummary(Request $request)
+    {
+        $from = $request->query('from')
+            ? Carbon::parse($request->query('from'))
+            : Carbon::now()->startOfMonth();
+        $to = $request->query('to')
+            ? Carbon::parse($request->query('to'))
+            : Carbon::now()->endOfMonth();
+
+        $employees = Employee::with(['contracts', 'allowances' => function ($query) use ($from, $to) {
+            $query->whereBetween('date', [$from, $to]);
+        }])->orderBy('name')->get();
+
+        $rows = $employees->map(function (Employee $employee) use ($from, $to) {
+            $contracts = $employee->contracts->filter(function (EmployeeContract $contract) use ($from, $to) {
+                if ($contract->status === 'ended') {
+                    return false;
+                }
+
+                $startsBeforeEnd = $contract->start_date ? $contract->start_date <= $to : true;
+                $endsAfterStart = $contract->end_date ? $contract->end_date >= $from : true;
+
+                return $startsBeforeEnd && $endsAfterStart;
+            });
+
+            $baseSalary = $contracts->sum('salary_amount');
+
+            $baseTa = $contracts->sum('travel_allowance');
+            $baseDa = $contracts->sum('dearness_allowance');
+            $baseBonus = $contracts->sum('bonus');
+
+            $allowances = $employee->allowances ?? collect();
+
+            $taAllowances = $allowances->where('type', 'TA')->sum('amount');
+            $daAllowances = $allowances->where('type', 'DA')->sum('amount');
+            $bonusAllowances = $allowances->where('type', 'BONUS')->sum('amount');
+
+            $totalSalary = $baseSalary;
+            $totalTa = $baseTa + $taAllowances;
+            $totalDa = $baseDa + $daAllowances;
+            $totalBonus = $baseBonus + $bonusAllowances;
+
+            $grandTotal = $totalSalary + $totalTa + $totalDa + $totalBonus;
+
+            return [
+                'employee' => $employee,
+                'contracts' => $contracts,
+                'base_salary' => $baseSalary,
+                'base_ta' => $baseTa,
+                'base_da' => $baseDa,
+                'base_bonus' => $baseBonus,
+                'ta_allowances' => $taAllowances,
+                'da_allowances' => $daAllowances,
+                'bonus_allowances' => $bonusAllowances,
+                'total_salary' => $totalSalary,
+                'total_ta' => $totalTa,
+                'total_da' => $totalDa,
+                'total_bonus' => $totalBonus,
+                'grand_total' => $grandTotal,
+            ];
+        })->filter(function (array $row) {
+            return $row['grand_total'] > 0;
+        });
+
+        $totals = [
+            'salary' => $rows->sum('total_salary'),
+            'ta' => $rows->sum('total_ta'),
+            'da' => $rows->sum('total_da'),
+            'bonus' => $rows->sum('total_bonus'),
+            'grand' => $rows->sum('grand_total'),
+        ];
+
+        return view('admin.finance.payroll_summary', compact('from', 'to', 'rows', 'totals'));
     }
 }

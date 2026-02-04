@@ -31,9 +31,8 @@
                         @error('name') <p class="form-error">{{ $message }}</p> @enderror
                     </div>
                     <div>
-                        <label for="product_image">Product image</label>
+                        <label for="product_image">Product image <span class="text-muted">(PNG/JPG, 1080×1080 px preferred)</span></label>
                         <input id="product_image" name="product_image" type="file" accept="image/*">
-                        <p class="text-muted">Preferred: 1080×1080 px PNG/JPG.</p>
                     </div>
                     <div class="full-width">
                         <label for="description">Description</label>
@@ -57,9 +56,8 @@
                         <input id="volume_ml" name="volume_ml" type="number" step="0.01" value="{{ old('volume_ml') }}">
                     </div>
                     <div>
-                        <label for="sku_code">SKU code</label>
+                        <label for="sku_code">Internal code (optional) <span class="text-muted">– legacy / agent app code</span></label>
                         <input id="sku_code" name="sku_code" value="{{ old('sku_code') }}">
-                        <p class="text-muted">Internal identifier for ERP or agent app.</p>
                     </div>
                 </div>
             </div>
@@ -82,7 +80,10 @@
                         </select>
                     </div>
                     <div>
-                        <label for="tax_class_id">Tax class</label>
+                        <label for="tax_class_id">
+                            Tax class
+                            <span class="text-muted">– HSN/SAC code and local tax references load from the class.</span>
+                        </label>
                         <select id="tax_class_id" name="tax_class_id">
                             <option value="">Unassigned</option>
                             @foreach($taxClasses as $class)
@@ -91,7 +92,6 @@
                                 </option>
                             @endforeach
                         </select>
-                        <p class="text-muted">HSN/SAC code and local tax references load from the class.</p>
                     </div>
                 </div>
             </div>
@@ -115,9 +115,8 @@
                         <input id="tds" name="tds" type="number" value="{{ old('tds') }}">
                     </div>
                     <div>
-                        <label for="certifications">Certifications</label>
+                        <label for="certifications">Certifications <span class="text-muted">(BSTI, ISO 22000, Halal, etc.)</span></label>
                         <input id="certifications" name="certifications" value="{{ old('certifications') }}">
-                        <p class="text-muted">List applicable approvals (BSTI, ISO 22000, Halal, etc.).</p>
                     </div>
                 </div>
             </div>
@@ -138,7 +137,8 @@
                     </div>
                     <div>
                         <label for="base_price">Base price</label>
-                        <input id="base_price" name="base_price" type="number" step="0.01" value="{{ old('base_price') }}">
+                        <input id="base_price" name="base_price" type="number" step="0.01" value="{{ old('base_price') }}" required>
+                        @error('base_price') <p class="form-error">{{ $message }}</p> @enderror
                     </div>
                 </div>
             </div>

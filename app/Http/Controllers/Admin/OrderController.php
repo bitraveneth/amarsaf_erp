@@ -15,6 +15,7 @@ use App\Models\StockMovement;
 use App\Models\Product;
 use App\Models\StockEntry;
 use Illuminate\Http\Request;
+use App\Http\Controllers\Admin\FinanceController;
 
 class OrderController extends Controller
 {
@@ -262,6 +263,17 @@ class OrderController extends Controller
             'status' => $order->status,
             'changed_at' => now(),
         ]);
+
+        // Auto-create invoice when an order is marked as delivered and has no invoice yet
+        if ($order->status === 'delivered') {
+            $hasInvoice = Invoice::where('order_id', $order->id)->exists();
+            if (! $hasInvoice) {
+                // reuse FinanceController logic without redirecting twice
+                $finance = app(FinanceController::class);
+                // createFromOrder already validates that status is 'delivered'
+                $finance->createFromOrder($order);
+            }
+        }
 
         return redirect()->route('admin.orders.show', $order)->with('status', 'Order status updated.');
     }

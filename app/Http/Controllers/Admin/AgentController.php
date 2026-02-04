@@ -8,6 +8,7 @@ use App\Models\AgentCommissionRule;
 use App\Models\AgentCommissionSettlement;
 use App\Models\AgentPriceList;
 use App\Models\Order;
+use App\Models\User;
 use Illuminate\Http\Request;
 
 class AgentController extends Controller
@@ -32,6 +33,10 @@ class AgentController extends Controller
             'phone' => 'nullable|string',
             'area' => 'nullable|string',
             'zone' => 'nullable|string',
+            'location_code' => 'nullable|string|max:100',
+            'special_code' => 'nullable|string|max:100',
+            'latitude' => 'nullable|numeric',
+            'longitude' => 'nullable|numeric',
             'credit_limit' => 'nullable|numeric|min:0',
             'kyc_documents' => 'nullable|array',
             'parent_id' => 'nullable|exists:agents,id',
@@ -52,6 +57,13 @@ class AgentController extends Controller
         return view('admin.agents.edit', compact('agent', 'parents'));
     }
 
+    public function show(Agent $agent)
+    {
+        $agent->load(['parent', 'orders']);
+
+        return view('admin.agents.show', compact('agent'));
+    }
+
     public function update(Request $request, Agent $agent)
     {
         $data = $request->validate([
@@ -60,6 +72,10 @@ class AgentController extends Controller
             'phone' => 'nullable|string',
             'area' => 'nullable|string',
             'zone' => 'nullable|string',
+            'location_code' => 'nullable|string|max:100',
+            'special_code' => 'nullable|string|max:100',
+            'latitude' => 'nullable|numeric',
+            'longitude' => 'nullable|numeric',
             'credit_limit' => 'nullable|numeric|min:0',
             'kyc_documents' => 'nullable|array',
             'parent_id' => 'nullable|exists:agents,id',
@@ -82,12 +98,15 @@ class AgentController extends Controller
                 ->with('status', 'Agent has orders and cannot be deleted. Consider disabling or reassigning instead.');
         }
 
+        // Unlink any user accounts pointing at this agent so the record can be removed safely.
+        User::where('agent_id', $agent->id)->update(['agent_id' => null]);
+
         AgentPriceList::where('agent_id', $agent->id)->delete();
         AgentCommissionRule::where('agent_id', $agent->id)->delete();
         AgentCommissionSettlement::where('agent_id', $agent->id)->delete();
 
         $agent->delete();
 
-        return redirect()->route('admin.agents.index')->with('status', 'Agent deleted.');
+        return redirect()->route('admin.agents.index')->with('status', 'Agent deleted and any linked user accounts were unassigned.');
     }
 }

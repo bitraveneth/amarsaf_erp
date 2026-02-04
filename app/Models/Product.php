@@ -49,4 +49,14 @@ class Product extends Model
     {
         return $this->hasMany(Batch::class);
     }
+
+    public function agentPriceLists()
+    {
+        return $this->hasMany(AgentPriceList::class);
+    }
+
+    public function billsOfMaterial()
+    {
+        return $this->hasMany(BillOfMaterial::class);
+    }
 }

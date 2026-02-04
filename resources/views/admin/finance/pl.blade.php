@@ -14,11 +14,11 @@
             <tbody>
                 <tr>
                     <td>Sales revenue</td>
-                    <td>{{ number_format($sales, 2) }}</td>
+                    <td>+{{ number_format($sales, 2) }}</td>
                 </tr>
                 <tr>
                     <td>Sales returns</td>
-                    <td>{{ number_format($returns, 2) }}</td>
+                    <td>-{{ number_format($returns, 2) }}</td>
                 </tr>
                 <tr>
                     <td>Net sales</td>
@@ -26,15 +26,22 @@
                 </tr>
                 <tr>
                     <td>Commission expense</td>
-                    <td>{{ number_format($commissions, 2) }}</td>
+                    <td>-{{ number_format($commissions, 2) }}</td>
+                </tr>
+                <tr>
+                    <td>Other operating expenses</td>
+                    <td>-{{ number_format($otherExpenses ?? 0, 2) }}</td>
                 </tr>
                 <tr>
                     <td><strong>Profit</strong></td>
-                    <td><strong>{{ number_format($profit, 2) }}</strong></td>
+                    <td>
+                        <strong>
+                            {{ $profit >= 0 ? '+' : '-' }}{{ number_format(abs($profit), 2) }}
+                        </strong>
+                    </td>
                 </tr>
             </tbody>
         </table>
     </section>
 </div>
 @endsection
-

@@ -34,7 +34,7 @@
                         @error('name') <p class="form-error">{{ $message }}</p> @enderror
                     </div>
                     <div>
-                        <label for="product_image">Product image</label>
+                        <label for="product_image">Product image <span class="text-muted">(PNG/JPG, 1080×1080 px preferred)</span></label>
                         <input id="product_image" name="product_image" type="file" accept="image/*">
                         @if($product->image_path)
                             <img src="{{ \Illuminate\Support\Facades\Storage::url($product->image_path) }}" alt="{{ $product->name }}" class="product-image-preview">
@@ -61,7 +61,7 @@
                         <input id="volume_ml" name="volume_ml" type="number" step="0.01" value="{{ old('volume_ml', $product->volume_ml) }}">
                     </div>
                     <div>
-                        <label for="sku_code">SKU code</label>
+                        <label for="sku_code">Internal code (optional) <span class="text-muted">– legacy / agent app code</span></label>
                         <input id="sku_code" name="sku_code" value="{{ old('sku_code', $product->sku_code) }}">
                     </div>
                 </div>
@@ -115,7 +115,7 @@
                         <input id="tds" name="tds" type="number" value="{{ old('tds', $product->tds) }}">
                     </div>
                     <div>
-                        <label for="certifications">Certifications</label>
+                        <label for="certifications">Certifications <span class="text-muted">(BSTI, ISO, WQA, etc.)</span></label>
                         <input id="certifications" name="certifications" value="{{ old('certifications', $product->certifications) }}">
                         <p class="text-muted">Lists approvals such as BSTI, ISO, or WQA.</p>
                     </div>
@@ -140,7 +140,8 @@
                     </div>
                     <div>
                         <label for="base_price">Base price</label>
-                        <input id="base_price" name="base_price" type="number" step="0.01" value="{{ old('base_price', $product->base_price) }}">
+                        <input id="base_price" name="base_price" type="number" step="0.01" value="{{ old('base_price', $product->base_price) }}" required>
+                        @error('base_price') <p class="form-error">{{ $message }}</p> @enderror
                     </div>
                 </div>
             </div>

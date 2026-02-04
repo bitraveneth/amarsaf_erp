@@ -64,4 +64,63 @@ class StockMovementController extends Controller
 
         return redirect()->route('admin.stock.movements')->with('status', 'Stock transferred.');
     }
+
+    public function writeOffForm()
+    {
+        $entries = StockEntry::with(['product', 'warehouse'])
+            ->where('status', 'available')
+            ->orderByDesc('updated_at')
+            ->get();
+
+        return view('admin.stock.writeoff', compact('entries'));
+    }
+
+    public function writeOffStore(Request $request)
+    {
+        $data = $request->validate([
+            'entry_id' => 'required|exists:stock_entries,id',
+            'quantity' => 'required|numeric|min:0.01',
+            'reason' => 'required|in:expired,wasted,supplier-return,other',
+            'notes' => 'nullable|string',
+        ]);
+
+        $entry = StockEntry::findOrFail($data['entry_id']);
+
+        if ($entry->quantity < $data['quantity']) {
+            return back()->withErrors(['quantity' => 'Cannot write off more than available quantity.']);
+        }
+
+        $entry->quantity -= $data['quantity'];
+        $entry->save();
+
+        StockMovement::create([
+            'stock_entry_id' => $entry->id,
+            'type' => $data['reason'],
+            'quantity' => $data['quantity'] * -1,
+            'notes' => $data['notes'],
+        ]);
+
+        return redirect()->route('admin.stock.movements')->with('status', 'Stock written off.');
+    }
+
+    public function writeOffEntry(StockEntry $entry)
+    {
+        if ($entry->quantity <= 0) {
+            return back()->with('status', 'Entry already has zero quantity.');
+        }
+
+        $quantity = $entry->quantity;
+
+        $entry->quantity = 0;
+        $entry->save();
+
+        StockMovement::create([
+            'stock_entry_id' => $entry->id,
+            'type' => 'expired',
+            'quantity' => $quantity * -1,
+            'notes' => 'Written off as expired from inventory view.',
+        ]);
+
+        return back()->with('status', 'Batch written off as expired.');
+    }
 }
