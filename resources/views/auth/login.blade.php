@@ -42,7 +42,7 @@
                            required 
                            autofocus 
                            autocomplete="email"
-                           placeholder="admin@company.com"
+                           placeholder="email"
                            class="h-11 w-full rounded-lg border border-gray-300 bg-transparent py-2.5 pl-10 pr-4 text-theme-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-700">
                 </div>
                 @error('email')
@@ -123,7 +123,7 @@
             @if(app()->environment('local'))
                 <div class="mt-4 rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50">
                     <p class="text-center text-theme-xs text-gray-600 dark:text-gray-400">
-                        <span class="font-medium">Demo:</span> admin@company.com / password
+                        <span class="font-medium">Demo:</span> admin@saferpv.local / password
                     </p>
                 </div>
             @endif
