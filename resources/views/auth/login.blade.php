@@ -1,57 +1,164 @@
-<!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Login | {{ config('app.name', 'SAFERP') }}</title>
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
-</head>
-<body>
-    <div class="login-shell">
-        <div class="login-card">
-            <header>
-                <div class="login-brand">SAFERP admin</div>
-                <h1>Welcome back</h1>
-                <p>Sign in to continue to your control panel.</p>
-            </header>
-            <form method="POST" action="{{ route('login') }}">
-                @csrf
-                <label for="email">Email</label>
-                <input id="email" type="email" name="email" value="{{ old('email') }}" required autofocus autocomplete="email">
-                @error('email')
-                    <p class="form-error">{{ $message }}</p>
-                @enderror
+{{-- resources/views/auth/login.blade.php --}}
+@extends('layouts.guest')
 
-                <label for="password">Password</label>
-                <div class="password-field">
-                    <input id="password" type="password" name="password" required autocomplete="current-password">
-                    <button type="button" id="toggle-password" class="password-toggle" aria-label="Show password">
-                        {{-- Eye icon (show) --}}
-                        <svg class="password-toggle-icon password-toggle-icon-show" viewBox="0 0 24 24" aria-hidden="true">
-                            <path d="M12 5C7 5 3.1 8.1 1.5 12c1.6 3.9 5.5 7 10.5 7s8.9-3.1 10.5-7C20.9 8.1 17 5 12 5zm0 11a4 4 0 1 1 0-8 4 4 0 0 1 0 8z" fill="currentColor"/>
-                            <circle cx="12" cy="12" r="2" fill="currentColor"/>
+@section('title', 'Sign in | ' . config('app.name', 'SAFERP'))
+
+@section('content')
+<div class="w-full max-w-md">
+    <div class="rounded-xl border border-gray-200 bg-white p-8 shadow-theme-lg dark:border-gray-800 dark:bg-gray-900">
+        {{-- Brand Header --}}
+        <header class="mb-8 text-center">
+            <div class="mb-4 inline-flex items-center justify-center">
+                <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-brand-50 dark:bg-brand-500/10">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="text-brand-600 dark:text-brand-400">
+                        <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+            </div>
+            <h1 class="text-title-md font-semibold text-gray-900 dark:text-white">Welcome back</h1>
+            <p class="mt-2 text-theme-sm text-gray-600 dark:text-gray-400">Sign in to continue to your control panel.</p>
+        </header>
+
+        <form method="POST" action="{{ route('login') }}" class="space-y-5">
+            @csrf
+
+            {{-- Email Field --}}
+            <div class="flex flex-col gap-1.5">
+                <label for="email" class="text-theme-sm font-medium text-gray-700 dark:text-gray-300">
+                    Email address
+                </label>
+                <div class="relative">
+                    <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5">
+                        <svg width="18" height="18" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" class="text-gray-500 dark:text-gray-400">
+                            <path d="M2.5 5.83333L10 10.8333L17.5 5.83333M4.16667 15.8333H15.8333C16.7538 15.8333 17.5 15.0871 17.5 14.1667V5.83333C17.5 4.91286 16.7538 4.16667 15.8333 4.16667H4.16667C3.24619 4.16667 2.5 4.91286 2.5 5.83333V14.1667C2.5 15.0871 3.24619 15.8333 4.16667 15.8333Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
-                        {{-- Eye-off icon (hide) --}}
-                        <svg class="password-toggle-icon password-toggle-icon-hide" viewBox="0 0 24 24" aria-hidden="true" style="display:none">
-                            <path d="M3 4.3 4.3 3l17 17L20.7 21l-2.1-2.1C16.9 19.6 14.6 20.5 12 20.5 7 20.5 3.1 17.4 1.5 13c.6-1.5 1.6-2.9 2.8-4L3 4.3zm5.2 5.2A4 4 0 0 0 12 16a4 4 0 0 0 2.5-.9l-6.3-6.3zM12 5c2.6 0 4.9.9 6.6 2.6 1.2 1.1 2.1 2.5 2.9 4-.4 1-1 2-1.7 2.9l-2-2A5.9 5.9 0 0 0 18.9 12C17.3 8.8 14.8 7 12 7c-.7 0-1.4.1-2 .3L8.2 5.5C9.4 5.2 10.7 5 12 5z" fill="currentColor"/>
+                    </div>
+                    <input id="email" 
+                           type="email" 
+                           name="email" 
+                           value="{{ old('email') }}" 
+                           required 
+                           autofocus 
+                           autocomplete="email"
+                           placeholder="admin@company.com"
+                           class="h-11 w-full rounded-lg border border-gray-300 bg-transparent py-2.5 pl-10 pr-4 text-theme-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-700">
+                </div>
+                @error('email')
+                    <p class="text-theme-xs text-error-600 dark:text-error-400">{{ $message }}</p>
+                @enderror
+            </div>
+
+            {{-- Password Field --}}
+            <div class="flex flex-col gap-1.5">
+                <div class="flex items-center justify-between">
+                    <label for="password" class="text-theme-sm font-medium text-gray-700 dark:text-gray-300">
+                        Password
+                    </label>
+                    @if (Route::has('password.request'))
+                        <a href="{{ route('password.request') }}" class="text-theme-xs font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300">
+                            Forgot password?
+                        </a>
+                    @endif
+                </div>
+                <div class="relative">
+                    <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5">
+                        <svg width="18" height="18" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" class="text-gray-500 dark:text-gray-400">
+                            <path d="M4.16667 9.16667H15.8333C16.7538 9.16667 17.5 9.91286 17.5 10.8333V15.8333C17.5 16.7538 16.7538 17.5 15.8333 17.5H4.16667C3.24619 17.5 2.5 16.7538 2.5 15.8333V10.8333C2.5 9.91286 3.24619 9.16667 4.16667 9.16667Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                            <path d="M6.66667 9.16667V5.83333C6.66667 3.99238 8.15905 2.5 10 2.5C11.8409 2.5 13.3333 3.99238 13.3333 5.83333V9.16667" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                        </svg>
+                    </div>
+                    <input id="password" 
+                           type="password" 
+                           name="password" 
+                           required 
+                           autocomplete="current-password"
+                           placeholder="••••••••"
+                           class="h-11 w-full rounded-lg border border-gray-300 bg-transparent py-2.5 pl-10 pr-12 text-theme-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-700">
+                    <button type="button" 
+                            id="toggle-password" 
+                            class="absolute inset-y-0 right-0 flex items-center pr-3.5 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+                            aria-label="Show password">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="password-toggle-icon-show">
+                            <path d="M12 5C7 5 3.1 8.1 1.5 12c1.6 3.9 5.5 7 10.5 7s8.9-3.1 10.5-7C20.9 8.1 17 5 12 5z" stroke="currentColor" stroke-width="1.5"/>
+                            <circle cx="12" cy="12" r="2" stroke="currentColor" stroke-width="1.5"/>
+                        </svg>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="password-toggle-icon-hide hidden">
+                            <path d="M3 4.3L4.3 3L21 20.7L19.7 22L16.6 18.9C15.1 19.6 13.6 20 12 20C7 20 3.1 16.9 1.5 12.5C2.1 10.9 3.2 9.4 4.5 8.1L3 4.3Z" stroke="currentColor" stroke-width="1.5"/>
+                            <path d="M9.5 9.5L14.5 14.5" stroke="currentColor" stroke-width="1.5"/>
+                            <circle cx="12" cy="12" r="2" stroke="currentColor" stroke-width="1.5"/>
+                            <path d="M12 5C9.5 5 7.2 5.9 5.3 7.3" stroke="currentColor" stroke-width="1.5"/>
+                            <path d="M18.9 8.1C20.2 9.5 21.2 11 21.9 12.5C20.3 16.9 16.5 20 12 20" stroke="currentColor" stroke-width="1.5"/>
                         </svg>
                     </button>
                 </div>
                 @error('password')
-                    <p class="form-error">{{ $message }}</p>
+                    <p class="text-theme-xs text-error-600 dark:text-error-400">{{ $message }}</p>
                 @enderror
+            </div>
 
-                <div class="form-remember">
-                    <label>
-                        <input type="checkbox" name="remember">
-                        Remember me
-                    </label>
+            {{-- Remember Me --}}
+            <div class="flex items-center gap-2">
+                <input type="checkbox" 
+                       name="remember" 
+                       id="remember" 
+                       class="h-4 w-4 rounded border-gray-300 text-brand-600 shadow-theme-xs focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-900 dark:checked:bg-brand-500 dark:focus:ring-brand-500/30"
+                       {{ old('remember') ? 'checked' : '' }}>
+                <label for="remember" class="text-theme-sm text-gray-600 dark:text-gray-400">
+                    Remember me
+                </label>
+            </div>
+
+            {{-- Submit Button --}}
+            <button type="submit" 
+                    class="flex w-full items-center justify-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-theme-sm font-medium text-white shadow-theme-xs transition hover:bg-brand-600 focus:outline-none focus:ring-4 focus:ring-brand-500/20 dark:bg-brand-500 dark:hover:bg-brand-600">
+                Sign in
+                <svg width="18" height="18" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M4.16667 10H15.8333M15.8333 10L12.5 6.66667M15.8333 10L12.5 13.3333" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </button>
+
+            {{-- Demo Credentials (Local Only) --}}
+            @if(app()->environment('local'))
+                <div class="mt-4 rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50">
+                    <p class="text-center text-theme-xs text-gray-600 dark:text-gray-400">
+                        <span class="font-medium">Demo:</span> admin@company.com / password
+                    </p>
                 </div>
-
-                <button type="submit">Sign in</button>
-            </form>
-        </div>
+            @endif
+        </form>
     </div>
+</div>
+@endsection
 
-</body>
-</html>
+@push('scripts')
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const togglePassword = document.getElementById('toggle-password');
+        const passwordInput = document.getElementById('password');
+        const showIcon = document.querySelector('.password-toggle-icon-show');
+        const hideIcon = document.querySelector('.password-toggle-icon-hide');
+
+        if (togglePassword && passwordInput) {
+            togglePassword.addEventListener('click', function() {
+                const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+                passwordInput.setAttribute('type', type);
+                
+                showIcon.classList.toggle('hidden');
+                hideIcon.classList.toggle('hidden');
+                
+                this.setAttribute('aria-label', type === 'password' ? 'Show password' : 'Hide password');
+            });
+        }
+
+        // Remove autofocus on mobile to prevent keyboard popup
+        if (window.innerWidth < 768) {
+            const emailInput = document.getElementById('email');
+            if (emailInput) {
+                emailInput.removeAttribute('autofocus');
+            }
+        }
+    });
+</script>
+@endpush
