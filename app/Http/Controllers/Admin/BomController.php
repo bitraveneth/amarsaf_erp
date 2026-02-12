@@ -21,10 +21,22 @@ class BomController extends Controller
 
     public function create()
     {
-        $products = Product::orderBy('name')->get();
+        // Finished products that can be produced via BOMs
+        $products = Product::where(function ($q) {
+                $q->whereNull('product_type')
+                    ->orWhere('product_type', 'finished');
+            })
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get();
+        $materials = Product::whereIn('product_type', ['raw', 'service', 'inhouse'])
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get();
 
         return view('admin.boms.create', [
             'products' => $products,
+            'materials' => $materials,
         ]);
     }
 
@@ -35,9 +47,11 @@ class BomController extends Controller
             'name' => 'nullable|string|max:255',
             'is_active' => 'sometimes|boolean',
             'notes' => 'nullable|string',
+            'material_unit_cost' => 'nullable|numeric|min:0',
             'items' => 'required|array|min:1',
             'items.*.component_product_id' => 'required|exists:products,id',
             'items.*.quantity' => 'required|numeric|min:0.0001',
+            'items.*.unit_cost' => 'nullable|numeric|min:0',
             'items.*.unit' => 'nullable|string|max:50',
         ]);
 
@@ -46,12 +60,21 @@ class BomController extends Controller
             'name' => $data['name'] ?? null,
             'is_active' => $request->boolean('is_active', true),
             'notes' => $data['notes'] ?? null,
+            'material_unit_cost' => $data['material_unit_cost'] ?? null,
         ]);
+
+        // Ensure only one active BOM per product: deactivate older ones if this is active
+        if ($bom->is_active) {
+            BillOfMaterial::where('product_id', $bom->product_id)
+                ->where('id', '!=', $bom->id)
+                ->update(['is_active' => false]);
+        }
 
         foreach ($data['items'] as $item) {
             $bom->items()->create([
                 'component_product_id' => $item['component_product_id'],
                 'quantity' => $item['quantity'],
+                'unit_cost' => $item['unit_cost'] ?? null,
                 'unit' => $item['unit'] ?? null,
             ]);
         }
@@ -62,9 +85,19 @@ class BomController extends Controller
     public function edit(BillOfMaterial $bom)
     {
         $bom->load('items.component');
-        $products = Product::orderBy('name')->get();
+        $products = Product::where(function ($q) {
+                $q->whereNull('product_type')
+                    ->orWhere('product_type', 'finished');
+            })
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get();
+        $materials = Product::whereIn('product_type', ['raw', 'service', 'inhouse'])
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get();
 
-        return view('admin.boms.edit', compact('bom', 'products'));
+        return view('admin.boms.edit', compact('bom', 'products', 'materials'));
     }
 
     public function update(Request $request, BillOfMaterial $bom)
@@ -73,9 +106,11 @@ class BomController extends Controller
             'name' => 'nullable|string|max:255',
             'is_active' => 'sometimes|boolean',
             'notes' => 'nullable|string',
+            'material_unit_cost' => 'nullable|numeric|min:0',
             'items' => 'required|array|min:1',
             'items.*.component_product_id' => 'required|exists:products,id',
             'items.*.quantity' => 'required|numeric|min:0.0001',
+            'items.*.unit_cost' => 'nullable|numeric|min:0',
             'items.*.unit' => 'nullable|string|max:50',
         ]);
 
@@ -83,13 +118,22 @@ class BomController extends Controller
             'name' => $data['name'] ?? null,
             'is_active' => $request->boolean('is_active', true),
             'notes' => $data['notes'] ?? null,
+            'material_unit_cost' => $data['material_unit_cost'] ?? null,
         ]);
+
+        // Ensure only one active BOM per product: deactivate older ones if this is active
+        if ($bom->is_active) {
+            BillOfMaterial::where('product_id', $bom->product_id)
+                ->where('id', '!=', $bom->id)
+                ->update(['is_active' => false]);
+        }
 
         $bom->items()->delete();
         foreach ($data['items'] as $item) {
             $bom->items()->create([
                 'component_product_id' => $item['component_product_id'],
                 'quantity' => $item['quantity'],
+                'unit_cost' => $item['unit_cost'] ?? null,
                 'unit' => $item['unit'] ?? null,
             ]);
         }

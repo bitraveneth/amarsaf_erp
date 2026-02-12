@@ -10,6 +10,7 @@ class StockEntry extends Model
     use HasFactory;
 
     protected $fillable = [
+        'purchase_bill_id',
         'warehouse_id',
         'warehouse_location_id',
         'product_id',

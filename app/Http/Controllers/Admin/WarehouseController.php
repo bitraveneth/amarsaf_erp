@@ -27,6 +27,18 @@ class WarehouseController extends Controller
         return view('admin.warehouses.create');
     }
 
+    public function show(Warehouse $warehouse)
+    {
+        // Load all stock entries for this warehouse so the view can present
+        // finished goods and raw materials in separate sections.
+        $entries = StockEntry::with(['product', 'batch'])
+            ->where('warehouse_id', $warehouse->id)
+            ->orderByDesc('updated_at')
+            ->get();
+
+        return view('admin.warehouses.show', compact('warehouse', 'entries'));
+    }
+
     public function store(Request $request)
     {
         $data = $request->validate([

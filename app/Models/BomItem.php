@@ -13,6 +13,7 @@ class BomItem extends Model
         'bill_of_materials_id',
         'component_product_id',
         'quantity',
+        'unit_cost',
         'unit',
     ];
 

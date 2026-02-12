@@ -36,6 +36,7 @@ class DeliveryController extends Controller
     public function packingIndex()
     {
         $deliveries = Delivery::with(['order.agent', 'route', 'vehicle'])
+            ->whereIn('status', ['scheduled', 'in_transit'])
             ->orderByDesc('created_at')
             ->paginate(12);
 
@@ -44,7 +45,12 @@ class DeliveryController extends Controller
 
     public function create()
     {
-        $orders = Order::with('agent')->whereIn('status', ['confirmed', 'packed'])->get();
+        // Deliveries are usually scheduled once picking is done. We allow both
+        // "picked" (ready to be packed) and "packed" (fully packed) orders so
+        // that packing can be confirmed from the packing slips screen.
+        $orders = Order::with('agent')
+            ->whereIn('status', ['picked', 'packed'])
+            ->get();
         $routes = DeliveryRoute::orderBy('name')->get();
         $vehicles = Vehicle::orderBy('name')->get();
         return view('admin.deliveries.create', compact('orders', 'routes', 'vehicles'));
@@ -65,9 +71,29 @@ class DeliveryController extends Controller
             $data['pod_photo'] = $request->file('pod_photo')->store('deliveries', 'public');
         }
 
-        Delivery::create($data);
+        $delivery = Delivery::create($data);
 
-        return redirect()->route('admin.deliveries.index')->with('status', 'Delivery scheduled.');
+        // Log a status event on the order timeline so users can see
+        // when delivery scheduling happened in relation to picking/packing.
+        $order = $delivery->order;
+        if ($order) {
+            \App\Models\OrderStatusHistory::create([
+                'order_id'   => $order->id,
+                'status'     => 'delivery_scheduled',
+                'changed_at' => now(),
+            ]);
+        }
+
+        return redirect()->route('admin.deliveries.pod-index')->with('status', 'Delivery scheduled.');
+    }
+
+    public function edit(Delivery $delivery)
+    {
+        $delivery->load('order.agent', 'route', 'vehicle');
+        $routes = DeliveryRoute::orderBy('name')->get();
+        $vehicles = Vehicle::orderBy('name')->get();
+
+        return view('admin.deliveries.edit', compact('delivery', 'routes', 'vehicles'));
     }
 
     public function update(Request $request, Delivery $delivery)
@@ -87,11 +113,34 @@ class DeliveryController extends Controller
 
         $delivery->update($data);
 
+        $order = $delivery->order;
+
+        // If the status has just changed to in_transit, mark the order as dispatched.
+        if ($originalStatus !== 'in_transit'
+            && $delivery->status === 'in_transit'
+            && $order
+            && $order->status !== 'dispatched') {
+
+            $order->update(['status' => 'dispatched']);
+
+            \App\Models\OrderStatusHistory::create([
+                'order_id'   => $order->id,
+                'status'     => 'dispatched',
+                'changed_at' => now(),
+            ]);
+        }
+
         // If the status has just changed to delivered, update the order and adjust stock.
-        if ($originalStatus !== 'delivered' && $delivery->status === 'delivered' && $delivery->order) {
-            if ($delivery->order->status !== 'delivered') {
-                $delivery->order->update(['status' => 'delivered']);
+        if ($originalStatus !== 'delivered' && $delivery->status === 'delivered' && $order) {
+            if ($order->status !== 'delivered') {
+                $order->update(['status' => 'delivered']);
             }
+
+            \App\Models\OrderStatusHistory::create([
+                'order_id'   => $order->id,
+                'status'     => 'delivered',
+                'changed_at' => now(),
+            ]);
 
             $order = $delivery->order()->with('items')->first();
 

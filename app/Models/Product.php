@@ -12,8 +12,10 @@ class Product extends Model
     protected $fillable = [
         'sku',
         'name',
+        'product_type',
         'description',
         'size',
+        'uom',
         'volume_ml',
         'sku_code',
         'packaging_type_id',
@@ -26,6 +28,9 @@ class Product extends Model
         'qr_code',
         'image_path',
         'base_price',
+        'standard_cost',
+        'supplier_name',
+        'is_active',
     ];
 
     protected $casts = [
@@ -33,6 +38,8 @@ class Product extends Model
         'ph' => 'float',
         'tds' => 'integer',
         'base_price' => 'decimal:2',
+        'standard_cost' => 'decimal:2',
+        'is_active' => 'boolean',
     ];
 
     public function packagingType()

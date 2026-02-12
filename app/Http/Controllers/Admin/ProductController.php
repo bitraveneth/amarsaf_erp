@@ -19,11 +19,57 @@ class ProductController extends Controller
 {
     public function index()
     {
-        $products = Product::with(['packagingType', 'taxClass'])->latest()->paginate(12);
+        $search = request('q');
+
+        $query = Product::with(['packagingType', 'taxClass'])
+            ->latest();
+
+        $products = $query
+            ->where(function ($q) {
+                $q->whereNull('product_type')
+                    ->orWhere('product_type', 'finished');
+            })
+            ->when($search, function ($q) use ($search) {
+                $term = '%' . $search . '%';
+                $q->where(function ($inner) use ($term) {
+                    $inner->where('sku', 'like', $term)
+                        ->orWhere('name', 'like', $term)
+                        ->orWhere('barcode', 'like', $term);
+                });
+            })
+            ->paginate(12);
         $packagingCount = PackagingType::count();
         $taxClassCount = TaxClass::count();
 
-        return view('admin.products.index', compact('products', 'packagingCount', 'taxClassCount'));
+        // Preserve search term when navigating pagination links.
+        $products->appends(['q' => $search]);
+
+        return view('admin.products.index', compact('products', 'packagingCount', 'taxClassCount', 'search'));
+    }
+
+    /**
+     * List all materials (raw, service, in‑house) that are used in BOMs and costing.
+     */
+    public function materialsIndex()
+    {
+        $search = request('q');
+
+        $materialsQuery = Product::whereIn('product_type', ['raw', 'service', 'inhouse'])
+            ->orderBy('name');
+
+        if ($search) {
+            $term = '%' . $search . '%';
+            $materialsQuery->where(function ($q) use ($term) {
+                $q->where('sku', 'like', $term)
+                    ->orWhere('name', 'like', $term)
+                    ->orWhere('supplier_name', 'like', $term);
+            });
+        }
+
+        $materials = $materialsQuery->paginate(20);
+        $materials->appends(['q' => $search]);
+
+        return view('admin.products.materials_index', compact('materials', 'search'));
     }
 
     public function create()
@@ -31,16 +77,37 @@ class ProductController extends Controller
         $packagingTypes = PackagingType::orderBy('name')->get();
         $taxClasses = TaxClass::orderBy('name')->get();
 
-        return view('admin.products.create', compact('packagingTypes', 'taxClasses'));
+        $context = 'products';
+
+        return view('admin.products.create', compact('packagingTypes', 'taxClasses', 'context'));
+    }
+
+    /**
+     * Material create form – reuses the product create view but with a different context.
+     */
+    public function materialsCreate()
+    {
+        $packagingTypes = PackagingType::orderBy('name')->get();
+        $taxClasses = TaxClass::orderBy('name')->get();
+        $context = 'materials';
+
+        return view('admin.products.create', compact('packagingTypes', 'taxClasses', 'context'));
     }
 
     public function store(Request $request)
     {
+        $isMaterialsRoute = $request->routeIs('admin.materials.*');
+
         $data = $request->validate([
             'sku' => 'required|string|unique:products,sku',
             'name' => 'required|string',
+            // When creating products from the main catalog screen we now focus on
+            // sellable SKUs. The form silently posts "finished" as the type, but
+            // we still allow other values for legacy records and API usage.
+            'product_type' => 'nullable|in:finished,raw,service,inhouse',
             'description' => 'nullable|string',
             'size' => 'nullable|string',
+            'uom' => 'nullable|string',
             'volume_ml' => 'nullable|numeric|min:0',
             'sku_code' => 'nullable|string',
             'packaging_type_id' => 'nullable|exists:packaging_types,id',
@@ -52,8 +119,24 @@ class ProductController extends Controller
             'barcode' => 'nullable|string',
             'qr_code' => 'nullable|string',
             'image_path' => 'nullable|string',
-            'base_price' => 'required|numeric|min:0',
+            'base_price' => ($isMaterialsRoute ? 'nullable' : 'required') . '|numeric|min:0',
+            'standard_cost' => 'nullable|numeric|min:0',
+            'supplier_name' => 'nullable|string',
+            'is_active' => 'sometimes|boolean',
         ]);
+
+        // Default type to "finished" if the form did not explicitly send it
+        $data['product_type'] = $data['product_type'] ?? 'finished';
+
+        // Default standard_cost to base_price for finished SKUs if not provided
+        if (! isset($data['standard_cost'])) {
+            $data['standard_cost'] = $data['base_price'] ?? 0;
+        }
+        // For materials we treat missing base_price as 0 so later reports work
+        if ($isMaterialsRoute && ! isset($data['base_price'])) {
+            $data['base_price'] = 0;
+        }
+        $data['is_active'] = $request->boolean('is_active', true);
 
         $product = Product::create($data);
 
@@ -65,24 +148,46 @@ class ProductController extends Controller
             $product->update(['qr_code' => $request->file('qr_code_file')->store('qrcodes', 'public')]);
         }
 
-        return redirect()->route('admin.products.show', $product)->with('status', 'Product added to catalog.');
+        if ($isMaterialsRoute) {
+            return redirect()
+                ->route('admin.materials.index')
+                ->with('status', 'Material added.');
+        }
+
+        return redirect()
+            ->route('admin.products.show', $product)
+            ->with('status', 'Product added to catalog.');
     }
 
     public function edit(Product $product)
     {
         $packagingTypes = PackagingType::orderBy('name')->get();
         $taxClasses = TaxClass::orderBy('name')->get();
+        $context = 'products';
 
-        return view('admin.products.edit', compact('product', 'packagingTypes', 'taxClasses'));
+        return view('admin.products.edit', compact('product', 'packagingTypes', 'taxClasses', 'context'));
+    }
+
+    public function materialsEdit(Product $product)
+    {
+        $packagingTypes = PackagingType::orderBy('name')->get();
+        $taxClasses = TaxClass::orderBy('name')->get();
+        $context = 'materials';
+
+        return view('admin.products.edit', compact('product', 'packagingTypes', 'taxClasses', 'context'));
     }
 
     public function update(Request $request, Product $product)
     {
+        $isMaterialsRoute = $request->routeIs('admin.materials.*');
+
         $data = $request->validate([
             'sku' => 'required|string|unique:products,sku,' . $product->id,
             'name' => 'required|string',
+            'product_type' => 'nullable|in:finished,raw,service,inhouse',
             'description' => 'nullable|string',
             'size' => 'nullable|string',
+            'uom' => 'nullable|string',
             'volume_ml' => 'nullable|numeric|min:0',
             'sku_code' => 'nullable|string',
             'packaging_type_id' => 'nullable|exists:packaging_types,id',
@@ -94,8 +199,20 @@ class ProductController extends Controller
             'barcode' => 'nullable|string',
             'qr_code' => 'nullable|string',
             'image_path' => 'nullable|string',
-            'base_price' => 'required|numeric|min:0',
+            'base_price' => ($isMaterialsRoute ? 'nullable' : 'required') . '|numeric|min:0',
+            'standard_cost' => 'nullable|numeric|min:0',
+            'supplier_name' => 'nullable|string',
+            'is_active' => 'sometimes|boolean',
         ]);
+
+        $data['product_type'] = $data['product_type'] ?? $product->product_type ?? 'finished';
+        if (! isset($data['standard_cost'])) {
+            $data['standard_cost'] = $data['base_price'] ?? 0;
+        }
+        if ($isMaterialsRoute && ! isset($data['base_price'])) {
+            $data['base_price'] = 0;
+        }
+        $data['is_active'] = $request->boolean('is_active', true);
 
         $product->update($data);
 
@@ -107,7 +224,15 @@ class ProductController extends Controller
             $product->update(['qr_code' => $request->file('qr_code_file')->store('qrcodes', 'public')]);
         }
 
-        return redirect()->route('admin.products.show', $product)->with('status', 'Product updated.');
+        if ($isMaterialsRoute) {
+            return redirect()
+                ->route('admin.materials.index')
+                ->with('status', 'Material updated.');
+        }
+
+        return redirect()
+            ->route('admin.products.show', $product)
+            ->with('status', 'Product updated.');
     }
 
     public function show(Product $product)
@@ -185,8 +310,10 @@ class ProductController extends Controller
         ]);
     }
 
-    public function destroy(Product $product)
+    public function destroy(Request $request, Product $product)
     {
+        $isMaterialsRoute = $request->routeIs('admin.materials.*');
+
         $reasons = [];
 
         if (OrderItem::where('product_id', $product->id)->exists()) {
@@ -216,8 +343,10 @@ class ProductController extends Controller
         if (! empty($reasons)) {
             $reasonText = implode(', ', $reasons);
 
-            return redirect()->route('admin.products.index')
-                ->with('status', 'Product cannot be deleted because it is linked to: ' . $reasonText . '.');
+            $label = $isMaterialsRoute ? 'Material' : 'Product';
+
+            return redirect()->route($isMaterialsRoute ? 'admin.materials.index' : 'admin.products.index')
+                ->with('status', $label . ' cannot be deleted because it is linked to: ' . $reasonText . '.');
         }
 
         if ($product->image_path) {
@@ -229,6 +358,14 @@ class ProductController extends Controller
 
         $product->delete();
 
-        return redirect()->route('admin.products.index')->with('status', 'Product deleted.');
+        if ($isMaterialsRoute) {
+            return redirect()
+                ->route('admin.materials.index')
+                ->with('status', 'Material deleted.');
+        }
+
+        return redirect()
+            ->route('admin.products.index')
+            ->with('status', 'Product deleted.');
     }
 }

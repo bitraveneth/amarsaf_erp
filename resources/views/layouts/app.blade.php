@@ -1,50 +1,137 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="h-full">
+
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ config('app.name', 'SAFERP') }} Admin</title>
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+
+    <title>{{ $title ?? (config('app.name', 'SAFERP') . ' Admin') }}</title>
+
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+
+    <script>
+        document.addEventListener('alpine:init', () => {
+            Alpine.store('theme', {
+                init() {
+                    const savedTheme = localStorage.getItem('theme');
+                    const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                    this.theme = savedTheme || systemTheme;
+                    this.updateTheme();
+                },
+                theme: 'light',
+                toggle() {
+                    this.theme = this.theme === 'light' ? 'dark' : 'light';
+                    localStorage.setItem('theme', this.theme);
+                    this.updateTheme();
+                },
+                updateTheme() {
+                    const html = document.documentElement;
+                    const body = document.body;
+                    if (this.theme === 'dark') {
+                        html.classList.add('dark');
+                        body.classList.add('dark', 'bg-gray-900');
+                    } else {
+                        html.classList.remove('dark');
+                        body.classList.remove('dark', 'bg-gray-900');
+                    }
+                },
+            });
+
+            Alpine.store('sidebar', {
+                isExpanded: window.innerWidth >= 1280,
+                isMobileOpen: false,
+                isHovered: false,
+
+                toggleExpanded() {
+                    this.isExpanded = !this.isExpanded;
+                    this.isMobileOpen = false;
+                },
+
+                toggleMobileOpen() {
+                    this.isMobileOpen = !this.isMobileOpen;
+                },
+
+                setMobileOpen(val) {
+                    this.isMobileOpen = val;
+                },
+
+                setHovered(val) {
+                    if (window.innerWidth >= 1280 && !this.isExpanded) {
+                        this.isHovered = val;
+                    }
+                },
+            });
+        });
+    </script>
+
+    <script>
+        (function() {
+            const savedTheme = localStorage.getItem('theme');
+            const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            const theme = savedTheme || systemTheme;
+            if (theme === 'dark') {
+                document.documentElement.classList.add('dark');
+                document.body.classList.add('dark', 'bg-gray-900');
+            } else {
+                document.documentElement.classList.remove('dark');
+                document.body.classList.remove('dark', 'bg-gray-900');
+            }
+        })();
+    </script>
 </head>
-<body>
-    <div class="admin-shell">
-        @include('layouts.partials.admin-header')
-        @if(session('status') || ($errors ?? null) && $errors->any())
-            <div class="admin-flash">
-                @if(session('status'))
-                    <div class="flash flash-success">
-                        <span class="flash-icon" aria-hidden="true">✓</span>
-                        <span>{{ session('status') }}</span>
-                        <button type="button" class="flash-close" aria-label="Dismiss message">×</button>
+
+<body x-data="{ loaded: true }"
+      x-init="$store.sidebar.isExpanded = window.innerWidth >= 1280;
+        const checkMobile = () => {
+            if (window.innerWidth < 1280) {
+                $store.sidebar.setMobileOpen(false);
+                $store.sidebar.isExpanded = false;
+            } else {
+                $store.sidebar.isMobileOpen = false;
+                $store.sidebar.isExpanded = true;
+            }
+        };
+        window.addEventListener('resize', checkMobile);">
+
+    <div class="min-h-screen xl:flex">
+        @include('layouts.backdrop')
+        @include('layouts.sidebar')
+
+        <div class="flex-1 transition-all duration-300 ease-in-out"
+             :class="{
+                'xl:ml-[290px]': $store.sidebar.isExpanded || $store.sidebar.isHovered,
+                'xl:ml-[90px]': !$store.sidebar.isExpanded && !$store.sidebar.isHovered,
+                'ml-0': $store.sidebar.isMobileOpen
+             }">
+            @include('layouts.app-header')
+
+            <div class="mx-auto max-w-(--breakpoint-2xl) p-4 md:p-6">
+                @if(session('status') || ($errors ?? null) && $errors->any())
+                    <div class="mb-4 space-y-3">
+                        @if(session('status'))
+                            <div class="rounded-lg border border-success-100 bg-success-50 px-4 py-3 text-sm text-success-700">
+                                {{ session('status') }}
+                            </div>
+                        @endif
+                        @if(($errors ?? null) && $errors->any())
+                            <div class="rounded-lg border border-error-100 bg-error-50 px-4 py-3 text-sm text-error-700">
+                                <strong class="font-semibold">Something went wrong.</strong>
+                                <ul class="mt-1 list-disc space-y-0.5 pl-5">
+                                    @foreach($errors->all() as $error)
+                                        <li>{{ $error }}</li>
+                                    @endforeach
+                                </ul>
+                            </div>
+                        @endif
                     </div>
                 @endif
-                @if(($errors ?? null) && $errors->any())
-                    <div class="flash flash-error">
-                        <span class="flash-icon" aria-hidden="true">!</span>
-                        <div>
-                            <strong>Something went wrong.</strong>
-                            <ul>
-                                @foreach($errors->all() as $error)
-                                    <li>{{ $error }}</li>
-                                @endforeach
-                            </ul>
-                        </div>
-                        <button type="button" class="flash-close" aria-label="Dismiss errors">×</button>
-                    </div>
-                @endif
-            </div>
-        @endif
-        <div class="admin-content">
-            @include('layouts.partials.admin-sidebar')
-            <main class="admin-main">
+
                 @yield('content')
-            </main>
+            </div>
         </div>
-        @include('layouts.partials.admin-footer')
-        @auth
-            <a href="{{ route('admin.help') }}" class="help-bubble" title="Help &amp; system guide">?</a>
-        @endauth
     </div>
+
     @stack('scripts')
 </body>
 </html>

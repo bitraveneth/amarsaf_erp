@@ -346,7 +346,7 @@ class AgentController extends Controller
         $baseOrderQuery = Order::where('agent_id', $agent->id);
 
         $openOrders = (clone $baseOrderQuery)
-            ->whereIn('status', ['draft', 'confirmed', 'packed', 'dispatched'])
+            ->whereIn('status', ['draft', 'confirmed', 'picked', 'packed', 'dispatched'])
             ->count();
 
         $deliveredThisMonth = (clone $baseOrderQuery)

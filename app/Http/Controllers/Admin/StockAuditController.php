@@ -54,5 +54,13 @@ class StockAuditController extends Controller
 
         return redirect()->route('admin.stock.audit')->with('status', 'Stock audit recorded.');
     }
-}
 
+    public function destroy(StockAudit $audit)
+    {
+        $audit->delete();
+
+        return redirect()
+            ->route('admin.stock.audit')
+            ->with('status', 'Stock audit entry deleted.');
+    }
+}

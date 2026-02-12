@@ -9,13 +9,16 @@ use App\Models\ProductionRun;
 use App\Models\Product;
 use App\Models\StockEntry;
 use App\Models\Warehouse;
+use App\Models\Employee;
 use Illuminate\Http\Request;
 
 class ProductionController extends Controller
 {
     public function index()
     {
-        $runs = ProductionRun::with('product', 'batch')->latest()->paginate(10);
+        $runs = ProductionRun::with('product', 'batch', 'warehouse', 'supervisor', 'approver')
+            ->latest()
+            ->paginate(10);
 
         $today = now()->toDateString();
         $todayRuns = ProductionRun::whereDate('created_at', $today)->get();
@@ -26,22 +29,163 @@ class ProductionController extends Controller
                 return $group->sum('quantity');
             });
 
+        // Capacity map keyed in a normalised "line|shift" (lowercase) form so that
+        // free-text input like "Line 1" / "morning" still matches.
         $lineCapacities = [
-            'Line 1|Morning' => 50000,
-            'Line 1|Evening' => 50000,
-            'Line 2|Morning' => 40000,
-            'Line 2|Evening' => 40000,
+            'line 1|morning' => 50000,
+            'line 1|evening' => 50000,
+            'line 2|morning' => 40000,
+            'line 2|evening' => 40000,
         ];
 
         return view('admin.production.index', compact('runs', 'byLineShift', 'lineCapacities', 'today'));
     }
 
+    /**
+     * List QC-approved production runs that have not yet been confirmed to stock.
+     * This is mainly for the warehouse manager to process goods receipts.
+     */
+    public function pendingReceipts()
+    {
+        $runs = ProductionRun::with(['product', 'batch', 'warehouse', 'approver'])
+            ->where('qc_status', 'approved')
+            ->whereNull('stock_confirmed_at')
+            ->latest()
+            ->get();
+
+        return view('admin.production.pending_receipts', compact('runs'));
+    }
+
     public function create()
     {
-        $products = Product::orderBy('name')->get();
+        // Only finished products should be selectable for production runs
+        $products = Product::where(function ($q) {
+                $q->whereNull('product_type')
+                    ->orWhere('product_type', 'finished');
+            })
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get();
+
+        // Pre-compute estimated material unit cost per finished unit for each product
+        $productUnitCosts = [];
+        $productIds = $products->pluck('id')->all();
+
+        if (!empty($productIds)) {
+            $boms = BillOfMaterial::whereIn('product_id', $productIds)
+                ->where('is_active', true)
+                ->with(['items.component'])
+                ->orderByDesc('id')
+                ->get()
+                ->keyBy('product_id');
+
+            foreach ($products as $product) {
+                $bom = $boms->get($product->id);
+                if (! $bom || $bom->items->isEmpty()) {
+                    continue;
+                }
+
+                $unitCost = null;
+
+                if ($bom->material_unit_cost !== null && $bom->material_unit_cost > 0) {
+                    // Explicit override on BOM
+                    $unitCost = (float) $bom->material_unit_cost;
+                } else {
+                    // Derive from components
+                    $accumulator = 0.0;
+                    foreach ($bom->items as $item) {
+                        $component = $item->component;
+                        $baseCost = null;
+                        if ($item->unit_cost !== null) {
+                            $baseCost = (float) $item->unit_cost;
+                        } elseif ($component && $component->standard_cost !== null) {
+                            $baseCost = (float) $component->standard_cost;
+                        }
+                        if ($baseCost !== null) {
+                            $accumulator += $baseCost * (float) $item->quantity;
+                        }
+                    }
+                    if ($accumulator > 0) {
+                        $unitCost = $accumulator;
+                    }
+                }
+
+                if ($unitCost !== null) {
+                    $productUnitCosts[$product->id] = $unitCost;
+                }
+            }
+        }
         $batches = Batch::orderBy('production_date', 'desc')->get();
         $warehouses = Warehouse::orderBy('name')->get();
-        return view('admin.production.create', compact('products', 'batches', 'warehouses'));
+
+        // Choose a sensible default warehouse for production. We prefer any
+        // warehouse marked as "factory"; if none exists, we leave it null and
+        // let the select fall back to the placeholder.
+        $defaultWarehouseId = optional(
+            $warehouses->firstWhere('type', 'factory')
+        )->id;
+
+        $employees = Employee::orderBy('name')->get();
+
+        // Pre-compute required materials per product and warehouse stock
+        $materialRequirements = [];
+        $warehouseStock = [];
+
+        $productIds = $products->pluck('id')->all();
+        if (! empty($productIds)) {
+            $boms = BillOfMaterial::whereIn('product_id', $productIds)
+                ->where('is_active', true)
+                ->with(['items.component'])
+                ->orderByDesc('id')
+                ->get()
+                ->keyBy('product_id');
+
+            foreach ($products as $product) {
+                $bom = $boms->get($product->id);
+                if (! $bom || $bom->items->isEmpty()) {
+                    continue;
+                }
+
+                $components = [];
+                foreach ($bom->items as $item) {
+                    if (! $item->component_product_id || ! $item->quantity) {
+                        continue;
+                    }
+                    $components[] = [
+                        'product_id' => $item->component_product_id,
+                        'name'       => $item->component?->name,
+                        'sku'        => $item->component?->sku,
+                        'uom'        => $item->component?->uom,
+                        'type'       => $item->component?->product_type,
+                        'quantity_per_unit' => (float) $item->quantity,
+                    ];
+                }
+
+                if (! empty($components)) {
+                    $materialRequirements[$product->id] = $components;
+                }
+            }
+
+            // Simple stock snapshot per warehouse+product
+            $stockEntries = StockEntry::selectRaw('warehouse_id, product_id, SUM(quantity) as qty')
+                ->groupBy('warehouse_id', 'product_id')
+                ->get();
+
+            foreach ($stockEntries as $entry) {
+                $warehouseStock[$entry->warehouse_id][$entry->product_id] = (float) $entry->qty;
+            }
+        }
+
+        return view('admin.production.create', [
+            'products'           => $products,
+            'batches'            => $batches,
+            'warehouses'         => $warehouses,
+            'employees'          => $employees,
+            'defaultWarehouseId' => $defaultWarehouseId,
+            'productUnitCosts'   => $productUnitCosts,
+            'materialRequirements' => $materialRequirements,
+            'warehouseStock'       => $warehouseStock,
+        ]);
     }
 
     public function edit(ProductionRun $production)
@@ -50,90 +194,146 @@ class ProductionController extends Controller
         return view('admin.production.edit', ['run' => $production]);
     }
 
+    public function show(ProductionRun $production)
+    {
+        $production->load('product', 'batch', 'warehouse', 'supervisor', 'approver', 'stockConfirmer');
+
+        // Load the active BOM for this product (if any) so the view can show
+        // a simple summary of components required for this run and an
+        // estimated material cost based on component standard_cost.
+        $bom = BillOfMaterial::where('product_id', $production->product_id)
+            ->where('is_active', true)
+            ->orderByDesc('id')
+            ->with(['items.component'])
+            ->first();
+
+        $estimatedUnitCost = null;
+        $estimatedTotalCost = null;
+
+        if ($bom && $bom->items->isNotEmpty()) {
+            $unitCostAccumulator = 0.0;
+
+            foreach ($bom->items as $item) {
+                $component = $item->component;
+                $componentUnitCost = 0.0;
+
+                if ($component && $component->standard_cost !== null) {
+                    // Standard cost is per 1 unit of the component; multiply by
+                    // quantity required for a single finished unit.
+                    $componentUnitCost = (float) $component->standard_cost * (float) $item->quantity;
+                }
+
+                // Attach helper attributes so the Blade view can display a
+                // per-component cost breakdown without re-doing the maths.
+                $item->calculated_unit_cost = $componentUnitCost;
+                $item->calculated_total_cost = $componentUnitCost * (float) $production->quantity;
+
+                $unitCostAccumulator += $componentUnitCost;
+            }
+
+            $estimatedUnitCost = $unitCostAccumulator;
+            $estimatedTotalCost = $estimatedUnitCost * (float) $production->quantity;
+        }
+
+        // If we already have a persisted costing snapshot, prefer that for the
+        // header summary while still using the BOM-derived breakdown table.
+        if (! is_null($production->material_unit_cost)) {
+            $estimatedUnitCost = (float) $production->material_unit_cost;
+        }
+        if (! is_null($production->material_total_cost)) {
+            $estimatedTotalCost = (float) $production->material_total_cost;
+        }
+
+        // If stock has been confirmed we can try to locate the finished-goods
+        // stock entry so that the UI can offer a quick write-off shortcut.
+        $stockEntry = null;
+        if ($production->stock_confirmed_at && $production->warehouse_id) {
+            $stockEntry = StockEntry::where('warehouse_id', $production->warehouse_id)
+                ->where('product_id', $production->product_id)
+                ->where('batch_id', $production->batch_id)
+                ->orderByDesc('updated_at')
+                ->first();
+        }
+
+        return view('admin.production.show', [
+            'run'                => $production,
+            'bom'                => $bom,
+            'stockEntry'         => $stockEntry,
+            'estimatedUnitCost'  => $estimatedUnitCost,
+            'estimatedTotalCost' => $estimatedTotalCost,
+        ]);
+    }
+
     public function store(Request $request)
     {
         $data = $request->validate([
+            'order_number' => 'nullable|string|max:255',
             'product_id' => 'required|exists:products,id',
             'batch_id' => 'required|exists:batches,id',
             'warehouse_id' => 'nullable|exists:warehouses,id',
             'line' => 'nullable|string',
             'shift' => 'nullable|string',
             'quantity' => 'required|integer|min:1',
-            'qc_status' => 'required|in:pending,approved,rejected',
             'notes' => 'nullable|string',
+            'status' => 'nullable|string|max:50',
+            'supervisor_id' => 'nullable|exists:employees,id',
+            'materials_reserved' => 'nullable|string',
         ]);
 
-        $run = ProductionRun::create($data);
-
-        if ($run->qc_status === 'approved' && $run->quantity > 0 && $run->warehouse_id) {
-            // Finished goods stock
-            StockEntry::create([
-                'warehouse_id' => $run->warehouse_id,
-                'product_id' => $run->product_id,
-                'batch_id' => $run->batch_id,
-                'quantity' => $run->quantity,
-                'status' => 'available',
-            ]);
-
-            // Consume raw materials based on active BOM, if any
-            $bom = BillOfMaterial::where('product_id', $run->product_id)
-                ->where('is_active', true)
-                ->orderByDesc('id')
-                ->with('items')
-                ->first();
-
-            if ($bom && $bom->items->isNotEmpty()) {
-                foreach ($bom->items as $item) {
-                    $totalRequired = $item->quantity * $run->quantity;
-                    if ($totalRequired <= 0) {
-                        continue;
-                    }
-
-                    // Simple FEFO/FIFO: use oldest stock entries first
-                    $entries = StockEntry::where('warehouse_id', $run->warehouse_id)
-                        ->where('product_id', $item->component_product_id)
-                        ->where('status', 'available')
-                        ->orderBy('created_at')
-                        ->get();
-
-                    $remaining = $totalRequired;
-
-                    foreach ($entries as $entry) {
-                        if ($remaining <= 0) {
-                            break;
-                        }
-
-                        $consume = min($remaining, $entry->quantity);
-                        if ($consume <= 0) {
-                            continue;
-                        }
-
-                        $entry->quantity -= $consume;
-                        if ($entry->quantity <= 0) {
-                            $entry->status = 'sold'; // treated as consumed in production
-                        }
-                        $entry->save();
-
-                        $remaining -= $consume;
-                    }
-
-                    // If remaining > 0, it means negative stock; we currently keep it simple and do not create it.
-                }
-            }
+        // Auto-generate production order number if not provided
+        if (empty($data['order_number'])) {
+            $batch = Batch::find($data['batch_id']);
+            $data['order_number'] = $this->generateOrderNumber($batch);
         }
+
+        // New runs always start as pending; QC officer will approve later
+        if (! isset($data['status'])) {
+            $data['status'] = 'confirmed';
+        }
+        $data['qc_status'] = 'pending';
+        $run = ProductionRun::create($data);
 
         return redirect()->route('admin.production.index')->with('status', 'Production run recorded.');
     }
 
     public function update(Request $request, ProductionRun $production)
     {
-        $data = $request->validate([
+        $role = auth()->user()->role ?? 'admin';
+
+        $rules = [
             'line' => 'nullable|string',
             'shift' => 'nullable|string',
             'notes' => 'nullable|string',
-        ]);
+            'status' => 'nullable|string|max:50',
+            'supervisor_id' => 'nullable|exists:employees,id',
+            'materials_reserved' => 'nullable|string',
+        ];
+
+        // Only admin and QC officer can change QC status
+        if (in_array($role, ['admin', 'qc_officer'])) {
+            $rules['qc_status'] = 'required|in:pending,approved,rejected';
+        }
+
+        $data = $request->validate($rules);
+
+        $previousQcStatus = $production->qc_status;
 
         $production->update($data);
+
+        // If QC just moved to approved for the first time, stamp approver + time
+        if (array_key_exists('qc_status', $data)
+            && $previousQcStatus !== 'approved'
+            && $production->qc_status === 'approved') {
+            if (! $production->approved_at) {
+                $production->approved_at = now();
+            }
+
+            if (! $production->approved_by && auth()->check()) {
+                $production->approved_by = auth()->id();
+            }
+
+            $production->save();
+        }
 
         return redirect()->route('admin.production.index')->with('status', 'Production run updated.');
     }
@@ -143,5 +343,192 @@ class ProductionController extends Controller
         $production->delete();
 
         return redirect()->route('admin.production.index')->with('status', 'Production run deleted.');
+    }
+
+    /**
+     * Confirm that stock from a QC-approved production run has been received
+     * into the selected warehouse. Only admin / warehouse manager should do this.
+     */
+    public function confirmStock(Request $request, ProductionRun $production)
+    {
+        $role = auth()->user()->role ?? 'admin';
+
+        if (! in_array($role, ['admin', 'warehouse_manager'])) {
+            return redirect()->route('admin.production.index')
+                ->with('status', 'Only admin or warehouse manager can confirm stock.');
+        }
+
+        if ($production->qc_status !== 'approved') {
+            return redirect()->route('admin.production.index')
+                ->with('status', 'QC must be approved before confirming stock.');
+        }
+
+        if ($production->stock_confirmed_at) {
+            return redirect()->route('admin.production.index')
+                ->with('status', 'Stock already confirmed for this production run.');
+        }
+
+        // Post finished goods + consume BOM materials
+        $this->postStockForApprovedRun($production);
+
+        $production->stock_confirmed_at = now();
+        if (auth()->check()) {
+            $production->stock_confirmed_by = auth()->id();
+        }
+
+        // Once stock is confirmed we can safely treat the production order / run
+        // as completed from a process point of view.
+        if (! in_array($production->status, ['cancelled'])) {
+            $production->status = 'completed';
+        }
+
+        $production->save();
+
+        return redirect()->route('admin.production.index')
+            ->with('status', 'Stock confirmed and posted to warehouse.');
+    }
+
+    /**
+     * Once a production run is QC approved, post finished goods stock and consume
+     * BOM components from the selected warehouse.
+     */
+    protected function postStockForApprovedRun(ProductionRun $run): void
+    {
+        if ($run->quantity <= 0 || ! $run->warehouse_id) {
+            return;
+        }
+
+        // Finished goods stock
+        StockEntry::create([
+            'warehouse_id' => $run->warehouse_id,
+            'product_id' => $run->product_id,
+            'batch_id' => $run->batch_id,
+            'quantity' => $run->quantity,
+            'status' => 'available',
+        ]);
+
+        // Consume raw materials based on active BOM, if any
+        $bom = BillOfMaterial::where('product_id', $run->product_id)
+            ->where('is_active', true)
+            ->orderByDesc('id')
+            ->with(['items.component'])
+            ->first();
+
+        if (! $bom || $bom->items->isEmpty()) {
+            return;
+        }
+
+        // If BOM has an explicit override material_unit_cost, use that directly.
+        if ($bom->material_unit_cost !== null && $bom->material_unit_cost > 0) {
+            $unitCostAccumulator = (float) $bom->material_unit_cost;
+        } else {
+            $unitCostAccumulator = 0.0;
+        }
+
+        foreach ($bom->items as $item) {
+            $totalRequired = $item->quantity * $run->quantity;
+            if ($totalRequired <= 0) {
+                continue;
+            }
+
+            // Simple FEFO/FIFO: use oldest stock entries first
+            $entries = StockEntry::where('warehouse_id', $run->warehouse_id)
+                ->where('product_id', $item->component_product_id)
+                ->where('status', 'available')
+                ->orderBy('created_at')
+                ->get();
+
+            $remaining = $totalRequired;
+
+            foreach ($entries as $entry) {
+                if ($remaining <= 0) {
+                    break;
+                }
+
+                $consume = min($remaining, $entry->quantity);
+                if ($consume <= 0) {
+                    continue;
+                }
+
+                $entry->quantity -= $consume;
+                if ($entry->quantity <= 0) {
+                    $entry->status = 'sold'; // treated as consumed in production
+                }
+                $entry->save();
+
+                $remaining -= $consume;
+            }
+
+            // If BOM-level override not set, accumulate from components
+            if ($bom->material_unit_cost === null || $bom->material_unit_cost <= 0) {
+                // Cost contribution from this component for ONE finished unit
+                $component = $item->component;
+                // Prefer BOM-level custom unit_cost if provided; fall back to product standard_cost
+                $baseCost = null;
+                if ($item->unit_cost !== null) {
+                    $baseCost = (float) $item->unit_cost;
+                } elseif ($component && $component->standard_cost !== null) {
+                    $baseCost = (float) $component->standard_cost;
+                }
+                if ($baseCost !== null) {
+                    $unitCostAccumulator += $baseCost * (float) $item->quantity;
+                }
+            }
+
+            // If remaining > 0, it means negative stock; we currently keep it simple and do not create it.
+        }
+
+        // Persist material cost snapshot on the production run so that future
+        // reports / COGS calculations can use a stable value.
+        if ($unitCostAccumulator > 0) {
+            $run->material_unit_cost = $unitCostAccumulator;
+            $run->material_total_cost = $unitCostAccumulator * (float) $run->quantity;
+            $run->save();
+        }
+    }
+
+    /**
+     * HTTP endpoint: generate a new production order number for the given batch.
+     * Used by the "Generate" button on the create form.
+     */
+    public function orderNumber(Request $request)
+    {
+        $batch = null;
+        if ($request->filled('batch_id')) {
+            $batch = Batch::find($request->input('batch_id'));
+        }
+
+        $orderNumber = $this->generateOrderNumber($batch);
+
+        return response()->json(['order_number' => $orderNumber]);
+    }
+
+    /**
+     * Generate a simple production order number like PO-YYYYMMDD-001
+     * based on the batch production date (or today if not set).
+     */
+    protected function generateOrderNumber(?Batch $batch): string
+    {
+        $date = $batch && $batch->production_date
+            ? $batch->production_date
+            : now()->toDateString();
+
+        $dateKey = \Illuminate\Support\Carbon::parse($date)->format('Ymd');
+        $prefix = "PO-{$dateKey}-";
+
+        $lastOrder = ProductionRun::whereDate('created_at', $date)
+            ->whereNotNull('order_number')
+            ->where('order_number', 'like', $prefix.'%')
+            ->orderByDesc('id')
+            ->value('order_number');
+
+        $nextSeq = 1;
+        if ($lastOrder && preg_match('/(\d+)$/', $lastOrder, $m)) {
+            $nextSeq = ((int) $m[1]) + 1;
+        }
+
+        $suffix = str_pad((string) $nextSeq, 3, '0', STR_PAD_LEFT);
+
+        return $prefix.$suffix;
     }
 }

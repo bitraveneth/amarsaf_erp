@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Batch;
 use App\Models\Product;
+use App\Models\User;
+use App\Notifications\NewBatchCreated;
 use Illuminate\Http\Request;
 
 class BatchController extends Controller
@@ -12,7 +14,14 @@ class BatchController extends Controller
     public function index()
     {
         $batches = Batch::with('product')->latest('production_date')->paginate(10);
-        $products = Product::orderBy('name')->get();
+        // Only finished products should be selectable for batches
+        $products = Product::where(function ($q) {
+                $q->whereNull('product_type')
+                    ->orWhere('product_type', 'finished');
+            })
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get();
 
         return view('admin.batches.index', compact('batches', 'products'));
     }
@@ -28,14 +37,26 @@ class BatchController extends Controller
             'notes' => 'nullable|string',
         ]);
 
-        Batch::create($data);
+        $batch = Batch::create($data);
+
+        // Notify admins and QC officers that a new batch has been recorded
+        $recipients = User::whereIn('role', ['admin', 'qc_officer'])->get();
+        foreach ($recipients as $user) {
+            $user->notify(new NewBatchCreated($batch));
+        }
 
         return back()->with('status', 'Batch recorded.');
     }
 
     public function edit(Batch $batch)
     {
-        $products = Product::orderBy('name')->get();
+        $products = Product::where(function ($q) {
+                $q->whereNull('product_type')
+                    ->orWhere('product_type', 'finished');
+            })
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get();
         return view('admin.batches.edit', compact('batch', 'products'));
     }
 

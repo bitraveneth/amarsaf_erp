@@ -28,7 +28,7 @@ class OrderController extends Controller
     public function pickingOverview()
     {
         $orders = Order::with('agent')
-            ->where('status', '!=', 'draft')
+            ->whereIn('status', ['confirmed', 'picked'])
             ->latest()
             ->paginate(10);
 
@@ -112,7 +112,20 @@ class OrderController extends Controller
     public function create()
     {
         $agents = Agent::orderBy('name')->get();
-        $products = Product::orderBy('name')->get();
+        // Only sellable finished products should be available on the order form
+        $products = Product::where(function ($q) {
+                $q->whereNull('product_type')
+                    ->orWhere('product_type', 'finished');
+            })
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get();
+
+        // Simple availability hint per product (sum of all available stock across warehouses)
+        $availability = StockEntry::selectRaw('product_id, SUM(quantity) as total')
+            ->where('status', 'available')
+            ->groupBy('product_id')
+            ->pluck('total', 'product_id');
 
         $priceLists = AgentPriceList::all()
             ->groupBy('agent_id')
@@ -123,6 +136,7 @@ class OrderController extends Controller
         return view('admin.orders.create', [
             'agents' => $agents,
             'products' => $products,
+            'availability' => $availability,
             'priceLists' => $priceLists,
         ]);
     }
@@ -132,7 +146,12 @@ class OrderController extends Controller
         $data = $request->validate([
             'agent_id' => 'required|exists:agents,id',
             'order_type' => 'required|in:regular,bulk,sample,return',
+            'agent_reference' => 'nullable|string|max:255',
             'delivery_date' => 'nullable|date',
+            'delivery_contact_name' => 'nullable|string|max:255',
+            'delivery_contact_phone' => 'nullable|string|max:50',
+            'delivery_address' => 'nullable|string',
+            'payment_mode' => 'nullable|in:cash,credit,bkash,bank_transfer',
             'notes' => 'nullable|string',
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|exists:products,id',
@@ -143,10 +162,15 @@ class OrderController extends Controller
         $order = Order::create([
             'agent_id' => $data['agent_id'],
             'order_type' => $data['order_type'],
+            'agent_reference' => $data['agent_reference'] ?? null,
             'delivery_date' => $data['delivery_date'],
+            'delivery_contact_name' => $data['delivery_contact_name'] ?? null,
+            'delivery_contact_phone' => $data['delivery_contact_phone'] ?? null,
+            'delivery_address' => $data['delivery_address'] ?? null,
             'status' => 'confirmed',
             'total' => 0,
             'notes' => $data['notes'] ?? null,
+            'payment_mode' => $data['payment_mode'] ?? null,
         ]);
 
         OrderStatusHistory::create([
@@ -253,10 +277,30 @@ class OrderController extends Controller
     public function updateStatus(Request $request, Order $order)
     {
         $data = $request->validate([
-            'status' => 'required|in:draft,confirmed,packed,dispatched,delivered',
+            'status' => 'required|in:draft,confirmed,picked,packed,dispatched,delivered',
         ]);
 
-        $order->update(['status' => $data['status']]);
+        $newStatus = $data['status'];
+        $oldStatus = $order->status;
+
+        // Enforce simple forward-only workflow: draft -> confirmed -> packed -> dispatched -> delivered
+        $workflow = ['draft','confirmed','picked','packed','dispatched','delivered'];
+        $currentIndex = array_search($oldStatus, $workflow, true);
+        $targetIndex = array_search($newStatus, $workflow, true);
+
+        // Do not allow skipping more than one step forward or moving backwards
+        if ($targetIndex === false || $currentIndex === false || $targetIndex > $currentIndex + 1 || $targetIndex < $currentIndex) {
+            return redirect()->route('admin.orders.show', $order)
+                ->with('status', 'Status change not allowed by workflow.');
+        }
+
+        // Once delivered, lock status
+        if ($oldStatus === 'delivered' && $newStatus !== 'delivered') {
+            return redirect()->route('admin.orders.show', $order)
+                ->with('status', 'Delivered orders cannot change status.');
+        }
+
+        $order->update(['status' => $newStatus]);
 
         OrderStatusHistory::create([
             'order_id' => $order->id,
@@ -283,6 +327,11 @@ class OrderController extends Controller
         $data = $request->validate([
             'delivery_date' => 'nullable|date',
             'notes' => 'nullable|string',
+            'agent_reference' => 'nullable|string|max:255',
+            'delivery_contact_name' => 'nullable|string|max:255',
+            'delivery_contact_phone' => 'nullable|string|max:50',
+            'delivery_address' => 'nullable|string',
+            'payment_mode' => 'nullable|in:cash,credit,bkash,bank_transfer',
         ]);
 
         $order->update($data);
@@ -297,6 +346,61 @@ class OrderController extends Controller
         if ($hasInvoice) {
             return redirect()->route('admin.orders.index')
                 ->with('status', 'Order has an invoice and cannot be deleted. Use credit notes instead.');
+        }
+
+        // Release any reserved stock back to available before deleting the order.
+        $reservedItems = $order->items()->with('product')->get();
+
+        foreach ($reservedItems as $item) {
+            $remaining = $item->quantity;
+
+            // Find reserved entries for this product, newest first (reverse of reservation order)
+            $reservedEntries = StockEntry::where('product_id', $item->product_id)
+                ->where('status', 'reserved')
+                ->orderByDesc('created_at')
+                ->get();
+
+            foreach ($reservedEntries as $reservedEntry) {
+                if ($remaining <= 0) {
+                    break;
+                }
+
+                // How much of this entry we will release
+                $releaseQty = min($remaining, $reservedEntry->quantity);
+
+                if ($releaseQty <= 0) {
+                    continue;
+                }
+
+                // Reduce reserved entry quantity
+                $reservedEntry->quantity -= $releaseQty;
+
+                if ($reservedEntry->quantity <= 0) {
+                    // Remove fully reserved entry
+                    $reservedEntry->delete();
+                } else {
+                    $reservedEntry->save();
+                }
+
+                // Add released quantity back to available for same warehouse/batch
+                $availableEntry = StockEntry::firstOrCreate(
+                    [
+                        'warehouse_id' => $reservedEntry->warehouse_id,
+                        'warehouse_location_id' => $reservedEntry->warehouse_location_id,
+                        'product_id' => $reservedEntry->product_id,
+                        'batch_id' => $reservedEntry->batch_id,
+                        'status' => 'available',
+                    ],
+                    [
+                        'quantity' => 0,
+                    ]
+                );
+
+                $availableEntry->quantity += $releaseQty;
+                $availableEntry->save();
+
+                $remaining -= $releaseQty;
+            }
         }
 
         // Delete dependent records first to satisfy foreign key constraints

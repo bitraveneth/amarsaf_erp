@@ -7,10 +7,12 @@ use App\Models\Account;
 use App\Models\Invoice;
 use App\Models\LedgerEntry;
 use App\Models\ProductionRun;
+use App\Models\InvoiceItem;
 use App\Models\Expense;
 use App\Models\Employee;
 use App\Models\EmployeeContract;
 use App\Models\EmployeeAllowance;
+use App\Models\BillOfMaterial;
 use Illuminate\Support\Collection;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -37,7 +39,34 @@ class ReportController extends Controller
             ->sum('amount');
 
         $netSales = $sales - $returns;
-        $profit = $netSales - $commissions - $otherExpenses;
+
+        // --- Approximate COGS using production material cost snapshot ---
+        $invoiceItems = InvoiceItem::with(['invoice', 'product'])
+            ->whereHas('invoice', function ($q) use ($from, $to) {
+                $q->whereBetween('issued_at', [$from->toDateString(), $to->toDateString()]);
+            })
+            ->get();
+
+        // Average material_unit_cost per product from all runs where it is set
+        $runsWithCost = ProductionRun::whereNotNull('material_unit_cost')->get();
+        $costByProduct = $runsWithCost->groupBy('product_id')->map(
+            fn ($group) => (float) $group->avg('material_unit_cost')
+        );
+
+        $cogs = 0.0;
+        foreach ($invoiceItems as $item) {
+            if (! $item->product_id) {
+                continue;
+            }
+            $unitCost = $costByProduct->get($item->product_id);
+            if ($unitCost === null) {
+                continue;
+            }
+            $cogs += $unitCost * (float) $item->quantity;
+        }
+
+        $grossProfit = $netSales - $cogs;
+        $profit = $grossProfit - $commissions - $otherExpenses;
 
         return view('admin.finance.pl', compact(
             'from',
@@ -47,6 +76,8 @@ class ReportController extends Controller
             'commissions',
             'otherExpenses',
             'netSales',
+            'cogs',
+            'grossProfit',
             'profit'
         ));
     }
@@ -220,13 +251,63 @@ class ReportController extends Controller
             ->whereBetween('created_at', [$from, $to])
             ->get();
 
-        $byProduct = $production->groupBy('product_id')->map(function ($runs) {
-            $product = $runs->first()->product;
+        // Preload active BOMs (with component standard_cost) for all products
+        $productIds = $production->pluck('product_id')->unique()->filter()->all();
+
+        $boms = BillOfMaterial::whereIn('product_id', $productIds)
+            ->where('is_active', true)
+            ->with(['items.component'])
+            ->orderByDesc('id')
+            ->get()
+            ->keyBy('product_id');
+
+        $byProduct = $production->groupBy('product_id')->map(function ($runs, $productId) use ($boms) {
+            $product  = $runs->first()->product;
+            $quantity = $runs->sum('quantity');
+
+            $unitCost  = null;
+            $totalCost = null;
+
+            // Prefer persisted costing data if available
+            $totalCostFromRuns = $runs->sum('material_total_cost');
+            if ($quantity > 0 && $totalCostFromRuns > 0) {
+                $totalCost = $totalCostFromRuns;
+                $unitCost  = $totalCostFromRuns / (float) $quantity;
+            } else {
+                // Fallback: estimate from BOM + component standard_cost / BOM unit_cost
+                $bom = $boms->get($productId);
+                if ($bom && $bom->items->isNotEmpty()) {
+                    if ($bom->material_unit_cost !== null && $bom->material_unit_cost > 0) {
+                        $unitCost  = (float) $bom->material_unit_cost;
+                        $totalCost = $unitCost * (float) $quantity;
+                    } else {
+                        $accumulator = 0.0;
+                        foreach ($bom->items as $item) {
+                            $component = $item->component;
+                            $baseCost = null;
+                            if ($item->unit_cost !== null) {
+                                $baseCost = (float) $item->unit_cost;
+                            } elseif ($component && $component->standard_cost !== null) {
+                                $baseCost = (float) $component->standard_cost;
+                            }
+                            if ($baseCost !== null) {
+                                $accumulator += $baseCost * (float) $item->quantity;
+                            }
+                        }
+                        if ($accumulator > 0) {
+                            $unitCost  = $accumulator;
+                            $totalCost = $unitCost * (float) $quantity;
+                        }
+                    }
+                }
+            }
 
             return [
-                'product' => $product,
-                'runs' => $runs->count(),
-                'quantity' => $runs->sum('quantity'),
+                'product'    => $product,
+                'runs'       => $runs->count(),
+                'quantity'   => $quantity,
+                'unit_cost'  => $unitCost,
+                'total_cost' => $totalCost,
             ];
         });
 

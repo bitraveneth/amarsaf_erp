@@ -10,6 +10,7 @@ use App\Models\AgentPriceList;
 use App\Models\Order;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class AgentController extends Controller
 {
@@ -38,13 +39,43 @@ class AgentController extends Controller
             'latitude' => 'nullable|numeric',
             'longitude' => 'nullable|numeric',
             'credit_limit' => 'nullable|numeric|min:0',
+            'withholding_rate' => 'nullable|numeric|min:0|max:100',
             'kyc_documents' => 'nullable|array',
+            'kyc_files' => 'nullable|array',
+            'kyc_files.*' => 'file|max:4096',
             'parent_id' => 'nullable|exists:agents,id',
             'bank_details' => 'nullable|string',
         ]);
 
+        $kycDocuments = [];
+
+        // Text-based KYC docs (comma separated string in first element)
         if (!empty($data['kyc_documents'])) {
-            $data['kyc_documents'] = array_values($data['kyc_documents']);
+            $raw = $data['kyc_documents'][0] ?? null;
+            if ($raw) {
+                foreach (explode(',', $raw) as $piece) {
+                    $trimmed = trim($piece);
+                    if ($trimmed !== '') {
+                        $kycDocuments[] = $trimmed;
+                    }
+                }
+            }
+        }
+
+        unset($data['kyc_documents']);
+
+        // Uploaded KYC files
+        if ($request->hasFile('kyc_files')) {
+            foreach ($request->file('kyc_files') as $file) {
+                if ($file && $file->isValid()) {
+                    $path = $file->store('agents/kyc', 'public');
+                    $kycDocuments[] = $path;
+                }
+            }
+        }
+
+        if (!empty($kycDocuments)) {
+            $data['kyc_documents'] = array_values($kycDocuments);
         }
 
         Agent::create($data);
@@ -77,13 +108,44 @@ class AgentController extends Controller
             'latitude' => 'nullable|numeric',
             'longitude' => 'nullable|numeric',
             'credit_limit' => 'nullable|numeric|min:0',
+            'withholding_rate' => 'nullable|numeric|min:0|max:100',
             'kyc_documents' => 'nullable|array',
+            'kyc_files' => 'nullable|array',
+            'kyc_files.*' => 'file|max:4096',
             'parent_id' => 'nullable|exists:agents,id',
             'bank_details' => 'nullable|string',
         ]);
 
+        // Start from existing documents
+        $kycDocuments = is_array($agent->kyc_documents) ? $agent->kyc_documents : [];
+
+        // Append text-based docs from input
         if (!empty($data['kyc_documents'])) {
-            $data['kyc_documents'] = array_values($data['kyc_documents']);
+            $raw = $data['kyc_documents'][0] ?? null;
+            if ($raw) {
+                foreach (explode(',', $raw) as $piece) {
+                    $trimmed = trim($piece);
+                    if ($trimmed !== '') {
+                        $kycDocuments[] = $trimmed;
+                    }
+                }
+            }
+        }
+
+        unset($data['kyc_documents']);
+
+        // Append new uploaded files
+        if ($request->hasFile('kyc_files')) {
+            foreach ($request->file('kyc_files') as $file) {
+                if ($file && $file->isValid()) {
+                    $path = $file->store('agents/kyc', 'public');
+                    $kycDocuments[] = $path;
+                }
+            }
+        }
+
+        if (!empty($kycDocuments)) {
+            $data['kyc_documents'] = array_values($kycDocuments);
         }
 
         $agent->update($data);

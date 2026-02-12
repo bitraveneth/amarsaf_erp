@@ -47,8 +47,17 @@ class AdminController extends Controller
         $taxClassCount = $taxReady ? TaxClass::count() : 0;
         $batchCount = $batchReady ? Batch::count() : 0;
         $agentCount = $agentReady ? Agent::count() : 0;
+        // Treat "orders" on the dashboard as sales orders only – exclude return
+        // orders so that the high-level metric reflects outbound sales. Returns
+        // are surfaced separately in a dedicated card.
+        $totalOrderCount = $orderReady
+            ? Order::where('order_type', '!=', 'return')->count()
+            : 0;
+        $returnOrderCount = $orderReady
+            ? Order::where('order_type', 'return')->count()
+            : 0;
         $openOrderCount = $orderReady
-            ? Order::whereIn('status', ['draft', 'confirmed', 'packed', 'dispatched'])->count()
+            ? Order::whereIn('status', ['draft', 'confirmed', 'picked', 'packed', 'dispatched'])->count()
             : 0;
         $todayOrders = $orderReady
             ? Order::whereDate('delivery_date', Carbon::today())->count()
@@ -90,6 +99,54 @@ class AdminController extends Controller
         $todayReceipts = $receiptReady
             ? Receipt::whereDate('received_at', Carbon::today())->sum('amount')
             : 0;
+
+        // Monthly aggregates for the current year
+        $monthLabels = [];
+        $monthlyOrders = [];
+        $monthlyReceipts = [];
+
+        if ($orderReady || $receiptReady) {
+            for ($m = 1; $m <= 12; $m++) {
+                $monthLabels[] = Carbon::create(null, $m, 1)->format('M');
+
+                $monthlyOrders[] = $orderReady
+                    ? Order::where('order_type', '!=', 'return')
+                        ->whereYear('delivery_date', Carbon::today()->year)
+                        ->whereMonth('delivery_date', $m)
+                        ->count()
+                    : 0;
+
+                $monthlyReceipts[] = $receiptReady
+                    ? Receipt::whereYear('received_at', Carbon::today()->year)
+                        ->whereMonth('received_at', $m)
+                        ->sum('amount')
+                    : 0;
+            }
+        }
+
+        // Simple 7‑day time‑series for dashboard charts
+        $chartDays = collect();
+        if ($orderReady || $receiptReady) {
+            for ($i = 6; $i >= 0; $i--) {
+                $day = Carbon::today()->copy()->subDays($i);
+
+                $ordersForDay = $orderReady
+                    ? Order::where('order_type', '!=', 'return')
+                        ->whereDate('delivery_date', $day)
+                        ->count()
+                    : 0;
+
+                $receiptsForDay = $receiptReady
+                    ? Receipt::whereDate('received_at', $day)->sum('amount')
+                    : 0;
+
+                $chartDays->push([
+                    'label' => $day->format('d M'),
+                    'orders' => $ordersForDay,
+                    'receipts' => $receiptsForDay,
+                ]);
+            }
+        }
 
         $metrics = [];
 
@@ -166,6 +223,11 @@ class AdminController extends Controller
             $alerts[] = 'Outstanding receivables of BDT ' . number_format($outstandingReceivables, 2);
         }
 
+        // Recent orders (for dashboard table)
+        $recentOrders = $orderReady
+            ? Order::with('agent')->orderByDesc('id')->take(10)->get()
+            : collect();
+
         return view('admin.dashboard', compact(
             'metrics',
             'usersTableReady',
@@ -179,7 +241,15 @@ class AdminController extends Controller
             'todayProductionQty',
             'outstandingReceivables',
             'todayReceipts',
-            'alerts'
+            'alerts',
+            'chartDays',
+            'agentCount',
+            'totalOrderCount',
+            'returnOrderCount',
+            'monthLabels',
+            'monthlyOrders',
+            'monthlyReceipts',
+            'recentOrders'
         ));
     }
 
@@ -241,6 +311,19 @@ class AdminController extends Controller
             }
         }
 
-        return view('admin.notifications.index', compact('alerts'));
+        // Load user-specific notifications (e.g. new batches) if the notifications table exists
+        $userNotifications = collect();
+        if (Schema::hasTable('notifications') && auth()->check()) {
+            $userNotifications = auth()->user()
+                ->notifications()
+                ->latest()
+                ->take(20)
+                ->get();
+        }
+
+        return view('admin.notifications.index', [
+            'alerts' => $alerts,
+            'userNotifications' => $userNotifications,
+        ]);
     }
 }

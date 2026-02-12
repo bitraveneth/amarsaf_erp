@@ -7,6 +7,7 @@ use App\Models\Employee;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class EmployeeController extends Controller
 {
@@ -60,6 +61,7 @@ class EmployeeController extends Controller
             'leaves',
             'locationLogs',
             'badges',
+            'user',
         ]);
 
         $currentContract = $employee->contracts->first();
@@ -68,6 +70,55 @@ class EmployeeController extends Controller
             : collect();
 
         return view('admin.employees.show', compact('employee', 'currentContract', 'recentAllowances'));
+    }
+
+    /**
+     * Show a small form that lets an admin create a login account
+     * for a given employee.
+     */
+    public function createUser(Employee $employee)
+    {
+        // Prevent creating multiple accounts for the same employee.
+        if ($employee->user) {
+            return redirect()
+                ->route('admin.employees.show', $employee)
+                ->with('status', 'This employee already has a login account.');
+        }
+
+        return view('admin.employees.create_user', compact('employee'));
+    }
+
+    /**
+     * Store a user record linked to the given employee.
+     */
+    public function storeUser(Request $request, Employee $employee)
+    {
+        if ($employee->user) {
+            return redirect()
+                ->route('admin.employees.show', $employee)
+                ->with('status', 'This employee already has a login account.');
+        }
+
+        $data = $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|max:255|unique:users,email',
+            'role' => 'required|string|in:admin,warehouse_manager,production_manager,qc_officer,employee',
+            'password' => 'nullable|string|min:6',
+        ]);
+
+        $plainPassword = $data['password'] ?: Str::random(10);
+
+        User::create([
+            'name' => $data['name'],
+            'email' => $data['email'],
+            'password' => $plainPassword,
+            'role' => $data['role'],
+            'employee_id' => $employee->id,
+        ]);
+
+        return redirect()
+            ->route('admin.employees.show', $employee)
+            ->with('status', 'Login account created for this employee. Temporary password: ' . $plainPassword);
     }
 
     public function update(Request $request, Employee $employee)

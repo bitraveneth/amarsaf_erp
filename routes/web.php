@@ -71,6 +71,8 @@ Route::post('logout', [LoginController::class, 'logout'])->middleware('auth')->n
 Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::get('/', [AdminController::class, 'index'])->name('dashboard');
     Route::view('help', 'admin.help')->name('help');
+
+    // Finished products catalog
     Route::get('products', [ProductController::class, 'index'])->name('products.index');
     Route::get('products/create', [ProductController::class, 'create'])->name('products.create');
     Route::post('products', [ProductController::class, 'store'])->name('products.store');
@@ -81,6 +83,14 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::get('products-export', [ProductController::class, 'export'])->name('products.export');
     Route::get('products-price-list', [ProductController::class, 'priceList'])->name('products.prices.index');
     Route::get('products-price-list/{product}', [ProductController::class, 'showPriceList'])->name('products.prices.show');
+
+    // Materials (raw / service / in‑house) – managed separately but stored in products table
+    Route::get('materials', [ProductController::class, 'materialsIndex'])->name('materials.index');
+    Route::get('materials/create', [ProductController::class, 'materialsCreate'])->name('materials.create');
+    Route::post('materials', [ProductController::class, 'store'])->name('materials.store');
+    Route::get('materials/{product}/edit', [ProductController::class, 'materialsEdit'])->name('materials.edit');
+    Route::patch('materials/{product}', [ProductController::class, 'update'])->name('materials.update');
+    Route::delete('materials/{product}', [ProductController::class, 'destroy'])->name('materials.destroy');
 
     Route::get('packaging', [PackagingTypeController::class, 'index'])->name('packaging.index');
     Route::post('packaging', [PackagingTypeController::class, 'store'])->name('packaging.store');
@@ -114,6 +124,10 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::get('employees/{employee}/edit', [EmployeeController::class, 'edit'])->name('employees.edit');
     Route::patch('employees/{employee}', [EmployeeController::class, 'update'])->name('employees.update');
     Route::delete('employees/{employee}', [EmployeeController::class, 'destroy'])->name('employees.destroy');
+
+    // Create login account for an employee
+    Route::get('employees/{employee}/user', [EmployeeController::class, 'createUser'])->name('employees.user.create');
+    Route::post('employees/{employee}/user', [EmployeeController::class, 'storeUser'])->name('employees.user.store');
 
     Route::get('contracts', [EmployeeContractController::class, 'all'])->name('contracts.index');
     Route::get('contracts/create', [EmployeeContractController::class, 'createGlobal'])->name('contracts.create');
@@ -210,6 +224,7 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::get('deliveries/packing-slips', [DeliveryController::class, 'packingIndex'])->name('deliveries.packing-index');
     Route::get('deliveries/create', [DeliveryController::class, 'create'])->name('deliveries.create');
     Route::post('deliveries', [DeliveryController::class, 'store'])->name('deliveries.store');
+    Route::get('deliveries/{delivery}/edit', [DeliveryController::class, 'edit'])->name('deliveries.edit');
     Route::post('deliveries/optimize', [DeliveryController::class, 'optimize'])->name('deliveries.optimize');
     Route::patch('deliveries/{delivery}', [DeliveryController::class, 'update'])->name('deliveries.update');
     Route::delete('deliveries/{delivery}', [DeliveryController::class, 'destroy'])->name('deliveries.destroy');
@@ -228,14 +243,17 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::post('stock/entries/{entry}/write-off', [StockMovementController::class, 'writeOffEntry'])->name('stock.entries.writeoff');
     Route::get('stock/audit', [StockAuditController::class, 'index'])->name('stock.audit');
     Route::post('stock/audit', [StockAuditController::class, 'store'])->name('stock.audit.store');
+    Route::delete('stock/audit/{audit}', [StockAuditController::class, 'destroy'])->name('stock.audit.destroy');
 
     Route::get('inventory', [InventoryController::class, 'index'])->name('inventory.index');
+    Route::get('inventory/materials', [InventoryController::class, 'materials'])->name('inventory.materials');
 
     Route::get('notifications', [AdminController::class, 'notifications'])->name('notifications.index');
 
     Route::get('warehouses', [WarehouseController::class, 'index'])->name('warehouses.index');
     Route::get('warehouses/create', [WarehouseController::class, 'create'])->name('warehouses.create');
     Route::post('warehouses', [WarehouseController::class, 'store'])->name('warehouses.store');
+    Route::get('warehouses/{warehouse}', [WarehouseController::class, 'show'])->name('warehouses.show');
     Route::get('warehouses/{warehouse}/edit', [WarehouseController::class, 'edit'])->name('warehouses.edit');
     Route::patch('warehouses/{warehouse}', [WarehouseController::class, 'update'])->name('warehouses.update');
     Route::post('warehouses/{warehouse}/clear-stock', [WarehouseController::class, 'clearStock'])->name('warehouses.clear-stock');
@@ -251,8 +269,12 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::get('production', [ProductionController::class, 'index'])->name('production.index');
     Route::get('production/create', [ProductionController::class, 'create'])->name('production.create');
     Route::post('production', [ProductionController::class, 'store'])->name('production.store');
+    Route::get('production/pending-receipts', [ProductionController::class, 'pendingReceipts'])->name('production.pending-receipts');
+    Route::get('production/order-number', [ProductionController::class, 'orderNumber'])->name('production.order-number');
+    Route::get('production/{production}', [ProductionController::class, 'show'])->name('production.show');
     Route::get('production/{production}/edit', [ProductionController::class, 'edit'])->name('production.edit');
     Route::patch('production/{production}', [ProductionController::class, 'update'])->name('production.update');
+    Route::post('production/{production}/confirm-stock', [ProductionController::class, 'confirmStock'])->name('production.confirm-stock');
     Route::delete('production/{production}', [ProductionController::class, 'destroy'])->name('production.destroy');
 
     Route::get('finance', [FinanceController::class, 'index'])->name('finance.index');
@@ -275,6 +297,7 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::patch('salary-distributions/{salaryDistribution}', [SalaryDistributionController::class, 'update'])->name('salary-distributions.update');
     Route::delete('salary-distributions/{salaryDistribution}', [SalaryDistributionController::class, 'destroy'])->name('salary-distributions.destroy');
     Route::get('finance/{invoice}', [FinanceController::class, 'show'])->name('finance.show');
+    Route::patch('finance/{invoice}/withholding', [FinanceController::class, 'updateWithholding'])->name('finance.withholding.update');
     Route::delete('finance/{invoice}', [FinanceController::class, 'destroy'])->name('finance.destroy');
     Route::delete('finance/receipts/{receipt}', [FinanceController::class, 'destroyReceipt'])->name('finance.receipts.destroy');
     Route::delete('finance/credit-notes/{creditNote}', [FinanceController::class, 'destroyCreditNote'])->name('finance.credit-notes.destroy');
@@ -294,6 +317,9 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::get('bills', [PurchaseBillController::class, 'index'])->name('bills.index');
     Route::get('bills/create', [PurchaseBillController::class, 'create'])->name('bills.create');
     Route::post('bills', [PurchaseBillController::class, 'store'])->name('bills.store');
+    Route::get('bills/{bill}/edit', [PurchaseBillController::class, 'edit'])->name('bills.edit');
+    Route::put('bills/{bill}', [PurchaseBillController::class, 'update'])->name('bills.update');
+    Route::delete('bills/{bill}', [PurchaseBillController::class, 'destroy'])->name('bills.destroy');
     Route::post('bills/{bill}/pay', [PurchaseBillController::class, 'storePayment'])->name('bills.pay');
 
     Route::get('batches', [BatchController::class, 'index'])->name('batches.index');

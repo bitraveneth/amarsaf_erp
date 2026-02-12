@@ -1,6 +1,46 @@
 import './bootstrap';
+import './invoice';
+import Alpine from 'alpinejs';
+import ApexCharts from 'apexcharts';
+import flatpickr from 'flatpickr';
+
+window.Alpine = Alpine;
+window.ApexCharts = ApexCharts;
+window.flatpickr = flatpickr;
+Alpine.start();
 
 document.addEventListener('DOMContentLoaded', () => {
+
+        // Map imports
+    if (document.querySelector('#mapOne')) {
+        import('./components/map').then(module => module.initMap());
+    }
+
+    // Chart imports
+    // chartOne (monthly sale) is rendered with dynamic ERP data via
+    // an inline script on the dashboard, so we skip the TailAdmin
+    // demo initialiser here.
+    if (document.querySelector('#chartTwo')) {
+        import('./components/chart/chart-2').then(module => module.initChartTwo());
+    }
+    // Dashboard statistics chart (#chartThree) is now rendered
+    // from Blade with real ERP data, so we no longer load the
+    // TailAdmin demo chart-3.js here to avoid double charts.
+    if (document.querySelector('#chartSix')) {
+        import('./components/chart/chart-6').then(module => module.initChartSix());
+    }
+    if (document.querySelector('#chartEight')) {
+        import('./components/chart/chart-8').then(module => module.initChartEight());
+    }
+    if (document.querySelector('#chartThirteen')) {
+        import('./components/chart/chart-13').then(module => module.initChartThirteen());
+    }
+
+    // Calendar init (only used on TailAdmin calendar examples)
+    if (document.querySelector('#calendar')) {
+        import('./components/calendar-init').then(module => module.calendarInit());
+    }
+
     // Sidebar groups
     const toggles = document.querySelectorAll('[data-collapse-toggle]');
 
@@ -32,27 +72,38 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     const setupDropdown = (containerSelector, toggleSelector, openClass) => {
-        const container = document.querySelector(containerSelector);
-        if (!container) {
-            return;
-        }
-        const toggle = container.querySelector(toggleSelector);
-        if (!toggle) {
+        const containers = document.querySelectorAll(containerSelector);
+        if (!containers.length) {
             return;
         }
 
-        toggle.addEventListener('click', (event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            container.classList.toggle(openClass);
+        containers.forEach((container) => {
+            const toggle = container.querySelector(toggleSelector);
+            if (!toggle) {
+                return;
+            }
+
+            toggle.addEventListener('click', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+
+                // Close any other open containers of the same type
+                containers.forEach((other) => {
+                    if (other !== container) {
+                        other.classList.remove(openClass);
+                    }
+                });
+
+                container.classList.toggle(openClass);
+            });
+
+            container.addEventListener('click', (event) => {
+                event.stopPropagation();
+            });
         });
 
         document.addEventListener('click', () => {
-            container.classList.remove(openClass);
-        });
-
-        container.addEventListener('click', (event) => {
-            event.stopPropagation();
+            containers.forEach((container) => container.classList.remove(openClass));
         });
     };
 
@@ -61,6 +112,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Header alerts dropdown
     setupDropdown('.header-alert', '.header-alert-toggle', 'header-alert--open');
+
+    // Warehouse card actions dropdown
+    setupDropdown('.warehouse-card-actions', '.warehouse-card-actions-toggle', 'warehouse-card-actions--open');
 
     // Dismiss flash messages
     document.querySelectorAll('.flash-close').forEach((btn) => {
@@ -206,4 +260,122 @@ document.addEventListener('DOMContentLoaded', () => {
         parseInitial();
         renderChips();
     });
+
+    // Product / material type specific fields
+    const typeSelect = document.getElementById('product_type');
+    if (typeSelect) {
+        const syncProductTypeFields = () => {
+            const type = typeSelect.value || 'finished';
+
+            document.querySelectorAll('[data-product-type="finished-only"]').forEach((el) => {
+                el.style.display = type === 'finished' ? '' : 'none';
+            });
+            document.querySelectorAll('[data-product-type="material-only"]').forEach((el) => {
+                el.style.display = type === 'finished' ? 'none' : '';
+            });
+
+            // For in‑house steps supplier is usually not relevant – disable the field for clarity.
+            const supplierInput = document.querySelector('[data-material-supplier]');
+            const supplierWrapper = document.querySelector('[data-material-supplier-wrapper]');
+            if (supplierInput) {
+                if (type === 'inhouse') {
+                    supplierInput.value = '';
+                    supplierInput.disabled = true;
+                    if (supplierWrapper) {
+                        supplierWrapper.style.display = 'none';
+                    }
+                } else {
+                    supplierInput.disabled = false;
+                    if (supplierWrapper) {
+                        supplierWrapper.style.display = '';
+                    }
+                }
+            }
+
+            // Update UOM placeholder by material type
+            const uomInput = document.querySelector('[data-material-uom]');
+            if (uomInput) {
+                if (type === 'raw') {
+                    uomInput.placeholder = 'e.g., piece, kg, liter';
+                } else if (type === 'service') {
+                    uomInput.placeholder = 'e.g., day, trip, shift, service';
+                } else if (type === 'inhouse') {
+                    uomInput.placeholder = 'e.g., piece, batch, case';
+                }
+            }
+        };
+
+        syncProductTypeFields();
+        typeSelect.addEventListener('change', syncProductTypeFields);
+    }
+
+    // Preset + custom combo fields (size, volume)
+    const wirePresetCombo = (selectId, inputId) => {
+        const select = document.getElementById(selectId);
+        const input = document.getElementById(inputId);
+        if (!select || !input) {
+            return;
+        }
+
+        const customValue = '__custom';
+
+        const syncVisibility = () => {
+            if (select.value === customValue) {
+                input.style.display = '';
+            } else {
+                input.style.display = 'none';
+                input.value = select.value || '';
+            }
+        };
+
+        select.addEventListener('change', syncVisibility);
+        syncVisibility();
+    };
+
+    wirePresetCombo('size_select', 'size');
+    wirePresetCombo('volume_ml_select', 'volume_ml');
+
+    // Generate production order number from button
+    const orderBtn = document.getElementById('btn-generate-order-number');
+    const orderInput = document.getElementById('order_number');
+    const batchSelect = document.getElementById('batch_id');
+    if (orderBtn && orderInput) {
+        orderBtn.addEventListener('click', () => {
+            const params = new URLSearchParams();
+            if (batchSelect && batchSelect.value) {
+                params.set('batch_id', batchSelect.value);
+            }
+
+            fetch(`/admin/production/order-number?${params.toString()}`, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            })
+                .then((response) => response.json())
+                .then((data) => {
+                    if (data.order_number) {
+                        orderInput.value = data.order_number;
+                    }
+                })
+                .catch(() => {
+                    // Fail silently; server-side auto-generation will still work on submit.
+                });
+        });
+    }
+
+    // Login password visibility toggle
+    const passwordInput = document.getElementById('password');
+    const toggleButton = document.getElementById('toggle-password');
+    if (passwordInput && toggleButton) {
+        const showIcon = toggleButton.querySelector('.password-toggle-icon-show');
+        const hideIcon = toggleButton.querySelector('.password-toggle-icon-hide');
+
+        if (showIcon && hideIcon) {
+            toggleButton.addEventListener('click', () => {
+                const isHidden = passwordInput.type === 'password';
+                passwordInput.type = isHidden ? 'text' : 'password';
+                showIcon.style.display = isHidden ? 'none' : 'block';
+                hideIcon.style.display = isHidden ? 'block' : 'none';
+                toggleButton.setAttribute('aria-label', isHidden ? 'Hide password' : 'Show password');
+            });
+        }
+    }
 });

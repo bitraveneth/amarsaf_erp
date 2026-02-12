@@ -12,6 +12,9 @@
                 $alertCollection = isset($alerts) ? collect($alerts)->values() : collect();
                 $alertCount = $alertCollection->count();
                 $trayAlerts = $alertCollection->take(10);
+                $user = auth()->user();
+                $labelSource = $user->name ?: $user->email;
+                $initials = strtoupper(mb_substr($labelSource, 0, 2));
             @endphp
             <div class="header-alert">
                 <button type="button"
@@ -39,11 +42,6 @@
             </div>
             <div class="header-user">
                 <button type="button" class="header-user-toggle">
-                    @php
-                        $user = auth()->user();
-                        $labelSource = $user->name ?: $user->email;
-                        $initials = strtoupper(mb_substr($labelSource, 0, 2));
-                    @endphp
                     <span class="header-user-initials">{{ $initials }}</span>
                 </button>
                 <div class="header-user-menu">

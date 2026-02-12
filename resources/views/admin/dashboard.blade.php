@@ -1,79 +1,167 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="dashboard-shell">
-    <section class="panel metrics-panel">
-        <div class="panel-header">
-            <div>
-                <h1>SAFERP admin overview</h1>
-                <p>Quick snapshot of users, products, and master data.</p>
-            </div>
-            <div class="button-group">
-                <a href="{{ route('admin.products.index') }}" class="button-secondary">Products</a>
-                <a href="{{ route('admin.orders.index') }}" class="button-secondary">Orders</a>
-                <a href="{{ route('admin.warehouses.index') }}" class="button-secondary">Warehouses</a>
-            </div>
-        </div>
-        <div class="metric-grid">
-            @foreach($metrics as $metric)
-                <article class="metric-card">
-                    <p class="metric-label">{{ $metric['label'] }}</p>
-                    <h2 class="metric-value">{{ $metric['value'] }}</h2>
-                    <p class="metric-change">{{ $metric['detail'] }}</p>
-                </article>
-            @endforeach
-        </div>
-    </section>
+  <div class="grid grid-cols-12 gap-4 md:gap-6">
+    <div class="col-span-12 space-y-6 xl:col-span-7">
+      <x-ecommerce.ecommerce-metrics
+          :agent-count="$agentCount ?? 0"
+          :total-order-count="$totalOrderCount ?? 0"
+          :return-order-count="$returnOrderCount ?? 0"
+      />
 
-    <section class="panel">
-        <header>
-            <h2>Today at a glance</h2>
-            <p>Operational snapshot for deliveries, production, and cash.</p>
-        </header>
-        <div class="master-grid">
-            <article>
-                <p class="metric-label">Orders delivering today</p>
-                <h3>{{ number_format($todayOrders) }}</h3>
-                <small>Based on order delivery date.</small>
-            </article>
-            <article>
-                <p class="metric-label">Batches expiring soon</p>
-                <h3>{{ number_format($expiringSoonCount) }}</h3>
-                <small>Expiry within the next 30 days.</small>
-            </article>
-            <article>
-                <p class="metric-label">Approved production today</p>
-                <h3>{{ number_format($todayProductionQty) }}</h3>
-                <small>Total bottles/litres from approved runs.</small>
-            </article>
-            <article>
-                <p class="metric-label">Outstanding receivables</p>
-                <h3>{{ number_format($outstandingReceivables, 2) }}</h3>
-                <small>Open invoices net of receipts.</small>
-            </article>
-            <article>
-                <p class="metric-label">Receipts today</p>
-                <h3>{{ number_format($todayReceipts, 2) }}</h3>
-                <small>Customer payments received today.</small>
-            </article>
-        </div>
-    </section>
+      <x-ecommerce.monthly-sale
+          :month-labels="$monthLabels ?? []"
+          :monthly-orders="$monthlyOrders ?? []"
+      />
+    </div>
+    <div class="col-span-12 xl:col-span-5">
+        <x-ecommerce.monthly-target
+            :outstanding-receivables="$outstandingReceivables ?? 0"
+            :monthly-receipts="$monthlyReceipts ?? []"
+            :today-receipts="$todayReceipts ?? 0"
+        />
+    </div>
 
-    <section class="panel" id="alerts">
-        <header>
-            <h2>System alerts</h2>
-            <p>Things that may need attention.</p>
-        </header>
-        @if(empty($alerts))
-            <p class="panel-note">All clear. No current alerts.</p>
-        @else
-            <ul class="activity-list">
-                @foreach($alerts as $alert)
-                    <li>{{ $alert }}</li>
-                @endforeach
-            </ul>
-        @endif
-    </section>
+    <div class="col-span-12">
+      <x-ecommerce.statistics-chart />
+    </div>
 
-</div>
+    <div class="col-span-12">
+      <x-ecommerce.recent-orders :orders="$recentOrders ?? collect()" />
+    </div>
+  </div>
 @endsection
+
+@push('scripts')
+    @if(isset($chartDays) && $chartDays instanceof \Illuminate\Support\Collection && $chartDays->isNotEmpty())
+        <script>
+            document.addEventListener('DOMContentLoaded', () => {
+                if (!window.ApexCharts) return;
+
+                const labels = @json($chartDays->pluck('label'));
+                const orders = @json($chartDays->pluck('orders'));
+                const receipts = @json($chartDays->pluck('receipts'));
+
+                const options = {
+                    chart: {
+                        type: 'area',
+                        height: 220,
+                        toolbar: { show: false },
+                        foreColor: '#667085',
+                        dropShadow: {
+                            enabled: true,
+                            top: 4,
+                            left: 0,
+                            blur: 3,
+                            opacity: 0.1
+                        }
+                    },
+                    stroke: {
+                        curve: 'smooth',
+                        width: 2.5
+                    },
+                    dataLabels: { enabled: false },
+                    grid: {
+                        borderColor: '#E4E7EC',
+                        strokeDashArray: 4,
+                        row: {
+                            opacity: 0.02
+                        }
+                    },
+                    fill: {
+                        type: 'gradient',
+                        gradient: {
+                            shadeIntensity: 0.7,
+                            opacityFrom: 0.25,
+                            opacityTo: 0,
+                            stops: [0, 90, 100]
+                        }
+                    },
+                    markers: {
+                        size: 3,
+                        strokeWidth: 0
+                    },
+                    tooltip: {
+                        shared: true,
+                        theme: document.documentElement.classList.contains('dark') ? 'dark' : 'light',
+                        y: {
+                            formatter: (val, opts) => {
+                                const seriesName = opts.seriesIndex === 1 ? 'BDT ' : '';
+                                return seriesName + val;
+                            }
+                        }
+                    },
+                    xaxis: {
+                        categories: labels,
+                        labels: {
+                            style: { fontSize: '11px' }
+                        },
+                        axisBorder: { show: false },
+                        axisTicks: { show: false }
+                    },
+                    yaxis: {
+                        labels: {
+                            style: { fontSize: '11px' }
+                        }
+                    },
+                    colors: ['#465FFF', '#12B76A'],
+                    series: [
+                        { name: 'Orders', data: orders },
+                        { name: 'Receipts (BDT)', data: receipts }
+                    ],
+                    legend: {
+                        position: 'top',
+                        horizontalAlign: 'left',
+                        fontSize: '11px',
+                        markers: { radius: 12 }
+                    }
+                };
+
+                const el = document.querySelector('#chartThree');
+                if (!el) return;
+
+                const chart = new window.ApexCharts(el, options);
+                chart.render();
+
+                // Expose for debugging if needed
+                window.dashboardStatsChart = chart;
+
+                // Wire up Overview / Sales / Revenue tabs
+                const tabs = document.querySelectorAll('[data-stats-tab]');
+                tabs.forEach((btn) => {
+                    btn.addEventListener('click', () => {
+                        const mode = btn.getAttribute('data-stats-tab') || 'overview';
+
+                        let series;
+                        if (mode === 'sales') {
+                            series = [
+                                { name: 'Orders', data: orders },
+                            ];
+                        } else if (mode === 'revenue') {
+                            series = [
+                                { name: 'Receipts (BDT)', data: receipts },
+                            ];
+                        } else {
+                            // overview
+                            series = [
+                                { name: 'Orders', data: orders },
+                                { name: 'Receipts (BDT)', data: receipts },
+                            ];
+                        }
+
+                        chart.updateOptions({
+                            series,
+                            legend: {
+                                show: series.length > 1,
+                                position: 'top',
+                                horizontalAlign: 'left',
+                                fontSize: '11px',
+                                markers: { radius: 12 },
+                            },
+                        });
+                    });
+                });
+            });
+        </script>
+    @endif
+@endpush

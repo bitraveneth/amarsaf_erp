@@ -26,6 +26,39 @@ class FinanceController extends Controller
         return view('admin.finance.show', compact('invoice'));
     }
 
+    public function updateWithholding(Request $request, Invoice $invoice)
+    {
+        $data = $request->validate([
+            'withholding' => 'required|numeric|min:0',
+        ]);
+
+        $grossTotal = $invoice->net_total + $invoice->vat_amount;
+        if ($data['withholding'] > $grossTotal) {
+            return back()->withErrors([
+                'withholding' => 'Withholding cannot exceed invoice total (net + VAT).',
+            ]);
+        }
+
+        $invoice->withholding = $data['withholding'];
+        $invoice->save();
+
+        // Recalculate status based on new withholding, existing credits and receipts
+        $cashTotal  = $grossTotal - $invoice->withholding;
+        $credited   = $invoice->creditNotes()->sum('amount');
+        $received   = $invoice->receipts()->sum('amount');
+        $outstanding = $cashTotal - $credited - $received;
+
+        if ($outstanding <= 0) {
+            $invoice->update(['status' => 'paid']);
+        } elseif ($received > 0 || $credited > 0) {
+            $invoice->update(['status' => 'partially_paid']);
+        } else {
+            $invoice->update(['status' => 'issued']);
+        }
+
+        return redirect()->route('admin.finance.show', $invoice)->with('status', 'Withholding updated.');
+    }
+
     public function createFromOrder(Order $order)
     {
         if ($order->status !== 'delivered') {
@@ -53,7 +86,7 @@ class FinanceController extends Controller
 
         $vatAmount = round($vatAmount, 2);
 
-        $invoice = Invoice::create([
+        $invoiceData = [
             'order_id' => $order->id,
             'number' => 'INV-' . str_pad((string)(Invoice::max('id') + 1), 6, '0', STR_PAD_LEFT),
             'issued_at' => Carbon::today(),
@@ -62,7 +95,16 @@ class FinanceController extends Controller
             'vat_amount' => $vatAmount,
             'withholding' => 0,
             'status' => 'issued',
-        ]);
+        ];
+
+        // Auto-calc withholding based on agent's configured rate (if any)
+        $agent = $order->agent;
+        if ($agent && $agent->withholding_rate > 0) {
+            $grossTotal = $netTotal + $vatAmount;
+            $invoiceData['withholding'] = round($grossTotal * ($agent->withholding_rate / 100), 2);
+        }
+
+        $invoice = Invoice::create($invoiceData);
 
         foreach ($order->items as $item) {
             InvoiceItem::create([
@@ -142,11 +184,22 @@ class FinanceController extends Controller
             'invoice_id' => $invoice->id,
         ]);
 
-        if ($invoice->net_total + $invoice->vat_amount <= $invoice->receipts()->sum('amount')) {
+        // Recalculate net outstanding considering withholding, credit notes and receipts
+        $grossTotal = $invoice->net_total + $invoice->vat_amount;
+        $cashTotal  = $grossTotal - $invoice->withholding;
+        $credited   = $invoice->creditNotes()->sum('amount');
+        $received   = $invoice->receipts()->sum('amount');
+        $outstanding = $cashTotal - $credited - $received;
+
+        if ($outstanding <= 0) {
             $invoice->update(['status' => 'paid']);
+        } elseif ($received > 0) {
+            $invoice->update(['status' => 'partially_paid']);
+        } else {
+            $invoice->update(['status' => 'issued']);
         }
 
-        return redirect()->route('admin.finance.index')->with('status', 'Receipt recorded.');
+        return redirect()->route('admin.finance.show', $invoice)->with('status', 'Receipt recorded.');
     }
 
     public function destroyReceipt(Receipt $receipt)
@@ -167,8 +220,17 @@ class FinanceController extends Controller
         $receipt->delete();
 
         if ($invoice) {
-            $paid = $invoice->receipts()->sum('amount');
-            if ($paid < ($invoice->net_total + $invoice->vat_amount)) {
+            $grossTotal = $invoice->net_total + $invoice->vat_amount;
+            $cashTotal  = $grossTotal - $invoice->withholding;
+            $credited   = $invoice->creditNotes()->sum('amount');
+            $paid       = $invoice->receipts()->sum('amount');
+            $outstanding = $cashTotal - $credited - $paid;
+
+            if ($outstanding <= 0) {
+                $invoice->update(['status' => 'paid']);
+            } elseif ($paid > 0 || $credited > 0) {
+                $invoice->update(['status' => 'partially_paid']);
+            } else {
                 $invoice->update(['status' => 'issued']);
             }
         }
@@ -188,8 +250,10 @@ class FinanceController extends Controller
             'amount' => 'required|numeric|min:0.01',
             'reason' => 'nullable|string',
         ]);
-
-        $maxCredit = $invoice->net_total + $invoice->vat_amount;
+        // Maximum credit cannot exceed outstanding cash amount after withholding
+        $grossTotal = $invoice->net_total + $invoice->vat_amount;
+        $cashTotal  = $grossTotal - $invoice->withholding;
+        $maxCredit = $cashTotal;
         $alreadyCredited = CreditNote::where('invoice_id', $invoice->id)->sum('amount');
 
         if ($data['amount'] > ($maxCredit - $alreadyCredited)) {
@@ -223,7 +287,20 @@ class FinanceController extends Controller
             'invoice_id' => $invoice->id,
         ]);
 
-        return redirect()->route('admin.finance.index')->with('status', 'Credit note created.');
+        // Recalculate status after applying credit
+        $credited   = $invoice->creditNotes()->sum('amount');
+        $received   = $invoice->receipts()->sum('amount');
+        $outstanding = $cashTotal - $credited - $received;
+
+        if ($outstanding <= 0) {
+            $invoice->update(['status' => 'paid']);
+        } elseif ($received > 0 || $credited > 0) {
+            $invoice->update(['status' => 'partially_paid']);
+        } else {
+            $invoice->update(['status' => 'issued']);
+        }
+
+        return redirect()->route('admin.finance.show', $invoice)->with('status', 'Credit note created.');
     }
 
     public function destroyCreditNote(CreditNote $creditNote)
@@ -237,6 +314,22 @@ class FinanceController extends Controller
         }
 
         $creditNote->delete();
+
+        if ($invoice) {
+            $grossTotal = $invoice->net_total + $invoice->vat_amount;
+            $cashTotal  = $grossTotal - $invoice->withholding;
+            $credited   = $invoice->creditNotes()->sum('amount');
+            $received   = $invoice->receipts()->sum('amount');
+            $outstanding = $cashTotal - $credited - $received;
+
+            if ($outstanding <= 0) {
+                $invoice->update(['status' => 'paid']);
+            } elseif ($received > 0 || $credited > 0) {
+                $invoice->update(['status' => 'partially_paid']);
+            } else {
+                $invoice->update(['status' => 'issued']);
+            }
+        }
 
         return redirect()->route('admin.finance.show', $invoice)->with('status', 'Credit note deleted.');
     }

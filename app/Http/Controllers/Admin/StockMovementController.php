@@ -18,9 +18,24 @@ class StockMovementController extends Controller
 
     public function create()
     {
-        $entries = StockEntry::with('product')->where('status', 'available')->get();
+        $entries = StockEntry::with(['product', 'warehouse'])
+            ->where('status', 'available')
+            ->orderByDesc('updated_at')
+            ->get();
+
+        // Split into two trays: material stock (raw / service) and finished products.
+        $materialEntries = $entries->filter(function (StockEntry $entry) {
+            $type = $entry->product->product_type ?? null;
+            return in_array($type, ['raw', 'service']);
+        });
+
+        $finishedEntries = $entries->reject(function (StockEntry $entry) {
+            $type = $entry->product->product_type ?? null;
+            return in_array($type, ['raw', 'service']);
+        });
+
         $warehouses = Warehouse::orderBy('name')->get();
-        return view('admin.stock.transfer', compact('entries', 'warehouses'));
+        return view('admin.stock.transfer', compact('materialEntries', 'finishedEntries', 'warehouses'));
     }
 
     public function store(Request $request)
@@ -65,14 +80,29 @@ class StockMovementController extends Controller
         return redirect()->route('admin.stock.movements')->with('status', 'Stock transferred.');
     }
 
-    public function writeOffForm()
+    public function writeOffForm(Request $request)
     {
+        $selectedEntryId = $request->input('entry_id');
+        $filterWarehouse = $request->input('warehouse_id');
+        $filterProduct   = $request->input('product_id');
+        $filterBatch     = $request->input('batch_id');
+        $defaultReason   = $request->input('reason');
+
         $entries = StockEntry::with(['product', 'warehouse'])
             ->where('status', 'available')
+            ->when($filterWarehouse, function ($q) use ($filterWarehouse) {
+                $q->where('warehouse_id', $filterWarehouse);
+            })
+            ->when($filterProduct, function ($q) use ($filterProduct) {
+                $q->where('product_id', $filterProduct);
+            })
+            ->when($filterBatch, function ($q) use ($filterBatch) {
+                $q->where('batch_id', $filterBatch);
+            })
             ->orderByDesc('updated_at')
             ->get();
 
-        return view('admin.stock.writeoff', compact('entries'));
+        return view('admin.stock.writeoff', compact('entries', 'selectedEntryId', 'defaultReason'));
     }
 
     public function writeOffStore(Request $request)
@@ -80,7 +110,7 @@ class StockMovementController extends Controller
         $data = $request->validate([
             'entry_id' => 'required|exists:stock_entries,id',
             'quantity' => 'required|numeric|min:0.01',
-            'reason' => 'required|in:expired,wasted,supplier-return,other',
+            'reason' => 'required|in:expired,wasted,supplier-return,production-loss,other',
             'notes' => 'nullable|string',
         ]);
 

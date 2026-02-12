@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\ProductionRun;
 use App\Models\StockEntry;
 use App\Models\StockMovement;
 use Illuminate\Http\Request;
@@ -31,6 +32,42 @@ class InventoryController extends Controller
             ->limit(10)
             ->get();
 
-        return view('admin.inventory.index', compact('summary', 'expiringSoon', 'recentMovements'));
+        $recentRuns = ProductionRun::with(['product', 'batch', 'warehouse'])
+            ->whereNotNull('stock_confirmed_at')
+            ->latest()
+            ->limit(10)
+            ->get();
+
+        return view('admin.inventory.index', compact('summary', 'expiringSoon', 'recentMovements', 'recentRuns'));
+    }
+
+    public function materials()
+    {
+        // Raw-material stock summary by product and warehouse
+        $entries = StockEntry::with(['product', 'warehouse'])
+            ->whereHas('product', function ($query) {
+                $query->where('product_type', 'raw');
+            })
+            ->get();
+
+        $grouped = $entries->groupBy(function ($entry) {
+            return $entry->product_id.'|'.$entry->warehouse_id;
+        });
+
+        $rows = $grouped->map(function ($group) {
+            $first = $group->first();
+
+            return (object) [
+                'product'   => $first->product,
+                'warehouse' => $first->warehouse,
+                'quantity'  => $group->sum('quantity'),
+            ];
+        })->sortBy(function ($row) {
+            return ($row->product->name ?? '').'|'.($row->warehouse->name ?? '');
+        });
+
+        return view('admin.inventory.materials', [
+            'rows' => $rows,
+        ]);
     }
 }

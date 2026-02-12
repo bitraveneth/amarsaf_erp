@@ -27,36 +27,10 @@
 
         <main class="public-main">
             <section class="public-intro">
-                <h1>Run your business in one place.</h1>
-                <p>
-                    SAFERP centralises product master data, agent orders, logistics, inventory,
-                    production, and finance so you can trace every bottle from source to shelf.
-                </p>
+                <h1>Welcome to SAFERP</h1>
+                <p>Secure web portal for managing products, production, inventory, sales, and finance.</p>
                 <div class="public-cta">
                     <span class="public-hint">Access is restricted to authorised SAFERP staff.</span>
-                </div>
-            </section>
-
-            <section class="public-process">
-                <h2>How the system works</h2>
-                <div class="process-flow">
-                    <div class="process-step">1. Configure products, packaging, tax classes and batches</div>
-                    <span class="process-arrow">↓</span>
-                    <div class="process-step">2. Set up agents, price lists and commission rules</div>
-                    <span class="process-arrow">↓</span>
-                    <div class="process-step">3. Record production runs, approve QC and create batch stock</div>
-                    <span class="process-arrow">↓</span>
-                    <div class="process-step">4. Stock appears by batch in warehouses and locations</div>
-                    <span class="process-arrow">↓</span>
-                    <div class="process-step">5. Create agent orders with SKUs, quantities and delivery dates</div>
-                    <span class="process-arrow">↓</span>
-                    <div class="process-step">6. Reserve FEFO stock and generate picking lists</div>
-                    <span class="process-arrow">↓</span>
-                    <div class="process-step">7. Plan routes, assign vehicles and deliver with POD</div>
-                    <span class="process-arrow">↓</span>
-                    <div class="process-step">8. Create invoices from delivered orders</div>
-                    <span class="process-arrow">↓</span>
-                    <div class="process-step">9. Record receipts and credit notes and review reports</div>
                 </div>
             </section>
         </main>
