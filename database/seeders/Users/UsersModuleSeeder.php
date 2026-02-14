@@ -17,10 +17,10 @@ class UsersModuleSeeder extends Seeder
     public function run(): void
     {
         $this->call([
+            PermissionsSeeder::class,
             AdminUsersSeeder::class,
             EmployeeUsersSeeder::class,
             // AgentUsersSeeder::class, // enable when agents are seeded
         ]);
     }
 }
-

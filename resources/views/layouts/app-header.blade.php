@@ -1,5 +1,5 @@
 <header
-    class="sticky top-0 z-99999 flex w-full border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900 xl:border-b"
+    class="sticky top-0 z-30 flex w-full border-b border-gray-200 bg-white/80 backdrop-blur-sm shadow-sm dark:border-gray-800 dark:bg-gray-900/80 xl:border-b"
     x-data="{
         isApplicationMenuOpen: false,
         toggleApplicationMenu() {
@@ -8,11 +8,11 @@
     }">
     <div class="flex grow flex-col items-center justify-between xl:flex-row xl:px-6">
         <div
-            class="flex w-full items-center justify-between gap-2 border-b border-gray-200 px-3 py-3 dark:border-gray-800 sm:gap-4 xl:justify-normal xl:border-b-0 xl:px-0 lg:py-4">
+            class="flex w-full items-center justify-between gap-2 border-b border-gray-200 px-3 py-2 dark:border-gray-800 sm:gap-4 xl:justify-normal xl:border-b-0 xl:px-0 lg:py-3">
 
             {{-- Desktop sidebar toggle --}}
             <button
-                class="hidden h-10 w-10 items-center justify-center rounded-lg border border-gray-200 text-gray-500 dark:border-gray-800 dark:text-gray-400 lg:h-11 lg:w-11 xl:flex"
+                class="header-toggle-btn hidden h-9 w-9 items-center justify-center rounded-lg border border-gray-200 text-gray-500 dark:border-gray-800 dark:text-gray-400 lg:h-10 lg:w-10 xl:flex"
                 :class="{ 'bg-gray-100 dark:bg-white/[0.03]': !$store.sidebar.isExpanded }"
                 @click="$store.sidebar.toggleExpanded()" aria-label="Toggle sidebar">
                 <svg x-show="!$store.sidebar.isMobileOpen" width="16" height="12" viewBox="0 0 16 12" fill="none"
@@ -31,7 +31,7 @@
 
             {{-- Mobile sidebar toggle --}}
             <button
-                class="flex h-10 w-10 items-center justify-center rounded-lg text-gray-500 dark:text-gray-400 lg:h-11 lg:w-11 xl:hidden"
+                class="header-toggle-btn flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 dark:text-gray-400 lg:h-10 lg:w-10 xl:hidden"
                 :class="{ 'bg-gray-100 dark:bg-white/[0.03]': $store.sidebar.isMobileOpen }"
                 @click="$store.sidebar.toggleMobileOpen()" aria-label="Toggle mobile menu">
                 <svg x-show="!$store.sidebar.isMobileOpen" width="16" height="12" viewBox="0 0 16 12" fill="none"
@@ -49,8 +49,11 @@
             </button>
 
             {{-- Logo (mobile) --}}
-            <a href="{{ route('admin.dashboard') }}" class="xl:hidden">
-                <span class="text-base font-semibold text-gray-900 dark:text-white">SAFERP</span>
+            <a href="{{ route('admin.dashboard') }}" class="flex items-center gap-2 xl:hidden">
+                <span class="flex h-9 w-9 items-center justify-center rounded-full bg-brand-500 text-sm font-semibold text-white">
+                    SF
+                </span>
+                <span class="text-sm font-semibold text-gray-900 dark:text-white">SAFERP</span>
             </a>
 
             {{-- Application menu toggle (mobile) --}}
@@ -112,7 +115,15 @@
                 {{-- Alerts dropdown (behaviour handled by resources/js/app.js via .header-alert / .header-alert-toggle) --}}
                 @auth
                     @php
-                        $alertCollection = isset($alerts) ? collect($alerts)->values() : collect();
+                        $alertCollection = isset($alerts)
+                            ? collect($alerts)
+                                ->values()
+                                ->map(function ($alert) {
+                                    return is_array($alert)
+                                        ? $alert
+                                        : ['message' => (string) $alert, 'variant' => 'error'];
+                                })
+                            : collect();
                         $alertCount = $alertCollection->count();
                         $trayAlerts = $alertCollection->take(10);
                     @endphp
@@ -148,22 +159,35 @@
 
                         {{-- Dropdown tray --}}
                         <div
-                            class="header-alert-menu absolute right-0 top-full mt-3 flex w-[22rem] flex-col rounded-xl border border-gray-200 bg-white p-4 text-sm shadow-theme-lg dark:border-gray-800 dark:bg-gray-900">
-                            <div class="mb-2 flex items-center justify-between">
-                                <h3 class="text-sm font-semibold text-gray-900 dark:text-white">
-                                    System alerts
-                                </h3>
-                                <span class="text-xs text-gray-500 dark:text-gray-400">
-                                    {{ $alertCount }} active
-                                </span>
+                            class="header-alert-menu fixed inset-x-4 top-20 z-40 flex max-h-[70vh] flex-col overflow-y-auto rounded-xl border border-gray-200 bg-white p-4 text-sm shadow-theme-lg dark:border-gray-800 dark:bg-gray-900
+                                   xl:absolute xl:inset-x-auto xl:right-0 xl:top-full xl:mt-3 xl:w-[22rem] xl:max-h-none">
+                            <div class="mb-2 flex items-center justify-between gap-3">
+                                <div>
+                                    <h3 class="text-sm font-semibold text-gray-900 dark:text-white">
+                                        System alerts
+                                    </h3>
+                                    <span class="text-xs text-gray-500 dark:text-gray-400">
+                                        {{ $alertCount }} active
+                                    </span>
+                                </div>
+                                <button type="button"
+                                        class="header-alert-menu-close flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700"
+                                        aria-label="Close alerts">
+                                    <svg class="h-4 w-4" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M6 6L14 14M14 6L6 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                                    </svg>
+                                </button>
                             </div>
 
                             @if ($alertCount)
-                                <ul class="mb-3 space-y-1 text-[13px] text-gray-700 dark:text-gray-300">
+                                <ul class="mb-3 space-y-2 text-[13px] text-gray-700 dark:text-gray-300">
                                     @foreach ($trayAlerts as $alert)
-                                        <li class="flex items-start gap-2 rounded-lg bg-gray-50 px-3 py-2 dark:bg-white/5">
-                                            <span class="mt-1 h-1.5 w-1.5 rounded-full bg-warning-500"></span>
-                                            <span>{{ $alert }}</span>
+                                        @php
+                                            $message = $alert['message'] ?? '';
+                                            $variant = $alert['variant'] ?? 'error';
+                                        @endphp
+                                        <li>
+                                            <x-alert :variant="$variant" :message="$message" />
                                         </li>
                                     @endforeach
                                 </ul>
@@ -188,6 +212,7 @@
                     $user = auth()->user();
                     $labelSource = $user->name ?: $user->email;
                     $initials = strtoupper(mb_substr($labelSource, 0, 2));
+                    $role = $user->role ?? 'employee';
                 @endphp
                 <div class="header-user relative">
                     {{-- Trigger button (behaviour handled by setupDropdown in app.js) --}}
@@ -198,8 +223,16 @@
                             {{ $initials }}
                         </span>
                         <span class="hidden text-left xl:block">
-                            <span class="block text-xs font-medium uppercase tracking-[0.08em] text-gray-400">
-                                {{ strtoupper($user->role ?? 'Admin') }}
+                            <span class="mb-0.5 inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-gray-600 dark:bg-gray-800 dark:text-gray-300">
+                                @switch($role)
+                                    @case('super_admin') SUPER ADMIN @break
+                                    @case('admin') ADMIN @break
+                                    @case('warehouse_manager') WAREHOUSE MANAGER @break
+                                    @case('production_manager') PRODUCTION MANAGER @break
+                                    @case('sales_manager') SALES MANAGER @break
+                                    @case('qc_officer') QC OFFICER @break
+                                    @default EMPLOYEE
+                                @endswitch
                             </span>
                             <span class="block text-sm font-semibold text-gray-900 dark:text-white">
                                 {{ $user->name ?? $user->email }}
@@ -227,6 +260,17 @@
                                 <div class="text-xs text-gray-500 dark:text-gray-400">
                                     {{ $user->email }}
                                 </div>
+                                <span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-gray-600 dark:bg-gray-800 dark:text-gray-300">
+                                    @switch($role)
+                                        @case('super_admin') SUPER ADMIN @break
+                                        @case('admin') ADMIN @break
+                                        @case('warehouse_manager') WAREHOUSE MANAGER @break
+                                        @case('production_manager') PRODUCTION MANAGER @break
+                                        @case('sales_manager') SALES MANAGER @break
+                                        @case('qc_officer') QC OFFICER @break
+                                        @default EMPLOYEE
+                                    @endswitch
+                                </span>
                             </div>
                         </div>
 

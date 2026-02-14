@@ -16,7 +16,7 @@ class AgentController extends Controller
 {
     public function index()
     {
-        $agents = Agent::with('parent')->paginate(12);
+        $agents = Agent::with(['parent', 'commissions'])->paginate(12);
         return view('admin.agents.index', compact('agents'));
     }
 

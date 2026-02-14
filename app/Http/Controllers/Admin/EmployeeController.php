@@ -102,7 +102,7 @@ class EmployeeController extends Controller
         $data = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|max:255|unique:users,email',
-            'role' => 'required|string|in:admin,warehouse_manager,production_manager,qc_officer,employee',
+            'role' => 'required|string|in:super_admin,admin,warehouse_manager,production_manager,sales_manager,qc_officer,employee',
             'password' => 'nullable|string|min:6',
         ]);
 

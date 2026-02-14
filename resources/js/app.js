@@ -113,6 +113,18 @@ document.addEventListener('DOMContentLoaded', () => {
     // Header alerts dropdown
     setupDropdown('.header-alert', '.header-alert-toggle', 'header-alert--open');
 
+    // Header alerts close buttons
+    document.querySelectorAll('.header-alert-menu-close').forEach((btn) => {
+        btn.addEventListener('click', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            const container = btn.closest('.header-alert');
+            if (container) {
+                container.classList.remove('header-alert--open');
+            }
+        });
+    });
+
     // Warehouse card actions dropdown
     setupDropdown('.warehouse-card-actions', '.warehouse-card-actions-toggle', 'warehouse-card-actions--open');
 

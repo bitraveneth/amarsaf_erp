@@ -19,6 +19,7 @@ class ContractsSeeder extends Seeder
 
         $warehouseManager = Employee::where('name', 'Warehouse Manager')->first();
         $salesRep01       = Employee::where('name', 'Field Sales Rep 01')->first();
+        $qcOfficer        = Employee::where('name', 'QC Officer')->first();
 
         if ($warehouseManager) {
             EmployeeContract::firstOrCreate(
@@ -31,8 +32,8 @@ class ContractsSeeder extends Seeder
                     'end_date'          => null,
                     'working_schedule'  => 'Sunday–Thursday, 9am–6pm',
                     'salary_amount'     => 45000,
-                    'travel_allowance'  => 0,
-                    'dearness_allowance'=> 0,
+                    'travel_allowance'  => 1500,
+                    'dearness_allowance'=> 800,
                     'bonus'             => 5000,
                     'status'            => 'active',
                 ]
@@ -57,6 +58,24 @@ class ContractsSeeder extends Seeder
                 ]
             );
         }
+
+        if ($qcOfficer) {
+            EmployeeContract::firstOrCreate(
+                [
+                    'employee_id' => $qcOfficer->id,
+                    'reference'   => 'QC-CT-001',
+                ],
+                [
+                    'start_date'        => $today->copy()->subMonths(3),
+                    'end_date'          => null,
+                    'working_schedule'  => 'Sunday–Thursday, 9am–6pm',
+                    'salary_amount'     => 30000,
+                    'travel_allowance'  => 1000,
+                    'dearness_allowance'=> 500,
+                    'bonus'             => 2000,
+                    'status'            => 'active',
+                ]
+            );
+        }
     }
 }
-

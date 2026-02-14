@@ -29,7 +29,10 @@
                     @if($alertCount)
                         <ul class="header-alert-list">
                             @foreach($trayAlerts as $alert)
-                                <li>{{ $alert }}</li>
+                                @php
+                                    $message = is_array($alert) ? ($alert['message'] ?? '') : $alert;
+                                @endphp
+                                <li>{{ $message }}</li>
                             @endforeach
                         </ul>
                     @else

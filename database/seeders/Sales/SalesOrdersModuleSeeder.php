@@ -51,6 +51,10 @@ class SalesOrdersModuleSeeder extends Seeder
             $unitPrice = $product->base_price ?? 550;
             $total     = $quantity * $unitPrice;
 
+            // Simple tiered commission: 2% for regular, 4% for bulk
+            $commissionRate = $orderType === 'bulk' ? 4 : 2;
+            $commissionTotal = round($total * ($commissionRate / 100), 2);
+
             $order = Order::firstOrCreate(
                 [
                     'agent_id'      => $agent->id,
@@ -64,7 +68,7 @@ class SalesOrdersModuleSeeder extends Seeder
                     'delivery_contact_phone' => $agent->phone,
                     'delivery_address'       => trim(($agent->area ?? '') . ', ' . ($agent->zone ?? '')),
                     'status'                 => 'confirmed',
-                    'commission_total'       => 0,
+                    'commission_total'       => $commissionTotal,
                     'notes'                  => 'Seeded demo order' . ($noteSuffix ? " ({$noteSuffix})" : ''),
                     'is_credit_used'         => false,
                     'payment_mode'           => $paymentMode,
@@ -80,8 +84,8 @@ class SalesOrdersModuleSeeder extends Seeder
                     'quantity'          => $quantity,
                     'unit_price'        => $unitPrice,
                     'order_type'        => $orderType,
-                    'commission_rate'   => 0,
-                    'commission_amount' => 0,
+                    'commission_rate'   => $commissionRate,
+                    'commission_amount' => $commissionTotal,
                 ]
             );
 

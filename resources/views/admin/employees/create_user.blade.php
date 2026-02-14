@@ -152,11 +152,13 @@
                             </div>
                             @php
                                 $roles = [
-                                    'warehouse_manager' => 'Warehouse manager',
+                                    'super_admin'        => 'Super admin',
+                                    'warehouse_manager'  => 'Warehouse manager',
                                     'production_manager' => 'Production manager',
-                                    'qc_officer' => 'QC officer',
-                                    'employee' => 'Field / office employee',
-                                    'admin' => 'Admin',
+                                    'sales_manager'      => 'Sales manager',
+                                    'qc_officer'         => 'QC officer',
+                                    'employee'           => 'Field / office employee',
+                                    'admin'              => 'Admin',
                                 ];
                             @endphp
                             <select id="role" 
@@ -221,6 +223,7 @@
                             <ul class="list-disc list-inside space-y-1">
                                 <li><span class="font-medium">Warehouse manager:</span> Full access to inventory, stock movements, and receiving</li>
                                 <li><span class="font-medium">Production manager:</span> Manage production orders, BOMs, and quality control</li>
+                                <li><span class="font-medium">Sales manager:</span> Manage sales orders, returns, and commissions</li>
                                 <li><span class="font-medium">QC officer:</span> Quality inspection and batch approvals</li>
                                 <li><span class="font-medium">Employee:</span> Basic view access and self-service features</li>
                                 <li><span class="font-medium">Admin:</span> Full system access (use with caution)</li>

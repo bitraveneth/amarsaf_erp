@@ -198,6 +198,49 @@
         </div>
     </div>
 
+    <!-- Detailed ledger breakdown -->
+    <div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+        <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-3">
+            Detailed ledger by account
+        </h3>
+        @if(isset($accountRows) && $accountRows->isNotEmpty())
+            <div class="overflow-x-auto">
+                <table class="min-w-full text-xs">
+                    <thead class="bg-gray-50 text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:bg-gray-800 dark:text-gray-400">
+                        <tr>
+                            <th class="px-3 py-2 text-left">Account</th>
+                            <th class="px-3 py-2 text-right">Debits</th>
+                            <th class="px-3 py-2 text-right">Credits</th>
+                            <th class="px-3 py-2 text-right">Net (credit - debit)</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                        @foreach($accountRows as $row)
+                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/40">
+                                <td class="px-3 py-2 text-gray-800 dark:text-gray-100">
+                                    {{ $row['account'] }}
+                                </td>
+                                <td class="px-3 py-2 text-right text-gray-700 dark:text-gray-200">
+                                    BDT {{ number_format($row['debit'], 2) }}
+                                </td>
+                                <td class="px-3 py-2 text-right text-gray-700 dark:text-gray-200">
+                                    BDT {{ number_format($row['credit'], 2) }}
+                                </td>
+                                <td class="px-3 py-2 text-right {{ $row['net'] >= 0 ? 'text-success-600 dark:text-success-400' : 'text-error-600 dark:text-error-500' }}">
+                                    {{ $row['net'] >= 0 ? '+' : '-' }}BDT {{ number_format(abs($row['net']), 2) }}
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        @else
+            <p class="text-sm text-gray-500 dark:text-gray-400">
+                No ledger entries found for this period.
+            </p>
+        @endif
+    </div>
+
     <!-- Notes Card -->
     <div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
         <div class="flex items-start gap-4">

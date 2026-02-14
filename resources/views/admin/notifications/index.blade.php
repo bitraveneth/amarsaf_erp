@@ -5,7 +5,7 @@
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-            <div class="flex items-center gap-3">
+            <div class="flex flex-wrap items-center gap-3">
                 <div class="relative">
                     <div class="absolute -inset-1 bg-gradient-to-r from-brand-500 to-brand-600 rounded-full blur opacity-20"></div>
                     <div class="relative flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-brand-600 text-white shadow-lg">
@@ -14,19 +14,26 @@
                         </svg>
                     </div>
                 </div>
-                <div>
-                    <h1 class="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
-                        Notifications
-                    </h1>
-                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                        System alerts and updates across SAFERP
-                    </p>
+                <div class="flex flex-wrap items-center gap-3">
+                    <div>
+                        <h1 class="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
+                            Alerts
+                        </h1>
+                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                            System alerts and updates across SAFERP
+                        </p>
+                    </div>
+                    @if(!empty($alerts))
+                        <span class="mt-2 inline-flex items-center rounded-full bg-gradient-to-r from-error-500 to-error-600 px-4 py-1.5 text-xs font-semibold text-white shadow-md sm:mt-0">
+                            {{ count($alerts) }} {{ Str::plural('Alert', count($alerts)) }}
+                        </span>
+                    @endif
                 </div>
             </div>
         </div>
         
         @if(isset($userNotifications) && method_exists($userNotifications, 'links') && $userNotifications->isNotEmpty())
-        <div class="flex items-center gap-2">
+        <div class="flex flex-wrap items-center justify-start gap-2 sm:justify-end">
             <button onclick="window.location.reload()" 
                     class="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white/80 backdrop-blur-sm px-4 py-2.5 text-sm font-medium text-gray-700 shadow-xs hover:bg-white hover:shadow-sm dark:border-gray-800 dark:bg-gray-900/80 dark:text-gray-300 dark:hover:bg-gray-900 transition-all duration-200">
                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -70,7 +77,7 @@
 
     @if(!$hasAlerts && !$hasNotifications)
         <!-- Empty State - Modern All Clear -->
-        <div class="relative overflow-hidden rounded-3xl border border-gray-200 bg-white/50 backdrop-blur-sm p-16 text-center shadow-xl dark:border-gray-800 dark:bg-gray-900/50">
+        <div class="relative overflow-hidden rounded-3xl border border-gray-200 bg-white/50 backdrop-blur-sm px-6 py-10 text-center shadow-xl dark:border-gray-800 dark:bg-gray-900/50 sm:p-12 lg:p-16">
             <!-- Decorative background -->
             <div class="absolute top-0 right-0 -mt-10 -mr-10 h-40 w-40 rounded-full bg-gradient-to-br from-brand-100 to-brand-50 opacity-20 dark:from-brand-900 dark:to-brand-800 blur-3xl"></div>
             <div class="absolute bottom-0 left-0 -mb-10 -ml-10 h-40 w-40 rounded-full bg-gradient-to-br from-success-100 to-success-50 opacity-20 dark:from-success-900 dark:to-success-800 blur-3xl"></div>
@@ -102,49 +109,23 @@
         <div class="space-y-10">
             <!-- System Alerts Section - Modern Redesign -->
             @if($hasAlerts)
-                <div class="relative overflow-hidden rounded-3xl border border-error-200 bg-gradient-to-br from-error-50/50 to-white p-6 dark:border-error-900/30 dark:from-error-950/20 dark:to-gray-900">
+                <div class="relative overflow-hidden rounded-3xl border border-error-200 bg-gradient-to-br from-error-50/50 to-white p-4 dark:border-error-900/30 dark:from-error-950/20 dark:to-gray-900 sm:p-6 lg:p-8">
                     <!-- Decorative elements -->
                     <div class="absolute top-0 right-0 -mt-8 -mr-8 h-32 w-32 rounded-full bg-gradient-to-br from-error-200 to-error-100 opacity-30 dark:from-error-900 dark:to-error-800 blur-2xl"></div>
                     
                     <div class="relative">
-                        <div class="flex items-start gap-4 sm:items-center">
-                            <div class="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-error-500 to-error-600 shadow-lg">
-                                <svg class="h-7 w-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-1.5-2.25h3M12 15.75h.007v.008H12v-.008z" />
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9 9 0 100-18 9 9 0 000 18z" />
-                                </svg>
-                            </div>
-                            <div class="flex-1 min-w-0">
-                                <div class="flex flex-wrap items-center justify-between gap-4">
-                                    <div>
-                                        <h2 class="text-xl font-bold text-gray-900 dark:text-white">System Alerts</h2>
-                                        <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">Critical issues requiring immediate attention</p>
-                                    </div>
-                                    <span class="inline-flex items-center rounded-full bg-gradient-to-r from-error-500 to-error-600 px-4 py-1.5 text-sm font-semibold text-white shadow-md">
-                                        {{ count($alerts) }} {{ Str::plural('Alert', count($alerts)) }}
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="mt-6 grid gap-3">
+                        <div class="mt-2 grid gap-3">
                             @foreach($alerts as $index => $alert)
-                                <div class="group relative overflow-hidden rounded-2xl border border-error-200 bg-white p-5 shadow-sm transition-all hover:shadow-md dark:border-error-800 dark:bg-gray-900">
-                                    <div class="absolute inset-y-0 left-0 w-1.5 bg-gradient-to-b from-error-500 to-error-600"></div>
-                                    <div class="flex items-start gap-4 pl-2">
-                                        <div class="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-error-100 dark:bg-error-900/50">
-                                            <svg class="h-4 w-4 text-error-600 dark:text-error-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
-                                            </svg>
-                                        </div>
-                                        <div class="flex-1">
-                                            <p class="text-base font-medium text-gray-900 dark:text-white">{{ $alert }}</p>
-                                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                                                {{ now()->format('d M Y, H:i') }} • System Generated
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
+                                @php
+                                    $message = is_array($alert) ? ($alert['message'] ?? '') : $alert;
+                                    $variant = is_array($alert) ? ($alert['variant'] ?? 'error') : 'error';
+                                    $title = $variant === 'success' ? 'Good news' : 'System alert';
+                                @endphp
+                                <x-alert :variant="$variant" :title="$title" :message="$message">
+                                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                        {{ now()->format('d M Y, H:i') }} • System Generated
+                                    </p>
+                                </x-alert>
                             @endforeach
                         </div>
                     </div>
@@ -154,7 +135,7 @@
             <!-- User Notifications Section - Modern Redesign with Read/Unread -->
             @if($hasNotifications)
                 <div class="space-y-6">
-                    <div class="flex items-center justify-between">
+                    <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                         <div class="flex items-center gap-4">
                             <div class="relative">
                                 <div class="absolute -inset-1 bg-gradient-to-r from-brand-500 to-brand-600 rounded-xl blur opacity-20"></div>
@@ -174,7 +155,7 @@
                         </div>
                         
                         <!-- Filter Tabs -->
-                        <div class="flex items-center gap-2 bg-gray-100 dark:bg-gray-800 rounded-xl p-1">
+                        <div class="flex flex-wrap items-center gap-2 bg-gray-100 dark:bg-gray-800 rounded-xl p-1 justify-start md:justify-end">
                             <button type="button" 
                                     id="show-all-btn"
                                     class="px-4 py-2 text-sm font-medium rounded-lg bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 shadow-sm transition-all">

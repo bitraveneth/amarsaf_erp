@@ -33,6 +33,9 @@ use Database\Seeders\Sales\PickingListsModuleSeeder;
 use Database\Seeders\Sales\ReturnsModuleSeeder;
 use Database\Seeders\Sales\SalesOrdersModuleSeeder;
 use Database\Seeders\Users\UsersModuleSeeder;
+use Database\Seeders\MenuStructureSeeder;
+use Database\Seeders\RolesSeeder;
+use Database\Seeders\Users\PermissionsSeeder;
 use Illuminate\Database\Seeder;
 
 /**
@@ -94,8 +97,11 @@ class DatabaseSeeder extends Seeder
             // Extra analytics / demo data so charts look alive.
             //DemoAnalyticsSeeder::class,
 
-            // 6. Users / roles
+            // 6. Users / roles / permissions / menu
             UsersModuleSeeder::class,
+            RolesSeeder::class,
+            PermissionsSeeder::class,
+            MenuStructureSeeder::class,
         ]);
     }
 }

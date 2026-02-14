@@ -52,6 +52,19 @@ class EmployeesSeeder extends Seeder
             ]
         );
 
+        // Sales manager
+        Employee::firstOrCreate(
+            ['name' => 'Sales Manager'],
+            [
+                'work_email'   => 'sales.manager@demo.local',
+                'work_phone'   => null,
+                'work_mobile'  => '01712-000005',
+                'department'   => 'Sales & Marketing',
+                'job_position' => 'Sales Manager',
+                'work_zone'    => 'National',
+            ]
+        );
+
         // Field sales representative
         Employee::firstOrCreate(
             ['name' => 'Field Sales Rep 01'],

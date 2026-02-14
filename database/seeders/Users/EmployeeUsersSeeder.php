@@ -59,6 +59,21 @@ class EmployeeUsersSeeder extends Seeder
             );
         }
 
+        // Sales Manager login
+        $salesManager = Employee::where('name', 'Sales Manager')->first();
+
+        if ($salesManager) {
+            User::firstOrCreate(
+                ['email' => 'sales.manager@saferpv.local'],
+                [
+                    'name'        => 'Demo Sales Manager',
+                    'password'    => Hash::make('password'),
+                    'role'        => 'sales_manager',
+                    'employee_id' => $salesManager->id,
+                ]
+            );
+        }
+
         // QC Officer login
         $qcOfficer = Employee::where('name', 'QC Officer')->first();
 

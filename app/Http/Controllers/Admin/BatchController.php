@@ -26,6 +26,47 @@ class BatchController extends Controller
         return view('admin.batches.index', compact('batches', 'products'));
     }
 
+    public function show(Batch $batch)
+    {
+        $batch->load([
+            'product',
+            'productionRuns.warehouse',
+            'stockEntries.warehouse',
+            'stockEntries.location',
+            'stockEntries.movements.order.agent',
+        ]);
+
+        $producedQty = $batch->productionRuns->sum('quantity');
+        $onHandQty   = $batch->stockEntries->where('status', 'available')->sum('quantity');
+        $reservedQty = $batch->stockEntries->where('status', 'reserved')->sum('quantity');
+
+        $movements = $batch->stockEntries
+            ->flatMap(function ($entry) {
+                return $entry->movements;
+            })
+            ->sortByDesc('created_at');
+
+        $writtenOffQty = $movements
+            ->whereIn('type', ['expired', 'wasted', 'supplier-return', 'production-loss', 'other'])
+            ->sum(function ($m) {
+                return abs($m->quantity);
+            });
+
+        $customerReturnQty = $movements
+            ->where('type', 'customer-return')
+            ->sum('quantity');
+
+        return view('admin.batches.show', [
+            'batch'             => $batch,
+            'producedQty'       => $producedQty,
+            'onHandQty'         => $onHandQty,
+            'reservedQty'       => $reservedQty,
+            'writtenOffQty'     => $writtenOffQty,
+            'customerReturnQty' => $customerReturnQty,
+            'movements'         => $movements,
+        ]);
+    }
+
     public function store(Request $request)
     {
         $data = $request->validate([

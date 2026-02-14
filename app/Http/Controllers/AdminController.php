@@ -208,19 +208,31 @@ class AdminController extends Controller
         $alerts = [];
 
         if ($expiringSoonCount > 0) {
-            $alerts[] = "{$expiringSoonCount} batches expiring within 30 days";
+            $alerts[] = [
+                'message' => "{$expiringSoonCount} batches expiring within 30 days",
+                'variant' => 'error', // bad / urgent
+            ];
         }
 
         if ($exceptionDeliveriesToday > 0) {
-            $alerts[] = "{$exceptionDeliveriesToday} deliveries marked as exception today";
+            $alerts[] = [
+                'message' => "{$exceptionDeliveriesToday} deliveries marked as exception today",
+                'variant' => 'error', // bad / exception
+            ];
         }
 
         if ($todayOrders > 0) {
-            $alerts[] = "{$todayOrders} orders scheduled for delivery today";
+            $alerts[] = [
+                'message' => "{$todayOrders} orders scheduled for delivery today",
+                'variant' => 'success', // good news
+            ];
         }
 
         if ($outstandingReceivables > 0) {
-            $alerts[] = 'Outstanding receivables of BDT ' . number_format($outstandingReceivables, 2);
+            $alerts[] = [
+                'message' => 'Outstanding receivables of BDT ' . number_format($outstandingReceivables, 2),
+                'variant' => 'error', // bad / attention needed
+            ];
         }
 
         // Recent orders (for dashboard table)
@@ -272,7 +284,10 @@ class AdminController extends Controller
                 ->count();
 
             if ($expiringSoonCount > 0) {
-                $alerts[] = "{$expiringSoonCount} batches expiring within 30 days";
+                $alerts[] = [
+                    'message' => "{$expiringSoonCount} batches expiring within 30 days",
+                    'variant' => 'error',
+                ];
             }
         }
 
@@ -282,7 +297,10 @@ class AdminController extends Controller
                 ->count();
 
             if ($exceptionDeliveriesToday > 0) {
-                $alerts[] = "{$exceptionDeliveriesToday} deliveries marked as exception today";
+                $alerts[] = [
+                    'message' => "{$exceptionDeliveriesToday} deliveries marked as exception today",
+                    'variant' => 'error',
+                ];
             }
         }
 
@@ -290,7 +308,10 @@ class AdminController extends Controller
             $todayOrders = Order::whereDate('delivery_date', Carbon::today())->count();
 
             if ($todayOrders > 0) {
-                $alerts[] = "{$todayOrders} orders scheduled for delivery today";
+                $alerts[] = [
+                    'message' => "{$todayOrders} orders scheduled for delivery today",
+                    'variant' => 'success',
+                ];
             }
         }
 
@@ -307,7 +328,10 @@ class AdminController extends Controller
             });
 
             if ($outstandingReceivables > 0) {
-                $alerts[] = 'Outstanding receivables of BDT ' . number_format($outstandingReceivables, 2);
+                $alerts[] = [
+                    'message' => 'Outstanding receivables of BDT ' . number_format($outstandingReceivables, 2),
+                    'variant' => 'error',
+                ];
             }
         }
 

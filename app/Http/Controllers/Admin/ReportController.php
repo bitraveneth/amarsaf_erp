@@ -68,6 +68,20 @@ class ReportController extends Controller
         $grossProfit = $netSales - $cogs;
         $profit = $grossProfit - $commissions - $otherExpenses;
 
+        // Detailed ledger breakdown by account for the period
+        $accountRows = $entries->groupBy('account')->map(function (Collection $rows, string $account) {
+            $debit  = (float) $rows->sum('debit');
+            $credit = (float) $rows->sum('credit');
+            $net    = $credit - $debit; // income-style: positive = income, negative = expense
+
+            return [
+                'account' => $account,
+                'debit'   => $debit,
+                'credit'  => $credit,
+                'net'     => $net,
+            ];
+        })->sortBy('account')->values();
+
         return view('admin.finance.pl', compact(
             'from',
             'to',
@@ -78,7 +92,8 @@ class ReportController extends Controller
             'netSales',
             'cogs',
             'grossProfit',
-            'profit'
+            'profit',
+            'accountRows'
         ));
     }
 
@@ -91,13 +106,47 @@ class ReportController extends Controller
         $from = $month->copy()->startOfMonth();
         $to = $month->copy()->endOfMonth();
 
+        // Summary from ledger (existing behaviour)
         $entries = LedgerEntry::where('account', 'VAT Payable')
             ->whereBetween('created_at', [$from, $to])
             ->get();
 
         $vatCollected = $entries->sum('credit') - $entries->sum('debit');
 
-        return view('admin.finance.vat', compact('month', 'vatCollected'));
+        // Detailed per‑invoice breakdown (output VAT)
+        $invoices = Invoice::with(['order.agent'])
+            ->whereBetween('issued_at', [$from->toDateString(), $to->toDateString()])
+            ->orderBy('issued_at')
+            ->get();
+
+        $invoiceRows = $invoices->map(function (Invoice $invoice) {
+            $taxable = (float) $invoice->net_total;
+            $vat = (float) $invoice->vat_amount;
+            $rate = $taxable > 0 ? round(($vat / $taxable) * 100, 2) : null;
+
+            return [
+                'date'        => $invoice->issued_at,
+                'number'      => $invoice->invoice_number ?? $invoice->id,
+            'customer'    => $invoice->order?->agent?->name,
+                'taxable'     => $taxable,
+                'vat'         => $vat,
+                'vat_rate'    => $rate,
+            ];
+        });
+
+        $totals = [
+            'taxable' => $invoiceRows->sum('taxable'),
+            'vat'     => $invoiceRows->sum('vat'),
+        ];
+
+        return view('admin.finance.vat', [
+            'month'        => $month,
+            'vatCollected' => $vatCollected,
+            'from'         => $from,
+            'to'           => $to,
+            'invoiceRows'  => $invoiceRows,
+            'totals'       => $totals,
+        ]);
     }
 
     public function balanceSheet(Request $request)

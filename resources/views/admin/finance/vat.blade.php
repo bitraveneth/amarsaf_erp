@@ -63,6 +63,19 @@
                 Current Period
             </a>
             @endif
+
+            <!-- Print button -->
+            <button
+                type="button"
+                onclick="window.print()"
+                class="inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-white/[0.03]"
+            >
+                <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M6 9V4a1 1 0 011-1h10a1 1 0 011 1v5M6 15H5a2 2 0 01-2-2v-1a2 2 0 012-2h14a2 2 0 012 2v1a2 2 0 01-2 2h-1M9 15h6v5H9z" />
+                </svg>
+                Print
+            </button>
         </div>
     </div>
 
@@ -92,6 +105,75 @@
                 </div>
             </div>
         </div>
+    </div>
+
+    <!-- Detailed VAT table -->
+    <div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-theme-sm dark:border-gray-800 dark:bg-gray-900">
+        <div class="flex items-center justify-between mb-4">
+            <div>
+                <h2 class="text-sm font-semibold text-gray-900 dark:text-white">Detailed VAT by invoice</h2>
+                <p class="text-xs text-gray-500 dark:text-gray-400">
+                    From {{ $from->toDateString() }} to {{ $to->toDateString() }}
+                </p>
+            </div>
+        </div>
+
+        @if($invoiceRows->isEmpty())
+            <p class="text-sm text-gray-500 dark:text-gray-400">
+                No invoices found in this period.
+            </p>
+        @else
+            <div class="overflow-x-auto">
+                <table class="min-w-full text-xs">
+                    <thead class="bg-gray-50 text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:bg-gray-800 dark:text-gray-400">
+                        <tr>
+                            <th class="px-3 py-2 text-left">Date</th>
+                            <th class="px-3 py-2 text-left">Invoice</th>
+                            <th class="px-3 py-2 text-left">Customer</th>
+                            <th class="px-3 py-2 text-right">Taxable amount</th>
+                            <th class="px-3 py-2 text-right">VAT</th>
+                            <th class="px-3 py-2 text-right">VAT rate</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                        @foreach($invoiceRows as $row)
+                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/40">
+                                <td class="px-3 py-2 text-gray-700 dark:text-gray-200">
+                                    {{ \Illuminate\Support\Carbon::parse($row['date'])->toDateString() }}
+                                </td>
+                                <td class="px-3 py-2 font-mono text-[11px] text-gray-600 dark:text-gray-300">
+                                    {{ $row['number'] }}
+                                </td>
+                                <td class="px-3 py-2 text-gray-700 dark:text-gray-200">
+                                    {{ $row['customer'] ?? '—' }}
+                                </td>
+                                <td class="px-3 py-2 text-right text-gray-800 dark:text-gray-100">
+                                    BDT {{ number_format($row['taxable'], 2) }}
+                                </td>
+                                <td class="px-3 py-2 text-right text-gray-800 dark:text-gray-100">
+                                    BDT {{ number_format($row['vat'], 2) }}
+                                </td>
+                                <td class="px-3 py-2 text-right text-gray-600 dark:text-gray-300">
+                                    {{ $row['vat_rate'] !== null ? $row['vat_rate'].'%' : '—' }}
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                    <tfoot class="bg-gray-50 text-[11px] font-semibold uppercase tracking-wide text-gray-600 dark:bg-gray-800 dark:text-gray-300">
+                        <tr>
+                            <td colspan="3" class="px-3 py-2 text-right">Totals</td>
+                            <td class="px-3 py-2 text-right">
+                                BDT {{ number_format($totals['taxable'], 2) }}
+                            </td>
+                            <td class="px-3 py-2 text-right">
+                                BDT {{ number_format($totals['vat'], 2) }}
+                            </td>
+                            <td class="px-3 py-2"></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        @endif
     </div>
 </div>
 @endsection
