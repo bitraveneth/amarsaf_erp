@@ -20,7 +20,7 @@
                             Alerts
                         </h1>
                         <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                            System alerts and updates across SAFERP
+                            System alerts and updates across ERP
                         </p>
                     </div>
                     @if(!empty($alerts))

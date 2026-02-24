@@ -109,7 +109,8 @@ class MenuHelper
                             ['name' => 'Materials (raw / service)', 'path' => '/admin/materials', 'permission' => 'control.products'],
                             ['name' => 'Packaging types', 'path' => '/admin/packaging', 'permission' => 'control.products'],
                             ['name' => 'Tax & VAT classes', 'path' => '/admin/tax-classes', 'permission' => 'control.products'],
-                            ['name' => 'Price lists', 'path' => '/admin/products/prices', 'permission' => 'control.products'],
+                            // Product price list (uses dedicated route /admin/products-price-list)
+                            ['name' => 'Price lists', 'path' => '/admin/products-price-list', 'permission' => 'control.products'],
                         ],
                     ],
                     [
@@ -129,7 +130,8 @@ class MenuHelper
                         'permission' => 'control.suppliers',
                         'subItems' => [
                             ['name' => 'Suppliers', 'path' => '/admin/suppliers', 'permission' => 'control.suppliers'],
-                            ['name' => 'Supplier prices', 'path' => '/admin/supplier-prices', 'permission' => 'control.suppliers'],
+                            // Supplier prices are managed from the main Suppliers screen for now
+                            ['name' => 'Supplier prices', 'path' => '/admin/suppliers', 'permission' => 'control.suppliers'],
                         ],
                     ],
                     [
@@ -140,7 +142,8 @@ class MenuHelper
                         'subItems' => [
                             ['name' => 'Warehouses', 'path' => '/admin/warehouses', 'permission' => 'control.warehouses'],
                             ['name' => 'Vehicle registry', 'path' => '/admin/vehicles', 'permission' => 'control.warehouses'],
-                            ['name' => 'Delivery zones & routes', 'path' => '/admin/zones', 'permission' => 'control.warehouses'],
+                            // Delivery zones & routes configuration
+                            ['name' => 'Delivery zones & routes', 'path' => '/admin/delivery-routes', 'permission' => 'control.warehouses'],
                             ['name' => 'Expenses & allowances', 'path' => '/admin/expenses', 'permission' => 'control.warehouses'],
                         ],
                     ],

@@ -1,3 +1,35 @@
+@php
+    use App\Helpers\MenuHelper;
+
+    $__menuSearchItems = collect(MenuHelper::getMenuGroups())
+        ->flatMap(function ($group) {
+            return collect($group['items'])->flatMap(function ($item) use ($group) {
+                $items = [];
+
+                if (! empty($item['path']) && $item['path'] !== '#') {
+                    $items[] = [
+                        'label' => $item['name'],
+                        'path' => $item['path'],
+                        'group' => $group['title'],
+                    ];
+                }
+
+                foreach ($item['subItems'] ?? [] as $sub) {
+                    if (! empty($sub['path']) && $sub['path'] !== '#') {
+                        $items[] = [
+                            'label' => $sub['name'],
+                            'path' => $sub['path'],
+                            'group' => $group['title'],
+                        ];
+                    }
+                }
+
+                return $items;
+            });
+        })
+        ->values();
+@endphp
+
 <header
     class="sticky top-0 z-30 flex w-full border-b border-gray-200 bg-white/80 backdrop-blur-sm shadow-sm dark:border-gray-800 dark:bg-gray-900/80 xl:border-b"
     x-data="{
@@ -51,9 +83,9 @@
             {{-- Logo (mobile) --}}
             <a href="{{ route('admin.dashboard') }}" class="flex items-center gap-2 xl:hidden">
                 <span class="flex h-9 w-9 items-center justify-center rounded-full bg-brand-500 text-sm font-semibold text-white">
-                    SF
+                    ER
                 </span>
-                <span class="text-sm font-semibold text-gray-900 dark:text-white">SAFERP</span>
+                <span class="text-sm font-semibold text-gray-900 dark:text-white">ERP</span>
             </a>
 
             {{-- Application menu toggle (mobile) --}}
@@ -68,8 +100,8 @@
 
             {{-- Search (desktop) --}}
             <div class="hidden xl:block">
-                <form>
-                    <div class="relative">
+                <form onsubmit="return false;">
+                    <div class="relative" data-command-container>
                         <span class="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2">
                             <svg class="fill-gray-500 dark:fill-gray-400" width="20" height="20" viewBox="0 0 20 20"
                                 fill="none">
@@ -78,13 +110,24 @@
                                     fill="" />
                             </svg>
                         </span>
-                        <input type="text" placeholder="Search or type command..."
+                        <input
+                            type="text"
+                            placeholder="Search or type command..."
+                            data-command-search
+                            data-search-index='@json($__menuSearchItems)'
                             class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-200 bg-transparent py-2.5 pl-12 pr-14 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-white/3 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800 xl:w-[430px]" />
                         <button
                             class="absolute right-2.5 top-1/2 inline-flex -translate-y-1/2 items-center gap-0.5 rounded-lg border border-gray-200 bg-gray-50 px-[7px] py-[4.5px] text-xs -tracking-[0.2px] text-gray-500 dark:border-gray-800 dark:bg-white/[0.03] dark:text-gray-400">
                             <span> ⌘ </span>
                             <span> K </span>
                         </button>
+
+                        {{-- Command palette results --}}
+                        <div
+                            data-command-results
+                            class="absolute left-0 right-0 z-40 mt-2 hidden overflow-hidden rounded-xl border border-gray-200 bg-white shadow-theme-md dark:border-gray-800 dark:bg-gray-900">
+                            {{-- Filled by resources/js/app.js --}}
+                        </div>
                     </div>
                 </form>
             </div>
@@ -94,6 +137,30 @@
         <div :class="isApplicationMenuOpen ? 'flex' : 'hidden'"
             class="w-full items-center justify-between gap-4 px-5 py-4 shadow-theme-md xl:flex xl:justify-end xl:px-0 xl:shadow-none">
             <div class="flex items-center gap-2 2xsm:gap-3">
+                {{-- Clock --}}
+                <div
+                    class="hidden items-center gap-2 rounded-full border border-gray-200 bg-white/80 px-3.5 py-1.5 text-[11px] font-medium text-gray-600 shadow-theme-xs dark:border-gray-800 dark:bg-gray-900/80 dark:text-gray-300 xl:flex"
+                    x-data="{ now: '' }"
+                    x-init="
+                        const format = new Intl.DateTimeFormat(undefined, {
+                            weekday: 'short',
+                            day: '2-digit',
+                            month: 'short',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            hour12: true,
+                        });
+                        const update = () => { now = format.format(new Date()); };
+                        update();
+                        setInterval(update, 60000);
+                    "
+                >
+                    <svg class="h-3.5 w-3.5 text-gray-400 dark:text-gray-500" viewBox=\"0 0 20 20\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">
+                        <path d=\"M10 1.75C5.71979 1.75 2.25 5.21979 2.25 9.5C2.25 13.7802 5.71979 17.25 10 17.25C14.2802 17.25 17.75 13.7802 17.75 9.5C17.75 5.21979 14.2802 1.75 10 1.75ZM3.75 9.5C3.75 6.04822 6.54822 3.25 10 3.25C13.4518 3.25 16.25 6.04822 16.25 9.5C16.25 12.9518 13.4518 15.75 10 15.75C6.54822 15.75 3.75 12.9518 3.75 9.5Z\" fill=\"currentColor\"/>
+                        <path d=\"M10.75 6C10.75 5.58579 10.4142 5.25 10 5.25C9.58579 5.25 9.25 5.58579 9.25 6V9.25C9.25 9.44891 9.32902 9.63968 9.46967 9.78033L11.4697 11.7803C11.7626 12.0732 12.2374 12.0732 12.5303 11.7803C12.8232 11.4874 12.8232 11.0126 12.5303 10.7197L10.75 8.93934V6Z\" fill=\"currentColor\"/>
+                    </svg>
+                    <span class="truncate" x-text="now"></span>
+                </div>
                 {{-- Theme toggle --}}
                 <button
                     class="relative flex h-11 w-11 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-500 shadow-theme-xs transition-colors hover:bg-gray-100 hover:text-gray-700 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white"
@@ -210,17 +277,24 @@
             @auth
                 @php
                     $user = auth()->user();
+                    $user->loadMissing('employee');
                     $labelSource = $user->name ?: $user->email;
                     $initials = strtoupper(mb_substr($labelSource, 0, 2));
                     $role = $user->role ?? 'employee';
+                    $avatarUrl = $user->employee && $user->employee->photo_path
+                        ? asset('storage/' . $user->employee->photo_path)
+                        : null;
                 @endphp
                 <div class="header-user relative">
                     {{-- Trigger button (behaviour handled by setupDropdown in app.js) --}}
                     <button type="button"
                         class="header-user-toggle flex items-center gap-2 rounded-full border border-gray-200 bg-white px-2.5 py-1.5 text-sm font-medium text-gray-700 shadow-theme-xs transition hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800">
-                        <span
-                            class="flex h-9 w-9 items-center justify-center rounded-full bg-brand-500 text-sm font-semibold text-white">
-                            {{ $initials }}
+                        <span class="flex h-9 w-9 items-center justify-center rounded-full bg-brand-500 text-sm font-semibold text-white overflow-hidden">
+                            @if($avatarUrl)
+                                <img src="{{ $avatarUrl }}" alt="Profile photo" class="h-full w-full object-cover">
+                            @else
+                                {{ $initials }}
+                            @endif
                         </span>
                         <span class="hidden text-left xl:block">
                             <span class="mb-0.5 inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-gray-600 dark:bg-gray-800 dark:text-gray-300">
@@ -249,9 +323,12 @@
                     <div
                         class="header-user-menu absolute right-0 top-full mt-3 w-64 rounded-xl border border-gray-200 bg-white p-4 text-sm shadow-theme-lg dark:border-gray-800 dark:bg-gray-900">
                         <div class="mb-3 flex items-center gap-3 border-b border-gray-100 pb-3 dark:border-gray-800">
-                            <span
-                                class="flex h-10 w-10 items-center justify-center rounded-full bg-brand-500 text-sm font-semibold text-white">
-                                {{ $initials }}
+                            <span class="flex h-10 w-10 items-center justify-center rounded-full bg-brand-500 text-sm font-semibold text-white overflow-hidden">
+                                @if($avatarUrl)
+                                    <img src="{{ $avatarUrl }}" alt="Profile photo" class="h-full w-full object-cover">
+                                @else
+                                    {{ $initials }}
+                                @endif
                             </span>
                             <div class="space-y-0.5">
                                 <div class="text-sm font-semibold text-gray-900 dark:text-white">
@@ -276,9 +353,9 @@
 
                         <ul class="mb-2 space-y-1 text-[13px] text-gray-700 dark:text-gray-300">
                             <li>
-                                <a href="{{ route('admin.dashboard') }}"
+                                <a href="{{ route('admin.profile.edit') }}"
                                     class="flex items-center justify-between rounded-lg px-3 py-2 hover:bg-gray-50 dark:hover:bg-white/5">
-                                    <span>Back to dashboard</span>
+                                    <span>Edit profile</span>
                                 </a>
                             </li>
                         </ul>

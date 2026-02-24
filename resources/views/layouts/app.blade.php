@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <title>{{ $title ?? (config('app.name', 'SAFERP') . ' Admin') }}</title>
+    <title>{{ $title ?? (config('app.name', 'ERP') . ' Admin') }}</title>
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
@@ -162,7 +162,7 @@
 
         {{-- App name with slide animation --}}
         <h1 class="mb-8 text-title-md font-semibold text-gray-900 dark:text-white animate-[slideUp_0.6s_ease-out]">
-            {{ config('app.name', 'SAFERP') }}
+            {{ config('app.name', 'ERP') }}
         </h1>
 
         {{-- Bouncing dots loader --}}

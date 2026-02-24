@@ -43,7 +43,7 @@
             <article class="rounded-xl border border-gray-200 bg-gray-50 p-5 dark:border-gray-800 dark:bg-gray-800/50">
                 <p class="text-theme-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Total distributed</p>
                 <h3 class="mt-2 text-title-md font-semibold text-gray-900 dark:text-white">
-                    {{ number_format($total, 2) }} {{ config('app.currency', 'USD') }}
+                    {{ number_format($total, 2) }} {{ config('app.currency', 'BDT') }}
                 </h3>
                 <span class="mt-1 inline-block text-theme-xs text-gray-500 dark:text-gray-400">For selected period</span>
             </article>
@@ -63,7 +63,7 @@
             <article class="rounded-xl border border-gray-200 bg-gray-50 p-5 dark:border-gray-800 dark:bg-gray-800/50">
                 <p class="text-theme-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Average</p>
                 <h3 class="mt-2 text-title-md font-semibold text-gray-900 dark:text-white">
-                    {{ number_format($averageDistribution, 2) }} {{ config('app.currency', 'USD') }}
+                    {{ number_format($averageDistribution, 2) }} {{ config('app.currency', 'BDT') }}
                 </h3>
                 <span class="mt-1 inline-block text-theme-xs text-gray-500 dark:text-gray-400">Per employee</span>
             </article>
@@ -89,17 +89,17 @@
 
         @if($rows->isNotEmpty())
             <div class="w-full overflow-x-auto custom-scrollbar">
-                <table class="data-table w-full min-w-[1400px] border-collapse">
+                <table class="data-table w-full border-collapse">
                     <thead>
                         <tr class="border-b border-gray-200 bg-gray-50 dark:border-gray-800 dark:bg-gray-900">
                             <th class="whitespace-nowrap px-4 py-3 text-left text-theme-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Employee</th>
                             <th class="whitespace-nowrap px-4 py-3 text-left text-theme-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Period</th>
-                            <th class="whitespace-nowrap px-4 py-3 text-right text-theme-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Base salary</th>
-                            <th class="whitespace-nowrap px-4 py-3 text-right text-theme-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Bonus</th>
-                            <th class="whitespace-nowrap px-4 py-3 text-right text-theme-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">TA</th>
-                            <th class="whitespace-nowrap px-4 py-3 text-right text-theme-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">DA</th>
-                            <th class="whitespace-nowrap px-4 py-3 text-right text-theme-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Commission</th>
-                            <th class="whitespace-nowrap px-4 py-3 text-right text-theme-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Total</th>
+                            <th class="whitespace-nowrap px-4 py-3 text-right text-theme-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Base salary (BDT)</th>
+                            <th class="whitespace-nowrap px-4 py-3 text-right text-theme-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Bonus (BDT)</th>
+                            <th class="whitespace-nowrap px-4 py-3 text-right text-theme-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">TA (BDT)</th>
+                            <th class="whitespace-nowrap px-4 py-3 text-right text-theme-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">DA (BDT)</th>
+                            <th class="whitespace-nowrap px-4 py-3 text-right text-theme-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Commission (BDT)</th>
+                            <th class="whitespace-nowrap px-4 py-3 text-right text-theme-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Total (BDT)</th>
                             <th class="whitespace-nowrap px-4 py-3 text-left text-theme-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Payment</th>
                             <th class="whitespace-nowrap px-4 py-3 text-left text-theme-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Document</th>
                             <th class="whitespace-nowrap px-4 py-3 text-left text-theme-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Remarks</th>
@@ -128,7 +128,7 @@
                                 </td>
                                 <td class="whitespace-nowrap px-4 py-3 text-theme-sm text-gray-700 dark:text-gray-300">
                                     <span class="inline-flex items-center gap-1.5">
-                                        <svg width="16" height="16" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" class="text-gray-400">
+                                        <svg width="16" height="16" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" class="text-gray-400 dark:text-white">
                                             <path d="M2.5 6.66667H17.5M5 3.33333H15M4.16667 16.6667H15.8333C16.7538 16.6667 17.5 15.9205 17.5 15V5C17.5 4.07953 16.7538 3.33333 15.8333 3.33333H4.16667C3.24619 3.33333 2.5 4.07953 2.5 5V15C2.5 15.9205 3.24619 16.6667 4.16667 16.6667Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
                                         </svg>
                                         {{ optional($row->period_start)->format('M d, Y') }} – {{ optional($row->period_end)->format('M d, Y') }}

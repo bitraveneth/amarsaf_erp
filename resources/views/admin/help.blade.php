@@ -1,369 +1,541 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="dashboard-shell">
-    <section class="panel">
-        <header class="panel-header">
-            <div>
-                <h1>হেল্প &amp; সিস্টেম গাইড</h1>
-                <p>এই পেইজটা আসলে আপনার <strong>SAF ERP ম্যানুয়াল</strong> – উপরে মেনু অনুযায়ী হেল্প, নিচে পুরো সিস্টেমের ফ্লো।</p>
-            </div>
-        </header>
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    {{-- Hero Header --}}
+    <div class="mb-8">
+        <div class="flex items-center gap-3 mb-2">
+            <span class="bg-brand-100 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300 px-3 py-1 rounded-full text-sm font-medium">📖 ডকুমেন্টেশন</span>
+            <span class="text-gray-400">/</span>
+            <span class="text-gray-600 dark:text-gray-400 text-sm">সিস্টেম গাইড v2.0</span>
+        </div>
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-3">হেল্প & সিস্টেম গাইড</h1>
+        <p class="text-lg text-gray-600 dark:text-gray-400 max-w-3xl">এই পেইজটা আসলে আপনার <span class="font-semibold text-brand-600 dark:text-brand-400">ERP ম্যানুয়াল</span> – উপরে মেনু অনুযায়ী হেল্প, নিচে পুরো সিস্টেমের ফ্লো।</p>
+    </div>
 
-        {{-- মেনু ভিত্তিক দ্রুত নেভিগেশন --}}
-        <nav class="help-toc">
-            <p class="metric-label">🔎 মেনু অনুযায়ী হেল্প</p>
-            <ul>
-                <li><a href="#help-control">1. Control (Masters &amp; Settings)</a></li>
-                <li><a href="#help-manufacturing">2. Manufacturing</a></li>
-                <li><a href="#help-inventory">3. Inventory (Core operations)</a></li>
-                <li><a href="#help-sales">4. Sales</a></li>
-                <li><a href="#help-accounting">5. Accounting</a></li>
-                <li><a href="#help-employees">6. Employees / HR</a></li>
-                <li><a href="#help-crm">7. CRM &amp; Marketing</a></li>
-            </ul>
-        </nav>
+    {{-- Quick Navigation Cards --}}
+    <div class="mb-10">
+        <h2 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-4">🔍 দ্রুত নেভিগেশন</h2>
+        <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+            <a href="#help-control" class="group flex flex-col items-center p-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-brand-300 dark:hover:border-brand-700 hover:shadow-md transition-all">
+                <span class="mb-2 inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-50 to-brand-100 dark:from-brand-900/40 dark:to-brand-900/10 text-brand-600 dark:text-brand-300 shadow-theme-xs border border-brand-100/70 dark:border-brand-500/30">
+                    {!! \App\Helpers\MenuHelper::getIconSvg('products') !!}
+                </span>
+                <span class="text-xs font-medium text-center text-gray-700 dark:text-gray-300 group-hover:text-brand-600 dark:group-hover:text-brand-400">Control</span>
+            </a>
+            <a href="#help-manufacturing" class="group flex flex-col items-center p-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-brand-300 dark:hover:border-brand-700 hover:shadow-md transition-all">
+                <span class="mb-2 inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-light-50 to-blue-light-100 dark:from-blue-light-900/40 dark:to-blue-light-900/10 text-brand-600 dark:text-brand-300 shadow-theme-xs border border-blue-light-100/70 dark:border-blue-light-500/40">
+                    {!! \App\Helpers\MenuHelper::getIconSvg('manufacturing') !!}
+                </span>
+                <span class="text-xs font-medium text-center text-gray-700 dark:text-gray-300 group-hover:text-brand-600 dark:group-hover:text-brand-400">Manufacturing</span>
+            </a>
+            <a href="#help-inventory" class="group flex flex-col items-center p-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-brand-300 dark:hover:border-brand-700 hover:shadow-md transition-all">
+                <span class="mb-2 inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-success-50 to-success-100 dark:from-success-900/30 dark:to-success-900/10 text-brand-600 dark:text-brand-300 shadow-theme-xs border border-success-100/70 dark:border-success-500/30">
+                    {!! \App\Helpers\MenuHelper::getIconSvg('inventory') !!}
+                </span>
+                <span class="text-xs font-medium text-center text-gray-700 dark:text-gray-300 group-hover:text-brand-600 dark:group-hover:text-brand-400">Inventory</span>
+            </a>
+            <a href="#help-sales" class="group flex flex-col items-center p-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-brand-300 dark:hover:border-brand-700 hover:shadow-md transition-all">
+                <span class="mb-2 inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/30 dark:to-orange-900/10 text-brand-600 dark:text-brand-300 shadow-theme-xs border border-orange-100/70 dark:border-orange-500/30">
+                    {!! \App\Helpers\MenuHelper::getIconSvg('sales') !!}
+                </span>
+                <span class="text-xs font-medium text-center text-gray-700 dark:text-gray-300 group-hover:text-brand-600 dark:group-hover:text-brand-400">Sales</span>
+            </a>
+            <a href="#help-accounting" class="group flex flex-col items-center p-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-brand-300 dark:hover:border-brand-700 hover:shadow-md transition-all">
+                <span class="mb-2 inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/30 dark:to-purple-900/10 text-brand-600 dark:text-brand-300 shadow-theme-xs border border-purple-100/70 dark:border-purple-500/30">
+                    {!! \App\Helpers\MenuHelper::getIconSvg('accounting') !!}
+                </span>
+                <span class="text-xs font-medium text-center text-gray-700 dark:text-gray-300 group-hover:text-brand-600 dark:group-hover:text-brand-400">Accounting</span>
+            </a>
+            <a href="#help-employees" class="group flex flex-col items-center p-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-brand-300 dark:hover:border-brand-700 hover:shadow-md transition-all">
+                <span class="mb-2 inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900/40 dark:to-gray-900/10 text-brand-600 dark:text-brand-300 shadow-theme-xs border border-gray-100/70 dark:border-gray-700/40">
+                    {!! \App\Helpers\MenuHelper::getIconSvg('default') !!}
+                </span>
+                <span class="text-xs font-medium text-center text-gray-700 dark:text-gray-300 group-hover:text-brand-600 dark:group-hover:text-brand-400">HR</span>
+            </a>
+            <a href="#help-crm" class="group flex flex-col items-center p-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-brand-300 dark:hover:border-brand-700 hover:shadow-md transition-all">
+                <span class="mb-2 inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-pink-50 to-pink-100 dark:from-pink-900/30 dark:to-pink-900/10 text-brand-600 dark:text-brand-300 shadow-theme-xs border border-pink-100/70 dark:border-pink-500/30">
+                    {!! \App\Helpers\MenuHelper::getIconSvg('reports') !!}
+                </span>
+                <span class="text-xs font-medium text-center text-gray-700 dark:text-gray-300 group-hover:text-brand-600 dark:group-hover:text-brand-400">CRM</span>
+            </a>
+        </div>
+    </div>
 
-        <p class="panel-note" style="margin-top:1.5rem;">
-            <strong>এক নজরে পুরো ফ্লো (কীভাবে সিস্টেমটা চলে?):</strong>
-            <br>১️⃣ আগে সেট‑আপ করুন – Products, Packaging types, Tax &amp; VAT classes, Warehouses, Agents, Employees।
-            <br>২️⃣ প্রতিটি ফিনিশড পণ্যের জন্য BOM (Bill of Materials) বানান – ১ cartoon বানাতে কত bottle, cap, label, carton লাগবে।
-            <br>৩️⃣ Production orders থেকে নির্দিষ্ট Batch / Lot ধরে production চালান, QC approve করলে Factory stock ↑ হয়।
-            <br>৪️⃣ Transfers দিয়ে Factory → Central depot / Warehouse এ stock পাঠান; batch/lot ঠিক থাকে বলে FIFO/FEFO follow করা যায়।
-            <br>৫️⃣ Agents থেকে Sales orders নিন; order <em>Confirmed</em> হলে প্রয়োজনীয় qty reserved হয়।
-            <br>৬️⃣ Picking lists, Packing slips ও Deliveries ব্যবহার করে গাড়ি/route অনুযায়ী মাল বের করুন; Delivery status শেষ পর্যন্ত <em>Delivered</em> করুন।
-            <br>৭️⃣ Delivered order থেকে Invoice তৈরি হলে Accounts Receivable (AR) ↑ এবং Sales Revenue ↑ হয়।
-            <br>৮️⃣ গ্রাহক টাকা দিলে Receipt এ নথিভুক্ত করুন – Bank ↑, AR ↓; Bank reconciliation থেকে statement অনুযায়ী মিলিয়ে নিন।
-            <br>৯️⃣ Employees, Contracts, Allowances, Expenses ইত্যাদি আপডেট করলে Payroll ও Profit &amp; Loss রিপোর্ট সঠিক থাকে।
-            <br>🔟 শেষে Accounting রিপোর্ট – Profit &amp; Loss, VAT report, Balance sheet, Cashflow, Agent performance ইত্যাদি দেখে
-            ব্যবসার সিদ্ধান্ত নিন।
-        </p>
-
-        {{-- নিচে মেনু ভিত্তিক ডিটেইল গাইড (expand/collapse সহ) --}}
-
-        <section id="help-control" class="help-section collapsed" data-collapsible>
-            <div class="help-section-header">
-                <h2>1. Control (Masters &amp; Settings)</h2>
-                <button type="button"
-                        class="sidebar-toggle"
-                        aria-label="Toggle Control help"
-                        data-collapse-toggle
-                        data-open-icon="−"
-                        data-closed-icon="+">
-                    <span class="sidebar-toggle-icon" aria-hidden="true"></span>
+    {{-- Main Help Sections with Tabs Design --}}
+    <div class="space-y-6">
+        <!-- Control Section -->
+        <div id="help-control" class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div class="flex items-center justify-between p-6 cursor-pointer section-trigger" data-target="control-content">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-brand-500 to-brand-600 flex items-center justify-center text-white">
+                        {!! \App\Helpers\MenuHelper::getIconSvg('products') !!}
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-bold text-gray-900 dark:text-white">1. Control (Masters & Settings)</h2>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Products, Agents, Warehouses, Employees এবং System settings</p>
+                    </div>
+                </div>
+                <button class="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-600 dark:text-gray-300 transform transition-transform duration-200 section-arrow">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                    </svg>
                 </button>
             </div>
-            <div class="help-section-body">
-            <p class="panel-note">
-                এই ব্লকটা মূলত সাইডবারের <strong>Control</strong> গ্রুপ – Products, Agents, Warehouses, Employees
-                এবং System settings অংশের জন্য।
-            </p>
-            <ul class="help-steps">
-                <li>
-                    <strong>Tax &amp; VAT classes</strong> (Control → Products → Tax &amp; VAT classes) – এখানে Bangladesh এর VAT rate গুলো দিন
-                    (যেমন ১৫%), প্রয়োজনে HSN / local কোড লিখুন। পরে প্রোডাক্টে এই ক্লাস সিলেক্ট করলে ইনভয়েসে VAT অটো ক্যালকুলেট হবে।
-                </li>
-                <li>
-                    <strong>Packaging types</strong> (Control → Products → Packaging types) – Bottle 500ml, Bottle 1L, Crate 12x1L ইত্যাদি
-                    ইউনিট সেট করুন। এখানেই basic unit/description থাকায় Picking ও Packing slip‑এ “Pack” কলামে সুন্দরভাবে দেখায়।
-                </li>
-                <li>
-                    <strong>Products</strong> (Control → Products → Products) – প্রতিটি SKU এর জন্য:
-                    <ul>
-                        <li>SKU, নাম, Size, Volume (ml)</li>
-                        <li>Packaging type, Tax class, Base price</li>
-                        <li>Mineral source, pH, TDS, Certifications</li>
-                        <li>Barcode / QR code (যদি ইমেজ দিয়ে আপলোড করেন)</li>
-                    </ul>
-                    এগুলো ঠিকভাবে থাকলে পরের সব রিপোর্ট (Sales, Production, Inventory, Finance) consistent হয়।
-                </li>
-                <li>
-                    <strong>Warehouses &amp; Locations</strong> (Control → Warehouses) –
-                    প্রথমে Central depot / Factory ইত্যাদি warehouse তৈরি করুন, পরে প্রয়োজন হলে
-                    <em>Location code</em> দিয়ে R1-S2-B3 টাইপ code ব্যবহার করুন যাতে Picking list‑এ কোন rack থেকে মাল তুলতে হবে,
-                    সেটা দেখা যায়।
-                </li>
-            </ul>
+            
+            <div id="control-content" class="border-t border-gray-200 dark:border-gray-700 section-content hidden">
+                <div class="p-6 space-y-6">
+                    <!-- Tax & VAT -->
+                    <div class="flex items-start gap-4">
+                        <div class="w-8 h-8 rounded-lg bg-brand-50 dark:bg-brand-900/20 flex items-center justify-center text-brand-600 dark:text-brand-400 flex-shrink-0">💰</div>
+                        <div>
+                            <h3 class="font-semibold text-gray-900 dark:text-white mb-1">Tax & VAT classes</h3>
+                            <p class="text-sm text-gray-600 dark:text-gray-400">Control → Products → Tax & VAT classes – বাংলাদেশের VAT rate দিন (১৫%), HSN/local কোড লিখুন। প্রোডাক্টে ক্লাস সিলেক্ট করলে VAT অটো ক্যালকুলেট হবে।</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Packaging types -->
+                    <div class="flex items-start gap-4">
+                        <div class="w-8 h-8 rounded-lg bg-brand-50 dark:bg-brand-900/20 flex items-center justify-center text-brand-600 dark:text-brand-400 flex-shrink-0">📦</div>
+                        <div>
+                            <h3 class="font-semibold text-gray-900 dark:text-white mb-1">Packaging types</h3>
+                            <p class="text-sm text-gray-600 dark:text-gray-400">Control → Products → Packaging types – Bottle 500ml, Bottle 1L, Crate 12x1L ইউনিট সেট করুন। Picking ও Packing slip-এ দেখাবে।</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Products -->
+                    <div class="flex items-start gap-4">
+                        <div class="w-8 h-8 rounded-lg bg-brand-50 dark:bg-brand-900/20 flex items-center justify-center text-brand-600 dark:text-brand-400 flex-shrink-0">🏷️</div>
+                        <div>
+                            <h3 class="font-semibold text-gray-900 dark:text-white mb-1">Products</h3>
+                            <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">Control → Products → Products – প্রতিটি SKU এর জন্য:</p>
+                            <div class="grid grid-cols-2 gap-2 text-xs">
+                                <span class="bg-gray-50 dark:bg-gray-700/50 px-2 py-1 rounded">SKU, নাম, Size, Volume</span>
+                                <span class="bg-gray-50 dark:bg-gray-700/50 px-2 py-1 rounded">Packaging type, Tax class</span>
+                                <span class="bg-gray-50 dark:bg-gray-700/50 px-2 py-1 rounded">Mineral source, pH, TDS</span>
+                                <span class="bg-gray-50 dark:bg-gray-700/50 px-2 py-1 rounded">Barcode / QR code</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Warehouses -->
+                    <div class="flex items-start gap-4">
+                        <div class="w-8 h-8 rounded-lg bg-brand-50 dark:bg-brand-900/20 flex items-center justify-center text-brand-600 dark:text-brand-400 flex-shrink-0">🏢</div>
+                        <div>
+                            <h3 class="font-semibold text-gray-900 dark:text-white mb-1">Warehouses & Locations</h3>
+                            <p class="text-sm text-gray-600 dark:text-gray-400">Control → Warehouses – Central depot/Factory তৈরি করুন, Location code (R1-S2-B3) দিয়ে rack লোকেশন সেট করুন।</p>
+                        </div>
+                    </div>
+                </div>
             </div>
-        </section>
+        </div>
 
-        {{-- 2. Manufacturing --}}
-        <section id="help-manufacturing" class="help-section collapsed" data-collapsible>
-            <div class="help-section-header">
-                <h2>2. Manufacturing – BOM, Production orders &amp; Batches</h2>
-                <button type="button"
-                        class="sidebar-toggle"
-                        aria-label="Toggle Manufacturing help"
-                        data-collapse-toggle
-                        data-open-icon="−"
-                        data-closed-icon="+">
-                    <span class="sidebar-toggle-icon" aria-hidden="true"></span>
+        <!-- Manufacturing Section -->
+        <div id="help-manufacturing" class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div class="flex items-center justify-between p-6 cursor-pointer section-trigger" data-target="manufacturing-content">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white">
+                        {!! \App\Helpers\MenuHelper::getIconSvg('manufacturing') !!}
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-bold text-gray-900 dark:text-white">2. Manufacturing</h2>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">BOM, Production orders & Batches</p>
+                    </div>
+                </div>
+                <button class="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-600 dark:text-gray-300 transform transition-transform duration-200 section-arrow">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                    </svg>
                 </button>
             </div>
-            <div class="help-section-body">
-            <ul class="help-steps">
-                <li>
-                    <strong>BOMs (Bill of Materials)</strong> (Manufacturing → BOMs) – একটা ফিনিশড পণ্য বানাতে
-                    প্রতি ইউনিটে কতগুলো component লাগে সেটা এখানে সেট করবেন।
-                    যেমন: ১ cartoon 1L water = ১২ bottle + ১২ cap + ১২ label + ১ carton box।
-                    পরে Production order করলে system এই BOM ধরে raw‑material consumption হিসাব করতে পারে।
-                </li>
-                <li>
-                    <strong>Batches &amp; lots</strong> (Manufacturing → Batches &amp; lots) – প্রতিটি production lot এর
-                    batch code (যেমন 1L‑250105‑A), Production date, Expiry date, QC status, Notes রেকর্ড করুন।
-                    এখানকার batch/lot নম্বরেই পরের সব stock, delivery ও invoice track হয়।
-                </li>
-                <li>
-                    <strong>Production orders</strong> (Manufacturing → Production orders) – production run এর সময়:
-                    <ol>
-                        <li>Finished product, Batch / Lot, Warehouse, Line, Shift নির্বাচন করুন</li>
-                        <li>Quantity এবং QC status দিন (প্রথমে সাধারণত <em>pending</em>)</li>
-                        <li>QC approved + warehouse সেট থাকলে system অটো <em>Stock entries</em> তৈরি করে, status = available</li>
-                    </ol>
-                    ফলে sales ও inventory একই batch data ব্যবহার করে – FEFO/FIFO handling সহজ হয়।
-                </li>
-            </ul>
+            
+            <div id="manufacturing-content" class="border-t border-gray-200 dark:border-gray-700 section-content hidden">
+                <div class="p-6 space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="bg-gradient-to-br from-blue-50 to-white dark:from-blue-900/10 dark:to-gray-800 p-4 rounded-xl border border-blue-100 dark:border-blue-900/20">
+                            <div class="text-blue-600 dark:text-blue-400 text-2xl mb-2">📋</div>
+                            <h3 class="font-semibold text-gray-900 dark:text-white mb-1">BOMs</h3>
+                            <p class="text-xs text-gray-600 dark:text-gray-400">Bill of Materials – ১ cartoon 1L water = ১২ bottle + ১২ cap + ১২ label + ১ carton box</p>
+                            <span class="inline-block mt-2 text-xs font-medium text-blue-600 dark:text-blue-400">Manufacturing → BOMs</span>
+                        </div>
+                        
+                        <div class="bg-gradient-to-br from-blue-50 to-white dark:from-blue-900/10 dark:to-gray-800 p-4 rounded-xl border border-blue-100 dark:border-blue-900/20">
+                            <div class="text-blue-600 dark:text-blue-400 text-2xl mb-2">🔖</div>
+                            <h3 class="font-semibold text-gray-900 dark:text-white mb-1">Batches & lots</h3>
+                            <p class="text-xs text-gray-600 dark:text-gray-400">Batch code (1L-250105-A), Production date, Expiry date, QC status রেকর্ড করুন</p>
+                            <span class="inline-block mt-2 text-xs font-medium text-blue-600 dark:text-blue-400">Manufacturing → Batches</span>
+                        </div>
+                        
+                        <div class="bg-gradient-to-br from-blue-50 to-white dark:from-blue-900/10 dark:to-gray-800 p-4 rounded-xl border border-blue-100 dark:border-blue-900/20">
+                            <div class="text-blue-600 dark:text-blue-400 text-2xl mb-2">⚙️</div>
+                            <h3 class="font-semibold text-gray-900 dark:text-white mb-1">Production orders</h3>
+                            <p class="text-xs text-gray-600 dark:text-gray-400">Finished product, Batch, Warehouse, Line, Shift → QC approved → Stock entries</p>
+                            <span class="inline-block mt-2 text-xs font-medium text-blue-600 dark:text-blue-400">Manufacturing → Production</span>
+                        </div>
+                    </div>
+                </div>
             </div>
-        </section>
+        </div>
 
-        {{-- 3. Inventory --}}
-        <section id="help-inventory" class="help-section collapsed" data-collapsible>
-            <div class="help-section-header">
-                <h2>3. Inventory – Transfers, Deliveries, Packing</h2>
-                <button type="button"
-                        class="sidebar-toggle"
-                        aria-label="Toggle Inventory help"
-                        data-collapse-toggle
-                        data-open-icon="−"
-                        data-closed-icon="+">
-                    <span class="sidebar-toggle-icon" aria-hidden="true"></span>
+        <!-- Inventory Section -->
+        <div id="help-inventory" class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div class="flex items-center justify-between p-6 cursor-pointer section-trigger" data-target="inventory-content">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center text-white">
+                        {!! \App\Helpers\MenuHelper::getIconSvg('inventory') !!}
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-bold text-gray-900 dark:text-white">3. Inventory</h2>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Transfers, Deliveries, Packing, Fleet</p>
+                    </div>
+                </div>
+                <button class="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-600 dark:text-gray-300 transform transition-transform duration-200 section-arrow">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                    </svg>
                 </button>
             </div>
-            <div class="help-section-body">
-            <ul class="help-steps">
-                <li>
-                    <strong>Inventory dashboard</strong> (Inventory → Inventory dashboard) – warehouse + product + batch অনুযায়ী
-                    available / reserved stockের সারাংশ; কোন batch শীঘ্রই expire হবে সেটাও এখান থেকে ধরা যায়।
-                </li>
-                <li>
-                    <strong>Transfers</strong> (Inventory → Transfers) – এক warehouse থেকে অন্য warehouse এ stock পাঠাতে ব্যবহার করুন;
-                    system দুই দিকেই movement log রাখে; পরে audit trail হিসেবে ব্যবহার করতে পারবেন।
-                </li>
-                <li>
-                    <strong>Deliveries &amp; POD</strong> – Sales order থেকে delivery তৈরি করুন:
-                    Route, Vehicle, Driver, Status (Scheduled → In transit → Delivered)।
-                    এখানে POD photo আপলোড করলে future reference থাকে।
-                </li>
-                <li>
-                    <strong>Packing slips</strong> – Inventory → Packing slips থেকে নির্দিষ্ট date / vehicle অনুযায়ী
-                    সব delivery line দেখে one click এ packing slip প্রিন্ট করতে পারবেন।
-                    এটাই warehouse / loader টিমের কাজের মূল কাগজ।
-                </li>
-                <li>
-                    <strong>Fleet, Fleet schedule &amp; Vehicle load</strong> – গাড়ি, capacity, driver, daily schedule এবং
-                    estimated crate load (গাড়ি কতটা full) – সব এখানে দেখা যায়, যাতে under‑utilized বা overloaded কোন vehicle না থাকে।
-                </li>
-                <li>
-                    <strong>Inventory adjustments</strong> – Expired / Wasted / Supplier return / Other কারণ দেখিয়ে
-                    write‑off করলে <em>Stock movements</em> টেবিলে কারণসহ রেকর্ড হয়; ফলে পরে বোঝা যায়
-                    কতটা ক্ষতি expiry, কতটা damage, কতটা return থেকে এসেছে।
-                </li>
-            </ul>
+            
+            <div id="inventory-content" class="border-t border-gray-200 dark:border-gray-700 section-content hidden">
+                <div class="p-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                            <span class="text-green-600 dark:text-green-400 text-xl">📊</span>
+                            <div>
+                                <h4 class="font-medium text-gray-900 dark:text-white">Inventory dashboard</h4>
+                                <p class="text-xs text-gray-600 dark:text-gray-400">warehouse + product + batch অনুযায়ী available / reserved stock</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                            <span class="text-green-600 dark:text-green-400 text-xl">🔄</span>
+                            <div>
+                                <h4 class="font-medium text-gray-900 dark:text-white">Transfers</h4>
+                                <p class="text-xs text-gray-600 dark:text-gray-400">এক warehouse থেকে অন্য warehouse এ stock পাঠান</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                            <span class="text-green-600 dark:text-green-400 text-xl">🚚</span>
+                            <div>
+                                <h4 class="font-medium text-gray-900 dark:text-white">Deliveries & POD</h4>
+                                <p class="text-xs text-gray-600 dark:text-gray-400">Route, Vehicle, Driver, Status, POD photo</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                            <span class="text-green-600 dark:text-green-400 text-xl">📄</span>
+                            <div>
+                                <h4 class="font-medium text-gray-900 dark:text-white">Packing slips</h4>
+                                <p class="text-xs text-gray-600 dark:text-gray-400">One click এ packing slip প্রিন্ট</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                            <span class="text-green-600 dark:text-green-400 text-xl">🚛</span>
+                            <div>
+                                <h4 class="font-medium text-gray-900 dark:text-white">Fleet management</h4>
+                                <p class="text-xs text-gray-600 dark:text-gray-400">গাড়ি, capacity, driver, daily schedule</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                            <span class="text-green-600 dark:text-green-400 text-xl">⚖️</span>
+                            <div>
+                                <h4 class="font-medium text-gray-900 dark:text-white">Inventory adjustments</h4>
+                                <p class="text-xs text-gray-600 dark:text-gray-400">Expired/Wasted/Return write-off</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-        </section>
+        </div>
 
-        {{-- 4. Sales --}}
-        <section id="help-sales" class="help-section collapsed" data-collapsible>
-            <div class="help-section-header">
-                <h2>4. Sales – Agents, Orders, Deliveries</h2>
-                <button type="button"
-                        class="sidebar-toggle"
-                        aria-label="Toggle Sales help"
-                        data-collapse-toggle
-                        data-open-icon="−"
-                        data-closed-icon="+">
-                    <span class="sidebar-toggle-icon" aria-hidden="true"></span>
+        <!-- Sales Section -->
+        <div id="help-sales" class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div class="flex items-center justify-between p-6 cursor-pointer section-trigger" data-target="sales-content">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center text-white">
+                        {!! \App\Helpers\MenuHelper::getIconSvg('sales') !!}
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-bold text-gray-900 dark:text-white">4. Sales</h2>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Agents, Orders, Deliveries</p>
+                    </div>
+                </div>
+                <button class="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-600 dark:text-gray-300 transform transition-transform duration-200 section-arrow">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                    </svg>
                 </button>
             </div>
-            <div class="help-section-body">
-            <ul class="help-steps">
-                <li>
-                    <strong>Agents</strong> (Control → Agents → Agents) –
-                    ডিলার / এজেন্ট / হোলসেলার প্রোফাইল এখানে থাকবে:
-                    নাম, Area, Zone, Location code, Special code, Mobile, Email, Credit limit, Bank details, KYC documents ইত্যাদি।
-                </li>
-                <li>
-                    <strong>Price lists</strong> – Control → Products → Price lists – এখানে base price ও কতজন এজেন্টের override আছে সেটা দেখবেন।
-                    এছাড়া এজেন্ট প্রোফাইল থেকে “Pricing &amp; commissions” খুলে প্রতি SKU এর special price সেট করলে,
-                    অর্ডার এন্ট্রি করার সময় সিস্টেম স্বয়ংক্রিয়ভাবে সেই rate নিয়ে আসে (না থাকলে Products এর base price নেয়)।
-                </li>
-                <li>
-                    <strong>Commission rules</strong> – একই স্ক্রিনে কমিশন rule (যেমন সব regular order এ ২%) সেট করলে,
-                    Order save হওয়ার সময় প্রতিটি লাইনে commission amount অটো ক্যালকুলেট হয় এবং
-                    <em>Agent commission settlements</em> রিপোর্টে মাসিক summary দেখা যায়।
-                </li>
-                <li>
-                    <strong>Sales orders</strong> (Sales → Sales orders) – নতুন অর্ডার নেবার ফ্লো:
-                    <ol>
-                        <li>Agent নির্বাচন করুন (Customers / Agents থেকে)</li>
-                        <li>Order type (Regular / Bulk / Sample / Return) ও Delivery date দিন</li>
-                        <li>পছন্দের SKU যোগ করুন – Qty, Unit price (অটো আসবে, চাইলে override)</li>
-                        <li>Save করলে order status = <em>Confirmed</em>; একই সময়ে stock থেকে সেই qty <em>reserved</em> হয়ে যায়</li>
-                    </ol>
-                </li>
-                <li>
-                    <strong>Customer gifts &amp; Marketing campaigns</strong> – কোন এজেন্টকে কী ধরনের fridge/banner/gift দিলেন
-                    এবং কোন campaign code এর সাথে link – এগুলো পরের রিপোর্টে “Customer acquisition cost” ও marketing ROI বোঝার কাজে লাগবে।
-                </li>
-            </ul>
+            
+            <div id="sales-content" class="border-t border-gray-200 dark:border-gray-700 section-content hidden">
+                <div class="p-6">
+                    <div class="space-y-4">
+                        <div class="flex items-start gap-3">
+                            <div class="w-6 h-6 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center text-purple-600 dark:text-purple-400 text-sm flex-shrink-0 mt-0.5">1</div>
+                            <div>
+                                <h4 class="font-medium text-gray-900 dark:text-white">Agents</h4>
+                                <p class="text-sm text-gray-600 dark:text-gray-400">ডিলার/এজেন্ট প্রোফাইল: Name, Area, Zone, Location code, Credit limit, KYC documents</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-3">
+                            <div class="w-6 h-6 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center text-purple-600 dark:text-purple-400 text-sm flex-shrink-0 mt-0.5">2</div>
+                            <div>
+                                <h4 class="font-medium text-gray-900 dark:text-white">Price lists & Commission</h4>
+                                <p class="text-sm text-gray-600 dark:text-gray-400">Base price, special price per SKU, commission rules (২%)</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-3">
+                            <div class="w-6 h-6 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center text-purple-600 dark:text-purple-400 text-sm flex-shrink-0 mt-0.5">3</div>
+                            <div>
+                                <h4 class="font-medium text-gray-900 dark:text-white">Sales orders flow</h4>
+                                <ol class="list-decimal pl-5 text-sm text-gray-600 dark:text-gray-400 mt-1 space-y-1">
+                                    <li>Agent নির্বাচন</li>
+                                    <li>Order type & Delivery date</li>
+                                    <li>SKU যোগ করুন – Qty, Unit price</li>
+                                    <li>Save → Order Confirmed → Stock Reserved</li>
+                                </ol>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-        </section>
+        </div>
 
-        <section id="help-employees" class="help-section collapsed" data-collapsible>
-            <div class="help-section-header">
-                <h2>6. Employees – HR, Contracts, Allowances, Locations</h2>
-                <button type="button"
-                        class="sidebar-toggle"
-                        aria-label="Toggle Employees help"
-                        data-collapse-toggle
-                        data-open-icon="−"
-                        data-closed-icon="+">
-                    <span class="sidebar-toggle-icon" aria-hidden="true"></span>
+        <!-- Employees Section -->
+        <div id="help-employees" class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div class="flex items-center justify-between p-6 cursor-pointer section-trigger" data-target="employees-content">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center text-white">
+                        {!! \App\Helpers\MenuHelper::getIconSvg('default') !!}
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-bold text-gray-900 dark:text-white">6. Employees / HR</h2>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">HR, Contracts, Allowances, Locations</p>
+                    </div>
+                </div>
+                <button class="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-600 dark:text-gray-300 transform transition-transform duration-200 section-arrow">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                    </svg>
                 </button>
             </div>
-            <div class="help-section-body">
-            <ul class="help-steps">
-                <li>
-                    <strong>Employees</strong> (Employees → Employees) – Name, Department, Job position, Work zone,
-                    work email/phone/mobile, Tag, Photo, CV – সব এক জায়গায় থাকবে।
-                </li>
-                <li>
-                    <strong>Contracts</strong> – Employee প্রতি active contract রাখুন:
-                    Reference, Start/End date, Working schedule, Salary, TA/DA, Bonus, Status।
-                    Payroll summary এই তথ্য ধরে মাসিক base salary হিসাব করে।
-                </li>
-                <li>
-                    <strong>Allowances</strong> – TA/DA/BONUS ক্লেইম গুলো employee নিজে mobile app থেকে
-                    বা backoffice থেকে add করতে পারে; Amount, Reference, Attachment (slip) সহ থাকে।
-                </li>
-                <li>
-                    <strong>Leaves</strong> – Leave apply / approve; Leave summary API দিয়ে mobile app‑এও
-                    “this year total vs used vs remaining” দেখানো হয়।
-                </li>
-                <li>
-                    <strong>Equipment</strong> – ট্যাব, ফোন, device ইস্যু date, identifier (IMEI), status (assigned / returned / lost)
-                    সব log হয়; পরে lost device / replacement হিসাব সহজ হয়।
-                </li>
-                <li>
-                    <strong>Locations</strong> – Field sales এর GPS / manual location log:
-                    Logged at, Lat/Lng, Label, Source (manual/imported/gps), Notes – এগুলো থেকে কোন day‑তে
-                    কে কোথায় ছিল সেটা record থাকে।
-                </li>
-                <li>
-                    <strong>Badges</strong> – “Star Performer”, “On‑time Collection” টাইপ recognition badge employee‑কে assign করতে পারবেন;
-                    এটি pure HR recognition, হিসাবের উপর প্রভাব ফেলে না কিন্তু culture‑এ positive impact দেয়।
-                </li>
-            </ul>
+            
+            <div id="employees-content" class="border-t border-gray-200 dark:border-gray-700 section-content hidden">
+                <div class="p-6">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-3">
+                            <span class="text-orange-500 text-lg">👤</span>
+                            <h4 class="font-medium text-gray-900 dark:text-white text-sm mt-1">Employees</h4>
+                            <p class="text-xs text-gray-500">Name, Department, Position, Zone</p>
+                        </div>
+                        <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-3">
+                            <span class="text-orange-500 text-lg">📄</span>
+                            <h4 class="font-medium text-gray-900 dark:text-white text-sm mt-1">Contracts</h4>
+                            <p class="text-xs text-gray-500">Salary, TA/DA, Bonus, Working schedule</p>
+                        </div>
+                        <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-3">
+                            <span class="text-orange-500 text-lg">💸</span>
+                            <h4 class="font-medium text-gray-900 dark:text-white text-sm mt-1">Allowances</h4>
+                            <p class="text-xs text-gray-500">TA/DA/BONUS claims with attachment</p>
+                        </div>
+                        <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-3">
+                            <span class="text-orange-500 text-lg">🏖️</span>
+                            <h4 class="font-medium text-gray-900 dark:text-white text-sm mt-1">Leaves</h4>
+                            <p class="text-xs text-gray-500">Apply/approve, remaining days</p>
+                        </div>
+                        <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-3">
+                            <span class="text-orange-500 text-lg">📱</span>
+                            <h4 class="font-medium text-gray-900 dark:text-white text-sm mt-1">Equipment</h4>
+                            <p class="text-xs text-gray-500">Device IMEI, status tracking</p>
+                        </div>
+                        <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-3">
+                            <span class="text-orange-500 text-lg">📍</span>
+                            <h4 class="font-medium text-gray-900 dark:text-white text-sm mt-1">Locations</h4>
+                            <p class="text-xs text-gray-500">GPS/manual location logs</p>
+                        </div>
+                    </div>
+                </div>
             </div>
-        </section>
+        </div>
 
-        <section id="help-accounting" class="help-section collapsed" data-collapsible>
-            <div class="help-section-header">
-                <h2>5. Accounting – Invoices, Receipts, Expenses, Reports</h2>
-                <button type="button"
-                        class="sidebar-toggle"
-                        aria-label="Toggle Accounting help"
-                        data-collapse-toggle
-                        data-open-icon="−"
-                        data-closed-icon="+">
-                    <span class="sidebar-toggle-icon" aria-hidden="true"></span>
+        <!-- Accounting Section -->
+        <div id="help-accounting" class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div class="flex items-center justify-between p-6 cursor-pointer section-trigger" data-target="accounting-content">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center text-white">
+                        {!! \App\Helpers\MenuHelper::getIconSvg('accounting') !!}
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-bold text-gray-900 dark:text-white">5. Accounting</h2>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Invoices, Receipts, Expenses, Reports</p>
+                    </div>
+                </div>
+                <button class="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-600 dark:text-gray-300 transform transition-transform duration-200 section-arrow">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                    </svg>
                 </button>
             </div>
-            <div class="help-section-body">
-            <p class="panel-note">
-                এখানে বাংলায় সহজ করে <strong>AR (Accounts Receivable)</strong>, Profit &amp; Loss, Balance sheet–এর relation ব্যাখ্যা করা হল।
-            </p>
-            <ul class="help-steps">
-                <li>
-                    <strong>Customer invoices</strong> (Accounting → Customer invoices) –
-                    শুধুমাত্র <em>Delivered</em> order থেকে invoice বানান।
-                    System এখানে Net total + VAT = Gross amount হিসাব করে।
-                    Invoice তৈরি হলে হিসাবটা হয়:
-                    <em>Accounts Receivable (AR) ↑, Sales Revenue ↑, VAT Payable ↑</em>।
-                </li>
-                <li>
-                    <strong>Receipts</strong> – Invoice ভিউয়ের নিচে যে “Receipts” অংশ দেখেন সেটা মোটামুটি
-                    “গ্রাহকের টাকা আসল কি না” log করার জায়গা।
-                    উদাহরণ: Invoice = 69,000; গ্রাহক Bank transfer এ 66,240 দিলেন →
-                    <em>Bank ↑ 66,240, Accounts Receivable ↓ 66,240</em>।
-                    বাকি টাকা থাকলে invoice status “Issued”–ই থাকে, পুরোটা পেলে “Paid” হয়।
-                </li>
-                <li>
-                    <strong>Credit notes</strong> – কোন কারণে গ্রাহককে discount / return দিতে হলে
-                    Invoice থেকে credit note issue করুন।
-                    হিসাব: <em>Sales Returns ↑, AR ↓</em> (অথবা future invoice adjust) – Profit &amp; Loss এ
-                    Net sales = Sales Revenue – Sales Returns হিসেবে দেখা যায়।
-                </li>
-                <li>
-                    <strong>Expenses</strong> – Utilities, Marketing, Salary, Travel ইত্যাদি সব খরচ এখানে category সহ রেকর্ড করুন।
-                    Profit &amp; Loss রিপোর্টে “Expenses” অংশে এগুলো যোগ হয়ে “Profit = Net sales – Expenses” দেখায়।
-                </li>
-                <li>
-                    <strong>Chart of accounts</strong> – Bank, Accounts Receivable, VAT Payable, Sales Revenue, Sales Returns,
-                    Commission Expense, বিভিন্ন Expense account – এগুলো আগে থেকে create করলে রিপোর্টগুলো অর্থবহ হয়।
-                </li>
-                <li>
-                    <strong>Bank reconciliation</strong> – Bank statement এর তারিখ অনুযায়ী কোন কোন receipt সত্যিকারের
-                    bank‑এ জমা হয়েছে সেটা tick করে “Mark selected as reconciled” করলে পরে
-                    audit / CA এর জন্য পরিষ্কার trail থাকে।
-                </li>
-                <li>
-                    <strong>Profit &amp; Loss</strong> – সময় অনুযায়ী Sales, Sales returns, Commission, Expenses নিয়ে
-                    Net profit দেখায়। এখানে + / – sign দিয়ে বুঝবেন:
-                    Sales = +ve, Returns / Expenses = –ve।
-                </li>
-                <li>
-                    <strong>Balance sheet</strong> – As of একটি তারিখে snapshot:
-                    <em>Assets (Bank + Accounts Receivable + অন্য সম্পদ)
-                        = Liabilities (VAT payable ইত্যাদি) + Equity</em>।
-                    সহজ বাংলায় – আজ পর্যন্ত ব্যবসায় আপনি মোট কত invest করেছেন এবং এখন cash + receivable মিলিয়ে
-                    কত সম্পদ আছে সেটা এই রিপোর্টে দেখা যায়।
-                </li>
-                <li>
-                    <strong>Cashflow, Payroll, Agent performance, Production analysis</strong> – এগুলো summery রিপোর্ট:
-                    টাকা আসা‑যাওয়া, HR খরচ, এজেন্ট level performance, production vs sales ইত্যাদি
-                    সব এক জায়গায় বোঝার জন্য।
-                </li>
-            </ul>
+            
+            <div id="accounting-content" class="border-t border-gray-200 dark:border-gray-700 section-content hidden">
+                <div class="p-6">
+                    <div class="bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-900/10 dark:to-orange-900/10 p-4 rounded-xl mb-4">
+                        <p class="text-sm text-gray-700 dark:text-gray-300">📌 <span class="font-semibold">AR (Accounts Receivable)</span> – গ্রাহকের কাছ থেকে পাওনা টাকা। Invoice তৈরি হলে AR ↑, টাকা পেলে AR ↓</p>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="border-l-2 border-red-400 pl-3">
+                            <h4 class="font-medium text-gray-900 dark:text-white flex items-center gap-1">🧾 Customer invoices</h4>
+                            <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">Delivered order থেকে invoice → AR ↑, Sales Revenue ↑, VAT Payable ↑</p>
+                        </div>
+                        <div class="border-l-2 border-red-400 pl-3">
+                            <h4 class="font-medium text-gray-900 dark:text-white flex items-center gap-1">💵 Receipts</h4>
+                            <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">টাকা পেলে → Bank ↑, AR ↓</p>
+                        </div>
+                        <div class="border-l-2 border-red-400 pl-3">
+                            <h4 class="font-medium text-gray-900 dark:text-white flex items-center gap-1">📝 Credit notes</h4>
+                            <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">Discount/return → Sales Returns ↑, AR ↓</p>
+                        </div>
+                        <div class="border-l-2 border-red-400 pl-3">
+                            <h4 class="font-medium text-gray-900 dark:text-white flex items-center gap-1">💰 Expenses</h4>
+                            <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">Utilities, Marketing, Salary, Travel</p>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4 grid grid-cols-2 md:grid-cols-4 gap-2">
+                        <div class="bg-gray-50 dark:bg-gray-700/50 p-2 rounded text-center">
+                            <span class="text-xs font-medium text-gray-900 dark:text-white">Profit & Loss</span>
+                        </div>
+                        <div class="bg-gray-50 dark:bg-gray-700/50 p-2 rounded text-center">
+                            <span class="text-xs font-medium text-gray-900 dark:text-white">Balance sheet</span>
+                        </div>
+                        <div class="bg-gray-50 dark:bg-gray-700/50 p-2 rounded text-center">
+                            <span class="text-xs font-medium text-gray-900 dark:text-white">Cashflow</span>
+                        </div>
+                        <div class="bg-gray-50 dark:bg-gray-700/50 p-2 rounded text-center">
+                            <span class="text-xs font-medium text-gray-900 dark:text-white">VAT report</span>
+                        </div>
+                    </div>
+                </div>
             </div>
-        </section>
+        </div>
 
-        <section id="help-crm" class="help-section collapsed" data-collapsible style="margin-bottom:1rem;">
-            <div class="help-section-header">
-                <h2>7. CRM &amp; Marketing – Customer gifts, Campaigns</h2>
-                <button type="button"
-                        class="sidebar-toggle"
-                        aria-label="Toggle CRM &amp; Marketing help"
-                        data-collapse-toggle
-                        data-open-icon="−"
-                        data-closed-icon="+">
-                    <span class="sidebar-toggle-icon" aria-hidden="true"></span>
+        <!-- CRM Section -->
+        <div id="help-crm" class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div class="flex items-center justify-between p-6 cursor-pointer section-trigger" data-target="crm-content">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-pink-500 to-pink-600 flex items-center justify-center text-white text-2xl">
+                        🎯
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-bold text-gray-900 dark:text-white">7. CRM & Marketing</h2>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Customer gifts, Campaigns</p>
+                    </div>
+                </div>
+                <button class="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-600 dark:text-gray-300 transform transition-transform duration-200 section-arrow">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                    </svg>
                 </button>
             </div>
-            <div class="help-section-body">
-            <ul class="help-steps">
-                <li>
-                    <strong>Customer gifts</strong> (Sales → Customer gifts) – কোন এজেন্টকে কোন তারিখে কী ধরনের gift, কত টাকার,
-                    কোন campaign code এর against এ দেওয়া হলো – সব রেকর্ড করুন।
-                </li>
-                <li>
-                    <strong>Marketing campaigns</strong> (Sales → Marketing campaigns) – Facebook / Instagram / Google ads,
-                    Field promo – এগুলোর reach, impressions, cost, status, attachment (report / creative) log করলে
-                    পরের দিন “প্রতি টাকায় কত sales এসেছে” সেটা হিসাব করা সহজ হয়।
-                </li>
-            </ul>
+            
+            <div id="crm-content" class="border-t border-gray-200 dark:border-gray-700 section-content hidden">
+                <div class="p-6">
+                    <div class="flex flex-col md:flex-row gap-4">
+                        <div class="flex-1 bg-gradient-to-br from-pink-50 to-white dark:from-pink-900/10 dark:to-gray-800 p-4 rounded-xl">
+                            <span class="text-3xl mb-2 block">🎁</span>
+                            <h3 class="font-semibold text-gray-900 dark:text-white">Customer gifts</h3>
+                            <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">কোন এজেন্টকে কী ধরনের gift, কত টাকার, কোন campaign code এর against এ দেওয়া হলো</p>
+                        </div>
+                        <div class="flex-1 bg-gradient-to-br from-pink-50 to-white dark:from-pink-900/10 dark:to-gray-800 p-4 rounded-xl">
+                            <span class="text-3xl mb-2 block">📢</span>
+                            <h3 class="font-semibold text-gray-900 dark:text-white">Marketing campaigns</h3>
+                            <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">Facebook/Instagram/Google ads, Field promo – reach, impressions, cost tracking</p>
+                        </div>
+                    </div>
+                </div>
             </div>
-        </section>
-    </section>
+        </div>
+    </div>
 </div>
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Section toggle functionality (accordion: only one open at a time)
+    const triggers = document.querySelectorAll('.section-trigger');
+    
+    triggers.forEach(trigger => {
+        trigger.addEventListener('click', function() {
+            const targetId = this.dataset.target;
+            const content = document.getElementById(targetId);
+            const arrow = this.querySelector('.section-arrow');
+
+            if (!content) return;
+
+            // Close all other sections first
+            document.querySelectorAll('.section-content').forEach(section => {
+                if (section.id !== targetId) {
+                    section.classList.add('hidden');
+                }
+            });
+            document.querySelectorAll('.section-arrow').forEach(icon => {
+                if (icon !== arrow) {
+                    icon.classList.remove('rotate-180');
+                }
+            });
+
+            // Toggle the current section
+            const willOpen = content.classList.contains('hidden');
+            content.classList.toggle('hidden', !willOpen);
+            if (arrow) {
+                arrow.classList.toggle('rotate-180', willOpen);
+            }
+        });
+    });
+    
+    // Smooth scroll for navigation cards (with offset for fixed header)
+    document.querySelectorAll('[href^="#help-"]').forEach(anchor => {
+        anchor.addEventListener('click', function(e) {
+            e.preventDefault();
+            const targetId = this.getAttribute('href');
+            const targetElement = document.querySelector(targetId);
+            
+            if (targetElement) {
+                // Open the target section and close others (accordion behaviour)
+                const content = targetElement.querySelector('.section-content');
+                const arrow = targetElement.querySelector('.section-arrow');
+                
+                if (content) {
+                    document.querySelectorAll('.section-content').forEach(section => {
+                        if (section !== content) {
+                            section.classList.add('hidden');
+                        }
+                    });
+                    document.querySelectorAll('.section-arrow').forEach(icon => {
+                        if (icon !== arrow) {
+                            icon.classList.remove('rotate-180');
+                        }
+                    });
+
+                    content.classList.remove('hidden');
+                    if (arrow) arrow.classList.add('rotate-180');
+                }
+
+                // Scroll to the element with a dynamic top offset based
+                // on the sticky app header height so the title is fully
+                // visible below the navbar.
+                const header = document.querySelector('header.sticky');
+                const headerOffset = header ? header.offsetHeight + 16 : 96; // px
+                const rect = targetElement.getBoundingClientRect();
+                const offsetTop = rect.top + window.pageYOffset - headerOffset;
+
+                window.scrollTo({
+                    top: offsetTop,
+                    behavior: 'smooth'
+                });
+            }
+        });
+    });
+});
+</script>
+@endpush
 @endsection

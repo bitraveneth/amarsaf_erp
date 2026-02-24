@@ -124,11 +124,23 @@
                                                                     <button type="submit" class="text-[11px] text-error-500 hover:text-error-600">Remove</button>
                                                                 </form>
                                                             </div>
-                                                            @if(isset($permissions) && $permissions->isNotEmpty())
-                                                                <form method="POST" action="{{ route('admin.menu.items.update', $child) }}" class="flex items-center gap-2">
-                                                                    @csrf
-                                                                    @method('PATCH')
-                                                                    <select name="permission" class="flex-1 rounded border border-gray-200 bg-transparent px-2 py-1 text-[11px] text-gray-100 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500/30 dark:border-gray-700 dark:bg-gray-900 dark:text-white">
+                                                            <form method="POST" action="{{ route('admin.menu.items.update', $child) }}" class="mt-1 flex flex-wrap items-center gap-2">
+                                                                @csrf
+                                                                @method('PATCH')
+                                                                <input
+                                                                    type="text"
+                                                                    name="name"
+                                                                    value="{{ $child->name }}"
+                                                                    class="w-32 flex-1 rounded border border-gray-200 bg-transparent px-2 py-1 text-[11px] text-gray-100 placeholder:text-gray-500 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500/30 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                                                                />
+                                                                <input
+                                                                    type="text"
+                                                                    name="path"
+                                                                    value="{{ $child->path }}"
+                                                                    class="w-40 flex-1 rounded border border-gray-200 bg-transparent px-2 py-1 text-[11px] text-gray-100 placeholder:text-gray-500 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500/30 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                                                                />
+                                                                @if(isset($permissions) && $permissions->isNotEmpty())
+                                                                    <select name="permission" class="w-40 rounded border border-gray-200 bg-transparent px-2 py-1 text-[11px] text-gray-100 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500/30 dark:border-gray-700 dark:bg-gray-900 dark:text-white">
                                                                         <option value="">No key (inherits group access)</option>
                                                                         @foreach($permissions as $perm)
                                                                             <option value="{{ $perm->name }}" @selected($child->permission === $perm->name)>
@@ -136,11 +148,11 @@
                                                                             </option>
                                                                         @endforeach
                                                                     </select>
-                                                                    <button type="submit" class="rounded bg-gray-800 px-2.5 py-1 text-[10px] font-semibold text-gray-100 hover:bg-gray-700 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-200">
-                                                                        Save
-                                                                    </button>
-                                                                </form>
-                                                            @endif
+                                                                @endif
+                                                                <button type="submit" class="rounded bg-gray-800 px-2.5 py-1 text-[10px] font-semibold text-gray-100 hover:bg-gray-700 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-200">
+                                                                    Save
+                                                                </button>
+                                                            </form>
                                                         </div>
                                                     @endforeach
                                                 </div>

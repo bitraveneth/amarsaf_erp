@@ -5,7 +5,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title', config('app.name', 'SAFERP'))</title>
+    <title>@yield('title', config('app.name', 'ERP'))</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="font-outfit bg-gray-50 antialiased dark:bg-gray-950">
@@ -16,7 +16,7 @@
             <div class="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
                 {{-- Brand --}}
                 <a href="{{ route('login') }}" class="text-title-sm font-semibold text-gray-900 dark:text-white">
-                    {{ config('app.name', 'SAFERP') }}
+                    {{ config('app.name', 'ERP') }}
                 </a>
 
                 {{-- Right side actions --}}
@@ -55,7 +55,7 @@
         {{-- Simple footer for guest pages --}}
         <footer class="py-6 text-center">
             <p class="text-theme-xs text-gray-500 dark:text-gray-400">
-                &copy; {{ date('Y') }} {{ config('app.name', 'SAFERP') }}. All rights reserved.
+                &copy; {{ date('Y') }} {{ config('app.name', 'ERP') }}. All rights reserved.
             </p>
         </footer>
     </div>

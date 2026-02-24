@@ -59,7 +59,7 @@
             <p class="text-theme-sm text-gray-600 dark:text-gray-400">
                 Total in period: 
                 <strong class="text-title-sm font-semibold text-brand-500 dark:text-brand-400">
-                    {{ number_format($total, 2) }} {{ config('app.currency', 'USD') }}
+                    {{ number_format($total, 2) }} {{ config('app.currency', 'BDT') }}
                 </strong>
             </p>
         </div>

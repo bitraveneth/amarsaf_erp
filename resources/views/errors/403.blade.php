@@ -12,7 +12,7 @@
             You don’t have permission to view this page
         </h1>
         <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
-            Your role doesn’t include access to this area of SAFERP. If you think this is a mistake, please contact your system administrator or super admin.
+            Your role doesn’t include access to this area of ERP. If you think this is a mistake, please contact your system administrator or super admin.
         </p>
 
         @auth
@@ -41,4 +41,3 @@
     </div>
 </div>
 @endsection
-

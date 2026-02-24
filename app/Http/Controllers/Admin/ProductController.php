@@ -288,9 +288,25 @@ class ProductController extends Controller
 
     public function priceList()
     {
-        $products = Product::withCount('agentPriceLists')
-            ->orderBy('sku')
-            ->paginate(20);
+        $search = request('q');
+
+        $query = Product::withCount('agentPriceLists')
+            ->where(function ($q) {
+                // Only show sellable SKUs in the price list.
+                $q->whereNull('product_type')
+                    ->orWhere('product_type', 'finished');
+            })
+            ->orderBy('sku');
+
+        if ($search) {
+            $term = '%' . $search . '%';
+            $query->where(function ($q) use ($term) {
+                $q->where('sku', 'like', $term)
+                    ->orWhere('name', 'like', $term);
+            });
+        }
+
+        $products = $query->paginate(20)->appends(['q' => $search]);
 
         return view('admin.products.price_list', compact('products'));
     }

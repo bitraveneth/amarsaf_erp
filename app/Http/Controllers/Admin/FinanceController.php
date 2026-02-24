@@ -51,7 +51,9 @@ class FinanceController extends Controller
         if ($outstanding <= 0) {
             $invoice->update(['status' => 'paid']);
         } elseif ($received > 0 || $credited > 0) {
-            $invoice->update(['status' => 'partially_paid']);
+            // For partial payment or credit we keep it as 'issued'
+            // so it stays within the allowed enum values.
+            $invoice->update(['status' => 'issued']);
         } else {
             $invoice->update(['status' => 'issued']);
         }
@@ -294,8 +296,6 @@ class FinanceController extends Controller
 
         if ($outstanding <= 0) {
             $invoice->update(['status' => 'paid']);
-        } elseif ($received > 0 || $credited > 0) {
-            $invoice->update(['status' => 'partially_paid']);
         } else {
             $invoice->update(['status' => 'issued']);
         }
@@ -324,8 +324,6 @@ class FinanceController extends Controller
 
             if ($outstanding <= 0) {
                 $invoice->update(['status' => 'paid']);
-            } elseif ($received > 0 || $credited > 0) {
-                $invoice->update(['status' => 'partially_paid']);
             } else {
                 $invoice->update(['status' => 'issued']);
             }

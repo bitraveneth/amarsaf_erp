@@ -13,31 +13,58 @@ class SalaryDistributionsModuleSeeder extends Seeder
 {
     public function run(): void
     {
-        $employee = Employee::where('name', 'Warehouse Manager')->first();
+        // Use a small group of demo employees so the Salary
+        // distributions screen looks alive after seeding.
+        $employees = Employee::orderBy('name')->take(6)->get();
 
-        if (! $employee) {
+        if ($employees->isEmpty()) {
             return;
         }
 
         $from = now()->startOfMonth()->toDateString();
         $to   = now()->endOfMonth()->toDateString();
 
-        SalaryDistribution::firstOrCreate(
+        $patterns = [
             [
-                'employee_id'  => $employee->id,
-                'period_start' => $from,
-                'period_end'   => $to,
+                'base_salary'   => 35000,
+                'bonus'         => 5000,
+                'ta_allowances' => 2000,
+                'da_allowances' => 1500,
+                'commission'    => 0,
+                'payment_method'=> 'bank',
             ],
             [
-                'base_salary'    => 35000,
-                'bonus'          => 5000,
-                'ta_allowances'  => 2000,
-                'da_allowances'  => 1500,
-                'commission'     => 0,
-                'payment_method' => 'bank',
-                'document_path'  => null,
-                'remarks'        => 'Demo monthly salary distribution',
-            ]
-        );
+                'base_salary'   => 28000,
+                'bonus'         => 3000,
+                'ta_allowances' => 1500,
+                'da_allowances' => 1200,
+                'commission'    => 0,
+                'payment_method'=> 'cash',
+            ],
+            [
+                'base_salary'   => 42000,
+                'bonus'         => 8000,
+                'ta_allowances' => 2500,
+                'da_allowances' => 2000,
+                'commission'    => 3500,
+                'payment_method'=> 'bank',
+            ],
+        ];
+
+        foreach ($employees as $index => $employee) {
+            $pattern = $patterns[$index % count($patterns)];
+
+            SalaryDistribution::firstOrCreate(
+                [
+                    'employee_id'  => $employee->id,
+                    'period_start' => $from,
+                    'period_end'   => $to,
+                ],
+                $pattern + [
+                    'document_path' => null,
+                    'remarks'       => 'Demo monthly salary for '.$employee->name,
+                ]
+            );
+        }
     }
 }

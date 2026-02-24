@@ -18,10 +18,10 @@
                 
                 <div>
                     <h1 class="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
-                        Finance
+                        Customer invoices
                     </h1>
                     <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                        Invoices, VAT, and ledger snapshots
+                        Sales invoices, receipts, and outstanding balances
                     </p>
                 </div>
             </div>

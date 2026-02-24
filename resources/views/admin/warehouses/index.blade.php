@@ -109,13 +109,42 @@ use Illuminate\Support\Str;
     @if($warehouses->isNotEmpty())
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         @foreach($warehouses as $warehouse)
+        @php
+            $type = strtolower($warehouse->type ?? 'depot');
+            $typeLabel = $warehouse->type ?? 'Depot';
+            $typeStyles = [
+                'factory' => ['bg' => 'bg-orange-50 dark:bg-orange-500/15', 'text' => 'text-orange-700 dark:text-orange-300'],
+                'returns' => ['bg' => 'bg-red-50 dark:bg-red-500/15', 'text' => 'text-red-700 dark:text-red-300'],
+                'consignment' => ['bg' => 'bg-purple-50 dark:bg-purple-500/15', 'text' => 'text-purple-700 dark:text-purple-300'],
+                'depot' => ['bg' => 'bg-blue-light-50 dark:bg-blue-light-500/15', 'text' => 'text-blue-light-700 dark:text-blue-light-300'],
+            ];
+            $style = $typeStyles[$type] ?? $typeStyles['depot'];
+        @endphp
+
         <a href="{{ route('admin.warehouses.show', $warehouse) }}"
-            class="group block rounded-xl border border-gray-200 bg-white p-5 shadow-theme-sm transition-all hover:border-brand-200 hover:shadow-theme-md dark:border-gray-800 dark:bg-gray-900 dark:hover:border-brand-800">
+            class="group block rounded-xl border border-gray-200 bg-white p-5 shadow-theme-sm transition-all hover:border-brand-200 hover:shadow-theme-md dark:border-gray-800 dark:bg-gray-900 dark:hover:border-brand-700/80">
             <div class="flex items-start justify-between">
-                <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-50 dark:bg-brand-500/10">
-                    <svg class="h-5 w-5 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z" />
-                    </svg>
+                <div class="flex items-center gap-3">
+                    <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-slate-900 to-slate-700 text-slate-100 shadow-theme-xs dark:from-slate-800 dark:to-slate-900">
+                        <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M3 11L12 4L21 11V20H3V11Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" />
+                            <path d="M9 20V13H15V20" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" />
+                            <path d="M6 11H18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-900 group-hover:text-brand-600 dark:text-white dark:group-hover:text-brand-400">
+                            {{ $warehouse->name }}
+                        </h3>
+                        <div class="mt-1 flex flex-wrap items-center gap-2">
+                            <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-medium {{ $style['bg'] }} {{ $style['text'] }}">
+                                {{ $typeLabel }}
+                            </span>
+                            <span class="text-[11px] text-gray-500 dark:text-gray-400">
+                                Code: {{ $warehouse->code ?? 'N/A' }}
+                            </span>
+                        </div>
+                    </div>
                 </div>
                 @if(!($warehouse->is_active ?? true))
                 <span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 dark:bg-gray-800 dark:text-gray-400">
@@ -125,12 +154,6 @@ use Illuminate\Support\Str;
             </div>
 
             <div class="mt-4">
-                <h3 class="text-lg font-semibold text-gray-900 group-hover:text-brand-600 dark:text-white dark:group-hover:text-brand-400">
-                    {{ $warehouse->name }}
-                </h3>
-                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                    {{ $warehouse->type ?? 'Depot' }} · Code: {{ $warehouse->code ?? 'N/A' }}
-                </p>
 
                 <div class="mt-4 flex items-center gap-4">
                     <div>
@@ -161,14 +184,15 @@ use Illuminate\Support\Str;
                 @endif
             </div>
 
-            <div class="mt-4 flex items-center justify-between border-t border-gray-100 pt-4 dark:border-gray-800">
-                <span class="text-xs font-medium text-brand-600 group-hover:text-brand-700 dark:text-brand-400 dark:group-hover:text-brand-300">
-                    View details →
-                </span>
-                <span class="text-xs text-gray-500 dark:text-gray-400">
-                    Updated {{ $warehouse->updated_at->diffForHumans() }}
-                </span>
-            </div>
+                <div class="mt-4 flex items-center justify-between border-t border-gray-100 pt-4 text-xs dark:border-gray-800">
+                    <span class="inline-flex items-center gap-1 font-medium text-brand-600 group-hover:text-brand-700 dark:text-brand-400 dark:group-hover:text-brand-300">
+                        <span class="h-1.5 w-1.5 rounded-full bg-brand-500"></span>
+                        View details
+                    </span>
+                    <span class="text-gray-500 dark:text-gray-400">
+                        Updated {{ $warehouse->updated_at->diffForHumans() }}
+                    </span>
+                </div>
         </a>
         @endforeach
     </div>

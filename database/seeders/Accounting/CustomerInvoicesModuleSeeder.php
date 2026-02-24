@@ -30,83 +30,86 @@ class CustomerInvoicesModuleSeeder extends Seeder
             return;
         }
 
-        $order = Order::where('status', 'confirmed')
+        $orders = Order::where('status', 'confirmed')
             ->whereHas('items', function ($q) use ($product) {
                 $q->where('product_id', $product->id);
             })
             ->with('items')
             ->orderBy('id')
-            ->first();
+            ->limit(5)
+            ->get();
 
-        if (! $order) {
+        if ($orders->isEmpty()) {
             return;
         }
 
-        // Avoid double seeding if an invoice is already linked.
-        $existing = Invoice::where('order_id', $order->id)->first();
-        if ($existing) {
-            return;
-        }
+        foreach ($orders as $order) {
+            // Avoid double seeding if an invoice is already linked.
+            if (Invoice::where('order_id', $order->id)->exists()) {
+                continue;
+            }
 
-        $item = $order->items()->where('product_id', $product->id)->first();
-        if (! $item) {
-            return;
-        }
+            $item = $order->items()->where('product_id', $product->id)->first();
+            if (! $item) {
+                continue;
+            }
 
-        $netTotal = $item->quantity * $item->unit_price;
-        $vatRate  = 0.15; // 15% demo VAT
-        $vatAmount = round($netTotal * $vatRate, 2);
+            $netTotal  = $item->quantity * $item->unit_price;
+            $vatRate   = 0.15; // 15% demo VAT
+            $vatAmount = round($netTotal * $vatRate, 2);
 
-        $invoice = Invoice::create([
-            'order_id'   => $order->id,
-            'number'     => 'INV-' . str_pad((string) ($order->id), 6, '0', STR_PAD_LEFT),
-            'issued_at'  => now()->toDateString(),
-            'due_at'     => now()->addDays(7)->toDateString(),
-            'net_total'  => $netTotal,
-            'vat_amount' => $vatAmount,
-            'withholding'=> 0,
-            'status'     => 'issued',
-        ]);
+            $issuedAt = now()->copy()->subDays(max(0, 5 - $order->id))->toDateString();
 
-        InvoiceItem::create([
-            'invoice_id'  => $invoice->id,
-            'product_id'  => $product->id,
-            'description' => $product->name,
-            'quantity'    => $item->quantity,
-            'unit_price'  => $item->unit_price,
-            'line_total'  => $netTotal,
-        ]);
+            $invoice = Invoice::create([
+                'order_id'    => $order->id,
+                'number'      => 'INV-' . str_pad((string) ($order->id), 6, '0', STR_PAD_LEFT),
+                'issued_at'   => $issuedAt,
+                'due_at'      => now()->addDays(7)->toDateString(),
+                'net_total'   => $netTotal,
+                'vat_amount'  => $vatAmount,
+                'withholding' => 0,
+                'status'      => 'issued',
+            ]);
 
-        $gross = $netTotal + $vatAmount;
+            InvoiceItem::create([
+                'invoice_id'  => $invoice->id,
+                'product_id'  => $product->id,
+                'description' => $product->name,
+                'quantity'    => $item->quantity,
+                'unit_price'  => $item->unit_price,
+                'line_total'  => $netTotal,
+            ]);
 
-        // Very simple demo ledger entries.
-        LedgerEntry::create([
-            'account'     => 'Accounts Receivable',
-            'description' => 'Invoice ' . $invoice->number,
-            'debit'       => $gross,
-            'credit'      => 0,
-            'order_id'    => $order->id,
-            'invoice_id'  => $invoice->id,
-        ]);
+            $gross = $netTotal + $vatAmount;
 
-        LedgerEntry::create([
-            'account'     => 'Sales Revenue',
-            'description' => 'Invoice ' . $invoice->number,
-            'debit'       => 0,
-            'credit'      => $netTotal,
-            'order_id'    => $order->id,
-            'invoice_id'  => $invoice->id,
-        ]);
-
-        if ($vatAmount > 0) {
             LedgerEntry::create([
-                'account'     => 'VAT Payable',
-                'description' => 'VAT on ' . $invoice->number,
-                'debit'       => 0,
-                'credit'      => $vatAmount,
+                'account'     => 'Accounts Receivable',
+                'description' => 'Invoice ' . $invoice->number,
+                'debit'       => $gross,
+                'credit'      => 0,
                 'order_id'    => $order->id,
                 'invoice_id'  => $invoice->id,
             ]);
+
+            LedgerEntry::create([
+                'account'     => 'Sales Revenue',
+                'description' => 'Invoice ' . $invoice->number,
+                'debit'       => 0,
+                'credit'      => $netTotal,
+                'order_id'    => $order->id,
+                'invoice_id'  => $invoice->id,
+            ]);
+
+            if ($vatAmount > 0) {
+                LedgerEntry::create([
+                    'account'     => 'VAT Payable',
+                    'description' => 'VAT on ' . $invoice->number,
+                    'debit'       => 0,
+                    'credit'      => $vatAmount,
+                    'order_id'    => $order->id,
+                    'invoice_id'  => $invoice->id,
+                ]);
+            }
         }
     }
 }

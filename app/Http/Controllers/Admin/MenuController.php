@@ -89,8 +89,18 @@ class MenuController extends Controller
         $this->ensureSuperAdmin();
 
         $data = $request->validate([
+            'name'       => 'nullable|string|max:100',
+            'path'       => 'nullable|string|max:255',
             'permission' => 'nullable|string|max:100',
         ]);
+
+        if (array_key_exists('name', $data) && $data['name'] !== null) {
+            $item->name = $data['name'];
+        }
+
+        if (array_key_exists('path', $data) && $data['path'] !== null) {
+            $item->path = $data['path'] ?: '#';
+        }
 
         $item->permission = $data['permission'] ?? null;
         $item->save();

@@ -128,6 +128,146 @@ document.addEventListener('DOMContentLoaded', () => {
     // Warehouse card actions dropdown
     setupDropdown('.warehouse-card-actions', '.warehouse-card-actions-toggle', 'warehouse-card-actions--open');
 
+    // ---------------------------------------------------------------------
+    // Header command palette / search (Cmd/Ctrl + K)
+    // ---------------------------------------------------------------------
+
+    const commandInput = document.querySelector('[data-command-search]');
+    const commandResults = document.querySelector('[data-command-results]');
+
+    if (commandInput && commandResults) {
+        let items = [];
+        try {
+            items = JSON.parse(commandInput.dataset.searchIndex || '[]');
+        } catch (e) {
+            // ignore malformed JSON
+        }
+
+        let filtered = [];
+        let activeIndex = -1;
+
+        const renderResults = () => {
+            if (!commandInput.value.trim() || !filtered.length) {
+                commandResults.classList.add('hidden');
+                commandResults.innerHTML = '';
+                activeIndex = -1;
+                return;
+            }
+
+            commandResults.innerHTML = `
+                <ul class="max-h-80 overflow-y-auto custom-scrollbar divide-y divide-gray-100 dark:divide-gray-800">
+                    ${filtered
+                        .map(
+                            (item, index) => `
+                        <li
+                            class="command-item flex cursor-pointer items-center justify-between px-4 py-2.5 text-sm ${
+                                index === activeIndex
+                                    ? 'bg-brand-50 text-brand-700 dark:bg-brand-500/15 dark:text-brand-200'
+                                    : 'text-gray-700 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-gray-800/60'
+                            }"
+                            data-index="${index}"
+                            data-path="${item.path}"
+                        >
+                            <div class="flex flex-col">
+                                <span class="font-medium">${item.label}</span>
+                                <span class="text-xs text-gray-500 dark:text-gray-400">${item.group}</span>
+                            </div>
+                            <span class="ml-3 text-[10px] uppercase tracking-wide text-gray-400 dark:text-gray-500">
+                                Go →
+                            </span>
+                        </li>`
+                        )
+                        .join('')}
+                </ul>
+            `;
+
+            commandResults.classList.remove('hidden');
+
+            // Click navigation
+            commandResults.querySelectorAll('.command-item').forEach((el) => {
+                el.addEventListener('mousedown', (event) => {
+                    event.preventDefault();
+                    const path = el.dataset.path;
+                    if (path) {
+                        window.location.href = path;
+                    }
+                });
+            });
+        };
+
+        const updateFiltered = () => {
+            const q = commandInput.value.trim().toLowerCase();
+            if (!q) {
+                filtered = [];
+                renderResults();
+                return;
+            }
+
+            filtered = items
+                .filter((item) => {
+                    const haystack = `${item.label} ${item.group} ${item.path}`.toLowerCase();
+                    return haystack.includes(q);
+                })
+                .slice(0, 10);
+            activeIndex = filtered.length ? 0 : -1;
+            renderResults();
+        };
+
+        commandInput.addEventListener('input', () => {
+            updateFiltered();
+        });
+
+        commandInput.addEventListener('keydown', (event) => {
+            if (event.key === 'ArrowDown') {
+                if (filtered.length) {
+                    event.preventDefault();
+                    activeIndex = (activeIndex + 1) % filtered.length;
+                    renderResults();
+                }
+            } else if (event.key === 'ArrowUp') {
+                if (filtered.length) {
+                    event.preventDefault();
+                    activeIndex = (activeIndex - 1 + filtered.length) % filtered.length;
+                    renderResults();
+                }
+            } else if (event.key === 'Enter') {
+                if (filtered.length && activeIndex >= 0) {
+                    event.preventDefault();
+                    const item = filtered[activeIndex];
+                    if (item?.path) {
+                        window.location.href = item.path;
+                    }
+                }
+            } else if (event.key === 'Escape') {
+                commandResults.classList.add('hidden');
+                activeIndex = -1;
+                commandInput.blur();
+            }
+        });
+
+        // Global shortcut Cmd/Ctrl + K
+        document.addEventListener('keydown', (event) => {
+            const isMac = navigator.platform.toUpperCase().includes('MAC');
+            const meta = isMac ? event.metaKey : event.ctrlKey;
+            if (meta && event.key.toLowerCase() === 'k') {
+                event.preventDefault();
+                commandInput.focus();
+                commandInput.select();
+            }
+        });
+
+        // Close results when clicking outside
+        document.addEventListener('click', (event) => {
+            if (!commandResults.classList.contains('hidden')) {
+                const container = document.querySelector('[data-command-container]');
+                if (container && !container.contains(event.target)) {
+                    commandResults.classList.add('hidden');
+                    activeIndex = -1;
+                }
+            }
+        });
+    }
+
     // Dismiss flash messages
     document.querySelectorAll('.flash-close').forEach((btn) => {
         btn.addEventListener('click', () => {

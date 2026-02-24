@@ -3,14 +3,14 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ config('app.name', 'SAFERP') }}</title>
+    <title>{{ config('app.name', 'ERP') }}</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="public-shell">
     <div class="public-hero">
         <header class="public-header">
             <div class="brand">
-                <span class="brand-title">SAFERP</span>
+                <span class="brand-title">ERP</span>
             </div>
             <nav class="public-nav">
                 @auth
@@ -27,16 +27,16 @@
 
         <main class="public-main">
             <section class="public-intro">
-                <h1>Welcome to SAFERP</h1>
+                <h1>Welcome to ERP</h1>
                 <p>Secure web portal for managing products, production, inventory, sales, and finance.</p>
                 <div class="public-cta">
-                    <span class="public-hint">Access is restricted to authorised SAFERP staff.</span>
+                    <span class="public-hint">Access is restricted to authorised ERP staff.</span>
                 </div>
             </section>
         </main>
 
         <footer class="public-footer">
-            <small>&copy; {{ date('Y') }} SAFERP. All rights reserved.</small>
+            <small>&copy; {{ date('Y') }} ERP. All rights reserved.</small>
         </footer>
     </div>
 </body>

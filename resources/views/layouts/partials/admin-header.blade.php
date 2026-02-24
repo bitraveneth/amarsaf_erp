@@ -1,6 +1,6 @@
 <header class="admin-header">
     <div class="brand">
-        <span>SAFERP</span>
+        <span>ERP</span>
         <small>Admin panel</small>
     </div>
     <nav class="header-links">

@@ -63,12 +63,12 @@
             : 'justify-start'">
         <a href="{{ route('admin.dashboard') }}" class="flex items-center gap-3">
             <div class="flex h-10 w-10 items-center justify-center rounded-full bg-brand-500 text-sm font-semibold text-white">
-                SF
+                ER
             </div>
             <div class="flex flex-col"
                  x-show="$store.sidebar.isExpanded || $store.sidebar.isHovered || $store.sidebar.isMobileOpen">
-                <span class="text-sm font-semibold text-gray-900 dark:text-white">SAFERP</span>
-                <span class="text-xs text-gray-500 dark:text-gray-400">ERP System</span>
+                <span class="text-sm font-semibold text-gray-900 dark:text-white">ERP</span>
+                <span class="text-xs text-gray-500 dark:text-gray-400">System</span>
             </div>
         </a>
     </div>
