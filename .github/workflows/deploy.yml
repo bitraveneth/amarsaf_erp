@@ -3,7 +3,7 @@ name: Deploy to VPS
 on:
   push:
     branches:
-      - test        # or main, whichever branch you deploy from
+      - test          # change to main if you deploy from main
 
 jobs:
   deploy:
@@ -19,10 +19,25 @@ jobs:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
       - name: Deploy to VPS
+        env:
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PATH: ${{ secrets.VPS_PATH }}
         run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} << 'EOF'
-            cd ${{ secrets.VPS_PATH }}
-            git pull origin test
+          BRANCH="${GITHUB_REF##*/}"
+
+          ssh -o StrictHostKeyChecking=no "$VPS_USER@$VPS_HOST" << 'EOF'
+            set -e
+
+            cd "$VPS_PATH"
+
+            # Optional: put app in maintenance mode during deploy
+            php artisan down || true
+
+            # Pull latest code for the deploy branch
+            git fetch origin
+            git checkout ${BRANCH}
+            git pull origin ${BRANCH}
 
             composer install --no-interaction --prefer-dist --optimize-autoloader
 
@@ -31,6 +46,11 @@ jobs:
             npm install
             npm run build
 
+            php artisan config:clear
             php artisan config:cache
             php artisan route:cache
+            php artisan view:clear
+
+            # Bring app back up
+            php artisan up
           EOF
