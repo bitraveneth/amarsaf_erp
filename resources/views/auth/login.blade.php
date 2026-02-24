@@ -133,6 +133,41 @@
                                 data-password="password">
                             admin@saferpv.local
                         </button>
+                        <button type="button"
+                                class="inline-flex items-center rounded-full bg-gray-200 px-3 py-1 font-medium text-gray-800 hover:bg-brand-100 hover:text-brand-700 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-brand-500/20 dark:hover:text-brand-300"
+                                data-demo-login
+                                data-email="warehouse@saferpv.local"
+                                data-password="password">
+                            warehouse@saferpv.local
+                        </button>
+                        <button type="button"
+                                class="inline-flex items-center rounded-full bg-gray-200 px-3 py-1 font-medium text-gray-800 hover:bg-brand-100 hover:text-brand-700 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-brand-500/20 dark:hover:text-brand-300"
+                                data-demo-login
+                                data-email="production@saferpv.local"
+                                data-password="password">
+                            production@saferpv.local
+                        </button>
+                        <button type="button"
+                                class="inline-flex items-center rounded-full bg-gray-200 px-3 py-1 font-medium text-gray-800 hover:bg-brand-100 hover:text-brand-700 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-brand-500/20 dark:hover:text-brand-300"
+                                data-demo-login
+                                data-email="employee@saferpv.local"
+                                data-password="password">
+                            employee@saferpv.local
+                        </button>
+                        <button type="button"
+                                class="inline-flex items-center rounded-full bg-gray-200 px-3 py-1 font-medium text-gray-800 hover:bg-brand-100 hover:text-brand-700 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-brand-500/20 dark:hover:text-brand-300"
+                                data-demo-login
+                                data-email="sales.manager@saferpv.local"
+                                data-password="password">
+                            sales.manager@saferpv.local
+                        </button>
+                        <button type="button"
+                                class="inline-flex items-center rounded-full bg-gray-200 px-3 py-1 font-medium text-gray-800 hover:bg-brand-100 hover:text-brand-700 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-brand-500/20 dark:hover:text-brand-300"
+                                data-demo-login
+                                data-email="qc@saferpv.local"
+                                data-password="password">
+                            qc@saferpv.local
+                        </button>
                     </div>
                     <p class="mt-2 text-center text-theme-xs text-gray-500 dark:text-gray-400">
                         Default password: <span class="font-mono">password</span>
