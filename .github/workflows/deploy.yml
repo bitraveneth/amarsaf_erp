@@ -27,6 +27,12 @@ jobs:
             set -e
 
             cd "${{ secrets.VPS_PATH }}"
+            
+            # Ensure APP_KEY is set once
+            if ! grep -q '^APP_KEY=' .env || grep -q '^APP_KEY=$' .env; then
+              echo "APP_KEY missing or empty – generating..."
+              php artisan key:generate
+            fi
 
             # Optional: maintenance mode during deploy
             php artisan down || true
