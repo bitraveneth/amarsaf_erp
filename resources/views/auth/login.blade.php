@@ -77,19 +77,12 @@
                            placeholder="••••••••"
                            class="h-11 w-full rounded-lg border border-gray-300 bg-transparent py-2.5 pl-10 pr-12 text-theme-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-700">
                     <button type="button" 
-                            id="toggle-password" 
                             class="absolute inset-y-0 right-0 flex items-center pr-3.5 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
-                            aria-label="Show password">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="password-toggle-icon-show">
+                            aria-label="Show password"
+                            onclick="(function(btn){var input=document.getElementById('password');if(!input)return;var isPass=input.type==='password';input.type=isPass?'text':'password';btn.setAttribute('aria-label',isPass?'Hide password':'Show password');})(this)">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <path d="M12 5C7 5 3.1 8.1 1.5 12c1.6 3.9 5.5 7 10.5 7s8.9-3.1 10.5-7C20.9 8.1 17 5 12 5z" stroke="currentColor" stroke-width="1.5"/>
                             <circle cx="12" cy="12" r="2" stroke="currentColor" stroke-width="1.5"/>
-                        </svg>
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="password-toggle-icon-hide hidden">
-                            <path d="M3 4.3L4.3 3L21 20.7L19.7 22L16.6 18.9C15.1 19.6 13.6 20 12 20C7 20 3.1 16.9 1.5 12.5C2.1 10.9 3.2 9.4 4.5 8.1L3 4.3Z" stroke="currentColor" stroke-width="1.5"/>
-                            <path d="M9.5 9.5L14.5 14.5" stroke="currentColor" stroke-width="1.5"/>
-                            <circle cx="12" cy="12" r="2" stroke="currentColor" stroke-width="1.5"/>
-                            <path d="M12 5C9.5 5 7.2 5.9 5.3 7.3" stroke="currentColor" stroke-width="1.5"/>
-                            <path d="M18.9 8.1C20.2 9.5 21.2 11 21.9 12.5C20.3 16.9 16.5 20 12 20" stroke="currentColor" stroke-width="1.5"/>
                         </svg>
                     </button>
                 </div>
@@ -122,8 +115,27 @@
             {{-- Demo Credentials (Local Only) --}}
             @if(app()->environment('local'))
                 <div class="mt-4 rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50">
-                    <p class="text-center text-theme-xs text-gray-600 dark:text-gray-400">
-                        <span class="font-medium">Demo:</span> admin@saferpv.local / password
+                    <p class="text-center text-theme-xs text-gray-600 dark:text-gray-400 mb-2">
+                        <span class="font-medium">Quick demo logins:</span> click to fill email &amp; password.
+                    </p>
+                    <div class="flex flex-wrap items-center justify-center gap-2 text-theme-xs">
+                        <button type="button"
+                                class="inline-flex items-center rounded-full bg-gray-200 px-3 py-1 font-medium text-gray-800 hover:bg-brand-100 hover:text-brand-700 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-brand-500/20 dark:hover:text-brand-300"
+                                data-demo-login
+                                data-email="super@saferpv.local"
+                                data-password="password">
+                            super@saferpv.local
+                        </button>
+                        <button type="button"
+                                class="inline-flex items-center rounded-full bg-gray-200 px-3 py-1 font-medium text-gray-800 hover:bg-brand-100 hover:text-brand-700 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-brand-500/20 dark:hover:text-brand-300"
+                                data-demo-login
+                                data-email="admin@saferpv.local"
+                                data-password="password">
+                            admin@saferpv.local
+                        </button>
+                    </div>
+                    <p class="mt-2 text-center text-theme-xs text-gray-500 dark:text-gray-400">
+                        Default password: <span class="font-mono">password</span>
                     </p>
                 </div>
             @endif
@@ -135,29 +147,25 @@
 @push('scripts')
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        const togglePassword = document.getElementById('toggle-password');
         const passwordInput = document.getElementById('password');
-        const showIcon = document.querySelector('.password-toggle-icon-show');
-        const hideIcon = document.querySelector('.password-toggle-icon-hide');
+        const emailInput = document.getElementById('email');
 
-        if (togglePassword && passwordInput) {
-            togglePassword.addEventListener('click', function() {
-                const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
-                passwordInput.setAttribute('type', type);
-                
-                showIcon.classList.toggle('hidden');
-                hideIcon.classList.toggle('hidden');
-                
-                this.setAttribute('aria-label', type === 'password' ? 'Show password' : 'Hide password');
+        // Demo login buttons (local)
+        if (emailInput && passwordInput) {
+            document.querySelectorAll('[data-demo-login]').forEach(function(button) {
+                button.addEventListener('click', function () {
+                    const email = this.getAttribute('data-email') || '';
+                    const password = this.getAttribute('data-password') || '';
+                    emailInput.value = email;
+                    passwordInput.value = password;
+                    emailInput.focus();
+                });
             });
         }
 
         // Remove autofocus on mobile to prevent keyboard popup
-        if (window.innerWidth < 768) {
-            const emailInput = document.getElementById('email');
-            if (emailInput) {
-                emailInput.removeAttribute('autofocus');
-            }
+        if (window.innerWidth < 768 && emailInput) {
+            emailInput.removeAttribute('autofocus');
         }
     });
 </script>

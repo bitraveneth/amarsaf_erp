@@ -7,10 +7,66 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', config('app.name', 'ERP'))</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+
+    <script>
+        document.addEventListener('alpine:init', () => {
+            Alpine.store('loader', {
+                show: true,
+                init() {
+                    window.addEventListener('load', () => {
+                        setTimeout(() => {
+                            this.show = false;
+                        }, 500);
+                    });
+
+                    setTimeout(() => {
+                        this.show = false;
+                    }, 3000);
+                },
+                hide() {
+                    this.show = false;
+                }
+            });
+        });
+    </script>
 </head>
-<body class="font-outfit bg-gray-50 antialiased dark:bg-gray-950">
-    {{-- Simple guest layout without sidebar, header, or authenticated UI --}}
-    <div class="flex min-h-screen flex-col">
+<body class="font-outfit bg-gray-50 antialiased dark:bg-gray-950" x-data>
+    {{-- Simple guest layout with loader --}}
+    {{-- Page Loader --}}
+    <div x-show="$store.loader.show"
+         x-transition:leave="loader-fade-leave"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         class="fixed inset-0 z-[99999] flex flex-col items-center justify-center bg-white dark:bg-gray-950"
+         style="will-change: opacity;">
+        <div class="mb-6 animate-pulse">
+            <div class="flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-50 shadow-theme-md dark:bg-brand-500/10">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="text-brand-600 dark:text-brand-400">
+                    <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+        </div>
+        <h1 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
+            {{ config('app.name', 'ERP') }}
+        </h1>
+        <div class="flex items-center gap-2">
+            <span class="h-2.5 w-2.5 rounded-full bg-brand-500 animate-bounce" style="animation-delay:0ms;"></span>
+            <span class="h-2.5 w-2.5 rounded-full bg-brand-500/80 animate-bounce" style="animation-delay:150ms;"></span>
+            <span class="h-2.5 w-2.5 rounded-full bg-brand-500/60 animate-bounce" style="animation-delay:300ms;"></span>
+        </div>
+        <p class="mt-4 text-theme-sm text-gray-600 dark:text-gray-400 animate-pulse">
+            Preparing sign-in screen...
+        </p>
+    </div>
+
+    <div class="flex min-h-screen flex-col"
+         x-show="!$store.loader.show"
+         x-transition:enter="transition ease-out duration-500"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         style="display:none;">
         {{-- Optional minimal header for guest pages --}}
         <header class="absolute left-0 right-0 top-0 z-50">
             <div class="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
