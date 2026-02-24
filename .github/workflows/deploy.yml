@@ -38,7 +38,7 @@ jobs:
 
             composer install --no-interaction --prefer-dist --optimize-autoloader
 
-            php artisan migrate:fresh --seed
+            php artisan migrate --force
 
             npm install
             npm run build
