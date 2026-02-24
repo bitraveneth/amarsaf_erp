@@ -36,12 +36,22 @@ jobs:
             git checkout test
             git pull origin test
 
+            # PHP dependencies
             composer install --no-interaction --prefer-dist --optimize-autoloader
 
+            # Incremental migrations (safe)
             php artisan migrate --force
 
+            # If you install Node later, you can re-enable these:
             npm install
             npm run build
+
+            # Ensure storage and cache directories are writable for Apache (www-data)
+            chown -R www-data:www-data storage bootstrap/cache || true
+            find storage -type d -exec chmod 775 {} \\; || true
+            find storage -type f -exec chmod 664 {} \\; || true
+            find bootstrap/cache -type d -exec chmod 775 {} \\; || true
+            find bootstrap/cache -type f -exec chmod 664 {} \\; || true
 
             php artisan config:clear
             php artisan config:cache
