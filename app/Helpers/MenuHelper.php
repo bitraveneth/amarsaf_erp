@@ -244,6 +244,7 @@ class MenuHelper
                         'path' => '#',
                         'permission' => 'accounting.manage',
                         'subItems' => [
+                            ['name' => 'Accounting dashboard', 'path' => '/admin/accounting-dashboard', 'permission' => 'accounting.manage'],
                             ['name' => 'Customer invoices', 'path' => '/admin/finance', 'permission' => 'accounting.manage'],
                             ['name' => 'Expenses', 'path' => '/admin/expenses', 'permission' => 'accounting.manage'],
                             ['name' => 'Salary distributions', 'path' => '/admin/salary-distributions', 'permission' => 'accounting.manage'],

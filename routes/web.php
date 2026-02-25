@@ -51,6 +51,8 @@ use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\ProfileController;
 use App\Http\Controllers\Admin\SalesDashboardController;
 use App\Http\Controllers\Admin\ManufacturingDashboardController;
+use App\Http\Controllers\Admin\AccountingDashboardController;
+use App\Http\Controllers\Admin\ReportsDashboardController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -83,6 +85,21 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::get('sales-dashboard', SalesDashboardController::class)
         ->middleware('perm:sales.manage')
         ->name('sales.dashboard');
+
+    // Manufacturing dashboard
+    Route::get('manufacturing-dashboard', ManufacturingDashboardController::class)
+        ->middleware('perm:manufacturing.manage')
+        ->name('manufacturing.dashboard');
+
+    // Accounting dashboard
+    Route::get('accounting-dashboard', AccountingDashboardController::class)
+        ->middleware('perm:accounting.manage')
+        ->name('accounting.dashboard');
+
+    // Reports dashboard
+    Route::get('reports-dashboard', ReportsDashboardController::class)
+        ->middleware('perm:reports.view')
+        ->name('reports.dashboard');
 
     // Manufacturing dashboard
     Route::get('manufacturing-dashboard', ManufacturingDashboardController::class)
