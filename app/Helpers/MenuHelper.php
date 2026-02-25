@@ -263,6 +263,7 @@ class MenuHelper
                         'path' => '#',
                         'permission' => 'reports.view',
                         'subItems' => [
+                            ['name' => 'Reports dashboard', 'path' => '/admin/reports-dashboard', 'permission' => 'reports.view'],
                             ['name' => 'Profit & Loss', 'path' => '/admin/reports/pl', 'permission' => 'reports.view'],
                             ['name' => 'Balance sheet', 'path' => '/admin/reports/bs', 'permission' => 'reports.view'],
                             ['name' => 'Cashflow', 'path' => '/admin/reports/cashflow', 'permission' => 'reports.view'],
