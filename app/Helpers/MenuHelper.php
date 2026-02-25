@@ -184,6 +184,7 @@ class MenuHelper
                         'path' => '#',
                         'permission' => 'manufacturing.manage',
                         'subItems' => [
+                            ['name' => 'Manufacturing dashboard', 'path' => '/admin/manufacturing-dashboard', 'permission' => 'manufacturing.manage'],
                             ['name' => 'BOMs (Bill of Materials)', 'path' => '/admin/boms', 'permission' => 'manufacturing.manage'],
                             ['name' => 'Production orders & runs', 'path' => '/admin/production', 'permission' => 'manufacturing.manage'],
                             ['name' => 'Pending receipts', 'path' => '/admin/production/pending-receipts', 'permission' => 'manufacturing.manage'],
@@ -223,6 +224,7 @@ class MenuHelper
                         'path' => '#',
                         'permission' => 'sales.manage',
                         'subItems' => [
+                            ['name' => 'Sales dashboard', 'path' => '/admin/sales-dashboard', 'permission' => 'sales.manage'],
                             ['name' => 'Sales orders', 'path' => '/admin/orders', 'permission' => 'sales.manage'],
                             ['name' => 'Returns', 'path' => '/admin/returns/customer', 'permission' => 'sales.manage'],
                             ['name' => 'Customer gifts', 'path' => '/admin/gifts', 'permission' => 'sales.manage'],

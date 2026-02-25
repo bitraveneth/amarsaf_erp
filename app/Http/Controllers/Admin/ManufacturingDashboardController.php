@@ -1,0 +1,79 @@
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use App\Models\Batch;
+use App\Models\ProductionRun;
+use Carbon\Carbon;
+
+class ManufacturingDashboardController extends Controller
+{
+    public function __invoke()
+    {
+        $today = Carbon::today();
+        $startOfMonth = $today->copy()->startOfMonth();
+        $endOfMonth = $today->copy()->endOfMonth();
+
+        $runQuery = ProductionRun::with(['product', 'warehouse'])
+            ->whereBetween('created_at', [$startOfMonth, $endOfMonth]);
+
+        $runs = $runQuery->get();
+
+        $totalRuns = $runs->count();
+        $totalQuantity = $runs->sum('quantity');
+
+        $approvedRuns = $runs->where('qc_status', 'approved');
+        $approvedQuantity = $approvedRuns->sum('quantity');
+
+        $pendingQcCount = $runs->where('qc_status', '!=', 'approved')->count();
+
+        // Batches produced this month
+        $batches = Batch::with('product')
+            ->whereBetween('production_date', [$startOfMonth, $endOfMonth])
+            ->get();
+
+        $batchCount = $batches->count();
+
+        $expiringSoon = Batch::with('product')
+            ->whereNotNull('expiry_date')
+            ->whereBetween('expiry_date', [$today, $today->copy()->addDays(60)])
+            ->get();
+
+        // Top products by produced quantity
+        $topProducts = $runs
+            ->groupBy(fn ($run) => $run->product?->name ?? 'Unknown product')
+            ->map(fn ($group) => [
+                'qty' => $group->sum('quantity'),
+                'runs' => $group->count(),
+            ])
+            ->sortByDesc('qty')
+            ->take(5);
+
+        // Output by line / shift
+        $byLine = $runs
+            ->groupBy('line')
+            ->map(fn ($group) => $group->sum('quantity'))
+            ->sortDesc();
+
+        $byShift = $runs
+            ->groupBy('shift')
+            ->map(fn ($group) => $group->sum('quantity'))
+            ->sortDesc();
+
+        return view('admin.manufacturing.dashboard', [
+            'periodLabel' => $startOfMonth->format('d M Y') . ' – ' . $endOfMonth->format('d M Y'),
+            'totalRuns' => $totalRuns,
+            'totalQuantity' => $totalQuantity,
+            'approvedQuantity' => $approvedQuantity,
+            'approvedRunsCount' => $approvedRuns->count(),
+            'pendingQcCount' => $pendingQcCount,
+            'batchCount' => $batchCount,
+            'expiringSoon' => $expiringSoon,
+            'topProducts' => $topProducts,
+            'byLine' => $byLine,
+            'byShift' => $byShift,
+        ]);
+    }
+}
+

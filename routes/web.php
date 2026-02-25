@@ -49,6 +49,8 @@ use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\PermissionController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\ProfileController;
+use App\Http\Controllers\Admin\SalesDashboardController;
+use App\Http\Controllers\Admin\ManufacturingDashboardController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -76,6 +78,16 @@ Route::post('logout', [LoginController::class, 'logout'])->middleware('auth')->n
 Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::get('/', [AdminController::class, 'index'])->name('dashboard');
     Route::view('help', 'admin.help')->name('help');
+
+    // Sales dashboard
+    Route::get('sales-dashboard', SalesDashboardController::class)
+        ->middleware('perm:sales.manage')
+        ->name('sales.dashboard');
+
+    // Manufacturing dashboard
+    Route::get('manufacturing-dashboard', ManufacturingDashboardController::class)
+        ->middleware('perm:manufacturing.manage')
+        ->name('manufacturing.dashboard');
 
     // My profile
     Route::get('profile', [ProfileController::class, 'edit'])->name('profile.edit');
