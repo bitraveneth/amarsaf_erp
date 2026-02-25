@@ -46,17 +46,38 @@
                                 <div class="text-[11px] font-semibold tracking-wide text-gray-900 dark:text-gray-100">
                                     {{ $group->title }}
                                 </div>
-                                <div class="mt-1 inline-flex items-center rounded-full bg-gray-200 px-2 py-0.5 text-[10px] text-gray-700 dark:bg-gray-800 dark:text-gray-300">
-                                    {{ $group->items->count() }} item{{ $group->items->count() === 1 ? '' : 's' }}
+                                <div class="mt-1 inline-flex items-center gap-1">
+                                    <span class="rounded-full bg-gray-200 px-2 py-0.5 text-[10px] text-gray-700 dark:bg-gray-800 dark:text-gray-300">
+                                        {{ $group->items->count() }} item{{ $group->items->count() === 1 ? '' : 's' }}
+                                    </span>
+                                    <span class="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] text-gray-500 dark:bg-gray-800 dark:text-gray-400">
+                                        Position: {{ $group->position }}
+                                    </span>
                                 </div>
                             </div>
-                            <form method="POST" action="{{ route('admin.menu.groups.delete', $group) }}" onsubmit="return confirm('Delete group {{ $group->title }} and all its items?');">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="rounded border border-error-200 bg-error-50 px-2 py-1 text-[11px] font-medium text-error-600 hover:bg-error-100 dark:border-error-500/40 dark:bg-error-500/10 dark:text-error-300">
-                                    Delete
-                                </button>
-                            </form>
+                            <div class="flex items-center gap-1">
+                                <form method="POST" action="{{ route('admin.menu.groups.move', $group) }}">
+                                    @csrf
+                                    <input type="hidden" name="direction" value="up">
+                                    <button type="submit" class="rounded border border-gray-200 bg-white px-1.5 py-1 text-[11px] text-gray-500 hover:border-brand-400 hover:text-brand-600 dark:border-gray-700 dark:bg-gray-900">
+                                        ↑
+                                    </button>
+                                </form>
+                                <form method="POST" action="{{ route('admin.menu.groups.move', $group) }}">
+                                    @csrf
+                                    <input type="hidden" name="direction" value="down">
+                                    <button type="submit" class="rounded border border-gray-200 bg-white px-1.5 py-1 text-[11px] text-gray-500 hover:border-brand-400 hover:text-brand-600 dark:border-gray-700 dark:bg-gray-900">
+                                        ↓
+                                    </button>
+                                </form>
+                                <form method="POST" action="{{ route('admin.menu.groups.delete', $group) }}" onsubmit="return confirm('Delete group {{ $group->title }} and all its items?');">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="rounded border border-error-200 bg-error-50 px-2 py-1 text-[11px] font-medium text-error-600 hover:bg-error-100 dark:border-error-500/40 dark:bg-error-500/10 dark:text-error-300">
+                                        Delete
+                                    </button>
+                                </form>
+                            </div>
                         </li>
                     @endforeach
                 </ul>
@@ -99,13 +120,43 @@
                                                         <span class="rounded-full bg-brand-50 px-2 py-0.5 text-[10px] text-brand-700 dark:bg-brand-900/40 dark:text-brand-300">{{ $item->permission }}</span>
                                                     @endif
                                                 </div>
-                                                <form method="POST" action="{{ route('admin.menu.items.delete', $item) }}" onsubmit="return confirm('Delete item {{ $item->name }} and its sub-items?');">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit" class="text-[10px] text-gray-500 hover:text-error-400 hover:underline">
-                                                        Delete
-                                                    </button>
-                                                </form>
+                                                <div class="flex items-center gap-1">
+                                                    <form method="POST" action="{{ route('admin.menu.items.move', $item) }}">
+                                                        @csrf
+                                                        <input type="hidden" name="direction" value="up">
+                                                        <button type="submit" class="rounded border border-gray-600 bg-gray-800 px-1.5 py-0.5 text-[10px] text-gray-300 hover:border-brand-400 hover:text-brand-300">
+                                                            ↑
+                                                        </button>
+                                                    </form>
+                                                    <form method="POST" action="{{ route('admin.menu.items.move', $item) }}">
+                                                        @csrf
+                                                        <input type="hidden" name="direction" value="down">
+                                                        <button type="submit" class="rounded border border-gray-600 bg-gray-800 px-1.5 py-0.5 text-[10px] text-gray-300 hover:border-brand-400 hover:text-brand-300">
+                                                            ↓
+                                                        </button>
+                                                    </form>
+                                                    <form method="POST" action="{{ route('admin.menu.items.delete', $item) }}" onsubmit="return confirm('Delete item {{ $item->name }} and its sub-items?');">
+                                                        @csrf
+                                                        @method('DELETE')
+                                                        <button type="submit" class="text-[10px] text-gray-500 hover:text-error-400 hover:underline">
+                                                            Delete
+                                                        </button>
+                                                    </form>
+                                                    {{-- Move to another group --}}
+                                                    <form method="POST" action="{{ route('admin.menu.items.move-group', $item) }}" class="ml-1">
+                                                        @csrf
+                                                        <select name="menu_group_id" class="rounded border border-gray-700 bg-gray-900 px-1 py-0.5 text-[10px] text-gray-300 focus:border-brand-400 focus:outline-none focus:ring-0">
+                                                            @foreach($groups as $targetGroup)
+                                                                <option value="{{ $targetGroup->id }}" @selected($targetGroup->id === $group->id)>
+                                                                    {{ $targetGroup->title }}
+                                                                </option>
+                                                            @endforeach
+                                                        </select>
+                                                        <button type="submit" class="ml-1 rounded border border-gray-600 bg-gray-800 px-1.5 py-0.5 text-[10px] text-gray-300 hover:border-brand-400 hover:text-brand-300">
+                                                            Move
+                                                        </button>
+                                                    </form>
+                                                </div>
                                             </div>
                                             <div class="mt-1 text-[11px] text-gray-400">Path: {{ $item->path }}</div>
 

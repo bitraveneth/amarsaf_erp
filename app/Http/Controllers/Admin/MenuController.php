@@ -52,6 +52,35 @@ class MenuController extends Controller
         return redirect()->route('admin.menu.index')->with('status', 'Group deleted.');
     }
 
+    public function moveGroup(Request $request, MenuGroup $group)
+    {
+        $this->ensureSuperAdmin();
+
+        $direction = $request->input('direction') === 'up' ? 'up' : 'down';
+
+        $query = MenuGroup::query();
+
+        if ($direction === 'up') {
+            $swap = $query->where('position', '<', $group->position)
+                ->orderByDesc('position')
+                ->first();
+        } else {
+            $swap = $query->where('position', '>', $group->position)
+                ->orderBy('position')
+                ->first();
+        }
+
+        if ($swap) {
+            $currentPos = $group->position;
+            $group->position = $swap->position;
+            $swap->position = $currentPos;
+            $group->save();
+            $swap->save();
+        }
+
+        return redirect()->route('admin.menu.index');
+    }
+
     public function storeItem(Request $request)
     {
         $this->ensureSuperAdmin();
@@ -115,6 +144,64 @@ class MenuController extends Controller
         $item->delete();
 
         return redirect()->route('admin.menu.index')->with('status', 'Menu item deleted.');
+    }
+
+    public function moveItem(Request $request, MenuItem $item)
+    {
+        $this->ensureSuperAdmin();
+
+        $direction = $request->input('direction') === 'up' ? 'up' : 'down';
+
+        $siblings = MenuItem::where('menu_group_id', $item->menu_group_id)
+            ->where('parent_id', $item->parent_id);
+
+        if ($direction === 'up') {
+            $swap = $siblings->where('position', '<', $item->position)
+                ->orderByDesc('position')
+                ->first();
+        } else {
+            $swap = $siblings->where('position', '>', $item->position)
+                ->orderBy('position')
+                ->first();
+        }
+
+        if ($swap) {
+            $currentPos = $item->position;
+            $item->position = $swap->position;
+            $swap->position = $currentPos;
+            $item->save();
+            $swap->save();
+        }
+
+        return redirect()->route('admin.menu.index');
+    }
+
+    public function moveItemGroup(Request $request, MenuItem $item)
+    {
+        $this->ensureSuperAdmin();
+
+        $data = $request->validate([
+            'menu_group_id' => 'required|exists:menu_groups,id',
+        ]);
+
+        $targetGroupId = (int) $data['menu_group_id'];
+
+        // If same group, nothing to do.
+        if ($targetGroupId === (int) $item->menu_group_id) {
+            return redirect()->route('admin.menu.index');
+        }
+
+        // Move as a top-level item in the target group, at the end.
+        $newPosition = (MenuItem::where('menu_group_id', $targetGroupId)
+            ->whereNull('parent_id')
+            ->max('position') ?? 0) + 1;
+
+        $item->menu_group_id = $targetGroupId;
+        $item->parent_id = null;
+        $item->position = $newPosition;
+        $item->save();
+
+        return redirect()->route('admin.menu.index')->with('status', 'Menu item moved to new group.');
     }
 
     protected function ensureSuperAdmin(): void

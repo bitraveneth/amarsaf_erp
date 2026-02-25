@@ -132,9 +132,12 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::get('menu', [MenuController::class, 'index'])->name('menu.index');
     Route::post('menu/groups', [MenuController::class, 'storeGroup'])->name('menu.groups.store');
     Route::delete('menu/groups/{group}', [MenuController::class, 'deleteGroup'])->name('menu.groups.delete');
+    Route::post('menu/groups/{group}/move', [MenuController::class, 'moveGroup'])->name('menu.groups.move');
     Route::post('menu/items', [MenuController::class, 'storeItem'])->name('menu.items.store');
     Route::patch('menu/items/{item}', [MenuController::class, 'updateItem'])->name('menu.items.update');
     Route::delete('menu/items/{item}', [MenuController::class, 'deleteItem'])->name('menu.items.delete');
+    Route::post('menu/items/{item}/move', [MenuController::class, 'moveItem'])->name('menu.items.move');
+    Route::post('menu/items/{item}/move-group', [MenuController::class, 'moveItemGroup'])->name('menu.items.move-group');
 
     // Finished products catalog
     Route::get('products', [ProductController::class, 'index'])->middleware('perm:control.products')->name('products.index');
