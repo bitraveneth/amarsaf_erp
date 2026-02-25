@@ -1,9 +1,14 @@
 @extends('layouts.app')
 
+@php
+    // Use only the invoice number so browser "Save as PDF" defaults to e.g. "INV-000001.pdf"
+    $title = $invoice->number;
+@endphp
+
 @section('content')
-<div class="space-y-8">
-    <!-- Header with gradient -->
-    <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
+<div class="space-y-8 print-invoice">
+    <!-- Header with gradient (screen only) -->
+    <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6 print-hidden">
         <div>
             <div class="flex items-start gap-4">
                 <!-- Invoice Icon -->
@@ -93,6 +98,46 @@
         </div>
     </div>
 
+    <!-- Clean A4-style header for print only -->
+    <div class="hidden print-only mb-6">
+        <div class="flex items-start justify-between">
+            <div class="flex items-center gap-3">
+                @php
+                    $appName = config('app.name', 'ERP');
+                    $appInitials = mb_strtoupper(mb_substr($appName, 0, 2));
+                @endphp
+                <div class="flex h-12 w-12 items-center justify-center rounded-full bg-brand-500 text-sm font-semibold text-white">
+                    {{ $appInitials }}
+                </div>
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-900">
+                        {{ config('app.name', 'ERP') }}
+                    </h2>
+                    <p class="mt-1 text-xs text-gray-600">
+                        Invoice &amp; Finance
+                    </p>
+                </div>
+            </div>
+            <div class="text-right space-y-1">
+                <h1 class="text-xl font-bold text-gray-900">
+                    Invoice {{ $invoice->number }}
+                </h1>
+                <p class="text-xs text-gray-600">
+                    Order #{{ $invoice->order_id ?? '—' }} · {{ $invoice->order?->agent->name ?? 'Unassigned' }}
+                </p>
+                <p class="text-xs text-gray-600">
+                    Issued: {{ optional($invoice->issued_at)->format('d M Y') }}
+                    @if($invoice->due_at)
+                        · Due: {{ $invoice->due_at->format('d M Y') }}
+                    @endif
+                </p>
+                <p class="text-xs text-gray-600">
+                    Status: {{ ucfirst(str_replace('_', ' ', $invoice->status)) }}
+                </p>
+            </div>
+        </div>
+    </div>
+
     @php
         // Gross invoice value (net + VAT)
         $grossTotal = $invoice->net_total + $invoice->vat_amount;
@@ -103,8 +148,8 @@
         $outstanding   = $cashTotal - $creditsTotal - $receiptsTotal;
     @endphp
 
-    <!-- Financial Summary Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+    <!-- Financial Summary Cards (screen only) -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 print-hidden">
         <div class="relative overflow-hidden rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition-all hover:shadow-md dark:border-gray-800 dark:bg-gray-900">
             <div class="absolute right-0 top-0 h-20 w-20 translate-x-6 -translate-y-6 opacity-5">
                 <svg class="h-full w-full text-gray-900 dark:text-white" fill="currentColor" viewBox="0 0 24 24">
@@ -204,8 +249,8 @@
         </div>
     </div>
 
-    <!-- Credits & Receipts Summary -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+    <!-- Credits & Receipts Summary (screen only) -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 print-hidden">
         <div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
             <div class="flex items-center justify-between mb-4">
                 <div class="flex items-center gap-2">
@@ -314,8 +359,100 @@
         </div>
     </div>
 
-    <!-- Invoice Items -->
-    <div class="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900 overflow-hidden">
+    <!-- Simple A4-style invoice body (print only) -->
+    <div class="print-only mt-6 text-[12px] leading-relaxed text-gray-900">
+        <div class="flex justify-between mb-4">
+            <div>
+                <h3 class="font-semibold text-sm">Bill to</h3>
+                <p class="mt-1">
+                    {{ $invoice->order?->agent->name ?? 'Customer' }}<br>
+                    {{-- ভবিষ্যতে agent address থাকলে এখানে দেখাব --}}
+                </p>
+            </div>
+            <div class="text-right">
+                <p>Invoice No: <strong>{{ $invoice->number }}</strong></p>
+                <p>Order No: {{ $invoice->order_id ?? '—' }}</p>
+                <p>Issued: {{ optional($invoice->issued_at)->format('d M Y') }}</p>
+                @if($invoice->due_at)
+                    <p>Due: {{ $invoice->due_at->format('d M Y') }}</p>
+                @endif
+            </div>
+        </div>
+
+        {{-- Items table --}}
+        <table class="w-full border-collapse text-[11px]">
+            <thead>
+                <tr>
+                    <th class="border border-gray-300 px-2 py-1 text-left">#</th>
+                    <th class="border border-gray-300 px-2 py-1 text-left">Description</th>
+                    <th class="border border-gray-300 px-2 py-1 text-right">Qty</th>
+                    <th class="border border-gray-300 px-2 py-1 text-right">Unit Price</th>
+                    <th class="border border-gray-300 px-2 py-1 text-right">Line Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach($invoice->items as $idx => $item)
+                    <tr>
+                        <td class="border border-gray-200 px-2 py-1 text-left">{{ $idx + 1 }}</td>
+                        <td class="border border-gray-200 px-2 py-1 text-left">
+                            {{ $item->description }}
+                        </td>
+                        <td class="border border-gray-200 px-2 py-1 text-right">{{ $item->quantity }}</td>
+                        <td class="border border-gray-200 px-2 py-1 text-right">
+                            {{ number_format($item->unit_price, 2) }}
+                        </td>
+                        <td class="border border-gray-200 px-2 py-1 text-right">
+                            {{ number_format($item->line_total, 2) }}
+                        </td>
+                    </tr>
+                @endforeach
+            </tbody>
+        </table>
+
+        {{-- Totals --}}
+        <div class="mt-4 flex justify-end">
+            <table class="text-[11px]">
+                <tr>
+                    <td class="px-3 py-1 text-right">Net total:</td>
+                    <td class="px-3 py-1 text-right">{{ number_format($invoice->net_total, 2) }}</td>
+                </tr>
+                <tr>
+                    <td class="px-3 py-1 text-right">VAT:</td>
+                    <td class="px-3 py-1 text-right">{{ number_format($invoice->vat_amount, 2) }}</td>
+                </tr>
+                <tr>
+                    <td class="px-3 py-1 text-right">Gross total:</td>
+                    <td class="px-3 py-1 text-right">{{ number_format($grossTotal, 2) }}</td>
+                </tr>
+                <tr>
+                    <td class="px-3 py-1 text-right">Withholding:</td>
+                    <td class="px-3 py-1 text-right">- {{ number_format($invoice->withholding, 2) }}</td>
+                </tr>
+                <tr>
+                    <td class="px-3 py-1 text-right">Cash due:</td>
+                    <td class="px-3 py-1 text-right">{{ number_format($cashTotal, 2) }}</td>
+                </tr>
+                <tr>
+                    <td class="px-3 py-1 text-right">Credits:</td>
+                    <td class="px-3 py-1 text-right">- {{ number_format($creditsTotal, 2) }}</td>
+                </tr>
+                <tr>
+                    <td class="px-3 py-1 text-right">Receipts:</td>
+                    <td class="px-3 py-1 text-right">- {{ number_format($receiptsTotal, 2) }}</td>
+                </tr>
+                <tr>
+                    <td class="px-3 py-1 text-right font-semibold border-t border-gray-300">Outstanding:</td>
+                    <td class="px-3 py-1 text-right font-semibold border-t border-gray-300">
+                        {{ number_format(max(0, $outstanding), 2) }}
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+    </div>
+
+    <!-- Invoice Items (screen only) -->
+    <div class="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900 overflow-hidden print-hidden">
         <div class="border-b border-gray-100 px-6 py-4 dark:border-gray-800">
             <div class="flex items-center gap-2">
                 <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-100 dark:bg-brand-900/30">
@@ -576,6 +713,60 @@
         </div>
     </div>
 </div>
+
+@push('styles')
+<style>
+    @media print {
+        @page {
+            size: A4;
+            margin: 12mm;
+        }
+
+        body {
+            background: #ffffff !important;
+        }
+
+        /* Hide app chrome when printing */
+        #sidebar,
+        header,
+        .print-hidden,
+        #receipt-modal,
+        #credit-modal {
+            display: none !important;
+        }
+
+        /* Expand invoice to full width */
+        .print-invoice {
+            margin: 0 !important;
+            padding: 0 !important;
+            max-width: 100% !important;
+        }
+
+        .print-invoice .rounded-2xl,
+        .print-invoice .rounded-xl {
+            box-shadow: none !important;
+            background-color: #ffffff !important;
+        }
+
+        /* Remove card hover effects, borders lighter for print */
+        .print-invoice .border {
+            border-color: #e5e7eb !important;
+        }
+    }
+
+    @media screen {
+        .print-only {
+            display: none !important;
+        }
+    }
+
+    @media print {
+        .print-only {
+            display: block !important;
+        }
+    }
+</style>
+@endpush
 
 @push('scripts')
 <script>

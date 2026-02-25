@@ -348,6 +348,7 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::post('finance/{invoice}/receipt', [FinanceController::class, 'storeReceipt'])->middleware('perm:accounting.manage')->name('finance.receipts.store');
     Route::get('finance/{invoice}/credit-note', [FinanceController::class, 'showCreditNoteForm'])->middleware('perm:accounting.manage')->name('finance.credit-notes.create');
     Route::post('finance/{invoice}/credit-note', [FinanceController::class, 'storeCreditNote'])->middleware('perm:accounting.manage')->name('finance.credit-notes.store');
+    Route::get('finance/{invoice}/pdf', [FinanceController::class, 'downloadPdf'])->middleware('perm:accounting.manage')->name('finance.pdf');
     Route::get('finance/reconciliation', [BankReconciliationController::class, 'index'])->middleware('perm:accounting.manage')->name('finance.reconciliation');
     Route::post('finance/reconciliation', [BankReconciliationController::class, 'update'])->middleware('perm:accounting.manage')->name('finance.reconciliation.update');
     Route::get('reports/pl', [ReportController::class, 'profitAndLoss'])->middleware('perm:reports.view')->name('reports.pl');

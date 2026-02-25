@@ -10,6 +10,8 @@
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
+    @stack('styles')
+
     <script>
         document.addEventListener('alpine:init', () => {
             Alpine.store('theme', {

@@ -11,6 +11,7 @@ use App\Models\Order;
 use App\Models\Receipt;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class FinanceController extends Controller
 {
@@ -51,9 +52,8 @@ class FinanceController extends Controller
         if ($outstanding <= 0) {
             $invoice->update(['status' => 'paid']);
         } elseif ($received > 0 || $credited > 0) {
-            // For partial payment or credit we keep it as 'issued'
-            // so it stays within the allowed enum values.
-            $invoice->update(['status' => 'issued']);
+            // Partially settled (payments and/or credits applied)
+            $invoice->update(['status' => 'adjusted']);
         } else {
             $invoice->update(['status' => 'issued']);
         }
@@ -195,8 +195,9 @@ class FinanceController extends Controller
 
         if ($outstanding <= 0) {
             $invoice->update(['status' => 'paid']);
-        } elseif ($received > 0) {
-            $invoice->update(['status' => 'partially_paid']);
+        } elseif ($received > 0 || $credited > 0) {
+            // Some cash or credits applied but still outstanding
+            $invoice->update(['status' => 'adjusted']);
         } else {
             $invoice->update(['status' => 'issued']);
         }
@@ -231,7 +232,7 @@ class FinanceController extends Controller
             if ($outstanding <= 0) {
                 $invoice->update(['status' => 'paid']);
             } elseif ($paid > 0 || $credited > 0) {
-                $invoice->update(['status' => 'partially_paid']);
+                $invoice->update(['status' => 'adjusted']);
             } else {
                 $invoice->update(['status' => 'issued']);
             }
@@ -330,6 +331,28 @@ class FinanceController extends Controller
         }
 
         return redirect()->route('admin.finance.show', $invoice)->with('status', 'Credit note deleted.');
+    }
+
+    public function downloadPdf(Invoice $invoice)
+    {
+        $invoice->load(['order.agent', 'items.product', 'receipts', 'creditNotes']);
+
+        $grossTotal    = $invoice->net_total + $invoice->vat_amount;
+        $cashTotal     = $grossTotal - $invoice->withholding;
+        $creditsTotal  = $invoice->creditNotes->sum('amount');
+        $receiptsTotal = $invoice->receipts->sum('amount');
+        $outstanding   = $cashTotal - $creditsTotal - $receiptsTotal;
+
+        $pdf = Pdf::loadView('admin.finance.invoice_pdf', [
+            'invoice'       => $invoice,
+            'grossTotal'    => $grossTotal,
+            'cashTotal'     => $cashTotal,
+            'creditsTotal'  => $creditsTotal,
+            'receiptsTotal' => $receiptsTotal,
+            'outstanding'   => $outstanding,
+        ]);
+
+        return $pdf->download('invoice-' . $invoice->number . '.pdf');
     }
 
     public function destroy(Invoice $invoice)
