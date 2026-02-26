@@ -42,21 +42,7 @@ class FinanceController extends Controller
 
         $invoice->withholding = $data['withholding'];
         $invoice->save();
-
-        // Recalculate status based on new withholding, existing credits and receipts
-        $cashTotal  = $grossTotal - $invoice->withholding;
-        $credited   = $invoice->creditNotes()->sum('amount');
-        $received   = $invoice->receipts()->sum('amount');
-        $outstanding = $cashTotal - $credited - $received;
-
-        if ($outstanding <= 0) {
-            $invoice->update(['status' => 'paid']);
-        } elseif ($received > 0 || $credited > 0) {
-            // Partially settled (payments and/or credits applied)
-            $invoice->update(['status' => 'adjusted']);
-        } else {
-            $invoice->update(['status' => 'issued']);
-        }
+        $invoice->recalculateStatus();
 
         return redirect()->route('admin.finance.show', $invoice)->with('status', 'Withholding updated.');
     }
@@ -185,22 +171,7 @@ class FinanceController extends Controller
             'order_id' => $invoice->order_id,
             'invoice_id' => $invoice->id,
         ]);
-
-        // Recalculate net outstanding considering withholding, credit notes and receipts
-        $grossTotal = $invoice->net_total + $invoice->vat_amount;
-        $cashTotal  = $grossTotal - $invoice->withholding;
-        $credited   = $invoice->creditNotes()->sum('amount');
-        $received   = $invoice->receipts()->sum('amount');
-        $outstanding = $cashTotal - $credited - $received;
-
-        if ($outstanding <= 0) {
-            $invoice->update(['status' => 'paid']);
-        } elseif ($received > 0 || $credited > 0) {
-            // Some cash or credits applied but still outstanding
-            $invoice->update(['status' => 'adjusted']);
-        } else {
-            $invoice->update(['status' => 'issued']);
-        }
+        $invoice->recalculateStatus();
 
         return redirect()->route('admin.finance.show', $invoice)->with('status', 'Receipt recorded.');
     }
@@ -223,19 +194,7 @@ class FinanceController extends Controller
         $receipt->delete();
 
         if ($invoice) {
-            $grossTotal = $invoice->net_total + $invoice->vat_amount;
-            $cashTotal  = $grossTotal - $invoice->withholding;
-            $credited   = $invoice->creditNotes()->sum('amount');
-            $paid       = $invoice->receipts()->sum('amount');
-            $outstanding = $cashTotal - $credited - $paid;
-
-            if ($outstanding <= 0) {
-                $invoice->update(['status' => 'paid']);
-            } elseif ($paid > 0 || $credited > 0) {
-                $invoice->update(['status' => 'adjusted']);
-            } else {
-                $invoice->update(['status' => 'issued']);
-            }
+            $invoice->recalculateStatus();
         }
 
         return redirect()->route('admin.finance.show', $invoice)->with('status', 'Receipt deleted.');
@@ -291,15 +250,7 @@ class FinanceController extends Controller
         ]);
 
         // Recalculate status after applying credit
-        $credited   = $invoice->creditNotes()->sum('amount');
-        $received   = $invoice->receipts()->sum('amount');
-        $outstanding = $cashTotal - $credited - $received;
-
-        if ($outstanding <= 0) {
-            $invoice->update(['status' => 'paid']);
-        } else {
-            $invoice->update(['status' => 'issued']);
-        }
+        $invoice->recalculateStatus();
 
         return redirect()->route('admin.finance.show', $invoice)->with('status', 'Credit note created.');
     }
@@ -317,17 +268,7 @@ class FinanceController extends Controller
         $creditNote->delete();
 
         if ($invoice) {
-            $grossTotal = $invoice->net_total + $invoice->vat_amount;
-            $cashTotal  = $grossTotal - $invoice->withholding;
-            $credited   = $invoice->creditNotes()->sum('amount');
-            $received   = $invoice->receipts()->sum('amount');
-            $outstanding = $cashTotal - $credited - $received;
-
-            if ($outstanding <= 0) {
-                $invoice->update(['status' => 'paid']);
-            } else {
-                $invoice->update(['status' => 'issued']);
-            }
+            $invoice->recalculateStatus();
         }
 
         return redirect()->route('admin.finance.show', $invoice)->with('status', 'Credit note deleted.');
