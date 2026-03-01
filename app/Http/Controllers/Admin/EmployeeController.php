@@ -93,6 +93,11 @@ class EmployeeController extends Controller
      */
     public function storeUser(Request $request, Employee $employee)
     {
+        $actorRole = auth()->user()?->role;
+        if (! in_array($actorRole, ['admin', 'super_admin'], true)) {
+            abort(403, 'Only admin or super admin users can create login accounts for employees.');
+        }
+
         if ($employee->user) {
             return redirect()
                 ->route('admin.employees.show', $employee)
@@ -105,6 +110,10 @@ class EmployeeController extends Controller
             'role' => 'required|string|in:super_admin,admin,warehouse_manager,production_manager,sales_manager,qc_officer,employee',
             'password' => 'nullable|string|min:6',
         ]);
+
+        if (($data['role'] ?? null) === 'super_admin' && $actorRole !== 'super_admin') {
+            abort(403, 'Only super admin can create another super admin account.');
+        }
 
         $plainPassword = $data['password'] ?: Str::random(10);
 

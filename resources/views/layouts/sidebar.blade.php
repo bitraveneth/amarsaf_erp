@@ -1,6 +1,10 @@
 @php
     use App\Helpers\MenuHelper;
     $menuGroups = MenuHelper::getMenuGroups();
+    $appName = config('app.name', 'ERP');
+    $nameParts = preg_split('/[^A-Za-z0-9]+/', $appName, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+    $initialSeed = collect($nameParts)->map(fn ($part) => mb_substr($part, 0, 1))->implode('');
+    $appInitials = strtoupper(mb_substr($initialSeed !== '' ? $initialSeed : $appName, 0, 2));
 
     // Get current path
     $currentPath = request()->path();
@@ -63,11 +67,11 @@
             : 'justify-start'">
         <a href="{{ route('admin.dashboard') }}" class="flex items-center gap-3">
             <div class="flex h-10 w-10 items-center justify-center rounded-full bg-brand-500 text-sm font-semibold text-white">
-                ER
+                {{ $appInitials }}
             </div>
             <div class="flex flex-col"
                  x-show="$store.sidebar.isExpanded || $store.sidebar.isHovered || $store.sidebar.isMobileOpen">
-                <span class="text-sm font-semibold text-gray-900 dark:text-white">ERP</span>
+                <span class="text-sm font-semibold text-gray-900 dark:text-white">{{ $appName }}</span>
                 <span class="text-xs text-gray-500 dark:text-gray-400">System</span>
             </div>
         </a>

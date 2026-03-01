@@ -5,7 +5,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title', config('app.name', 'ERP'))</title>
+    <title>@yield('title', config('app.name'))</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
     @stack('styles')
@@ -51,7 +51,7 @@
             </div>
         </div>
         <h1 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
-            {{ config('app.name', 'ERP') }}
+            {{ config('app.name') }}
         </h1>
         <div class="flex items-center gap-2">
             <span class="h-2.5 w-2.5 rounded-full bg-brand-500 animate-bounce" style="animation-delay:0ms;"></span>
@@ -74,7 +74,7 @@
             <div class="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
                 {{-- Brand --}}
                 <a href="{{ route('login') }}" class="text-title-sm font-semibold text-gray-900 dark:text-white">
-                    {{ config('app.name', 'ERP') }}
+                    {{ config('app.name') }}
                 </a>
 
                 {{-- Right side actions --}}
@@ -113,7 +113,7 @@
         {{-- Simple footer for guest pages --}}
         <footer class="py-6 text-center">
             <p class="text-theme-xs text-gray-500 dark:text-gray-400">
-                &copy; {{ date('Y') }} {{ config('app.name', 'ERP') }}. All rights reserved.
+                &copy; {{ date('Y') }} {{ config('app.name') }}. All rights reserved.
             </p>
         </footer>
     </div>

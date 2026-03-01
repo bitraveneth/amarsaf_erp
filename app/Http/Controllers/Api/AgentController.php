@@ -15,6 +15,8 @@ use App\Models\Invoice;
 use App\Models\Receipt;
 use App\Models\CreditNote;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class AgentController extends Controller
 {
@@ -102,113 +104,128 @@ class AgentController extends Controller
             'items.*.unit_price' => 'nullable|numeric|min:0',
         ]);
 
-        $order = Order::create([
-            'agent_id' => $agent->id,
-            'order_type' => $data['order_type'],
-            'delivery_date' => $data['delivery_date'] ?? null,
-            'status' => 'confirmed',
-            'total' => 0,
-            'notes' => $data['notes'] ?? null,
-        ]);
-
-        OrderStatusHistory::create([
-            'order_id' => $order->id,
-            'status' => $order->status,
-            'changed_at' => now(),
-        ]);
-
-        $agentPrices = AgentPriceList::where('agent_id', $agent->id)
-            ->pluck('price', 'product_id');
-
-        $products = Product::whereIn('id', collect($data['items'])->pluck('product_id'))
-            ->get()
-            ->keyBy('id');
-
-        $commissionRules = AgentCommissionRule::where('agent_id', $agent->id)->get();
-
-        $total = 0;
-        $commissionTotal = 0;
-
-        foreach ($data['items'] as $item) {
-            $productId = $item['product_id'];
-            $quantity = $item->quantity ?? $item['quantity'];
-            $unitPrice = $agentPrices[$productId] ?? ($item['unit_price'] ?? 0);
-            $lineTotal = $quantity * $unitPrice;
-            $total += $lineTotal;
-
-            $product = $products[$productId] ?? null;
-            $sku = $product ? $product->sku : null;
-
-            $matchingRules = $commissionRules->filter(function ($rule) use ($sku, $data) {
-                if ($rule->frequency !== 'per_order') {
-                    return false;
-                }
-
-                if ($rule->sku && $sku && $rule->sku !== $sku) {
-                    return false;
-                }
-
-                if ($rule->order_type && $rule->order_type !== $data['order_type']) {
-                    return false;
-                }
-
-                return true;
-            });
-
-            $lineCommission = 0;
-            foreach ($matchingRules as $rule) {
-                if ($rule->type === 'percentage') {
-                    $lineCommission += ($lineTotal * ($rule->value / 100));
-                } elseif ($rule->type === 'fixed') {
-                    $lineCommission += $rule->value;
-                }
-            }
-
-            $commissionTotal += $lineCommission;
-            $commissionRate = $lineTotal > 0 ? ($lineCommission / $lineTotal) * 100 : null;
-
-            OrderItem::create([
-                'order_id' => $order->id,
-                'product_id' => $productId,
-                'quantity' => $quantity,
-                'unit_price' => $unitPrice,
+        $order = DB::transaction(function () use ($agent, $data) {
+            $order = Order::create([
+                'agent_id' => $agent->id,
                 'order_type' => $data['order_type'],
-                'commission_rate' => $commissionRate,
-                'commission_amount' => $lineCommission,
+                'delivery_date' => $data['delivery_date'] ?? null,
+                'status' => 'confirmed',
+                'total' => 0,
+                'notes' => $data['notes'] ?? null,
             ]);
 
-            $toReserve = $quantity;
-            $entries = StockEntry::where('product_id', $productId)
-                ->where('status', 'available')
-                ->orderBy('created_at')
-                ->get();
-            foreach ($entries as $entry) {
-                if ($toReserve <= 0) {
-                    break;
+            OrderStatusHistory::create([
+                'order_id' => $order->id,
+                'status' => $order->status,
+                'changed_at' => now(),
+            ]);
+
+            $agentPrices = AgentPriceList::where('agent_id', $agent->id)
+                ->pluck('price', 'product_id');
+
+            $products = Product::whereIn('id', collect($data['items'])->pluck('product_id'))
+                ->get()
+                ->keyBy('id');
+
+            $commissionRules = AgentCommissionRule::where('agent_id', $agent->id)->get();
+
+            $total = 0;
+            $commissionTotal = 0;
+
+            foreach ($data['items'] as $item) {
+                $productId = $item['product_id'];
+                $quantity = $item['quantity'];
+                $unitPrice = $agentPrices[$productId] ?? ($item['unit_price'] ?? 0);
+                $lineTotal = $quantity * $unitPrice;
+                $total += $lineTotal;
+
+                $product = $products[$productId] ?? null;
+                $sku = $product ? $product->sku : null;
+
+                $matchingRules = $commissionRules->filter(function ($rule) use ($sku, $data) {
+                    if ($rule->frequency !== 'per_order') {
+                        return false;
+                    }
+
+                    if ($rule->sku && $sku && $rule->sku !== $sku) {
+                        return false;
+                    }
+
+                    if ($rule->order_type && $rule->order_type !== $data['order_type']) {
+                        return false;
+                    }
+
+                    return true;
+                });
+
+                $lineCommission = 0;
+                foreach ($matchingRules as $rule) {
+                    if ($rule->type === 'percentage') {
+                        $lineCommission += ($lineTotal * ($rule->value / 100));
+                    } elseif ($rule->type === 'fixed') {
+                        $lineCommission += $rule->value;
+                    }
                 }
 
-                $reserved = min($entry->quantity, $toReserve);
-                $entry->quantity = $entry->quantity - $reserved;
-                if ($entry->quantity == 0) {
-                    $entry->status = 'reserved';
-                }
-                $entry->save();
-                StockEntry::create([
-                    'warehouse_id' => $entry->warehouse_id,
-                    'product_id' => $entry->product_id,
-                    'batch_id' => $entry->batch_id,
-                    'quantity' => $reserved,
-                    'status' => 'reserved',
+                $commissionTotal += $lineCommission;
+                $commissionRate = $lineTotal > 0 ? ($lineCommission / $lineTotal) * 100 : null;
+
+                OrderItem::create([
+                    'order_id' => $order->id,
+                    'product_id' => $productId,
+                    'quantity' => $quantity,
+                    'unit_price' => $unitPrice,
+                    'order_type' => $data['order_type'],
+                    'commission_rate' => $commissionRate,
+                    'commission_amount' => $lineCommission,
                 ]);
-                $toReserve -= $reserved;
+
+                $entries = StockEntry::where('product_id', $productId)
+                    ->where('status', 'available')
+                    ->orderBy('created_at')
+                    ->lockForUpdate()
+                    ->get();
+
+                $availableQty = (float) $entries->sum('quantity');
+                if ($availableQty < (float) $quantity) {
+                    throw ValidationException::withMessages([
+                        'items' => ['Insufficient available stock for product ' . ($product?->name ?? ('#' . $productId)) . '.'],
+                    ]);
+                }
+
+                $toReserve = $quantity;
+                foreach ($entries as $entry) {
+                    if ($toReserve <= 0) {
+                        break;
+                    }
+
+                    $reserved = min((float) $entry->quantity, (float) $toReserve);
+                    $entry->quantity = (float) $entry->quantity - $reserved;
+                    if ((float) $entry->quantity <= 0.0) {
+                        $entry->status = 'reserved';
+                    }
+                    $entry->save();
+
+                    StockEntry::create([
+                        'order_id' => $order->id,
+                        'warehouse_id' => $entry->warehouse_id,
+                        'warehouse_location_id' => $entry->warehouse_location_id,
+                        'product_id' => $entry->product_id,
+                        'batch_id' => $entry->batch_id,
+                        'quantity' => $reserved,
+                        'status' => 'reserved',
+                    ]);
+                    $toReserve -= $reserved;
+                }
             }
-        }
 
-        $order->update(['total' => $total]);
+            $order->update([
+                'total' => $total,
+                'commission_total' => $commissionTotal > 0 ? $commissionTotal : null,
+            ]);
 
-        if ($commissionTotal > 0) {
-            $order->update(['commission_total' => $commissionTotal]);
-        }
+            return $order;
+        });
 
         $order->load(['items.product', 'statusHistory']);
 

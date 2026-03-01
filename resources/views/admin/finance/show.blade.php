@@ -103,7 +103,7 @@
         <div class="flex items-start justify-between">
             <div class="flex items-center gap-3">
                 @php
-                    $appName = config('app.name', 'ERP');
+                    $appName = config('app.name');
                     $appInitials = mb_strtoupper(mb_substr($appName, 0, 2));
                 @endphp
                 <div class="flex h-12 w-12 items-center justify-center rounded-full bg-brand-500 text-sm font-semibold text-white">
@@ -111,7 +111,7 @@
                 </div>
                 <div>
                     <h2 class="text-lg font-semibold text-gray-900">
-                        {{ config('app.name', 'ERP') }}
+                        {{ config('app.name') }}
                     </h2>
                     <p class="mt-1 text-xs text-gray-600">
                         Invoice &amp; Finance

@@ -24,17 +24,22 @@ jobs:
           VPS_HOST: ${{ secrets.VPS_HOST }}
         run: |
           ssh -o StrictHostKeyChecking=no "$VPS_USER@$VPS_HOST" << EOF
-            set -e
+            set -euo pipefail
 
             cd "${{ secrets.VPS_PATH }}"
-            
+
+            # Ensure .env exists (first deploy)
+            if [ ! -f .env ]; then
+              cp .env.example .env || true
+            fi
+
             # Ensure APP_KEY is set once
             if ! grep -q '^APP_KEY=' .env || grep -q '^APP_KEY=$' .env; then
               echo "APP_KEY missing or empty – generating..."
-              php artisan key:generate
+              php artisan key:generate --force
             fi
 
-            # Optional: maintenance mode during deploy
+            # Maintenance mode during deploy
             php artisan down || true
 
             # Pull latest code for test branch
@@ -42,15 +47,27 @@ jobs:
             git checkout test
             git pull origin test
 
-            # PHP dependencies
-            composer install --no-interaction --prefer-dist --optimize-autoloader
+            # PHP dependencies (optimized, no dev)
+            if command -v composer >/dev/null 2>&1; then
+              composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev
+            else
+              echo "Composer not found on server"; exit 1
+            fi
 
-            # Incremental migrations (safe)
+            # Incremental migrations
             php artisan migrate --force
 
-            # If you install Node later, you can re-enable these:
-            npm install
-            npm run build
+            # Frontend build – only if Node/npm is available
+            if command -v npm >/dev/null 2>&1; then
+              if [ -f package-lock.json ]; then
+                npm ci --omit=dev || npm ci
+              else
+                npm install
+              fi
+              npm run build
+            else
+              echo "npm not found on server – skipping asset build"
+            fi
 
             # Ensure storage and cache directories are writable for Apache (www-data)
             chown -R www-data:www-data storage bootstrap/cache || true

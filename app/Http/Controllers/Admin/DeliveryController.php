@@ -10,6 +10,7 @@ use App\Models\StockEntry;
 use App\Models\Vehicle;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
 
 class DeliveryController extends Controller
 {
@@ -111,77 +112,90 @@ class DeliveryController extends Controller
             $data['pod_photo'] = $request->file('pod_photo')->store('deliveries', 'public');
         }
 
-        $delivery->update($data);
+        DB::transaction(function () use ($delivery, $data, $originalStatus) {
+            $delivery->update($data);
 
-        $order = $delivery->order;
+            $order = $delivery->order;
 
-        // If the status has just changed to in_transit, mark the order as dispatched.
-        if ($originalStatus !== 'in_transit'
-            && $delivery->status === 'in_transit'
-            && $order
-            && $order->status !== 'dispatched') {
+            // If the status has just changed to in_transit, mark the order as dispatched.
+            if ($originalStatus !== 'in_transit'
+                && $delivery->status === 'in_transit'
+                && $order
+                && $order->status !== 'dispatched') {
 
-            $order->update(['status' => 'dispatched']);
+                $order->update(['status' => 'dispatched']);
 
-            \App\Models\OrderStatusHistory::create([
-                'order_id'   => $order->id,
-                'status'     => 'dispatched',
-                'changed_at' => now(),
-            ]);
-        }
-
-        // If the status has just changed to delivered, update the order and adjust stock.
-        if ($originalStatus !== 'delivered' && $delivery->status === 'delivered' && $order) {
-            if ($order->status !== 'delivered') {
-                $order->update(['status' => 'delivered']);
+                \App\Models\OrderStatusHistory::create([
+                    'order_id'   => $order->id,
+                    'status'     => 'dispatched',
+                    'changed_at' => now(),
+                ]);
             }
 
-            \App\Models\OrderStatusHistory::create([
-                'order_id'   => $order->id,
-                'status'     => 'delivered',
-                'changed_at' => now(),
-            ]);
-
-            $order = $delivery->order()->with('items')->first();
-
-            foreach ($order->items as $item) {
-                $toShip = (float) $item->quantity;
-
-                if ($toShip <= 0) {
-                    continue;
+            // If the status has just changed to delivered, update the order and adjust stock.
+            if ($originalStatus !== 'delivered' && $delivery->status === 'delivered' && $order) {
+                if ($order->status !== 'delivered') {
+                    $order->update(['status' => 'delivered']);
                 }
 
-                $reservedEntries = StockEntry::where('product_id', $item->product_id)
-                    ->where('status', 'reserved')
-                    ->orderBy('created_at')
-                    ->get();
+                \App\Models\OrderStatusHistory::create([
+                    'order_id'   => $order->id,
+                    'status'     => 'delivered',
+                    'changed_at' => now(),
+                ]);
 
-                foreach ($reservedEntries as $entry) {
+                $order = $delivery->order()->with('items')->first();
+
+                foreach ($order->items as $item) {
+                    $toShip = (float) $item->quantity;
+
                     if ($toShip <= 0) {
-                        break;
-                    }
-
-                    $entryQty = (float) $entry->quantity;
-                    if ($entryQty <= 0) {
                         continue;
                     }
 
-                    $shipQty = min($toShip, $entryQty);
+                    $reservedEntries = StockEntry::where('order_id', $order->id)
+                        ->where('product_id', $item->product_id)
+                        ->where('status', 'reserved')
+                        ->orderBy('created_at')
+                        ->lockForUpdate()
+                        ->get();
 
-                    $remaining = $entryQty - $shipQty;
-
-                    if ($remaining <= 0) {
-                        // Entire reserved entry has been shipped; remove it.
-                        $entry->delete();
-                    } else {
-                        $entry->quantity = $remaining;
-                        $entry->save();
+                    // Backward compatibility for older rows created before order_id was added.
+                    if ($reservedEntries->isEmpty()) {
+                        $reservedEntries = StockEntry::whereNull('order_id')
+                            ->where('product_id', $item->product_id)
+                            ->where('status', 'reserved')
+                            ->orderBy('created_at')
+                            ->lockForUpdate()
+                            ->get();
                     }
 
-                    $toShip -= $shipQty;
+                    foreach ($reservedEntries as $entry) {
+                        if ($toShip <= 0) {
+                            break;
+                        }
+
+                        $entryQty = (float) $entry->quantity;
+                        if ($entryQty <= 0) {
+                            continue;
+                        }
+
+                        $shipQty = min($toShip, $entryQty);
+                        $remaining = $entryQty - $shipQty;
+
+                        if ($remaining <= 0) {
+                            // Entire reserved entry has been shipped; remove it.
+                            $entry->delete();
+                        } else {
+                            $entry->quantity = $remaining;
+                            $entry->save();
+                        }
+
+                        $toShip -= $shipQty;
+                    }
                 }
             }
-        }
+        });
 
         return back()->with('status', 'Delivery updated.');
     }

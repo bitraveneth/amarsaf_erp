@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="max-w-5xl mx-auto space-y-8">
+<div class="max-w-6xl mx-auto space-y-8">
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -17,15 +17,15 @@
                 <div class="flex flex-wrap items-center gap-3">
                     <div>
                         <h1 class="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
-                            Alerts
+                            Notifications
                         </h1>
                         <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                            System alerts and updates across ERP
+                            System alerts and updates across {{ config('app.name') }}
                         </p>
                     </div>
                     @if(!empty($alerts))
-                        <span class="mt-2 inline-flex items-center rounded-full bg-gradient-to-r from-error-500 to-error-600 px-4 py-1.5 text-xs font-semibold text-white shadow-md sm:mt-0">
-                            {{ count($alerts) }} {{ Str::plural('Alert', count($alerts)) }}
+                        <span class="mt-2 inline-flex items-center rounded-full bg-gradient-to-r from-brand-500 to-brand-600 px-4 py-1.5 text-xs font-semibold text-white shadow-md sm:mt-0">
+                            {{ count($alerts) }} {{ Str::plural('Notification', count($alerts)) }}
                         </span>
                     @endif
                 </div>
@@ -107,27 +107,71 @@
         </div>
     @else
         <div class="space-y-10">
-            <!-- System Alerts Section - Modern Redesign -->
+            <!-- System Alerts -->
             @if($hasAlerts)
-                <div class="relative overflow-hidden rounded-3xl border border-error-200 bg-gradient-to-br from-error-50/50 to-white p-4 dark:border-error-900/30 dark:from-error-950/20 dark:to-gray-900 sm:p-6 lg:p-8">
-                    <!-- Decorative elements -->
-                    <div class="absolute top-0 right-0 -mt-8 -mr-8 h-32 w-32 rounded-full bg-gradient-to-br from-error-200 to-error-100 opacity-30 dark:from-error-900 dark:to-error-800 blur-2xl"></div>
-                    
-                    <div class="relative">
-                        <div class="mt-2 grid gap-3">
-                            @foreach($alerts as $index => $alert)
-                                @php
-                                    $message = is_array($alert) ? ($alert['message'] ?? '') : $alert;
-                                    $variant = is_array($alert) ? ($alert['variant'] ?? 'error') : 'error';
-                                    $title = $variant === 'success' ? 'Good news' : 'System alert';
-                                @endphp
-                                <x-alert :variant="$variant" :title="$title" :message="$message">
-                                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                                        {{ now()->format('d M Y, H:i') }} • System Generated
-                                    </p>
-                                </x-alert>
-                            @endforeach
+                <div class="rounded-2xl border border-gray-200/80 bg-white/90 p-4 shadow-theme-sm dark:border-gray-800 dark:bg-gray-900/80 sm:p-6">
+                    <div class="mb-4 flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-100 text-brand-600 dark:bg-brand-500/15 dark:text-brand-300">
+                                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0018 9.75v-.7V9a6 6 0 10-12 0v.05-.05v.7a8.967 8.967 0 00-2.311 6.022 23.848 23.848 0 005.454 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
+                                </svg>
+                            </div>
+                            <div>
+                                <h2 class="text-lg font-semibold text-gray-900 dark:text-white">System Notifications</h2>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">{{ count($alerts) }} active</p>
+                            </div>
                         </div>
+                    </div>
+
+                    <div class="grid gap-3">
+                        @foreach($alerts as $index => $alert)
+                            @php
+                                $message = is_array($alert) ? ($alert['message'] ?? '') : $alert;
+                                $variant = is_array($alert) ? ($alert['variant'] ?? 'error') : 'error';
+                                $alertStyles = [
+                                    'error' => [
+                                        'ring' => 'border-error-300/60 bg-error-500/10 dark:border-error-700/60 dark:bg-error-500/12',
+                                        'dot' => 'bg-error-500',
+                                        'label' => 'Error',
+                                        'labelClass' => 'text-error-700 dark:text-error-300',
+                                    ],
+                                    'warning' => [
+                                        'ring' => 'border-warning-300/60 bg-warning-500/10 dark:border-warning-700/60 dark:bg-warning-500/12',
+                                        'dot' => 'bg-warning-500',
+                                        'label' => 'Warning',
+                                        'labelClass' => 'text-warning-700 dark:text-warning-300',
+                                    ],
+                                    'success' => [
+                                        'ring' => 'border-success-300/60 bg-success-500/10 dark:border-success-700/60 dark:bg-success-500/12',
+                                        'dot' => 'bg-success-500',
+                                        'label' => 'Success',
+                                        'labelClass' => 'text-success-700 dark:text-success-300',
+                                    ],
+                                    'info' => [
+                                        'ring' => 'border-brand-300/60 bg-brand-500/10 dark:border-brand-700/60 dark:bg-brand-500/12',
+                                        'dot' => 'bg-brand-500',
+                                        'label' => 'Info',
+                                        'labelClass' => 'text-brand-700 dark:text-brand-300',
+                                    ],
+                                ][$variant] ?? [
+                                    'ring' => 'border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800/50',
+                                    'dot' => 'bg-gray-400',
+                                    'label' => 'Notice',
+                                    'labelClass' => 'text-gray-600 dark:text-gray-300',
+                                ];
+                            @endphp
+                            <div class="rounded-xl border px-4 py-3 {{ $alertStyles['ring'] }}">
+                                <div class="mb-1.5 flex items-center justify-between gap-2">
+                                    <div class="flex items-center gap-2">
+                                        <span class="h-2 w-2 rounded-full {{ $alertStyles['dot'] }}"></span>
+                                        <span class="text-[11px] font-semibold uppercase tracking-wide {{ $alertStyles['labelClass'] }}">{{ $alertStyles['label'] }}</span>
+                                    </div>
+                                    <span class="text-[11px] text-gray-500 dark:text-gray-400">{{ now()->format('d M Y, H:i') }}</span>
+                                </div>
+                                <p class="leading-5 text-gray-800 dark:text-gray-100">{{ $message }}</p>
+                            </div>
+                        @endforeach
                     </div>
                 </div>
             @endif

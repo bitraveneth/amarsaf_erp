@@ -81,11 +81,17 @@
             </button>
 
             {{-- Logo (mobile) --}}
+            @php
+                $appName = config('app.name', 'ERP');
+                $nameParts = preg_split('/[^A-Za-z0-9]+/', $appName, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+                $initialSeed = collect($nameParts)->map(fn ($part) => mb_substr($part, 0, 1))->implode('');
+                $appInitials = strtoupper(mb_substr($initialSeed !== '' ? $initialSeed : $appName, 0, 2));
+            @endphp
             <a href="{{ route('admin.dashboard') }}" class="flex items-center gap-2 xl:hidden">
                 <span class="flex h-9 w-9 items-center justify-center rounded-full bg-brand-500 text-sm font-semibold text-white">
-                    ER
+                    {{ $appInitials }}
                 </span>
-                <span class="text-sm font-semibold text-gray-900 dark:text-white">ERP</span>
+                <span class="text-sm font-semibold text-gray-900 dark:text-white">{{ $appName }}</span>
             </a>
 
             {{-- Application menu toggle (mobile) --}}
@@ -139,27 +145,250 @@
             <div class="flex items-center gap-2 2xsm:gap-3">
                 {{-- Clock --}}
                 <div
-                    class="hidden items-center gap-2 rounded-full border border-gray-200 bg-white/80 px-3.5 py-1.5 text-[11px] font-medium text-gray-600 shadow-theme-xs dark:border-gray-800 dark:bg-gray-900/80 dark:text-gray-300 xl:flex"
-                    x-data="{ now: '' }"
-                    x-init="
-                        const format = new Intl.DateTimeFormat(undefined, {
-                            weekday: 'short',
-                            day: '2-digit',
-                            month: 'short',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                            hour12: true,
-                        });
-                        const update = () => { now = format.format(new Date()); };
-                        update();
-                        setInterval(update, 60000);
-                    "
+                    class="relative block"
+                    x-data="{
+                        open: true,
+                        dragging: false,
+                        storageKeyOpen: 'headerAnalogClockOpen',
+                        storageKeyPos: 'headerAnalogClockPos',
+                        nowDate: '',
+                        nowTime: '',
+                        hourDeg: 0,
+                        minDeg: 0,
+                        secDeg: 0,
+                        posX: 0,
+                        posY: 0,
+                        dragOffsetX: 0,
+                        dragOffsetY: 0,
+                        dateFmt: null,
+                        timeFmt: null,
+                        getPoint(event) {
+                            if (event.touches && event.touches.length) {
+                                return { x: event.touches[0].clientX, y: event.touches[0].clientY };
+                            }
+                            return { x: event.clientX, y: event.clientY };
+                        },
+                        popupEl() {
+                            return document.getElementById('analog-clock-popup');
+                        },
+                        viewportSize() {
+                            return {
+                                w: document.documentElement.clientWidth || window.innerWidth,
+                                h: document.documentElement.clientHeight || window.innerHeight,
+                            };
+                        },
+                        clampToViewport() {
+                            const popup = this.popupEl();
+                            if (!popup) return;
+                            const rect = popup.getBoundingClientRect();
+                            const width = popup.offsetWidth || rect.width || 256;
+                            const height = popup.offsetHeight || rect.height || 320;
+                            const vp = this.viewportSize();
+                            const maxX = Math.max(8, vp.w - width - 8);
+                            const maxY = Math.max(8, vp.h - height - 8);
+                            this.posX = Math.min(Math.max(this.posX, 8), maxX);
+                            this.posY = Math.min(Math.max(this.posY, 8), maxY);
+                        },
+                        settleClamp() {
+                            let frames = 0;
+                            const tick = () => {
+                                if (!this.open || this.dragging || frames > 24) return;
+                                this.clampToViewport();
+                                frames += 1;
+                                requestAnimationFrame(tick);
+                            };
+                            requestAnimationFrame(tick);
+                        },
+                        setInitialPosition(btnRect = null) {
+                            const btn = this.$refs.clockBtn;
+                            const popup = this.popupEl();
+                            if (!btn || !popup) return;
+                            const b = btnRect || btn.getBoundingClientRect();
+                            const width = popup.offsetWidth || 256;
+                            this.posX = b.right - width;
+                            this.posY = b.bottom + 12;
+                            this.clampToViewport();
+                        },
+                        centerPopup() {
+                            const popup = this.popupEl();
+                            if (!popup) return;
+                            const width = popup.offsetWidth || 256;
+                            const height = popup.offsetHeight || 320;
+                            const vp = this.viewportSize();
+                            this.posX = (vp.w - width) / 2;
+                            this.posY = (vp.h - height) / 2;
+                            this.clampToViewport();
+                        },
+                        startDrag(event) {
+                            this.dragging = true;
+                            const point = this.getPoint(event);
+                            this.dragOffsetX = point.x - this.posX;
+                            this.dragOffsetY = point.y - this.posY;
+                        },
+                        onDrag(event) {
+                            if (!this.dragging) return;
+                            const point = this.getPoint(event);
+                            this.posX = point.x - this.dragOffsetX;
+                            this.posY = point.y - this.dragOffsetY;
+                            this.clampToViewport();
+                        },
+                        endDrag() {
+                            this.dragging = false;
+                            this.persistPosition();
+                        },
+                        persistPosition() {
+                            localStorage.setItem(this.storageKeyPos, JSON.stringify({
+                                x: this.posX,
+                                y: this.posY,
+                            }));
+                        },
+                        loadPosition() {
+                            try {
+                                const raw = localStorage.getItem(this.storageKeyPos);
+                                if (!raw) return false;
+                                const parsed = JSON.parse(raw);
+                                if (typeof parsed?.x !== 'number' || typeof parsed?.y !== 'number') return false;
+                                this.posX = parsed.x;
+                                this.posY = parsed.y;
+                                this.clampToViewport();
+                                return true;
+                            } catch (e) {
+                                return false;
+                            }
+                        },
+                        placePopupFromStorageOrCenter() {
+                            let frames = 0;
+                            const tick = () => {
+                                const popup = this.popupEl();
+                                if (!this.open || !popup || this.dragging) return;
+                                if ((popup.offsetWidth || 0) === 0 || (popup.offsetHeight || 0) === 0) {
+                                    if (frames < 24) {
+                                        frames += 1;
+                                        requestAnimationFrame(tick);
+                                    }
+                                    return;
+                                }
+                                if (!this.loadPosition()) {
+                                    this.centerPopup();
+                                }
+                                this.clampToViewport();
+                                this.settleClamp();
+                            };
+                            requestAnimationFrame(tick);
+                        },
+                        updateClock() {
+                            const d = new Date();
+                            this.nowDate = this.dateFmt.format(d);
+                            this.nowTime = this.timeFmt.format(d);
+                            const h = d.getHours() % 12;
+                            const m = d.getMinutes();
+                            const s = d.getSeconds();
+                            this.hourDeg = (h * 30) + (m * 0.5);
+                            this.minDeg = (m * 6) + (s * 0.1);
+                            this.secDeg = s * 6;
+                        },
+                        init() {
+                            this.dateFmt = new Intl.DateTimeFormat(undefined, {
+                                weekday: 'short',
+                                day: '2-digit',
+                                month: 'short',
+                            });
+                            this.timeFmt = new Intl.DateTimeFormat(undefined, {
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                second: '2-digit',
+                                hour12: true,
+                            });
+                            this.updateClock();
+                            setInterval(() => this.updateClock(), 1000);
+                            window.addEventListener('resize', () => this.clampToViewport());
+                            this.$watch('open', (value) => {
+                                if (value) {
+                                    this.placePopupFromStorageOrCenter();
+                                }
+                            });
+                            this.$watch('$store.loader.show', (loading) => {
+                                if (!loading && this.open) {
+                                    this.placePopupFromStorageOrCenter();
+                                }
+                            });
+
+                            this.open = true;
+                        }
+                    }"
+                    @mousemove.window="onDrag($event)"
+                    @mouseup.window="endDrag()"
+                    @touchmove.window="onDrag($event)"
+                    @touchend.window="endDrag()"
                 >
-                    <svg class="h-3.5 w-3.5 text-gray-400 dark:text-gray-500" viewBox=\"0 0 20 20\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">
-                        <path d=\"M10 1.75C5.71979 1.75 2.25 5.21979 2.25 9.5C2.25 13.7802 5.71979 17.25 10 17.25C14.2802 17.25 17.75 13.7802 17.75 9.5C17.75 5.21979 14.2802 1.75 10 1.75ZM3.75 9.5C3.75 6.04822 6.54822 3.25 10 3.25C13.4518 3.25 16.25 6.04822 16.25 9.5C16.25 12.9518 13.4518 15.75 10 15.75C6.54822 15.75 3.75 12.9518 3.75 9.5Z\" fill=\"currentColor\"/>
-                        <path d=\"M10.75 6C10.75 5.58579 10.4142 5.25 10 5.25C9.58579 5.25 9.25 5.58579 9.25 6V9.25C9.25 9.44891 9.32902 9.63968 9.46967 9.78033L11.4697 11.7803C11.7626 12.0732 12.2374 12.0732 12.5303 11.7803C12.8232 11.4874 12.8232 11.0126 12.5303 10.7197L10.75 8.93934V6Z\" fill=\"currentColor\"/>
-                    </svg>
-                    <span class="truncate" x-text="now"></span>
+                    <button
+                        type="button"
+                        x-ref="clockBtn"
+                        x-show="!open && !$store.loader.show"
+                        @click="
+                            if (!open) {
+                                const b = $refs.clockBtn.getBoundingClientRect();
+                                open = true;
+                                $nextTick(() => {
+                                    setInitialPosition(b);
+                                    requestAnimationFrame(() => clampToViewport());
+                                    settleClamp();
+                                });
+                            }
+                        "
+                        class="flex items-center gap-3 rounded-xl border border-gray-200/90 bg-gradient-to-r from-white to-gray-50 px-3 py-2 shadow-theme-xs transition hover:border-brand-300 dark:border-gray-800 dark:from-gray-900 dark:to-gray-800/70 dark:hover:border-brand-700"
+                        title="Open analog clock"
+                    >
+                        <div class="leading-tight text-left">
+                            <div class="text-[10px] font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400" x-text="nowDate"></div>
+                            <div class="font-semibold text-gray-800 dark:text-gray-100" x-text="nowTime"></div>
+                        </div>
+                        <span class="h-2 w-2 rounded-full bg-success-500"></span>
+                    </button>
+
+                    <template x-teleport="body">
+                        <div
+                            id="analog-clock-popup"
+                            x-show="open && !$store.loader.show"
+                            x-transition:enter="transition ease-out duration-120"
+                            x-transition:enter-start="opacity-0"
+                            x-transition:enter-end="opacity-100"
+                            x-transition:leave="transition ease-in duration-90"
+                            x-transition:leave-start="opacity-100"
+                            x-transition:leave-end="opacity-0"
+                            class="fixed z-[99999] w-44 max-w-[calc(100vw-1rem)] bg-transparent p-0 shadow-none"
+                            :style="`left:${posX}px; top:${posY}px;`"
+                        >
+                            <button
+                                type="button"
+                                @click.stop="open = false"
+                                class="absolute right-2 top-2 z-10 flex h-6 w-6 items-center justify-center rounded-md border border-error-300 bg-error-50 text-error-600 hover:bg-error-100 hover:text-error-700 dark:border-error-700 dark:bg-error-500/10 dark:text-error-400 dark:hover:bg-error-500/20 dark:hover:text-error-300"
+                                aria-label="Close clock popup"
+                                title="Close"
+                            >
+                                <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M6 6L14 14M14 6L6 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                                </svg>
+                            </button>
+
+                            <div class="mx-auto h-40 w-40 cursor-move select-none touch-none rounded-full border-4 border-gray-200 bg-gray-50 shadow-inner dark:border-gray-700 dark:bg-gray-800 relative"
+                                 @mousedown.prevent="startDrag($event)"
+                                 @touchstart.prevent="startDrag($event)">
+                                <template x-for="n in 12" :key="n">
+                                    <span class="absolute left-1/2 top-2 h-2 w-0.5 -translate-x-1/2 bg-gray-500 dark:bg-gray-300"
+                                          :style="`transform: translateX(-50%) rotate(${n * 30}deg); transform-origin: 50% 72px;`"></span>
+                                </template>
+
+                                <span class="absolute left-1/2 bottom-1/2 h-10 w-1 -translate-x-1/2 rounded-full bg-gray-800 dark:bg-gray-100"
+                                      :style="`transform: translateX(-50%) rotate(${hourDeg}deg); transform-origin: 50% 100%;`"></span>
+                                <span class="absolute left-1/2 bottom-1/2 h-14 w-0.5 -translate-x-1/2 rounded-full bg-brand-500"
+                                      :style="`transform: translateX(-50%) rotate(${minDeg}deg); transform-origin: 50% 100%;`"></span>
+                                <span class="absolute left-1/2 bottom-1/2 h-16 w-px -translate-x-1/2 rounded-full bg-error-500"
+                                      :style="`transform: translateX(-50%) rotate(${secDeg}deg); transform-origin: 50% 100%;`"></span>
+                                <span class="absolute left-1/2 top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-gray-800 dark:bg-gray-100"></span>
+                            </div>
+                        </div>
+                    </template>
                 </div>
                 {{-- Theme toggle --}}
                 <button
@@ -197,22 +426,13 @@
                     <div class="header-alert relative">
                         {{-- Trigger button --}}
                         <button type="button"
-                            class="header-alert-toggle relative flex h-11 w-11 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-500 shadow-theme-xs transition-colors hover:bg-gray-100 hover:text-gray-700 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white"
-                            title="View system alerts">
+                            class="header-alert-toggle relative flex h-11 w-11 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-500 shadow-theme-xs transition-colors hover:border-brand-300 hover:bg-brand-50 hover:text-brand-600 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400 dark:hover:border-brand-700 dark:hover:bg-brand-500/10 dark:hover:text-brand-300"
+                            title="View notifications">
                             {{-- Bell icon --}}
                             <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"
                                 aria-hidden="true">
-                                <path
-                                    d="M15 17H9C7.89543 17 7 16.1046 7 15V11C7 8.79086 8.79086 7 11 7H13C15.2091 7 17 8.79086 17 11V15C17 16.1046 16.1046 17 15 17Z"
-                                    stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
-                                    stroke-linejoin="round" />
-                                <path d="M9 17V18C9 19.1046 9.89543 20 11 20H13C14.1046 20 15 19.1046 15 18V17"
-                                    stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
-                                    stroke-linejoin="round" />
-                                <path d="M7 12H6C5.44772 12 5 11.5523 5 11V10" stroke="currentColor"
-                                    stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
-                                <path d="M17 12H18C18.5523 12 19 11.5523 19 11V10" stroke="currentColor"
-                                    stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                                <path d="M12 3.5C9.51472 3.5 7.5 5.51472 7.5 8V10.2344C7.5 11.0897 7.21486 11.9207 6.68945 12.5957L5.73047 13.8291C5.20006 14.5111 5.68643 15.5 6.55078 15.5H17.4492C18.3136 15.5 18.7999 14.5111 18.2695 13.8291L17.3105 12.5957C16.7851 11.9207 16.5 11.0897 16.5 10.2344V8C16.5 5.51472 14.4853 3.5 12 3.5Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M9.5 17.5C9.80616 18.3734 10.6383 19 11.625 19H12.375C13.3617 19 14.1938 18.3734 14.5 17.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
                             </svg>
 
                             {{-- Counter badge --}}
@@ -226,19 +446,17 @@
 
                         {{-- Dropdown tray --}}
                         <div
-                            class="header-alert-menu fixed inset-x-4 top-20 z-40 flex max-h-[70vh] flex-col overflow-y-auto rounded-xl border border-gray-200 bg-white p-4 text-sm shadow-theme-lg dark:border-gray-800 dark:bg-gray-900
-                                   xl:absolute xl:inset-x-auto xl:right-0 xl:top-full xl:mt-3 xl:w-[22rem] xl:max-h-none">
-                            <div class="mb-2 flex items-center justify-between gap-3">
+                            class="header-alert-menu fixed inset-x-4 top-20 z-40 flex max-h-[70vh] flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white text-sm shadow-theme-lg dark:border-gray-800 dark:bg-gray-900
+                                   xl:absolute xl:inset-x-auto xl:right-0 xl:top-full xl:mt-3 xl:w-[27rem] xl:max-h-none">
+                            <div class="flex items-start justify-between gap-3 border-b border-gray-100 px-4 py-3 dark:border-gray-800">
                                 <div>
                                     <h3 class="text-sm font-semibold text-gray-900 dark:text-white">
-                                        System alerts
+                                        Notifications
                                     </h3>
-                                    <span class="text-xs text-gray-500 dark:text-gray-400">
-                                        {{ $alertCount }} active
-                                    </span>
+                                    <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{{ $alertCount }} active</p>
                                 </div>
                                 <button type="button"
-                                        class="header-alert-menu-close flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700"
+                                        class="header-alert-menu-close flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700"
                                         aria-label="Close alerts">
                                     <svg class="h-4 w-4" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
                                         <path d="M6 6L14 14M14 6L6 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
@@ -247,27 +465,71 @@
                             </div>
 
                             @if ($alertCount)
-                                <ul class="mb-3 space-y-2 text-[13px] text-gray-700 dark:text-gray-300">
+                                <ul class="max-h-[430px] space-y-2 overflow-y-auto p-4 text-[13px] text-gray-700 dark:text-gray-300">
                                     @foreach ($trayAlerts as $alert)
                                         @php
                                             $message = $alert['message'] ?? '';
                                             $variant = $alert['variant'] ?? 'error';
+                                            $alertStyles = [
+                                                'error' => [
+                                                    'ring' => 'border-error-300/70 bg-error-50/70 dark:border-error-700/60 dark:bg-error-500/10',
+                                                    'dot' => 'bg-error-500',
+                                                    'label' => 'Error',
+                                                    'labelClass' => 'text-error-700 dark:text-error-300',
+                                                ],
+                                                'warning' => [
+                                                    'ring' => 'border-warning-300/70 bg-warning-50/70 dark:border-warning-700/60 dark:bg-warning-500/10',
+                                                    'dot' => 'bg-warning-500',
+                                                    'label' => 'Warning',
+                                                    'labelClass' => 'text-warning-700 dark:text-warning-300',
+                                                ],
+                                                'success' => [
+                                                    'ring' => 'border-success-300/70 bg-success-50/70 dark:border-success-700/60 dark:bg-success-500/10',
+                                                    'dot' => 'bg-success-500',
+                                                    'label' => 'Success',
+                                                    'labelClass' => 'text-success-700 dark:text-success-300',
+                                                ],
+                                                'info' => [
+                                                    'ring' => 'border-brand-300/70 bg-brand-50/70 dark:border-brand-700/60 dark:bg-brand-500/10',
+                                                    'dot' => 'bg-brand-500',
+                                                    'label' => 'Info',
+                                                    'labelClass' => 'text-brand-700 dark:text-brand-300',
+                                                ],
+                                            ][$variant] ?? [
+                                                'ring' => 'border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800/50',
+                                                'dot' => 'bg-gray-400',
+                                                'label' => 'Notice',
+                                                'labelClass' => 'text-gray-600 dark:text-gray-300',
+                                            ];
                                         @endphp
                                         <li>
-                                            <x-alert :variant="$variant" :message="$message" />
+                                            <div class="rounded-xl border px-3 py-2.5 {{ $alertStyles['ring'] }}">
+                                                <div class="mb-1 flex items-center justify-between gap-2">
+                                                    <div class="flex items-center gap-2">
+                                                        <span class="h-2 w-2 rounded-full {{ $alertStyles['dot'] }}"></span>
+                                                        <span class="text-[11px] font-semibold uppercase tracking-wide {{ $alertStyles['labelClass'] }}">{{ $alertStyles['label'] }}</span>
+                                                    </div>
+                                                    <span class="text-[11px] text-gray-500 dark:text-gray-400">Now</span>
+                                                </div>
+                                                <p class="leading-5 text-gray-800 dark:text-gray-100">{{ $message }}</p>
+                                            </div>
                                         </li>
                                     @endforeach
                                 </ul>
                             @else
-                                <p class="mb-3 rounded-lg bg-gray-50 px-3 py-2 text-[13px] text-gray-500 dark:bg-white/5 dark:text-gray-400">
-                                    No current alerts.
-                                </p>
+                                <div class="p-4">
+                                    <p class="rounded-xl border border-gray-200 bg-gray-50 px-3 py-3 text-[13px] text-gray-500 dark:border-gray-700 dark:bg-white/5 dark:text-gray-400">
+                                        No current alerts.
+                                    </p>
+                                </div>
                             @endif
 
-                            <a href="{{ route('admin.notifications.index') }}"
-                                class="inline-flex items-center justify-center rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs font-medium text-gray-700 transition hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700">
-                                View all notifications
-                            </a>
+                            <div class="border-t border-gray-100 p-3 dark:border-gray-800">
+                                <a href="{{ route('admin.notifications.index') }}"
+                                    class="inline-flex w-full items-center justify-center rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs font-semibold text-gray-700 transition hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700">
+                                    View all notifications
+                                </a>
+                            </div>
                         </div>
                     </div>
                 @endauth

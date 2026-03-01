@@ -85,7 +85,7 @@
     </style>
 </head>
 @php
-    $appName = config('app.name', 'ERP');
+    $appName = config('app.name');
     $appInitials = mb_strtoupper(mb_substr($appName, 0, 2));
 @endphp
 <body>

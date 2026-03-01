@@ -15,6 +15,8 @@ use App\Models\StockMovement;
 use App\Models\Product;
 use App\Models\StockEntry;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use App\Http\Controllers\Admin\FinanceController;
 
 class OrderController extends Controller
@@ -159,117 +161,131 @@ class OrderController extends Controller
             'items.*.unit_price' => 'required|numeric|min:0',
         ]);
 
-        $order = Order::create([
-            'agent_id' => $data['agent_id'],
-            'order_type' => $data['order_type'],
-            'agent_reference' => $data['agent_reference'] ?? null,
-            'delivery_date' => $data['delivery_date'],
-            'delivery_contact_name' => $data['delivery_contact_name'] ?? null,
-            'delivery_contact_phone' => $data['delivery_contact_phone'] ?? null,
-            'delivery_address' => $data['delivery_address'] ?? null,
-            'status' => 'confirmed',
-            'total' => 0,
-            'notes' => $data['notes'] ?? null,
-            'payment_mode' => $data['payment_mode'] ?? null,
-        ]);
-
-        OrderStatusHistory::create([
-            'order_id' => $order->id,
-            'status' => $order->status,
-            'changed_at' => now(),
-        ]);
-
-        $agentPrices = AgentPriceList::where('agent_id', $data['agent_id'])
-            ->pluck('price', 'product_id');
-        $products = Product::whereIn('id', collect($data['items'])->pluck('product_id'))
-            ->get()
-            ->keyBy('id');
-        $commissionRules = AgentCommissionRule::where('agent_id', $data['agent_id'])->get();
-
-        $total = 0;
-        $commissionTotal = 0;
-
-        foreach ($data['items'] as $item) {
-            $productId = $item['product_id'];
-            $quantity = $item['quantity'];
-            $unitPrice = $agentPrices[$productId] ?? $item['unit_price'];
-            $lineTotal = $quantity * $unitPrice;
-            $total += $lineTotal;
-
-            $product = $products[$productId] ?? null;
-            $sku = $product ? $product->sku : null;
-
-            $matchingRules = $commissionRules->filter(function ($rule) use ($sku, $data) {
-                if ($rule->frequency !== 'per_order') {
-                    return false;
-                }
-
-                if ($rule->sku && $sku && $rule->sku !== $sku) {
-                    return false;
-                }
-
-                if ($rule->order_type && $rule->order_type !== $data['order_type']) {
-                    return false;
-                }
-
-                return true;
-            });
-
-            $lineCommission = 0;
-            foreach ($matchingRules as $rule) {
-                if ($rule->type === 'percentage') {
-                    $lineCommission += ($lineTotal * ($rule->value / 100));
-                } elseif ($rule->type === 'fixed') {
-                    $lineCommission += $rule->value;
-                }
-            }
-
-            $commissionTotal += $lineCommission;
-
-            $commissionRate = $lineTotal > 0 ? ($lineCommission / $lineTotal) * 100 : null;
-
-            OrderItem::create([
-                'order_id' => $order->id,
-                'product_id' => $productId,
-                'quantity' => $quantity,
-                'unit_price' => $unitPrice,
+        $order = DB::transaction(function () use ($data) {
+            $order = Order::create([
+                'agent_id' => $data['agent_id'],
                 'order_type' => $data['order_type'],
-                'commission_rate' => $commissionRate,
-                'commission_amount' => $lineCommission,
+                'agent_reference' => $data['agent_reference'] ?? null,
+                'delivery_date' => $data['delivery_date'],
+                'delivery_contact_name' => $data['delivery_contact_name'] ?? null,
+                'delivery_contact_phone' => $data['delivery_contact_phone'] ?? null,
+                'delivery_address' => $data['delivery_address'] ?? null,
+                'status' => 'confirmed',
+                'total' => 0,
+                'notes' => $data['notes'] ?? null,
+                'payment_mode' => $data['payment_mode'] ?? null,
             ]);
 
-            $toReserve = $item['quantity'];
-            $entries = StockEntry::where('product_id', $item['product_id'])
-                ->where('status', 'available')
-                ->orderBy('created_at')
-                ->get();
-            foreach ($entries as $entry) {
-                if ($toReserve <= 0) {
-                    break;
+            OrderStatusHistory::create([
+                'order_id' => $order->id,
+                'status' => $order->status,
+                'changed_at' => now(),
+            ]);
+
+            $agentPrices = AgentPriceList::where('agent_id', $data['agent_id'])
+                ->pluck('price', 'product_id');
+            $products = Product::whereIn('id', collect($data['items'])->pluck('product_id'))
+                ->get()
+                ->keyBy('id');
+            $commissionRules = AgentCommissionRule::where('agent_id', $data['agent_id'])->get();
+
+            $total = 0;
+            $commissionTotal = 0;
+
+            foreach ($data['items'] as $item) {
+                $productId = $item['product_id'];
+                $quantity = $item['quantity'];
+                $unitPrice = $agentPrices[$productId] ?? $item['unit_price'];
+                $lineTotal = $quantity * $unitPrice;
+                $total += $lineTotal;
+
+                $product = $products[$productId] ?? null;
+                $sku = $product ? $product->sku : null;
+
+                $matchingRules = $commissionRules->filter(function ($rule) use ($sku, $data) {
+                    if ($rule->frequency !== 'per_order') {
+                        return false;
+                    }
+
+                    if ($rule->sku && $sku && $rule->sku !== $sku) {
+                        return false;
+                    }
+
+                    if ($rule->order_type && $rule->order_type !== $data['order_type']) {
+                        return false;
+                    }
+
+                    return true;
+                });
+
+                $lineCommission = 0;
+                foreach ($matchingRules as $rule) {
+                    if ($rule->type === 'percentage') {
+                        $lineCommission += ($lineTotal * ($rule->value / 100));
+                    } elseif ($rule->type === 'fixed') {
+                        $lineCommission += $rule->value;
+                    }
                 }
 
-                $reserved = min($entry->quantity, $toReserve);
-                $entry->quantity = $entry->quantity - $reserved;
-                if ($entry->quantity == 0) {
-                    $entry->status = 'reserved';
-                }
-                $entry->save();
-                StockEntry::create([
-                    'warehouse_id' => $entry->warehouse_id,
-                    'product_id' => $entry->product_id,
-                    'batch_id' => $entry->batch_id,
-                    'quantity' => $reserved,
-                    'status' => 'reserved',
+                $commissionTotal += $lineCommission;
+                $commissionRate = $lineTotal > 0 ? ($lineCommission / $lineTotal) * 100 : null;
+
+                OrderItem::create([
+                    'order_id' => $order->id,
+                    'product_id' => $productId,
+                    'quantity' => $quantity,
+                    'unit_price' => $unitPrice,
+                    'order_type' => $data['order_type'],
+                    'commission_rate' => $commissionRate,
+                    'commission_amount' => $lineCommission,
                 ]);
-                $toReserve -= $reserved;
+
+                $entries = StockEntry::where('product_id', $productId)
+                    ->where('status', 'available')
+                    ->orderBy('created_at')
+                    ->lockForUpdate()
+                    ->get();
+
+                $availableQty = (float) $entries->sum('quantity');
+                if ($availableQty < (float) $quantity) {
+                    throw ValidationException::withMessages([
+                        'items' => ['Insufficient available stock for product ' . ($product?->name ?? ('#' . $productId)) . '.'],
+                    ]);
+                }
+
+                $toReserve = $quantity;
+                foreach ($entries as $entry) {
+                    if ($toReserve <= 0) {
+                        break;
+                    }
+
+                    $reserved = min((float) $entry->quantity, (float) $toReserve);
+                    $entry->quantity = (float) $entry->quantity - $reserved;
+                    if ((float) $entry->quantity <= 0.0) {
+                        $entry->status = 'reserved';
+                    }
+                    $entry->save();
+
+                    StockEntry::create([
+                        'order_id' => $order->id,
+                        'warehouse_id' => $entry->warehouse_id,
+                        'warehouse_location_id' => $entry->warehouse_location_id,
+                        'product_id' => $entry->product_id,
+                        'batch_id' => $entry->batch_id,
+                        'quantity' => $reserved,
+                        'status' => 'reserved',
+                    ]);
+                    $toReserve -= $reserved;
+                }
             }
-        }
 
-        $order->update(['total' => $total]);
+            $order->update([
+                'total' => $total,
+                'commission_total' => $commissionTotal > 0 ? $commissionTotal : null,
+            ]);
 
-        if ($commissionTotal > 0) {
-            $order->update(['commission_total' => $commissionTotal]);
-        }
+            return $order;
+        });
 
         return redirect()->route('admin.orders.index')->with('status', 'Order created.');
     }
@@ -348,68 +364,82 @@ class OrderController extends Controller
                 ->with('status', 'Order has an invoice and cannot be deleted. Use credit notes instead.');
         }
 
-        // Release any reserved stock back to available before deleting the order.
-        $reservedItems = $order->items()->with('product')->get();
+        DB::transaction(function () use ($order) {
+            // Release any reserved stock back to available before deleting the order.
+            $reservedItems = $order->items()->with('product')->get();
 
-        foreach ($reservedItems as $item) {
-            $remaining = $item->quantity;
+            foreach ($reservedItems as $item) {
+                $remaining = $item->quantity;
 
-            // Find reserved entries for this product, newest first (reverse of reservation order)
-            $reservedEntries = StockEntry::where('product_id', $item->product_id)
-                ->where('status', 'reserved')
-                ->orderByDesc('created_at')
-                ->get();
+                // Find reserved entries for this product, newest first (reverse of reservation order)
+                $reservedEntries = StockEntry::where('order_id', $order->id)
+                    ->where('product_id', $item->product_id)
+                    ->where('status', 'reserved')
+                    ->orderByDesc('created_at')
+                    ->lockForUpdate()
+                    ->get();
 
-            foreach ($reservedEntries as $reservedEntry) {
-                if ($remaining <= 0) {
-                    break;
+                // Backward compatibility for older rows created before order_id was added.
+                if ($reservedEntries->isEmpty()) {
+                    $reservedEntries = StockEntry::whereNull('order_id')
+                        ->where('product_id', $item->product_id)
+                        ->where('status', 'reserved')
+                        ->orderByDesc('created_at')
+                        ->lockForUpdate()
+                        ->get();
                 }
 
-                // How much of this entry we will release
-                $releaseQty = min($remaining, $reservedEntry->quantity);
+                foreach ($reservedEntries as $reservedEntry) {
+                    if ($remaining <= 0) {
+                        break;
+                    }
 
-                if ($releaseQty <= 0) {
-                    continue;
+                    // How much of this entry we will release
+                    $releaseQty = min((float) $remaining, (float) $reservedEntry->quantity);
+
+                    if ($releaseQty <= 0) {
+                        continue;
+                    }
+
+                    // Reduce reserved entry quantity
+                    $reservedEntry->quantity -= $releaseQty;
+
+                    if ($reservedEntry->quantity <= 0) {
+                        // Remove fully reserved entry
+                        $reservedEntry->delete();
+                    } else {
+                        $reservedEntry->save();
+                    }
+
+                    // Add released quantity back to available for same warehouse/batch
+                    $availableEntry = StockEntry::firstOrCreate(
+                        [
+                            'warehouse_id' => $reservedEntry->warehouse_id,
+                            'warehouse_location_id' => $reservedEntry->warehouse_location_id,
+                            'product_id' => $reservedEntry->product_id,
+                            'batch_id' => $reservedEntry->batch_id,
+                            'status' => 'available',
+                        ],
+                        [
+                            'quantity' => 0,
+                        ]
+                    );
+
+                    $availableEntry->quantity += $releaseQty;
+                    $availableEntry->save();
+
+                    $remaining -= $releaseQty;
                 }
-
-                // Reduce reserved entry quantity
-                $reservedEntry->quantity -= $releaseQty;
-
-                if ($reservedEntry->quantity <= 0) {
-                    // Remove fully reserved entry
-                    $reservedEntry->delete();
-                } else {
-                    $reservedEntry->save();
-                }
-
-                // Add released quantity back to available for same warehouse/batch
-                $availableEntry = StockEntry::firstOrCreate(
-                    [
-                        'warehouse_id' => $reservedEntry->warehouse_id,
-                        'warehouse_location_id' => $reservedEntry->warehouse_location_id,
-                        'product_id' => $reservedEntry->product_id,
-                        'batch_id' => $reservedEntry->batch_id,
-                        'status' => 'available',
-                    ],
-                    [
-                        'quantity' => 0,
-                    ]
-                );
-
-                $availableEntry->quantity += $releaseQty;
-                $availableEntry->save();
-
-                $remaining -= $releaseQty;
             }
-        }
 
-        // Delete dependent records first to satisfy foreign key constraints
-        Delivery::where('order_id', $order->id)->delete();
-        StockMovement::where('order_id', $order->id)->delete();
-        $order->items()->delete();
-        $order->statusHistory()->delete();
+            // Delete dependent records first to satisfy foreign key constraints
+            Delivery::where('order_id', $order->id)->delete();
+            StockMovement::where('order_id', $order->id)->delete();
+            $order->items()->delete();
+            $order->statusHistory()->delete();
 
-        $order->delete();
+            $order->delete();
+        });
 
         return redirect()->route('admin.orders.index')->with('status', 'Order deleted.');
     }

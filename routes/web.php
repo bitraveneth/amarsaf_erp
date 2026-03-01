@@ -86,11 +86,6 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
         ->middleware('perm:sales.manage')
         ->name('sales.dashboard');
 
-    // Manufacturing dashboard
-    Route::get('manufacturing-dashboard', ManufacturingDashboardController::class)
-        ->middleware('perm:manufacturing.manage')
-        ->name('manufacturing.dashboard');
-
     // Accounting dashboard
     Route::get('accounting-dashboard', AccountingDashboardController::class)
         ->middleware('perm:accounting.manage')
@@ -167,12 +162,12 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::post('packaging/conversions', [PackagingConversionController::class, 'store'])->middleware('perm:control.products')->name('packaging.conversions.store');
     Route::delete('packaging/conversions/{conversion}', [PackagingConversionController::class, 'destroy'])->middleware('perm:control.products')->name('packaging.conversions.destroy');
 
-    Route::get('boms', [BomController::class, 'index'])->name('boms.index');
-    Route::get('boms/create', [BomController::class, 'create'])->name('boms.create');
-    Route::post('boms', [BomController::class, 'store'])->name('boms.store');
-    Route::get('boms/{bom}/edit', [BomController::class, 'edit'])->name('boms.edit');
-    Route::patch('boms/{bom}', [BomController::class, 'update'])->name('boms.update');
-    Route::delete('boms/{bom}', [BomController::class, 'destroy'])->name('boms.destroy');
+    Route::get('boms', [BomController::class, 'index'])->middleware('perm:manufacturing.manage')->name('boms.index');
+    Route::get('boms/create', [BomController::class, 'create'])->middleware('perm:manufacturing.manage')->name('boms.create');
+    Route::post('boms', [BomController::class, 'store'])->middleware('perm:manufacturing.manage')->name('boms.store');
+    Route::get('boms/{bom}/edit', [BomController::class, 'edit'])->middleware('perm:manufacturing.manage')->name('boms.edit');
+    Route::patch('boms/{bom}', [BomController::class, 'update'])->middleware('perm:manufacturing.manage')->name('boms.update');
+    Route::delete('boms/{bom}', [BomController::class, 'destroy'])->middleware('perm:manufacturing.manage')->name('boms.destroy');
 
     Route::get('tax-classes', [TaxClassController::class, 'index'])->middleware('perm:control.products')->name('tax-classes.index');
     Route::post('tax-classes', [TaxClassController::class, 'store'])->middleware('perm:control.products')->name('tax-classes.store');
@@ -193,8 +188,8 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::delete('employees/{employee}', [EmployeeController::class, 'destroy'])->middleware('perm:control.employees')->name('employees.destroy');
 
     // Create login account for an employee
-    Route::get('employees/{employee}/user', [EmployeeController::class, 'createUser'])->name('employees.user.create');
-    Route::post('employees/{employee}/user', [EmployeeController::class, 'storeUser'])->name('employees.user.store');
+    Route::get('employees/{employee}/user', [EmployeeController::class, 'createUser'])->middleware('perm:control.employees')->name('employees.user.create');
+    Route::post('employees/{employee}/user', [EmployeeController::class, 'storeUser'])->middleware('perm:control.employees')->name('employees.user.store');
 
     Route::get('contracts', [EmployeeContractController::class, 'all'])->middleware('perm:control.employees')->name('contracts.index');
     Route::get('contracts/create', [EmployeeContractController::class, 'createGlobal'])->middleware('perm:control.employees')->name('contracts.create');
@@ -286,21 +281,21 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::delete('orders/{order}', [OrderController::class, 'destroy'])->middleware('perm:sales.manage')->name('orders.destroy');
     Route::post('orders/{order}/invoice', [FinanceController::class, 'createFromOrder'])->middleware('perm:sales.manage')->name('orders.invoice');
 
-    Route::get('deliveries', [DeliveryController::class, 'index'])->name('deliveries.index');
-    Route::get('deliveries/pod', [DeliveryController::class, 'podIndex'])->name('deliveries.pod-index');
-    Route::get('deliveries/packing-slips', [DeliveryController::class, 'packingIndex'])->name('deliveries.packing-index');
-    Route::get('deliveries/create', [DeliveryController::class, 'create'])->name('deliveries.create');
-    Route::post('deliveries', [DeliveryController::class, 'store'])->name('deliveries.store');
-    Route::get('deliveries/{delivery}/edit', [DeliveryController::class, 'edit'])->name('deliveries.edit');
-    Route::post('deliveries/optimize', [DeliveryController::class, 'optimize'])->name('deliveries.optimize');
-    Route::patch('deliveries/{delivery}', [DeliveryController::class, 'update'])->name('deliveries.update');
-    Route::delete('deliveries/{delivery}', [DeliveryController::class, 'destroy'])->name('deliveries.destroy');
-    Route::get('deliveries/{delivery}/packing-slip', [DeliveryController::class, 'packingSlip'])->name('deliveries.packing-slip');
-    Route::get('delivery-routes', [DeliveryRouteController::class, 'index'])->name('delivery-routes.index');
-    Route::post('delivery-routes', [DeliveryRouteController::class, 'store'])->name('delivery-routes.store');
-    Route::get('vehicle-load', [VehicleLoadController::class, 'index'])->name('vehicle-load.index');
-    Route::get('vehicle-schedule', [VehicleScheduleController::class, 'index'])->name('vehicle-schedule.index');
-    Route::post('vehicle-schedule', [VehicleScheduleController::class, 'store'])->name('vehicle-schedule.store');
+    Route::get('deliveries', [DeliveryController::class, 'index'])->middleware('perm:control.warehouses')->name('deliveries.index');
+    Route::get('deliveries/pod', [DeliveryController::class, 'podIndex'])->middleware('perm:control.warehouses')->name('deliveries.pod-index');
+    Route::get('deliveries/packing-slips', [DeliveryController::class, 'packingIndex'])->middleware('perm:control.warehouses')->name('deliveries.packing-index');
+    Route::get('deliveries/create', [DeliveryController::class, 'create'])->middleware('perm:control.warehouses')->name('deliveries.create');
+    Route::post('deliveries', [DeliveryController::class, 'store'])->middleware('perm:control.warehouses')->name('deliveries.store');
+    Route::get('deliveries/{delivery}/edit', [DeliveryController::class, 'edit'])->middleware('perm:control.warehouses')->name('deliveries.edit');
+    Route::post('deliveries/optimize', [DeliveryController::class, 'optimize'])->middleware('perm:control.warehouses')->name('deliveries.optimize');
+    Route::patch('deliveries/{delivery}', [DeliveryController::class, 'update'])->middleware('perm:control.warehouses')->name('deliveries.update');
+    Route::delete('deliveries/{delivery}', [DeliveryController::class, 'destroy'])->middleware('perm:control.warehouses')->name('deliveries.destroy');
+    Route::get('deliveries/{delivery}/packing-slip', [DeliveryController::class, 'packingSlip'])->middleware('perm:control.warehouses')->name('deliveries.packing-slip');
+    Route::get('delivery-routes', [DeliveryRouteController::class, 'index'])->middleware('perm:control.warehouses')->name('delivery-routes.index');
+    Route::post('delivery-routes', [DeliveryRouteController::class, 'store'])->middleware('perm:control.warehouses')->name('delivery-routes.store');
+    Route::get('vehicle-load', [VehicleLoadController::class, 'index'])->middleware('perm:control.warehouses')->name('vehicle-load.index');
+    Route::get('vehicle-schedule', [VehicleScheduleController::class, 'index'])->middleware('perm:control.warehouses')->name('vehicle-schedule.index');
+    Route::post('vehicle-schedule', [VehicleScheduleController::class, 'store'])->middleware('perm:control.warehouses')->name('vehicle-schedule.store');
 
     Route::get('stock/movements', [StockMovementController::class, 'index'])->middleware('perm:inventory.manage')->name('stock.movements');
     Route::get('stock/transfers', [StockMovementController::class, 'create'])->middleware('perm:inventory.manage')->name('stock.transfers');
@@ -390,30 +385,30 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::delete('bills/{bill}', [PurchaseBillController::class, 'destroy'])->middleware('perm:accounting.manage')->name('bills.destroy');
     Route::post('bills/{bill}/pay', [PurchaseBillController::class, 'storePayment'])->middleware('perm:accounting.manage')->name('bills.pay');
 
-    Route::get('batches', [BatchController::class, 'index'])->name('batches.index');
-    Route::post('batches', [BatchController::class, 'store'])->name('batches.store');
-    Route::get('batches/{batch}', [BatchController::class, 'show'])->name('batches.show');
-    Route::get('batches/{batch}/edit', [BatchController::class, 'edit'])->name('batches.edit');
-    Route::patch('batches/{batch}', [BatchController::class, 'update'])->name('batches.update');
-    Route::delete('batches/{batch}', [BatchController::class, 'destroy'])->name('batches.destroy');
+    Route::get('batches', [BatchController::class, 'index'])->middleware('perm:manufacturing.manage')->name('batches.index');
+    Route::post('batches', [BatchController::class, 'store'])->middleware('perm:manufacturing.manage')->name('batches.store');
+    Route::get('batches/{batch}', [BatchController::class, 'show'])->middleware('perm:manufacturing.manage')->name('batches.show');
+    Route::get('batches/{batch}/edit', [BatchController::class, 'edit'])->middleware('perm:manufacturing.manage')->name('batches.edit');
+    Route::patch('batches/{batch}', [BatchController::class, 'update'])->middleware('perm:manufacturing.manage')->name('batches.update');
+    Route::delete('batches/{batch}', [BatchController::class, 'destroy'])->middleware('perm:manufacturing.manage')->name('batches.destroy');
 
-    Route::get('returns/customer', [CustomerReturnController::class, 'index'])->name('returns.customer.index');
-    Route::get('returns/customer/create', [CustomerReturnController::class, 'create'])->name('returns.customer.create');
-    Route::post('returns/customer', [CustomerReturnController::class, 'store'])->name('returns.customer.store');
+    Route::get('returns/customer', [CustomerReturnController::class, 'index'])->middleware('perm:sales.manage')->name('returns.customer.index');
+    Route::get('returns/customer/create', [CustomerReturnController::class, 'create'])->middleware('perm:sales.manage')->name('returns.customer.create');
+    Route::post('returns/customer', [CustomerReturnController::class, 'store'])->middleware('perm:sales.manage')->name('returns.customer.store');
 
-    Route::get('returns/supplier', [SupplierReturnController::class, 'index'])->name('returns.supplier.index');
+    Route::get('returns/supplier', [SupplierReturnController::class, 'index'])->middleware('perm:control.suppliers')->name('returns.supplier.index');
 
-    Route::get('campaigns', [CampaignController::class, 'index'])->name('campaigns.index');
-    Route::get('campaigns/create', [CampaignController::class, 'create'])->name('campaigns.create');
-    Route::post('campaigns', [CampaignController::class, 'store'])->name('campaigns.store');
-    Route::get('campaigns/{campaign}/edit', [CampaignController::class, 'edit'])->name('campaigns.edit');
-    Route::patch('campaigns/{campaign}', [CampaignController::class, 'update'])->name('campaigns.update');
-    Route::delete('campaigns/{campaign}', [CampaignController::class, 'destroy'])->name('campaigns.destroy');
+    Route::get('campaigns', [CampaignController::class, 'index'])->middleware('perm:sales.manage')->name('campaigns.index');
+    Route::get('campaigns/create', [CampaignController::class, 'create'])->middleware('perm:sales.manage')->name('campaigns.create');
+    Route::post('campaigns', [CampaignController::class, 'store'])->middleware('perm:sales.manage')->name('campaigns.store');
+    Route::get('campaigns/{campaign}/edit', [CampaignController::class, 'edit'])->middleware('perm:sales.manage')->name('campaigns.edit');
+    Route::patch('campaigns/{campaign}', [CampaignController::class, 'update'])->middleware('perm:sales.manage')->name('campaigns.update');
+    Route::delete('campaigns/{campaign}', [CampaignController::class, 'destroy'])->middleware('perm:sales.manage')->name('campaigns.destroy');
 
-    Route::get('gifts', [CustomerGiftController::class, 'index'])->name('gifts.index');
-    Route::get('gifts/create', [CustomerGiftController::class, 'create'])->name('gifts.create');
-    Route::post('gifts', [CustomerGiftController::class, 'store'])->name('gifts.store');
-    Route::get('gifts/{gift}/edit', [CustomerGiftController::class, 'edit'])->name('gifts.edit');
-    Route::patch('gifts/{gift}', [CustomerGiftController::class, 'update'])->name('gifts.update');
-    Route::delete('gifts/{gift}', [CustomerGiftController::class, 'destroy'])->name('gifts.destroy');
+    Route::get('gifts', [CustomerGiftController::class, 'index'])->middleware('perm:sales.manage')->name('gifts.index');
+    Route::get('gifts/create', [CustomerGiftController::class, 'create'])->middleware('perm:sales.manage')->name('gifts.create');
+    Route::post('gifts', [CustomerGiftController::class, 'store'])->middleware('perm:sales.manage')->name('gifts.store');
+    Route::get('gifts/{gift}/edit', [CustomerGiftController::class, 'edit'])->middleware('perm:sales.manage')->name('gifts.edit');
+    Route::patch('gifts/{gift}', [CustomerGiftController::class, 'update'])->middleware('perm:sales.manage')->name('gifts.update');
+    Route::delete('gifts/{gift}', [CustomerGiftController::class, 'destroy'])->middleware('perm:sales.manage')->name('gifts.destroy');
 });
