@@ -16,7 +16,7 @@ class DeliveryController extends Controller
 {
     public function index()
     {
-        $deliveries = Delivery::with(['order.agent', 'route', 'vehicle'])
+        $deliveries = Delivery::with(['order.agent', 'route', 'vehicle', 'pod'])
             ->orderByDesc('created_at')
             ->paginate(12);
         return view('admin.deliveries.index', compact('deliveries'));
@@ -27,7 +27,7 @@ class DeliveryController extends Controller
      */
     public function podIndex()
     {
-        $deliveries = Delivery::with(['order.agent', 'route', 'vehicle'])
+        $deliveries = Delivery::with(['order.agent', 'route', 'vehicle', 'pod'])
             ->orderByDesc('created_at')
             ->paginate(12);
 
@@ -36,7 +36,7 @@ class DeliveryController extends Controller
 
     public function packingIndex()
     {
-        $deliveries = Delivery::with(['order.agent', 'route', 'vehicle'])
+        $deliveries = Delivery::with(['order.agent', 'route', 'vehicle', 'pod'])
             ->whereIn('status', ['scheduled', 'in_transit'])
             ->orderByDesc('created_at')
             ->paginate(12);
@@ -90,7 +90,7 @@ class DeliveryController extends Controller
 
     public function edit(Delivery $delivery)
     {
-        $delivery->load('order.agent', 'route', 'vehicle');
+        $delivery->load('order.agent', 'order.items.product', 'route', 'vehicle', 'pod', 'items');
         $routes = DeliveryRoute::orderBy('name')->get();
         $vehicles = Vehicle::orderBy('name')->get();
 
@@ -100,10 +100,28 @@ class DeliveryController extends Controller
     public function update(Request $request, Delivery $delivery)
     {
         $data = $request->validate([
+            'route_id' => 'nullable|exists:delivery_routes,id',
+            'vehicle_id' => 'nullable|exists:vehicles,id',
             'status' => 'required|in:scheduled,in_transit,delivered,exception',
             'sequence' => 'nullable|integer|min:1',
             'exception_notes' => 'nullable|string',
             'pod_photo' => 'nullable|image',
+            'pod_signed_by' => 'nullable|string|max:255',
+            'pod_receiver_name' => 'nullable|string|max:255',
+            'pod_receiver_phone' => 'nullable|string|max:50',
+            'pod_notes' => 'nullable|string',
+            'pod_delivered_at' => 'nullable|date',
+            'pod_latitude' => 'nullable|numeric|between:-90,90',
+            'pod_longitude' => 'nullable|numeric|between:-180,180',
+            'items' => 'nullable|array',
+            'items.*.order_item_id' => 'required_with:items|exists:order_items,id',
+            'items.*.product_id' => 'required_with:items|exists:products,id',
+            'items.*.batch_id' => 'nullable|exists:batches,id',
+            'items.*.qty_dispatched' => 'nullable|numeric|min:0',
+            'items.*.qty_delivered' => 'nullable|numeric|min:0',
+            'items.*.qty_short' => 'nullable|numeric|min:0',
+            'items.*.qty_damaged' => 'nullable|numeric|min:0',
+            'items.*.notes' => 'nullable|string',
         ]);
 
         $originalStatus = $delivery->status;
@@ -113,7 +131,17 @@ class DeliveryController extends Controller
         }
 
         DB::transaction(function () use ($delivery, $data, $originalStatus) {
-            $delivery->update($data);
+            $delivery->update([
+                'route_id' => $data['route_id'] ?? null,
+                'vehicle_id' => $data['vehicle_id'] ?? null,
+                'status' => $data['status'],
+                'sequence' => $data['sequence'] ?? $delivery->sequence,
+                'exception_notes' => $data['exception_notes'] ?? null,
+                'pod_photo' => $data['pod_photo'] ?? $delivery->pod_photo,
+            ]);
+
+            $deliveryItems = $this->syncDeliveryItems($delivery, $data);
+            $this->syncDeliveryPod($delivery, $data);
 
             $order = $delivery->order;
 
@@ -147,7 +175,10 @@ class DeliveryController extends Controller
                 $order = $delivery->order()->with('items')->first();
 
                 foreach ($order->items as $item) {
-                    $toShip = (float) $item->quantity;
+                    $line = $deliveryItems->firstWhere('order_item_id', $item->id);
+                    $toShip = $line
+                        ? (float) $line->qty_dispatched
+                        : (float) $item->quantity;
 
                     if ($toShip <= 0) {
                         continue;
@@ -246,7 +277,87 @@ class DeliveryController extends Controller
 
     public function packingSlip(Delivery $delivery)
     {
-        $delivery->load('order.items.product', 'route', 'vehicle', 'order.agent');
+        $delivery->load('order.items.product', 'route', 'vehicle', 'order.agent', 'pod', 'items.product');
         return view('admin.deliveries.packing_slip', compact('delivery'));
+    }
+
+    protected function syncDeliveryItems(Delivery $delivery, array $data)
+    {
+        $rows = collect($data['items'] ?? [])->filter(function ($row) {
+            return isset($row['order_item_id'], $row['product_id']);
+        });
+
+        if ($rows->isEmpty()) {
+            $order = $delivery->order()->with('items')->first();
+            $rows = collect($order?->items ?? [])->map(function ($item) {
+                $qty = (float) $item->quantity;
+                return [
+                    'order_item_id' => $item->id,
+                    'product_id' => $item->product_id,
+                    'batch_id' => null,
+                    'qty_dispatched' => $qty,
+                    'qty_delivered' => $qty,
+                    'qty_short' => 0,
+                    'qty_damaged' => 0,
+                    'notes' => null,
+                ];
+            });
+        }
+
+        $delivery->items()->delete();
+
+        foreach ($rows as $row) {
+            $qtyDelivered = isset($row['qty_delivered']) ? (float) $row['qty_delivered'] : 0;
+            $qtyShort = isset($row['qty_short']) ? (float) $row['qty_short'] : 0;
+            $qtyDamaged = isset($row['qty_damaged']) ? (float) $row['qty_damaged'] : 0;
+            $qtyDispatched = isset($row['qty_dispatched'])
+                ? (float) $row['qty_dispatched']
+                : ($qtyDelivered + $qtyShort + $qtyDamaged);
+
+            if ($qtyDispatched <= 0 && ($qtyDelivered + $qtyShort + $qtyDamaged) > 0) {
+                $qtyDispatched = $qtyDelivered + $qtyShort + $qtyDamaged;
+            }
+
+            $delivery->items()->create([
+                'order_item_id' => $row['order_item_id'],
+                'product_id' => $row['product_id'],
+                'batch_id' => $row['batch_id'] ?? null,
+                'qty_dispatched' => $qtyDispatched,
+                'qty_delivered' => $qtyDelivered,
+                'qty_short' => $qtyShort,
+                'qty_damaged' => $qtyDamaged,
+                'notes' => $row['notes'] ?? null,
+            ]);
+        }
+
+        return $delivery->items()->get();
+    }
+
+    protected function syncDeliveryPod(Delivery $delivery, array $data): void
+    {
+        $podPayload = [
+            'signed_by' => $data['pod_signed_by'] ?? null,
+            'signature_path' => $data['pod_photo'] ?? $delivery->pod?->signature_path,
+            'receiver_name' => $data['pod_receiver_name'] ?? null,
+            'receiver_phone' => $data['pod_receiver_phone'] ?? null,
+            'notes' => $data['pod_notes'] ?? null,
+            'delivered_at' => $data['pod_delivered_at'] ?? null,
+            'latitude' => $data['pod_latitude'] ?? null,
+            'longitude' => $data['pod_longitude'] ?? null,
+        ];
+
+        $shouldPersist = collect($podPayload)->filter(function ($value) {
+            return $value !== null && $value !== '';
+        })->isNotEmpty() || $delivery->status === 'delivered';
+
+        if (! $shouldPersist) {
+            return;
+        }
+
+        if (empty($podPayload['delivered_at']) && $delivery->status === 'delivered') {
+            $podPayload['delivered_at'] = now();
+        }
+
+        $delivery->pod()->updateOrCreate([], $podPayload);
     }
 }

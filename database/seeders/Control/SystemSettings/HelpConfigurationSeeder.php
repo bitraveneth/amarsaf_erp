@@ -58,6 +58,19 @@ class HelpConfigurationSeeder extends Seeder
                     'items' => [
                         'Contact your implementation partner for live setup',
                         'Use this Help screen as a quick reference',
+                        'Set APP_NAME in .env to control branding across views',
+                        'Enable scheduler cron to keep system notifications up to date',
+                        'Run queue worker for queued notifications and background jobs',
+                    ],
+                ],
+                [
+                    'key'   => 'operations',
+                    'title' => 'Live operations checklist',
+                    'items' => [
+                        'Verify APP_ENV=production and APP_DEBUG=false',
+                        'After deploy run: migrate, optimize:clear, config:cache, route:cache, view:cache',
+                        'Keep storage link present: public/storage -> storage/app/public',
+                        'Use /admin/notifications to confirm read/unread flow is working',
                     ],
                 ],
             ],

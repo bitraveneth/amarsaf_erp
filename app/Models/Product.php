@@ -66,4 +66,24 @@ class Product extends Model
     {
         return $this->hasMany(BillOfMaterial::class);
     }
+
+    public function purchaseOrderItems()
+    {
+        return $this->hasMany(PurchaseOrderItem::class);
+    }
+
+    public function goodsReceiptItems()
+    {
+        return $this->hasMany(GoodsReceiptItem::class);
+    }
+
+    public function deliveryItems()
+    {
+        return $this->hasMany(DeliveryItem::class);
+    }
+
+    public function productionMaterialIssueItems()
+    {
+        return $this->hasMany(ProductionMaterialIssueItem::class, 'component_product_id');
+    }
 }

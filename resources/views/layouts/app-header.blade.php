@@ -609,6 +609,17 @@
                     $labelSource = $user->name ?: $user->email;
                     $initials = strtoupper(mb_substr($labelSource, 0, 2));
                     $role = $user->role ?? 'employee';
+                    $roleLabels = [
+                        'super_admin' => 'SUPER ADMIN',
+                        'admin' => 'ADMIN',
+                        'purchase_executive' => 'PURCHASE EXECUTIVE',
+                        'warehouse_officer' => 'WAREHOUSE OFFICER',
+                        'production_officer' => 'PRODUCTION OFFICER',
+                        'sales_officer' => 'SALES OFFICER',
+                        'delivery_coordinator' => 'DELIVERY COORDINATOR',
+                        'accounts_officer' => 'ACCOUNTS OFFICER',
+                        'qc_officer' => 'QC OFFICER',
+                    ];
                     $avatarUrl = $user->employee && $user->employee->photo_path
                         ? asset('storage/' . $user->employee->photo_path)
                         : null;
@@ -626,15 +637,7 @@
                         </span>
                         <span class="hidden text-left xl:block">
                             <span class="mb-0.5 inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-gray-600 dark:bg-gray-800 dark:text-gray-300">
-                                @switch($role)
-                                    @case('super_admin') SUPER ADMIN @break
-                                    @case('admin') ADMIN @break
-                                    @case('warehouse_manager') WAREHOUSE MANAGER @break
-                                    @case('production_manager') PRODUCTION MANAGER @break
-                                    @case('sales_manager') SALES MANAGER @break
-                                    @case('qc_officer') QC OFFICER @break
-                                    @default EMPLOYEE
-                                @endswitch
+                                {{ $roleLabels[$role] ?? strtoupper(str_replace('_', ' ', $role)) }}
                             </span>
                             <span class="block text-sm font-semibold text-gray-900 dark:text-white">
                                 {{ $user->name ?? $user->email }}
@@ -666,15 +669,7 @@
                                     {{ $user->email }}
                                 </div>
                                 <span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-gray-600 dark:bg-gray-800 dark:text-gray-300">
-                                    @switch($role)
-                                        @case('super_admin') SUPER ADMIN @break
-                                        @case('admin') ADMIN @break
-                                        @case('warehouse_manager') WAREHOUSE MANAGER @break
-                                        @case('production_manager') PRODUCTION MANAGER @break
-                                        @case('sales_manager') SALES MANAGER @break
-                                        @case('qc_officer') QC OFFICER @break
-                                        @default EMPLOYEE
-                                    @endswitch
+                                    {{ $roleLabels[$role] ?? strtoupper(str_replace('_', ' ', $role)) }}
                                 </span>
                             </div>
                         </div>

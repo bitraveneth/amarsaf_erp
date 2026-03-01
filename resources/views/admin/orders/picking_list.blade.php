@@ -71,8 +71,8 @@
         </div>
         
         <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-            @php($role = auth()->user()->role ?? 'admin')
-            @if(in_array($role, ['admin', 'warehouse_manager']) && $order->status === 'confirmed')
+            @php($canConfirmPicking = auth()->user()?->hasAnyRole(['admin', 'super_admin', 'warehouse_officer']))
+            @if($canConfirmPicking && $order->status === 'confirmed')
                 <form action="{{ route('admin.orders.status.update', $order) }}" method="POST" class="inline">
                     @csrf
                     @method('PATCH')

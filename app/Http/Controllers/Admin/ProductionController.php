@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Batch;
 use App\Models\BillOfMaterial;
+use App\Models\ProductionMaterialIssue;
+use App\Models\ProductionMaterialIssueItem;
 use App\Models\ProductionRun;
 use App\Models\Product;
 use App\Models\StockEntry;
@@ -16,7 +18,11 @@ class ProductionController extends Controller
 {
     public function index()
     {
+        $warehouseIds = auth()->user()?->accessibleWarehouseIds();
         $runs = ProductionRun::with('product', 'batch', 'warehouse', 'supervisor', 'approver')
+            ->when($warehouseIds !== null, function ($query) use ($warehouseIds) {
+                $query->whereIn('warehouse_id', $warehouseIds);
+            })
             ->latest()
             ->paginate(10);
 
@@ -47,9 +53,13 @@ class ProductionController extends Controller
      */
     public function pendingReceipts()
     {
+        $warehouseIds = auth()->user()?->accessibleWarehouseIds();
         $runs = ProductionRun::with(['product', 'batch', 'warehouse', 'approver'])
             ->where('qc_status', 'approved')
             ->whereNull('stock_confirmed_at')
+            ->when($warehouseIds !== null, function ($query) use ($warehouseIds) {
+                $query->whereIn('warehouse_id', $warehouseIds);
+            })
             ->latest()
             ->get();
 
@@ -58,6 +68,7 @@ class ProductionController extends Controller
 
     public function create()
     {
+        $warehouseIds = auth()->user()?->accessibleWarehouseIds();
         // Only finished products should be selectable for production runs
         $products = Product::where(function ($q) {
                 $q->whereNull('product_type')
@@ -116,7 +127,12 @@ class ProductionController extends Controller
             }
         }
         $batches = Batch::orderBy('production_date', 'desc')->get();
-        $warehouses = Warehouse::orderBy('name')->get();
+        $warehouses = Warehouse::query()
+            ->when($warehouseIds !== null, function ($query) use ($warehouseIds) {
+                $query->whereIn('id', $warehouseIds);
+            })
+            ->orderBy('name')
+            ->get();
 
         // Choose a sensible default warehouse for production. We prefer any
         // warehouse marked as "factory"; if none exists, we leave it null and
@@ -168,6 +184,9 @@ class ProductionController extends Controller
 
             // Simple stock snapshot per warehouse+product
             $stockEntries = StockEntry::selectRaw('warehouse_id, product_id, SUM(quantity) as qty')
+                ->when($warehouseIds !== null, function ($query) use ($warehouseIds) {
+                    $query->whereIn('warehouse_id', $warehouseIds);
+                })
                 ->groupBy('warehouse_id', 'product_id')
                 ->get();
 
@@ -190,13 +209,15 @@ class ProductionController extends Controller
 
     public function edit(ProductionRun $production)
     {
+        $this->ensureWarehouseAccess($production->warehouse_id);
         $production->load('product', 'batch', 'warehouse');
         return view('admin.production.edit', ['run' => $production]);
     }
 
     public function show(ProductionRun $production)
     {
-        $production->load('product', 'batch', 'warehouse', 'supervisor', 'approver', 'stockConfirmer');
+        $this->ensureWarehouseAccess($production->warehouse_id);
+        $production->load('product', 'batch', 'warehouse', 'supervisor', 'approver', 'stockConfirmer', 'materialIssues.items.component', 'materialIssues.issuer');
 
         // Load the active BOM for this product (if any) so the view can show
         // a simple summary of components required for this run and an
@@ -280,6 +301,8 @@ class ProductionController extends Controller
             'materials_reserved' => 'nullable|string',
         ]);
 
+        $this->ensureWarehouseAccess($data['warehouse_id'] ?? null);
+
         // Auto-generate production order number if not provided
         if (empty($data['order_number'])) {
             $batch = Batch::find($data['batch_id']);
@@ -298,7 +321,8 @@ class ProductionController extends Controller
 
     public function update(Request $request, ProductionRun $production)
     {
-        $role = auth()->user()->role ?? 'admin';
+        $this->ensureWarehouseAccess($production->warehouse_id);
+        $user = auth()->user();
 
         $rules = [
             'line' => 'nullable|string',
@@ -309,8 +333,8 @@ class ProductionController extends Controller
             'materials_reserved' => 'nullable|string',
         ];
 
-        // Only admin and QC officer can change QC status
-        if (in_array($role, ['admin', 'qc_officer'])) {
+        // Only admin/super admin and QC officer can change QC status
+        if ($user?->hasAnyRole(['admin', 'super_admin', 'qc_officer'])) {
             $rules['qc_status'] = 'required|in:pending,approved,rejected';
         }
 
@@ -340,6 +364,7 @@ class ProductionController extends Controller
 
     public function destroy(ProductionRun $production)
     {
+        $this->ensureWarehouseAccess($production->warehouse_id);
         $production->delete();
 
         return redirect()->route('admin.production.index')->with('status', 'Production run deleted.');
@@ -347,15 +372,16 @@ class ProductionController extends Controller
 
     /**
      * Confirm that stock from a QC-approved production run has been received
-     * into the selected warehouse. Only admin / warehouse manager should do this.
+     * into the selected warehouse. Only admin / warehouse officer should do this.
      */
     public function confirmStock(Request $request, ProductionRun $production)
     {
-        $role = auth()->user()->role ?? 'admin';
+        $this->ensureWarehouseAccess($production->warehouse_id);
+        $user = auth()->user();
 
-        if (! in_array($role, ['admin', 'warehouse_manager'])) {
+        if (! $user?->hasAnyRole(['admin', 'super_admin', 'warehouse_officer'])) {
             return redirect()->route('admin.production.index')
-                ->with('status', 'Only admin or warehouse manager can confirm stock.');
+                ->with('status', 'Only admin or warehouse officer can confirm stock.');
         }
 
         if ($production->qc_status !== 'approved') {
@@ -388,6 +414,17 @@ class ProductionController extends Controller
             ->with('status', 'Stock confirmed and posted to warehouse.');
     }
 
+    protected function ensureWarehouseAccess($warehouseId): void
+    {
+        if ($warehouseId === null) {
+            return;
+        }
+
+        if (! auth()->user()?->canAccessWarehouse((int) $warehouseId)) {
+            abort(403, 'You do not have access to this warehouse.');
+        }
+    }
+
     /**
      * Once a production run is QC approved, post finished goods stock and consume
      * BOM components from the selected warehouse.
@@ -417,6 +454,14 @@ class ProductionController extends Controller
         if (! $bom || $bom->items->isEmpty()) {
             return;
         }
+
+        $materialIssue = ProductionMaterialIssue::create([
+            'production_run_id' => $run->id,
+            'warehouse_id' => $run->warehouse_id,
+            'issued_by' => auth()->id(),
+            'issued_at' => now(),
+            'notes' => 'Auto-issued during stock confirmation for production order ' . ($run->order_number ?? ('#' . $run->id)),
+        ]);
 
         // If BOM has an explicit override material_unit_cost, use that directly.
         if ($bom->material_unit_cost !== null && $bom->material_unit_cost > 0) {
@@ -455,6 +500,23 @@ class ProductionController extends Controller
                     $entry->status = 'sold'; // treated as consumed in production
                 }
                 $entry->save();
+
+                $component = $item->component;
+                $baseCost = null;
+                if ($item->unit_cost !== null) {
+                    $baseCost = (float) $item->unit_cost;
+                } elseif ($component && $component->standard_cost !== null) {
+                    $baseCost = (float) $component->standard_cost;
+                }
+
+                ProductionMaterialIssueItem::create([
+                    'production_material_issue_id' => $materialIssue->id,
+                    'component_product_id' => $item->component_product_id,
+                    'batch_id' => $entry->batch_id,
+                    'quantity' => $consume,
+                    'unit_cost' => $baseCost,
+                    'line_total' => $baseCost !== null ? ($consume * $baseCost) : null,
+                ]);
 
                 $remaining -= $consume;
             }

@@ -209,8 +209,8 @@
                                 ];
                                 $qcColor = $qcColors[$run->qc_status] ?? 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400';
                                 
-                                $role = auth()->user()->role ?? 'admin';
-                                $canConfirmStock = $run->qc_status === 'approved' && $role === 'warehouse_manager';
+                                $canConfirmStock = $run->qc_status === 'approved'
+                                    && auth()->user()?->hasAnyRole(['admin', 'super_admin', 'warehouse_officer']);
                                 $isStockConfirmed = $run->stock_confirmed_at !== null;
                             @endphp
                             <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50">

@@ -19,6 +19,12 @@ class StockAudit extends Model
         'notes',
     ];
 
+    protected $casts = [
+        'system_quantity' => 'decimal:2',
+        'counted_quantity' => 'decimal:2',
+        'variance' => 'decimal:2',
+    ];
+
     public function warehouse()
     {
         return $this->belongsTo(Warehouse::class);
@@ -34,4 +40,3 @@ class StockAudit extends Model
         return $this->belongsTo(Batch::class);
     }
 }
-

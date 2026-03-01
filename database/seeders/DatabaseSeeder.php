@@ -98,9 +98,9 @@ class DatabaseSeeder extends Seeder
             //DemoAnalyticsSeeder::class,
 
             // 6. Users / roles / permissions / menu
-            UsersModuleSeeder::class,
             RolesSeeder::class,
             PermissionsSeeder::class,
+            UsersModuleSeeder::class,
             MenuStructureSeeder::class,
         ]);
     }

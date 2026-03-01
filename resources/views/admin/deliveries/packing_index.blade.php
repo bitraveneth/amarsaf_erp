@@ -141,8 +141,9 @@
                             @php
                                 $order = $delivery->order;
                                 $packingStatus = $order?->status;
-                                $role = auth()->user()->role ?? 'admin';
-                                $canConfirmPacking = $order && in_array($role, ['admin', 'warehouse_manager']) && $order->status === 'picked';
+                                $canConfirmPacking = $order
+                                    && auth()->user()?->hasAnyRole(['admin', 'super_admin', 'warehouse_officer'])
+                                    && $order->status === 'picked';
                                 
                                 $orderStatusColors = [
                                     'pending' => 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400',

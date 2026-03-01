@@ -206,8 +206,7 @@ class MenuController extends Controller
 
     protected function ensureSuperAdmin(): void
     {
-        $role = auth()->user()->role ?? null;
-        if ($role !== 'super_admin') {
+        if (! auth()->user()?->hasRole('super_admin')) {
             abort(403, 'Only super admin can manage menu.');
         }
     }

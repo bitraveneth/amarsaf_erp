@@ -14,8 +14,8 @@ class SuppliersModuleSeeder extends Seeder
     {
         $this->call([
             SuppliersSeeder::class,
+            PurchaseOrdersSeeder::class,
             PurchaseBillsSeeder::class,
         ]);
     }
 }
-

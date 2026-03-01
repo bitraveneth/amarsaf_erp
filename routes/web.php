@@ -19,6 +19,8 @@ use App\Http\Controllers\Admin\AccountController;
 use App\Http\Controllers\Admin\SalaryDistributionController;
 use App\Http\Controllers\Admin\SupplierController;
 use App\Http\Controllers\Admin\PurchaseBillController;
+use App\Http\Controllers\Admin\PurchaseOrderController;
+use App\Http\Controllers\Admin\GoodsReceiptController;
 use App\Http\Controllers\Admin\ProductionController;
 use App\Http\Controllers\Admin\StockMovementController;
 use App\Http\Controllers\Admin\TaxClassController;
@@ -77,9 +79,15 @@ Route::middleware('guest')->group(function () {
 
 Route::post('logout', [LoginController::class, 'logout'])->middleware('auth')->name('logout');
 
+// Backward-compatible home URL
+Route::get('/home', function () {
+    return redirect()->route('admin.dashboard');
+})->middleware('auth')->name('home');
+
 Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::get('/', [AdminController::class, 'index'])->name('dashboard');
     Route::view('help', 'admin.help')->name('help');
+    Route::view('client-guide', 'admin.client-guide')->name('client-guide');
 
     // Sales dashboard
     Route::get('sales-dashboard', SalesDashboardController::class)
@@ -113,6 +121,8 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     // User manager
     Route::get('users', [UserController::class, 'index'])->name('users.index');
     Route::post('users', [UserController::class, 'store'])->name('users.store');
+    Route::get('users/{user}/access', [UserController::class, 'editAccess'])->name('users.access.edit');
+    Route::patch('users/{user}/access', [UserController::class, 'updateAccess'])->name('users.access.update');
 
     // Permission manager (super admin)
     Route::get('permissions', [PermissionController::class, 'index'])->name('permissions.index');
@@ -389,6 +399,17 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::put('bills/{bill}', [PurchaseBillController::class, 'update'])->middleware('perm:accounting.manage')->name('bills.update');
     Route::delete('bills/{bill}', [PurchaseBillController::class, 'destroy'])->middleware('perm:accounting.manage')->name('bills.destroy');
     Route::post('bills/{bill}/pay', [PurchaseBillController::class, 'storePayment'])->middleware('perm:accounting.manage')->name('bills.pay');
+
+    Route::get('purchase-orders', [PurchaseOrderController::class, 'index'])->middleware('perm:control.suppliers')->name('purchase-orders.index');
+    Route::get('purchase-orders/create', [PurchaseOrderController::class, 'create'])->middleware('perm:control.suppliers')->name('purchase-orders.create');
+    Route::post('purchase-orders', [PurchaseOrderController::class, 'store'])->middleware('perm:control.suppliers')->name('purchase-orders.store');
+    Route::get('purchase-orders/{purchaseOrder}', [PurchaseOrderController::class, 'show'])->middleware('perm:control.suppliers')->name('purchase-orders.show');
+    Route::post('purchase-orders/{purchaseOrder}/approve', [PurchaseOrderController::class, 'approve'])->middleware('perm:control.suppliers')->name('purchase-orders.approve');
+
+    Route::get('goods-receipts', [GoodsReceiptController::class, 'index'])->middleware('perm:inventory.manage')->name('goods-receipts.index');
+    Route::get('goods-receipts/create', [GoodsReceiptController::class, 'create'])->middleware('perm:inventory.manage')->name('goods-receipts.create');
+    Route::post('goods-receipts', [GoodsReceiptController::class, 'store'])->middleware('perm:inventory.manage')->name('goods-receipts.store');
+    Route::get('goods-receipts/{goodsReceipt}', [GoodsReceiptController::class, 'show'])->middleware('perm:inventory.manage')->name('goods-receipts.show');
 
     Route::get('batches', [BatchController::class, 'index'])->middleware('perm:manufacturing.manage')->name('batches.index');
     Route::post('batches', [BatchController::class, 'store'])->middleware('perm:manufacturing.manage')->name('batches.store');

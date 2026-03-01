@@ -10,21 +10,60 @@ use Illuminate\Http\Request;
 
 class PermissionController extends Controller
 {
+    /**
+     * Canonical permission module labels.
+     */
+    protected array $groupAliases = [
+        'access control' => 'Access Control',
+        'masters & control' => 'Masters & Control',
+        'purchasing' => 'Purchasing',
+        'inventory & stock' => 'Inventory & Stock',
+        'production & qc' => 'Production & QC',
+        'sales & returns' => 'Sales & Returns',
+        'accounting & finance' => 'Accounting & Finance',
+        'reports & analytics' => 'Reports & Analytics',
+        'system' => 'System',
+    ];
+
+    protected array $groupOrder = [
+        'Access Control',
+        'Masters & Control',
+        'Purchasing',
+        'Inventory & Stock',
+        'Production & QC',
+        'Sales & Returns',
+        'Accounting & Finance',
+        'Reports & Analytics',
+        'System',
+        'Other',
+    ];
+
     public function index(Request $request)
     {
         $this->ensureSuperAdmin();
 
         $permissions = Permission::orderBy('group')->orderBy('name')->get();
 
-        $groups = Permission::selectRaw("`group` as group_key, COALESCE(`group`, 'Other') as label, COUNT(*) as total")
-            ->groupBy('group_key', 'label')
-            ->orderBy('label')
-            ->get();
+        // Build group summary in PHP with normalized labels so minor text
+        // inconsistencies (spaces/case) don't create duplicate groups in UI.
+        $groups = $permissions
+            ->groupBy(fn ($perm) => $this->normalizeGroupKey($perm->group))
+            ->map(function ($items, $groupKey) {
+                $label = $this->canonicalGroupLabel((string) $groupKey);
+
+                return (object) [
+                    'group_key' => $groupKey,
+                    'label' => $label,
+                    'total' => $items->count(),
+                ];
+            })
+            ->sortBy(fn ($group) => $this->groupSortRank($group->label))
+            ->values();
 
         // Permissions grouped by module label for easier per-role display
-        $groupedPermissions = $permissions->groupBy(function ($perm) {
-            return $perm->group ?? 'Other';
-        });
+        $groupedPermissions = $permissions
+            ->groupBy(fn ($perm) => $this->canonicalGroupLabel($perm->group))
+            ->sortKeysUsing(fn ($a, $b) => $this->groupSortRank($a) <=> $this->groupSortRank($b));
 
         $roles = Role::orderBy('label')->pluck('label', 'key')->all();
 
@@ -33,11 +72,13 @@ class PermissionController extends Controller
             $roles = [
                 'super_admin'        => 'Super admin',
                 'admin'              => 'Admin',
-                'warehouse_manager'  => 'Warehouse manager',
-                'production_manager' => 'Production manager',
-                'sales_manager'      => 'Sales manager',
+                'purchase_executive' => 'Purchase executive',
+                'warehouse_officer'  => 'Warehouse officer',
+                'production_officer' => 'Production officer',
+                'sales_officer'      => 'Sales officer',
+                'delivery_coordinator' => 'Delivery coordinator',
+                'accounts_officer'   => 'Accounts officer',
                 'qc_officer'         => 'QC officer',
-                'employee'           => 'Field / office employee',
             ];
         }
 
@@ -74,6 +115,10 @@ class PermissionController extends Controller
             'label' => 'required|string|max:255',
             'group' => 'nullable|string|max:100',
         ]);
+
+        $data['group'] = isset($data['group']) && trim((string) $data['group']) !== ''
+            ? $this->canonicalGroupLabel($data['group'])
+            : null;
 
         Permission::create($data);
 
@@ -159,7 +204,7 @@ class PermissionController extends Controller
 
         $current = $data['current_group'] === '' ? null : $data['current_group'];
 
-        Permission::where('group', $current)->update(['group' => $data['new_group']]);
+        Permission::where('group', $current)->update(['group' => $this->canonicalGroupLabel($data['new_group'])]);
 
         return redirect()->route('admin.permissions.index')
             ->with('status', 'Group renamed to ' . $data['new_group'] . '.');
@@ -191,9 +236,32 @@ class PermissionController extends Controller
 
     protected function ensureSuperAdmin(): void
     {
-        $role = auth()->user()->role ?? null;
-        if ($role !== 'super_admin') {
+        if (! auth()->user()?->hasRole('super_admin')) {
             abort(403, 'Only super admin can manage permissions.');
         }
+    }
+
+    protected function normalizeGroupKey(?string $group): string
+    {
+        $label = trim((string) ($group ?? ''));
+        if ($label === '') {
+            return 'other';
+        }
+
+        return mb_strtolower($label);
+    }
+
+    protected function canonicalGroupLabel(?string $group): string
+    {
+        $key = $this->normalizeGroupKey($group);
+
+        return $this->groupAliases[$key] ?? ($key === 'other' ? 'Other' : trim((string) $group));
+    }
+
+    protected function groupSortRank(string $label): int
+    {
+        $rank = array_search($label, $this->groupOrder, true);
+
+        return $rank === false ? 999 : $rank;
     }
 }

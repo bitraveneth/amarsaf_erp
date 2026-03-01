@@ -67,4 +67,9 @@ class ProductionRun extends Model
     {
         return $this->belongsTo(User::class, 'stock_confirmed_by');
     }
+
+    public function materialIssues()
+    {
+        return $this->hasMany(ProductionMaterialIssue::class);
+    }
 }

@@ -29,6 +29,11 @@
                     $canSeeItem = empty($itemPermission) || Permission::can($authUser, $itemPermission);
 
                     if (isset($item['subItems']) && is_array($item['subItems'])) {
+                        // Enforce parent-level permission for dropdown sections.
+                        if (!$canSeeItem) {
+                            return null;
+                        }
+
                         $filteredSubItems = collect($item['subItems'])
                             ->filter(function ($subItem) use ($authUser, $isValidPath) {
                                 $permission = $subItem['permission'] ?? null;

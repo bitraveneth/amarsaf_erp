@@ -244,6 +244,119 @@
                 </div>
             </div>
 
+            @php
+                $existingItems = $delivery->items->keyBy('order_item_id');
+                $pod = $delivery->pod;
+            @endphp
+
+            <!-- POD Metadata -->
+            <div class="mt-8 rounded-xl border border-gray-200 p-4 dark:border-gray-700">
+                <h4 class="text-sm font-semibold text-gray-900 dark:text-white">POD Details</h4>
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Capture delivery receiver and location details.</p>
+
+                <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    <div>
+                        <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Signed By</label>
+                        <input type="text" name="pod_signed_by" value="{{ old('pod_signed_by', $pod?->signed_by) }}"
+                               class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white">
+                    </div>
+                    <div>
+                        <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Receiver Name</label>
+                        <input type="text" name="pod_receiver_name" value="{{ old('pod_receiver_name', $pod?->receiver_name) }}"
+                               class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white">
+                    </div>
+                    <div>
+                        <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Receiver Phone</label>
+                        <input type="text" name="pod_receiver_phone" value="{{ old('pod_receiver_phone', $pod?->receiver_phone) }}"
+                               class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white">
+                    </div>
+                    <div>
+                        <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Delivered At</label>
+                        <input type="datetime-local" name="pod_delivered_at"
+                               value="{{ old('pod_delivered_at', optional($pod?->delivered_at)->format('Y-m-d\\TH:i')) }}"
+                               class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white">
+                    </div>
+                    <div>
+                        <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Latitude</label>
+                        <input type="number" step="0.0000001" name="pod_latitude" value="{{ old('pod_latitude', $pod?->latitude) }}"
+                               class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white">
+                    </div>
+                    <div>
+                        <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Longitude</label>
+                        <input type="number" step="0.0000001" name="pod_longitude" value="{{ old('pod_longitude', $pod?->longitude) }}"
+                               class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white">
+                    </div>
+                    <div class="sm:col-span-2 lg:col-span-3">
+                        <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">POD Notes</label>
+                        <textarea name="pod_notes" rows="2"
+                                  class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white">{{ old('pod_notes', $pod?->notes) }}</textarea>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Delivery Item Quantities -->
+            <div class="mt-6 rounded-xl border border-gray-200 p-4 dark:border-gray-700">
+                <h4 class="text-sm font-semibold text-gray-900 dark:text-white">Delivered Item Quantities</h4>
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Used for POD accuracy, exception tracking, and stock movement.</p>
+
+                <div class="mt-4 overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-800">
+                        <thead>
+                            <tr class="text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                                <th class="px-2 py-2">Item</th>
+                                <th class="px-2 py-2">Dispatch</th>
+                                <th class="px-2 py-2">Delivered</th>
+                                <th class="px-2 py-2">Short</th>
+                                <th class="px-2 py-2">Damaged</th>
+                                <th class="px-2 py-2">Note</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                            @foreach($delivery->order->items as $idx => $orderItem)
+                                @php
+                                    $row = $existingItems->get($orderItem->id);
+                                    $defaultQty = (float) $orderItem->quantity;
+                                @endphp
+                                <tr>
+                                    <td class="px-2 py-3">
+                                        <div class="text-sm font-medium text-gray-900 dark:text-white">{{ $orderItem->product->name ?? 'Item' }}</div>
+                                        <div class="text-xs text-gray-500 dark:text-gray-400">Qty ordered: {{ $orderItem->quantity }}</div>
+                                        <input type="hidden" name="items[{{ $idx }}][order_item_id]" value="{{ $orderItem->id }}">
+                                        <input type="hidden" name="items[{{ $idx }}][product_id]" value="{{ $orderItem->product_id }}">
+                                    </td>
+                                    <td class="px-2 py-3">
+                                        <input type="number" min="0" step="0.01" name="items[{{ $idx }}][qty_dispatched]"
+                                               value="{{ old(\"items.$idx.qty_dispatched\", $row?->qty_dispatched ?? $defaultQty) }}"
+                                               class="w-24 rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-white">
+                                    </td>
+                                    <td class="px-2 py-3">
+                                        <input type="number" min="0" step="0.01" name="items[{{ $idx }}][qty_delivered]"
+                                               value="{{ old(\"items.$idx.qty_delivered\", $row?->qty_delivered ?? $defaultQty) }}"
+                                               class="w-24 rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-white">
+                                    </td>
+                                    <td class="px-2 py-3">
+                                        <input type="number" min="0" step="0.01" name="items[{{ $idx }}][qty_short]"
+                                               value="{{ old(\"items.$idx.qty_short\", $row?->qty_short ?? 0) }}"
+                                               class="w-24 rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-white">
+                                    </td>
+                                    <td class="px-2 py-3">
+                                        <input type="number" min="0" step="0.01" name="items[{{ $idx }}][qty_damaged]"
+                                               value="{{ old(\"items.$idx.qty_damaged\", $row?->qty_damaged ?? 0) }}"
+                                               class="w-24 rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-white">
+                                    </td>
+                                    <td class="px-2 py-3">
+                                        <input type="text" name="items[{{ $idx }}][notes]"
+                                               value="{{ old(\"items.$idx.notes\", $row?->notes) }}"
+                                               class="w-full rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                                               placeholder="Optional note">
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
             <!-- Form Actions -->
             <div class="mt-8 flex items-center justify-end gap-3 border-t border-gray-100 pt-6 dark:border-gray-800">
                 <a href="{{ route('admin.deliveries.index') }}" 

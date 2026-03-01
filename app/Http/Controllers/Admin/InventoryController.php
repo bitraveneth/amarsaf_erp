@@ -13,8 +13,12 @@ class InventoryController extends Controller
 {
     public function index()
     {
+        $warehouseIds = auth()->user()?->accessibleWarehouseIds();
         $today = Carbon::today();
         $expiringSoon = StockEntry::with('product', 'batch')
+            ->when($warehouseIds !== null, function ($query) use ($warehouseIds) {
+                $query->whereIn('warehouse_id', $warehouseIds);
+            })
             ->whereNotNull('batch_id')
             ->whereHas('batch', function ($query) use ($today) {
                 $query->where('expiry_date', '<=', $today->copy()->addDays(30));
@@ -23,16 +27,27 @@ class InventoryController extends Controller
             ->get();
 
         $summary = StockEntry::selectRaw('warehouse_id, status, SUM(quantity) as total')
+            ->when($warehouseIds !== null, function ($query) use ($warehouseIds) {
+                $query->whereIn('warehouse_id', $warehouseIds);
+            })
             ->groupBy('warehouse_id', 'status')
             ->with('warehouse')
             ->get();
 
         $recentMovements = StockMovement::with(['stockEntry.product', 'stockEntry.warehouse', 'order.agent'])
+            ->when($warehouseIds !== null, function ($query) use ($warehouseIds) {
+                $query->whereHas('stockEntry', function ($stockQuery) use ($warehouseIds) {
+                    $stockQuery->whereIn('warehouse_id', $warehouseIds);
+                });
+            })
             ->latest()
             ->limit(10)
             ->get();
 
         $recentRuns = ProductionRun::with(['product', 'batch', 'warehouse'])
+            ->when($warehouseIds !== null, function ($query) use ($warehouseIds) {
+                $query->whereIn('warehouse_id', $warehouseIds);
+            })
             ->whereNotNull('stock_confirmed_at')
             ->latest()
             ->limit(10)
@@ -43,8 +58,12 @@ class InventoryController extends Controller
 
     public function materials()
     {
+        $warehouseIds = auth()->user()?->accessibleWarehouseIds();
         // Raw-material stock summary by product and warehouse
         $entries = StockEntry::with(['product', 'warehouse'])
+            ->when($warehouseIds !== null, function ($query) use ($warehouseIds) {
+                $query->whereIn('warehouse_id', $warehouseIds);
+            })
             ->whereHas('product', function ($query) {
                 $query->where('product_type', 'raw');
             })

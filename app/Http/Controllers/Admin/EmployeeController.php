@@ -8,6 +8,8 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class EmployeeController extends Controller
 {
@@ -93,8 +95,8 @@ class EmployeeController extends Controller
      */
     public function storeUser(Request $request, Employee $employee)
     {
-        $actorRole = auth()->user()?->role;
-        if (! in_array($actorRole, ['admin', 'super_admin'], true)) {
+        $actor = auth()->user();
+        if (! $actor?->hasAnyRole(['admin', 'super_admin'])) {
             abort(403, 'Only admin or super admin users can create login accounts for employees.');
         }
 
@@ -107,27 +109,40 @@ class EmployeeController extends Controller
         $data = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|max:255|unique:users,email',
-            'role' => 'required|string|in:super_admin,admin,warehouse_manager,production_manager,sales_manager,qc_officer,employee',
+            'role' => 'required|string|in:super_admin,admin,purchase_executive,warehouse_officer,production_officer,sales_officer,delivery_coordinator,accounts_officer,qc_officer',
             'password' => 'nullable|string|min:6',
         ]);
 
-        if (($data['role'] ?? null) === 'super_admin' && $actorRole !== 'super_admin') {
+        if (($data['role'] ?? null) === 'super_admin' && ! $actor?->hasRole('super_admin')) {
             abort(403, 'Only super admin can create another super admin account.');
         }
 
         $plainPassword = $data['password'] ?: Str::random(10);
 
-        User::create([
+        $user = User::create([
             'name' => $data['name'],
             'email' => $data['email'],
             'password' => $plainPassword,
             'role' => $data['role'],
             'employee_id' => $employee->id,
         ]);
+        $this->syncPrimaryRole($user);
 
         return redirect()
             ->route('admin.employees.show', $employee)
             ->with('status', 'Login account created for this employee. Temporary password: ' . $plainPassword);
+    }
+
+    protected function syncPrimaryRole(User $user): void
+    {
+        if (! Schema::hasTable('user_roles') || empty($user->role)) {
+            return;
+        }
+
+        DB::table('user_roles')->updateOrInsert(
+            ['user_id' => $user->id, 'role_key' => $user->role],
+            ['updated_at' => now(), 'created_at' => now()]
+        );
     }
 
     public function update(Request $request, Employee $employee)

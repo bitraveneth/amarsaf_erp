@@ -28,7 +28,7 @@ class StockAuditController extends Controller
             'warehouse_id' => 'required|exists:warehouses,id',
             'product_id' => 'required|exists:products,id',
             'batch_id' => 'nullable|exists:batches,id',
-            'counted_quantity' => 'required|integer|min:0',
+            'counted_quantity' => 'required|numeric|min:0',
             'notes' => 'nullable|string',
         ]);
 
@@ -39,15 +39,16 @@ class StockAuditController extends Controller
             $query->where('batch_id', $data['batch_id']);
         }
 
-        $systemQty = (int) $query->sum('quantity');
-        $variance = $data['counted_quantity'] - $systemQty;
+        $systemQty = (float) $query->sum('quantity');
+        $countedQty = (float) $data['counted_quantity'];
+        $variance = $countedQty - $systemQty;
 
         StockAudit::create([
             'warehouse_id' => $data['warehouse_id'],
             'product_id' => $data['product_id'],
             'batch_id' => $data['batch_id'] ?? null,
             'system_quantity' => $systemQty,
-            'counted_quantity' => $data['counted_quantity'],
+            'counted_quantity' => $countedQty,
             'variance' => $variance,
             'notes' => $data['notes'] ?? null,
         ]);

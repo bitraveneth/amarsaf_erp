@@ -2,8 +2,10 @@
 
 namespace App\Helpers;
 
+use App\Models\UserPermission;
 use App\Models\User;
 use App\Models\RolePermission;
+use Illuminate\Support\Facades\Schema;
 
 class Permission
 {
@@ -18,20 +20,80 @@ class Permission
             return false;
         }
 
-        $role = $user->role ?? null;
-        if (in_array($role, ['admin', 'super_admin'], true)) {
+        $roleKeys = $user->roleKeys();
+        if (in_array('admin', $roleKeys, true) || in_array('super_admin', $roleKeys, true)) {
             // Admin and Super Admin can do everything.
             return true;
         }
 
-        static $cache = [];
+        $candidates = self::permissionCandidates($permission);
 
-        if (! array_key_exists($permission, $cache)) {
-            $cache[$permission] = RolePermission::where('permission_name', $permission)
-                ->pluck('role')
-                ->all();
+        // User-level override has highest priority.
+        // We check from most specific to broader candidates.
+        static $userOverridesCache = [];
+        if (! array_key_exists($user->id, $userOverridesCache)) {
+            $userOverridesCache[$user->id] = Schema::hasTable('user_permissions')
+                ? UserPermission::query()
+                    ->where('user_id', $user->id)
+                    ->pluck('allowed', 'permission_name')
+                    ->all()
+                : [];
+        }
+        $overrides = $userOverridesCache[$user->id];
+
+        foreach ($candidates as $candidate) {
+            if (array_key_exists($candidate, $overrides)) {
+                return (bool) $overrides[$candidate];
+            }
         }
 
-        return in_array($role, $cache[$permission], true);
+        if (empty($roleKeys)) {
+            return false;
+        }
+
+        sort($roleKeys);
+        $roleCacheKey = implode('|', $roleKeys);
+
+        static $rolePermissionsCache = [];
+        if (! array_key_exists($roleCacheKey, $rolePermissionsCache)) {
+            $rolePermissionsCache[$roleCacheKey] = Schema::hasTable('role_permissions')
+                ? RolePermission::query()
+                    ->whereIn('role', $roleKeys)
+                    ->pluck('permission_name')
+                    ->all()
+                : [];
+        }
+
+        return ! empty(array_intersect($candidates, $rolePermissionsCache[$roleCacheKey]));
+    }
+
+    /**
+     * Build a permission resolution chain from most specific to broader.
+     *
+     * Examples:
+     * - sales.order.create -> sales.order.create, sales.order, sales.order.manage, sales, sales.manage
+     * - control.products.edit -> control.products.edit, control.products, control.products.manage, control, control.manage
+     */
+    protected static function permissionCandidates(string $permission): array
+    {
+        $permission = trim($permission);
+        if ($permission === '') {
+            return [];
+        }
+
+        $parts = explode('.', $permission);
+        $candidates = [$permission];
+
+        for ($i = count($parts) - 1; $i >= 1; $i--) {
+            $prefix = implode('.', array_slice($parts, 0, $i));
+            $candidates[] = $prefix;
+            $candidates[] = $prefix . '.manage';
+        }
+
+        if (! str_ends_with($permission, '.manage')) {
+            $candidates[] = $permission . '.manage';
+        }
+
+        return array_values(array_unique($candidates));
     }
 }

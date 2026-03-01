@@ -71,11 +71,16 @@ class MenuHelper
                         }
 
                         if ($subItems->isNotEmpty()) {
-                            $data['subItems'] = $subItems->all();
+                            $data['subItems'] = $subItems
+                                ->unique(fn (array $sub) => mb_strtolower(trim(($sub['name'] ?? '') . '|' . ($sub['path'] ?? ''))))
+                                ->values()
+                                ->all();
                         }
 
                         return $data;
                     })
+                    ->unique(fn (array $item) => mb_strtolower(trim(($item['name'] ?? '') . '|' . ($item['path'] ?? ''))))
+                    ->values()
                     ->all(),
             ];
         })->all();
@@ -132,8 +137,7 @@ class MenuHelper
                         'permission' => 'control.suppliers',
                         'subItems' => [
                             ['name' => 'Suppliers', 'path' => '/admin/suppliers', 'permission' => 'control.suppliers'],
-                            // Supplier prices are managed from the main Suppliers screen for now
-                            ['name' => 'Supplier prices', 'path' => '/admin/suppliers', 'permission' => 'control.suppliers'],
+                            ['name' => 'Purchase orders', 'path' => '/admin/purchase-orders', 'permission' => 'control.suppliers'],
                         ],
                     ],
                     [
@@ -146,7 +150,6 @@ class MenuHelper
                             ['name' => 'Vehicle registry', 'path' => '/admin/vehicles', 'permission' => 'control.warehouses'],
                             // Delivery zones & routes configuration
                             ['name' => 'Delivery zones & routes', 'path' => '/admin/delivery-routes', 'permission' => 'control.warehouses'],
-                            ['name' => 'Expenses & allowances', 'path' => '/admin/expenses', 'permission' => 'control.warehouses'],
                         ],
                     ],
                     [
@@ -171,6 +174,7 @@ class MenuHelper
                         'permission' => 'system.settings',
                         'subItems' => [
                             ['name' => 'Help & configuration guide', 'path' => '/admin/help', 'permission' => 'system.settings'],
+                            ['name' => 'Client manual', 'path' => '/admin/client-guide', 'permission' => 'system.settings'],
                             ['name' => 'User manager', 'path' => '/admin/users', 'permission' => 'roles.manage'],
                             ['name' => 'Role manager', 'path' => '/admin/roles', 'permission' => 'roles.manage'],
                             ['name' => 'Permission manager', 'path' => '/admin/permissions', 'permission' => 'permissions.manage'],
@@ -209,6 +213,7 @@ class MenuHelper
                         'subItems' => [
                             ['name' => 'Inventory dashboard', 'path' => '/admin/inventory', 'permission' => 'inventory.manage'],
                             ['name' => 'Material stock', 'path' => '/admin/inventory/materials', 'permission' => 'inventory.manage'],
+                            ['name' => 'Goods receipts (GRN)', 'path' => '/admin/goods-receipts', 'permission' => 'inventory.manage'],
                             ['name' => 'Transfers', 'path' => '/admin/stock/transfers', 'permission' => 'inventory.manage'],
                             ['name' => 'Deliveries & POD', 'path' => '/admin/deliveries/pod', 'permission' => 'control.warehouses'],
                             ['name' => 'Vehicle loads', 'path' => '/admin/vehicle-load', 'permission' => 'control.warehouses'],
@@ -250,6 +255,7 @@ class MenuHelper
                         'subItems' => [
                             ['name' => 'Accounting dashboard', 'path' => '/admin/accounting-dashboard', 'permission' => 'accounting.manage'],
                             ['name' => 'Customer invoices', 'path' => '/admin/finance', 'permission' => 'accounting.manage'],
+                            ['name' => 'Purchase bills', 'path' => '/admin/bills', 'permission' => 'accounting.manage'],
                             ['name' => 'Expenses', 'path' => '/admin/expenses', 'permission' => 'accounting.manage'],
                             ['name' => 'Salary distributions', 'path' => '/admin/salary-distributions', 'permission' => 'accounting.manage'],
                             ['name' => 'Chart of accounts', 'path' => '/admin/accounts', 'permission' => 'accounting.manage'],
@@ -328,6 +334,14 @@ SVG,
   <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.5"/>
   <path d="M4 12H2M22 12H20M12 4V2M12 22V20M6.2 6.2L4.8 4.8M19.2 19.2L17.8 17.8M17.8 6.2L19.2 4.8M4.8 19.2L6.2 17.8"
         stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+</svg>
+SVG,
+            'system' => <<<'SVG'
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect x="4" y="5" width="16" height="12" rx="2" stroke="currentColor" stroke-width="1.5"/>
+  <path d="M9 20H15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+  <path d="M12 17V20" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+  <path d="M8 9H16M8 12H13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
 </svg>
 SVG,
             'manufacturing' => <<<'SVG'

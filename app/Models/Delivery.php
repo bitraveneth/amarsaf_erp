@@ -33,4 +33,14 @@ class Delivery extends Model
     {
         return $this->belongsTo(Vehicle::class);
     }
+
+    public function pod()
+    {
+        return $this->hasOne(DeliveryPod::class);
+    }
+
+    public function items()
+    {
+        return $this->hasMany(DeliveryItem::class);
+    }
 }

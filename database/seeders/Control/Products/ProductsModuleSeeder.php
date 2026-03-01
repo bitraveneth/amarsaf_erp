@@ -8,10 +8,10 @@ use Illuminate\Database\Seeder;
  * Orchestrator for the Control → Products area.
  *
  * This seeder simply delegates to the more granular seeders:
- * - ProductsSeeder
- * - MaterialsSeeder
- * - PackagingTypesSeeder
  * - TaxVatClassesSeeder
+ * - PackagingTypesSeeder
+ * - MaterialsSeeder
+ * - ProductsSeeder
  * - PriceListsSeeder
  */
 class ProductsModuleSeeder extends Seeder
@@ -19,10 +19,10 @@ class ProductsModuleSeeder extends Seeder
     public function run(): void
     {
         $this->call([
-            ProductsSeeder::class,
-            MaterialsSeeder::class,
-            PackagingTypesSeeder::class,
             TaxVatClassesSeeder::class,
+            PackagingTypesSeeder::class,
+            MaterialsSeeder::class,
+            ProductsSeeder::class,
             PriceListsSeeder::class,
         ]);
     }

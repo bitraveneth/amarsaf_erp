@@ -387,6 +387,54 @@
             </div>
         </div>
     @endif
+
+    @if($run->materialIssues->isNotEmpty())
+        <div class="rounded-2xl border border-gray-200 bg-white shadow-theme-sm dark:border-gray-800 dark:bg-gray-900">
+            <div class="border-b border-gray-100 px-6 py-4 dark:border-gray-800">
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white">Material Issue Log</h3>
+                <p class="text-xs text-gray-500 dark:text-gray-400">Trace of raw material consumption captured during stock confirmation.</p>
+            </div>
+            <div class="p-6 space-y-5">
+                @foreach($run->materialIssues as $issue)
+                    <div class="rounded-xl border border-gray-200 dark:border-gray-800">
+                        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 px-4 py-3 dark:border-gray-800">
+                            <div class="text-sm text-gray-700 dark:text-gray-300">
+                                Issued at {{ optional($issue->issued_at)->format('d M Y H:i') }}
+                                @if($issue->issuer)
+                                    by {{ $issue->issuer->name }}
+                                @endif
+                            </div>
+                            <div class="text-xs text-gray-500 dark:text-gray-400">{{ $issue->items->count() }} lines</div>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-800">
+                                <thead>
+                                    <tr class="text-left text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                                        <th class="px-4 py-2">Component</th>
+                                        <th class="px-4 py-2">Batch</th>
+                                        <th class="px-4 py-2 text-right">Qty</th>
+                                        <th class="px-4 py-2 text-right">Unit Cost</th>
+                                        <th class="px-4 py-2 text-right">Line Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                                    @foreach($issue->items as $item)
+                                        <tr>
+                                            <td class="px-4 py-2 text-sm text-gray-800 dark:text-gray-200">{{ $item->component->name ?? '—' }}</td>
+                                            <td class="px-4 py-2 text-sm text-gray-700 dark:text-gray-300">{{ $item->batch->batch_code ?? '—' }}</td>
+                                            <td class="px-4 py-2 text-right text-sm text-gray-700 dark:text-gray-300">{{ number_format($item->quantity, 4) }}</td>
+                                            <td class="px-4 py-2 text-right text-sm text-gray-700 dark:text-gray-300">{{ $item->unit_cost !== null ? number_format($item->unit_cost, 4) : '—' }}</td>
+                                            <td class="px-4 py-2 text-right text-sm font-medium text-gray-900 dark:text-white">{{ $item->line_total !== null ? number_format($item->line_total, 2) : '—' }}</td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+        </div>
+    @endif
 </div>
 
 @push('styles')

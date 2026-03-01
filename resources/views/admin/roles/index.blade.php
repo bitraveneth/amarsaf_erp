@@ -12,7 +12,7 @@
                 View all users and adjust their roles from a single place. Super admin can also define new roles.
             </p>
         </div>
-        @if(auth()->user()->role === 'super_admin')
+        @if(auth()->user()?->hasRole('super_admin'))
             <button
                 type="button"
                 @click="showCreateRole = true"
@@ -49,7 +49,7 @@
         @endforeach
     </div>
     {{-- Create role modal --}}
-    @if(auth()->user()->role === 'super_admin')
+    @if(auth()->user()?->hasRole('super_admin'))
         <div
             x-show="showCreateRole"
             x-cloak
@@ -188,16 +188,22 @@
                         </td>
                         <td class="px-4 py-3 align-top">
                             @php
-                                $label = $roles[$user->role] ?? ucfirst($user->role ?? 'Unknown');
+                                $roleKeys = $user->roleKeys();
                             @endphp
-                            <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-300">
-                                {{ $label }}
-                            </span>
+                            <div class="flex flex-wrap gap-1">
+                                @forelse($roleKeys as $roleKey)
+                                    <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-300">
+                                        {{ $roles[$roleKey] ?? ucfirst(str_replace('_', ' ', $roleKey)) }}
+                                    </span>
+                                @empty
+                                    <span class="text-xs text-gray-400">Unknown</span>
+                                @endforelse
+                            </div>
                         </td>
                         <td class="px-4 py-3 align-top text-right">
                             <div class="flex flex-col items-end gap-2 sm:flex-row sm:justify-end">
                                 <a
-                                    href="{{ route('admin.permissions.index', ['role' => $user->role]) }}"
+                                    href="{{ route('admin.permissions.index', ['role' => $user->role ?? ($roleKeys[0] ?? null)]) }}"
                                     class="inline-flex items-center rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-[11px] font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800"
                                 >
                                     View permissions

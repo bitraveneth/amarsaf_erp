@@ -14,12 +14,9 @@ class BankReconciliationModuleSeeder extends Seeder
 {
     public function run(): void
     {
-        // If the database already has receipts, keep the original
-        // behaviour of marking everything up to today as reconciled.
+        // Never mutate existing receipts in a seeder.
+        // If real data exists, exit safely.
         if (Receipt::query()->exists()) {
-            Receipt::whereDate('received_at', '<=', now()->toDateString())
-                ->update(['reconciled' => true]);
-
             return;
         }
 

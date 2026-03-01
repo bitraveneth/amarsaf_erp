@@ -66,7 +66,7 @@ class ProductionOrdersModuleSeeder extends Seeder
         $supervisor      = Employee::where('name', 'Production Manager')->first();
         $adminUser       = User::where('role', 'admin')->first();
         $qcUser          = User::where('role', 'qc_officer')->first();
-        $warehouseUser   = User::where('role', 'warehouse_manager')->first();
+        $warehouseUser   = User::where('role', 'warehouse_officer')->first();
         $approverUserId  = optional($qcUser ?: $adminUser)->id;
         $confirmerUserId = optional($warehouseUser ?: $adminUser)->id;
 

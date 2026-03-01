@@ -151,15 +151,24 @@
                                 </svg>
                             </div>
                             @php
-                                $roles = [
-                                    'super_admin'        => 'Super admin',
-                                    'warehouse_manager'  => 'Warehouse manager',
-                                    'production_manager' => 'Production manager',
-                                    'sales_manager'      => 'Sales manager',
-                                    'qc_officer'         => 'QC officer',
-                                    'employee'           => 'Field / office employee',
-                                    'admin'              => 'Admin',
-                                ];
+                                $roles = \App\Models\Role::query()
+                                    ->whereNotIn('key', ['warehouse_manager', 'production_manager', 'sales_manager', 'employee'])
+                                    ->orderBy('label')
+                                    ->pluck('label', 'key')
+                                    ->all();
+                                if (empty($roles)) {
+                                    $roles = [
+                                        'super_admin'          => 'Super admin',
+                                        'admin'                => 'Admin',
+                                        'purchase_executive'   => 'Purchase executive',
+                                        'warehouse_officer'    => 'Warehouse officer',
+                                        'production_officer'   => 'Production officer',
+                                        'sales_officer'        => 'Sales officer',
+                                        'delivery_coordinator' => 'Delivery coordinator',
+                                        'accounts_officer'     => 'Accounts officer',
+                                        'qc_officer'           => 'QC officer',
+                                    ];
+                                }
                             @endphp
                             <select id="role" 
                                     name="role" 

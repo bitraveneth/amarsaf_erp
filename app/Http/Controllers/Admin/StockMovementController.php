@@ -12,13 +12,25 @@ class StockMovementController extends Controller
 {
     public function index()
     {
-        $movements = StockMovement::with(['stockEntry.product', 'stockEntry.warehouse', 'order'])->latest()->paginate(12);
+        $warehouseIds = auth()->user()?->accessibleWarehouseIds();
+        $movements = StockMovement::with(['stockEntry.product', 'stockEntry.warehouse', 'order'])
+            ->when($warehouseIds !== null, function ($query) use ($warehouseIds) {
+                $query->whereHas('stockEntry', function ($stockQuery) use ($warehouseIds) {
+                    $stockQuery->whereIn('warehouse_id', $warehouseIds);
+                });
+            })
+            ->latest()
+            ->paginate(12);
         return view('admin.stock.movements', compact('movements'));
     }
 
     public function create()
     {
+        $warehouseIds = auth()->user()?->accessibleWarehouseIds();
         $entries = StockEntry::with(['product', 'warehouse'])
+            ->when($warehouseIds !== null, function ($query) use ($warehouseIds) {
+                $query->whereIn('warehouse_id', $warehouseIds);
+            })
             ->where('status', 'available')
             ->orderByDesc('updated_at')
             ->get();
@@ -34,7 +46,12 @@ class StockMovementController extends Controller
             return in_array($type, ['raw', 'service']);
         });
 
-        $warehouses = Warehouse::orderBy('name')->get();
+        $warehouses = Warehouse::query()
+            ->when($warehouseIds !== null, function ($query) use ($warehouseIds) {
+                $query->whereIn('id', $warehouseIds);
+            })
+            ->orderBy('name')
+            ->get();
         return view('admin.stock.transfer', compact('materialEntries', 'finishedEntries', 'warehouses'));
     }
 
@@ -48,6 +65,9 @@ class StockMovementController extends Controller
         ]);
 
         $entry = StockEntry::findOrFail($data['entry_id']);
+        $this->ensureStockEntryAccess($entry);
+        $this->ensureWarehouseAccess((int) $data['destination_warehouse_id']);
+
         if ($entry->quantity < $data['quantity']) {
             return back()->withErrors(['quantity' => 'Cannot transfer more than available quantity.']);
         }
@@ -82,6 +102,7 @@ class StockMovementController extends Controller
 
     public function writeOffForm(Request $request)
     {
+        $warehouseIds = auth()->user()?->accessibleWarehouseIds();
         $selectedEntryId = $request->input('entry_id');
         $filterWarehouse = $request->input('warehouse_id');
         $filterProduct   = $request->input('product_id');
@@ -89,6 +110,9 @@ class StockMovementController extends Controller
         $defaultReason   = $request->input('reason');
 
         $entries = StockEntry::with(['product', 'warehouse'])
+            ->when($warehouseIds !== null, function ($query) use ($warehouseIds) {
+                $query->whereIn('warehouse_id', $warehouseIds);
+            })
             ->where('status', 'available')
             ->when($filterWarehouse, function ($q) use ($filterWarehouse) {
                 $q->where('warehouse_id', $filterWarehouse);
@@ -115,6 +139,7 @@ class StockMovementController extends Controller
         ]);
 
         $entry = StockEntry::findOrFail($data['entry_id']);
+        $this->ensureStockEntryAccess($entry);
 
         if ($entry->quantity < $data['quantity']) {
             return back()->withErrors(['quantity' => 'Cannot write off more than available quantity.']);
@@ -135,6 +160,8 @@ class StockMovementController extends Controller
 
     public function writeOffEntry(StockEntry $entry)
     {
+        $this->ensureStockEntryAccess($entry);
+
         if ($entry->quantity <= 0) {
             return back()->with('status', 'Entry already has zero quantity.');
         }
@@ -152,5 +179,17 @@ class StockMovementController extends Controller
         ]);
 
         return back()->with('status', 'Batch written off as expired.');
+    }
+
+    protected function ensureWarehouseAccess(int $warehouseId): void
+    {
+        if (! auth()->user()?->canAccessWarehouse($warehouseId)) {
+            abort(403, 'You do not have access to this warehouse.');
+        }
+    }
+
+    protected function ensureStockEntryAccess(StockEntry $entry): void
+    {
+        $this->ensureWarehouseAccess((int) $entry->warehouse_id);
     }
 }

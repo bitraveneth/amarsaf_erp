@@ -35,4 +35,9 @@ class OrderItem extends Model
     {
         return $this->belongsTo(Product::class);
     }
+
+    public function deliveryItems()
+    {
+        return $this->hasMany(DeliveryItem::class);
+    }
 }

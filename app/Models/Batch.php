@@ -38,6 +38,16 @@ class Batch extends Model
         return $this->hasMany(StockEntry::class);
     }
 
+    public function deliveryItems()
+    {
+        return $this->hasMany(DeliveryItem::class);
+    }
+
+    public function productionMaterialIssueItems()
+    {
+        return $this->hasMany(ProductionMaterialIssueItem::class);
+    }
+
     /**
      * All stock movements related to this batch via its stock entries.
      */

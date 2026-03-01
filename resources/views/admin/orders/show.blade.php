@@ -266,10 +266,8 @@
                     </button>
                 </form>
 
-                @php
-                    $role = auth()->user()->role ?? 'admin';
-                @endphp
-                @if(in_array($role, ['admin','warehouse_manager']) && $order->status === 'picked')
+                @php($canConfirmPacking = auth()->user()?->hasAnyRole(['admin', 'super_admin', 'warehouse_officer']))
+                @if($canConfirmPacking && $order->status === 'picked')
                     <form action="{{ route('admin.orders.status.update', $order) }}" method="POST">
                         @csrf
                         @method('PATCH')

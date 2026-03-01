@@ -65,5 +65,16 @@ class MenuStructureSeeder extends Seeder
                 }
             }
         }
+
+        // Cleanup deprecated duplicate link:
+        // "Supplier prices" previously pointed to the same path as "Suppliers".
+        MenuItem::where('name', 'Supplier prices')
+            ->where('path', '/admin/suppliers')
+            ->delete();
+
+        // Cleanup misplaced warehouse submenu.
+        MenuItem::where('name', 'Expenses & allowances')
+            ->where('path', '/admin/expenses')
+            ->delete();
     }
 }

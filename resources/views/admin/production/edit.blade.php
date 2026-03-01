@@ -49,8 +49,7 @@
     </div>
 
     @php
-        $role = auth()->user()->role ?? 'admin';
-        $canEditQc = in_array($role, ['admin', 'qc_officer']);
+        $canEditQc = auth()->user()?->hasAnyRole(['admin', 'super_admin', 'qc_officer']);
     @endphp
 
     <!-- Form Card -->

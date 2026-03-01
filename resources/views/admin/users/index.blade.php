@@ -81,19 +81,45 @@
                     <th class="px-4 py-2 text-left">Name</th>
                     <th class="px-4 py-2 text-left">Email</th>
                     <th class="px-4 py-2 text-left">Role</th>
+                    <th class="px-4 py-2 text-left">Access summary</th>
                     <th class="px-4 py-2 text-left">Linked employee</th>
                     <th class="px-4 py-2 text-right">Actions</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
                 @forelse($users as $user)
+                    @php
+                        $roleKeys = $user->roleKeys();
+                        $roleCount = count($roleKeys);
+                        $scopeCount = (int) ($user->warehouse_scopes_count ?? 0);
+                        $overrideCount = (int) ($user->permission_overrides_count ?? 0);
+                    @endphp
                     <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/40">
                         <td class="px-4 py-2 text-gray-900 dark:text-white">{{ $user->name }}</td>
                         <td class="px-4 py-2 text-gray-600 dark:text-gray-300">{{ $user->email }}</td>
                         <td class="px-4 py-2 text-gray-600 dark:text-gray-300">
-                            <span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-200">
-                                {{ $roles[$user->role] ?? $user->role ?? '—' }}
-                            </span>
+                            <div class="flex flex-wrap gap-1">
+                                @forelse($roleKeys as $roleKey)
+                                    <span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-200">
+                                        {{ $roles[$roleKey] ?? ucfirst(str_replace('_', ' ', $roleKey)) }}
+                                    </span>
+                                @empty
+                                    <span class="text-xs text-gray-400">—</span>
+                                @endforelse
+                            </div>
+                        </td>
+                        <td class="px-4 py-2 text-gray-600 dark:text-gray-300">
+                            <div class="flex flex-wrap gap-1">
+                                <span class="inline-flex items-center rounded-full bg-brand-50 px-2 py-0.5 text-[11px] font-medium text-brand-700 dark:bg-brand-500/20 dark:text-brand-300">
+                                    Roles {{ $roleCount }}
+                                </span>
+                                <span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-200">
+                                    Scope {{ $hasWarehouseScopesTable ? $scopeCount : '—' }}
+                                </span>
+                                <span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-200">
+                                    Override {{ $hasUserPermissionsTable ? $overrideCount : '—' }}
+                                </span>
+                            </div>
                         </td>
                         <td class="px-4 py-2 text-gray-600 dark:text-gray-300">
                             @if($user->employee)
@@ -103,14 +129,19 @@
                             @endif
                         </td>
                         <td class="px-4 py-2 text-right text-xs">
-                            <a href="{{ route('admin.roles.index', ['q' => $user->email]) }}" class="inline-flex items-center rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800">
-                                Manage role
-                            </a>
+                            <div class="inline-flex items-center gap-2">
+                                <a href="{{ route('admin.users.access.edit', $user) }}" class="inline-flex items-center rounded-lg border border-brand-200 bg-brand-50 px-3 py-1.5 text-xs font-medium text-brand-700 hover:bg-brand-100 dark:border-brand-800 dark:bg-brand-900/30 dark:text-brand-300 dark:hover:bg-brand-900/50">
+                                    Access
+                                </a>
+                                <a href="{{ route('admin.roles.index', ['q' => $user->email]) }}" class="inline-flex items-center rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800">
+                                    Role
+                                </a>
+                            </div>
                         </td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="5" class="px-4 py-6 text-center text-sm text-gray-500 dark:text-gray-400">
+                        <td colspan="6" class="px-4 py-6 text-center text-sm text-gray-500 dark:text-gray-400">
                             No users found for this filter.
                         </td>
                     </tr>

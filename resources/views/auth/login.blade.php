@@ -164,6 +164,20 @@
                         <button type="button"
                                 class="inline-flex items-center rounded-full bg-gray-200 px-3 py-1 font-medium text-gray-800 hover:bg-brand-100 hover:text-brand-700 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-brand-500/20 dark:hover:text-brand-300"
                                 data-demo-login
+                                data-email="purchase@saferpv.local"
+                                data-password="password">
+                            purchase@saferpv.local
+                        </button>
+                        <button type="button"
+                                class="inline-flex items-center rounded-full bg-gray-200 px-3 py-1 font-medium text-gray-800 hover:bg-brand-100 hover:text-brand-700 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-brand-500/20 dark:hover:text-brand-300"
+                                data-demo-login
+                                data-email="accounts@saferpv.local"
+                                data-password="password">
+                            accounts@saferpv.local
+                        </button>
+                        <button type="button"
+                                class="inline-flex items-center rounded-full bg-gray-200 px-3 py-1 font-medium text-gray-800 hover:bg-brand-100 hover:text-brand-700 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-brand-500/20 dark:hover:text-brand-300"
+                                data-demo-login
                                 data-email="qc@saferpv.local"
                                 data-password="password">
                             qc@saferpv.local
