@@ -200,7 +200,7 @@
             <div class="flex items-center gap-2 2xsm:gap-3">
                 {{-- Clock --}}
                 <div
-                    class="relative block"
+                    class="relative hidden md:block"
                     x-data="{
                         open: true,
                         dragging: false,
