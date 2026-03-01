@@ -270,8 +270,8 @@
                             const width = popup.offsetWidth || 256;
                             const height = popup.offsetHeight || 320;
                             const vp = this.viewportSize();
-                            this.posX = (vp.w - width) / 2;
-                            this.posY = (vp.h - height) / 2;
+                            this.posX = vp.w - width - 16;
+                            this.posY = vp.h - height - 16;
                             this.clampToViewport();
                         },
                         startDrag(event) {
@@ -296,6 +296,24 @@
                                 x: this.posX,
                                 y: this.posY,
                             }));
+                        },
+                        persistOpenState() {
+                            try {
+                                localStorage.setItem(this.storageKeyOpen, this.open ? '1' : '0');
+                            } catch (e) {}
+                        },
+                        loadOpenState() {
+                            try {
+                                const raw = localStorage.getItem(this.storageKeyOpen);
+                                if (raw === null) {
+                                    // First-time visit: default to visible.
+                                    localStorage.setItem(this.storageKeyOpen, '1');
+                                    return true;
+                                }
+                                return raw === '1';
+                            } catch (e) {
+                                return true;
+                            }
                         },
                         loadPosition() {
                             try {
@@ -358,6 +376,7 @@
                             setInterval(() => this.updateClock(), 1000);
                             window.addEventListener('resize', () => this.clampToViewport());
                             this.$watch('open', (value) => {
+                                this.persistOpenState();
                                 if (value) {
                                     this.placePopupFromStorageOrCenter();
                                 }
@@ -368,7 +387,10 @@
                                 }
                             });
 
-                            this.open = true;
+                            this.open = this.loadOpenState();
+                            if (this.open) {
+                                this.placePopupFromStorageOrCenter();
+                            }
                         }
                     }"
                     @mousemove.window="onDrag($event)"
@@ -411,13 +433,13 @@
                             x-transition:leave="transition ease-in duration-90"
                             x-transition:leave-start="opacity-100"
                             x-transition:leave-end="opacity-0"
-                            class="fixed z-[99999] w-44 max-w-[calc(100vw-1rem)] bg-transparent p-0 shadow-none"
+                            class="group/clock fixed z-[99999] w-44 max-w-[calc(100vw-1rem)] bg-transparent p-0 shadow-none"
                             :style="`left:${posX}px; top:${posY}px;`"
                         >
                             <button
                                 type="button"
                                 @click.stop="open = false"
-                                class="absolute right-2 top-2 z-10 flex h-6 w-6 items-center justify-center rounded-md border border-error-300 bg-error-50 text-error-600 hover:bg-error-100 hover:text-error-700 dark:border-error-700 dark:bg-error-500/10 dark:text-error-400 dark:hover:bg-error-500/20 dark:hover:text-error-300"
+                                class="pointer-events-none absolute right-2 top-2 z-10 flex h-6 w-6 items-center justify-center rounded-md border border-error-300 bg-error-50 text-error-600 opacity-0 transition-opacity duration-150 hover:bg-error-100 hover:text-error-700 group-hover/clock:pointer-events-auto group-hover/clock:opacity-100 dark:border-error-700 dark:bg-error-500/10 dark:text-error-400 dark:hover:bg-error-500/20 dark:hover:text-error-300"
                                 aria-label="Close clock popup"
                                 title="Close"
                             >
@@ -426,7 +448,7 @@
                                 </svg>
                             </button>
 
-                            <div class="mx-auto h-40 w-40 cursor-move select-none touch-none rounded-full border-4 border-gray-200 bg-gray-50 shadow-inner dark:border-gray-700 dark:bg-gray-800 relative"
+                            <div class="mx-auto h-40 w-40 cursor-move select-none touch-none rounded-full border-4 border-gray-200 bg-white/10 backdrop-blur-[2px] shadow-inner dark:border-gray-700 dark:bg-white/5 relative"
                                  @mousedown.prevent="startDrag($event)"
                                  @touchstart.prevent="startDrag($event)">
                                 <template x-for="n in 12" :key="n">
