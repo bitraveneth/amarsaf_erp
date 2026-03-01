@@ -204,6 +204,7 @@
                     x-data="{
                         open: true,
                         dragging: false,
+                        isMobileView: false,
                         storageKeyOpen: 'headerAnalogClockOpen',
                         storageKeyPos: 'headerAnalogClockPos',
                         nowDate: '',
@@ -231,6 +232,9 @@
                                 w: document.documentElement.clientWidth || window.innerWidth,
                                 h: document.documentElement.clientHeight || window.innerHeight,
                             };
+                        },
+                        syncViewportMode() {
+                            this.isMobileView = window.matchMedia('(max-width: 767px)').matches;
                         },
                         clampToViewport() {
                             const popup = this.popupEl();
@@ -298,6 +302,7 @@
                             }));
                         },
                         persistOpenState() {
+                            if (this.isMobileView) return;
                             try {
                                 localStorage.setItem(this.storageKeyOpen, this.open ? '1' : '0');
                             } catch (e) {}
@@ -333,7 +338,7 @@
                             let frames = 0;
                             const tick = () => {
                                 const popup = this.popupEl();
-                                if (!this.open || !popup || this.dragging) return;
+                                if (!this.open || this.isMobileView || !popup || this.dragging) return;
                                 if ((popup.offsetWidth || 0) === 0 || (popup.offsetHeight || 0) === 0) {
                                     if (frames < 24) {
                                         frames += 1;
@@ -374,7 +379,25 @@
                             });
                             this.updateClock();
                             setInterval(() => this.updateClock(), 1000);
-                            window.addEventListener('resize', () => this.clampToViewport());
+                            this.syncViewportMode();
+                            window.addEventListener('resize', () => {
+                                const wasMobile = this.isMobileView;
+                                this.syncViewportMode();
+
+                                if (!wasMobile && this.isMobileView) {
+                                    this.open = false;
+                                    return;
+                                }
+
+                                if (wasMobile && !this.isMobileView) {
+                                    this.open = this.loadOpenState();
+                                    if (this.open) {
+                                        this.$nextTick(() => this.placePopupFromStorageOrCenter());
+                                    }
+                                }
+
+                                this.clampToViewport();
+                            });
                             this.$watch('open', (value) => {
                                 this.persistOpenState();
                                 if (value) {
@@ -387,7 +410,7 @@
                                 }
                             });
 
-                            this.open = this.loadOpenState();
+                            this.open = this.isMobileView ? false : this.loadOpenState();
                             if (this.open) {
                                 this.placePopupFromStorageOrCenter();
                             }
@@ -401,7 +424,7 @@
                     <button
                         type="button"
                         x-ref="clockBtn"
-                        x-show="!open && !$store.loader.show"
+                        x-show="!isMobileView && !open && !$store.loader.show"
                         @click="
                             if (!open) {
                                 const b = $refs.clockBtn.getBoundingClientRect();
@@ -426,7 +449,7 @@
                     <template x-teleport="body">
                         <div
                             id="analog-clock-popup"
-                            x-show="open && !$store.loader.show"
+                            x-show="!isMobileView && open && !$store.loader.show"
                             x-transition:enter="transition ease-out duration-120"
                             x-transition:enter-start="opacity-0"
                             x-transition:enter-end="opacity-100"
