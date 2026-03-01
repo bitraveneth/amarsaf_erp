@@ -27,9 +27,14 @@ jobs:
       - name: Add VPS host key
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_HOST_KEY: ${{ secrets.VPS_HOST_KEY }}
         run: |
           mkdir -p ~/.ssh
-          ssh-keyscan -H "$VPS_HOST" >> ~/.ssh/known_hosts
+          if [ -z "$VPS_HOST_KEY" ]; then
+            echo "Missing VPS_HOST_KEY secret. Refusing unpinned host key deployment."
+            exit 1
+          fi
+          echo "$VPS_HOST $VPS_HOST_KEY" >> ~/.ssh/known_hosts
 
       - name: Deploy to VPS
         env:
@@ -59,6 +64,15 @@ jobs:
             # Ensure APP_KEY exists once
             if [ -f .env ] && ( ! grep -q '^APP_KEY=' .env || grep -q '^APP_KEY=$' .env ); then
               php artisan key:generate --force
+            fi
+
+            # Enforce non-debug runtime on server
+            if [ -f .env ]; then
+              if grep -q '^APP_DEBUG=' .env; then
+                sed -i 's/^APP_DEBUG=.*/APP_DEBUG=false/' .env
+              else
+                echo 'APP_DEBUG=false' >> .env
+              fi
             fi
 
             # Pull latest code safely (no hard reset, no data loss)

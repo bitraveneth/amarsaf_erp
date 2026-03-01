@@ -9,8 +9,8 @@
         @endguest
         @auth
             @php
-                $alertCollection = isset($alerts) ? collect($alerts)->values() : collect();
-                $alertCount = $alertCollection->count();
+                $alertCollection = isset($headerAlerts) ? collect($headerAlerts)->values() : collect();
+                $alertCount = isset($headerAlertCount) ? (int) $headerAlertCount : $alertCollection->count();
                 $trayAlerts = $alertCollection->take(10);
                 $user = auth()->user();
                 $labelSource = $user->name ?: $user->email;
@@ -19,13 +19,13 @@
             <div class="header-alert">
                 <button type="button"
                         class="header-notify header-alert-toggle {{ $alertCount ? '' : 'header-notify-empty' }}"
-                        title="View system alerts">
+                        title="View notifications">
                     <span class="header-notify-icon" aria-hidden="true">🔔</span>
-                    <span class="header-notify-label">Alerts</span>
+                    <span class="header-notify-label">Notifications</span>
                     <span class="header-notify-count">{{ $alertCount }}</span>
                 </button>
                 <div class="header-alert-menu">
-                    <div class="header-alert-title">System alerts</div>
+                    <div class="header-alert-title">Notifications</div>
                     @if($alertCount)
                         <ul class="header-alert-list">
                             @foreach($trayAlerts as $alert)

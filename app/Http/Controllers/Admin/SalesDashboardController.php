@@ -16,7 +16,11 @@ class SalesDashboardController extends Controller
         $startOfMonth = $today->copy()->startOfMonth();
         $endOfMonth = $today->copy()->endOfMonth();
 
-        $invoices = Invoice::with(['order.agent', 'receipts', 'creditNotes'])
+        $invoices = Invoice::query()
+            ->select(['id', 'order_id', 'issued_at', 'net_total', 'vat_amount', 'withholding'])
+            ->with(['order.agent'])
+            ->withSum('receipts', 'amount')
+            ->withSum('creditNotes', 'amount')
             ->whereBetween('issued_at', [$startOfMonth, $endOfMonth])
             ->orderByDesc('issued_at')
             ->get();
@@ -31,8 +35,8 @@ class SalesDashboardController extends Controller
         $outstanding = $invoices->sum(function (Invoice $invoice) {
             $grossTotal = $invoice->net_total + $invoice->vat_amount;
             $cashTotal = $grossTotal - $invoice->withholding;
-            $credited = $invoice->creditNotes->sum('amount');
-            $paid = $invoice->receipts->sum('amount');
+            $credited = (float) ($invoice->credit_notes_sum_amount ?? 0);
+            $paid = (float) ($invoice->receipts_sum_amount ?? 0);
 
             return max($cashTotal - $credited - $paid, 0);
         });
@@ -83,4 +87,3 @@ class SalesDashboardController extends Controller
         ]);
     }
 }
-

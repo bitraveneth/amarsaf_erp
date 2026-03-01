@@ -53,6 +53,7 @@ class MenuHelper
                             $subItems->push([
                                 'name' => $child->name,
                                 'path' => $child->path,
+                                'permission' => $child->permission,
                             ]);
 
                             $grandChildren = $child->children
@@ -64,6 +65,7 @@ class MenuHelper
                                 $subItems->push([
                                     'name' => $grandchild->name,
                                     'path' => $grandchild->path,
+                                    'permission' => $grandchild->permission,
                                 ]);
                             }
                         }
@@ -154,9 +156,11 @@ class MenuHelper
                         'permission' => 'control.employees',
                         'subItems' => [
                             ['name' => 'Employees', 'path' => '/admin/employees', 'permission' => 'control.employees'],
-                            ['name' => 'Teams & hierarchy', 'path' => '/admin/teams', 'permission' => 'control.employees'],
-                            ['name' => 'Targets & KPIs', 'path' => '/admin/targets', 'permission' => 'control.employees'],
+                            ['name' => 'Contracts', 'path' => '/admin/contracts', 'permission' => 'control.employees'],
+                            ['name' => 'Allowances', 'path' => '/admin/allowances', 'permission' => 'control.employees'],
+                            ['name' => 'Equipment', 'path' => '/admin/equipment', 'permission' => 'control.employees'],
                             ['name' => 'Leaves', 'path' => '/admin/leaves', 'permission' => 'control.employees'],
+                            ['name' => 'Location logs', 'path' => '/admin/locations', 'permission' => 'control.employees'],
                             ['name' => 'Badges', 'path' => '/admin/badges', 'permission' => 'control.employees'],
                         ],
                     ],
@@ -206,10 +210,10 @@ class MenuHelper
                             ['name' => 'Inventory dashboard', 'path' => '/admin/inventory', 'permission' => 'inventory.manage'],
                             ['name' => 'Material stock', 'path' => '/admin/inventory/materials', 'permission' => 'inventory.manage'],
                             ['name' => 'Transfers', 'path' => '/admin/stock/transfers', 'permission' => 'inventory.manage'],
-                            ['name' => 'Deliveries & POD', 'path' => '/admin/deliveries/pod', 'permission' => 'inventory.manage'],
-                            ['name' => 'Vehicle loads', 'path' => '/admin/vehicle-load', 'permission' => 'inventory.manage'],
-                            ['name' => 'Packing slips', 'path' => '/admin/deliveries/packing-slips', 'permission' => 'inventory.manage'],
-                            ['name' => 'Picking lists', 'path' => '/admin/orders-picking', 'permission' => 'inventory.manage'],
+                            ['name' => 'Deliveries & POD', 'path' => '/admin/deliveries/pod', 'permission' => 'control.warehouses'],
+                            ['name' => 'Vehicle loads', 'path' => '/admin/vehicle-load', 'permission' => 'control.warehouses'],
+                            ['name' => 'Packing slips', 'path' => '/admin/deliveries/packing-slips', 'permission' => 'control.warehouses'],
+                            ['name' => 'Picking lists', 'path' => '/admin/orders-picking', 'permission' => 'sales.manage'],
                             ['name' => 'Inventory adjustments', 'path' => '/admin/stock/audit', 'permission' => 'inventory.manage'],
                         ],
                     ],

@@ -1,7 +1,57 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="max-w-6xl mx-auto space-y-8">
+@php
+    // Normalise variables early so header counts are always defined.
+    $alerts = $alerts ?? [];
+    $userNotifications = $userNotifications ?? collect();
+    $systemAlertCount = count($alerts);
+    $hasAlerts = $systemAlertCount > 0;
+    $hasNotifications = $userNotifications->isNotEmpty();
+    $totalUnread = $userNotifications->whereNull('read_at')->count();
+    $totalRead = $userNotifications->whereNotNull('read_at')->count();
+    $unreadSystemAlertCount = collect($alerts)
+        ->filter(function ($alert) {
+            if (!is_array($alert)) {
+                return false;
+            }
+            return !($alert['is_read'] ?? false);
+        })
+        ->count();
+    $groupOrder = ['Today' => 0, 'Yesterday' => 1, 'Earlier' => 2];
+    $resolveGroupLabel = function ($dateValue) {
+        if (!$dateValue) {
+            return 'Earlier';
+        }
+        $date = \Carbon\Carbon::parse($dateValue);
+        if ($date->isToday()) {
+            return 'Today';
+        }
+        if ($date->isYesterday()) {
+            return 'Yesterday';
+        }
+        return 'Earlier';
+    };
+    $groupAndSort = function ($collection, $dateResolver) use ($resolveGroupLabel, $groupOrder) {
+        return collect($collection)
+            ->groupBy(function ($item) use ($dateResolver, $resolveGroupLabel) {
+                return $resolveGroupLabel($dateResolver($item));
+            })
+            ->sortBy(function ($items, $label) use ($groupOrder) {
+                return $groupOrder[$label] ?? 99;
+            });
+    };
+    $groupedSystemAlerts = $groupAndSort($alerts, function ($alert) {
+        return is_array($alert) ? ($alert['created_at'] ?? null) : null;
+    });
+    $groupedUserNotifications = $groupAndSort($userNotifications, function ($notification) {
+        return $notification->created_at ?? null;
+    });
+    $serverUnreadCount = isset($totalUnreadCount)
+        ? (int) $totalUnreadCount
+        : ($unreadSystemAlertCount + $totalUnread);
+@endphp
+<div id="notifications-page-root" data-server-unread-count="{{ $serverUnreadCount }}" class="max-w-6xl mx-auto space-y-8">
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -23,57 +73,23 @@
                             System alerts and updates across {{ config('app.name') }}
                         </p>
                     </div>
-                    @if(!empty($alerts))
-                        <span class="mt-2 inline-flex items-center rounded-full bg-gradient-to-r from-brand-500 to-brand-600 px-4 py-1.5 text-xs font-semibold text-white shadow-md sm:mt-0">
-                            {{ count($alerts) }} {{ Str::plural('Notification', count($alerts)) }}
-                        </span>
-                    @endif
                 </div>
             </div>
         </div>
         
-        @if(isset($userNotifications) && method_exists($userNotifications, 'links') && $userNotifications->isNotEmpty())
+        @if(isset($userNotifications) && $userNotifications->isNotEmpty())
         <div class="flex flex-wrap items-center justify-start gap-2 sm:justify-end">
-            <button onclick="window.location.reload()" 
-                    class="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white/80 backdrop-blur-sm px-4 py-2.5 text-sm font-medium text-gray-700 shadow-xs hover:bg-white hover:shadow-sm dark:border-gray-800 dark:bg-gray-900/80 dark:text-gray-300 dark:hover:bg-gray-900 transition-all duration-200">
-                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <button type="button" class="js-notifications-refresh inline-flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200 bg-white/80 text-gray-700 shadow-xs transition-all duration-200 hover:bg-white hover:shadow-sm dark:border-gray-800 dark:bg-gray-900/80 dark:text-gray-300 dark:hover:bg-gray-900"
+                    aria-label="Refresh notifications"
+                    title="Refresh notifications">
+                <svg class="h-4 w-4 js-refresh-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
                 </svg>
-                Refresh
             </button>
             
-            @if(Route::has('admin.notifications.mark-all-read'))
-            <a href="{{ route('admin.notifications.mark-all-read') }}" 
-               class="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-brand-500 to-brand-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md hover:from-brand-600 hover:to-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500/50 transition-all duration-200">
-                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-                </svg>
-                Mark All as Read
-            </a>
-            @endif
-            
-            @if(Route::has('admin.notifications.mark-all-unread'))
-            <a href="{{ route('admin.notifications.mark-all-unread') }}" 
-               class="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white/80 backdrop-blur-sm px-4 py-2.5 text-sm font-medium text-gray-700 shadow-xs hover:bg-white hover:shadow-sm dark:border-gray-800 dark:bg-gray-900/80 dark:text-gray-300 dark:hover:bg-gray-900 transition-all duration-200">
-                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h18v18H3V3z"/>
-                </svg>
-                Mark All as Unread
-            </a>
-            @endif
         </div>
         @endif
     </div>
-
-    @php
-        // Normalise variables
-        $alerts = $alerts ?? [];
-        $userNotifications = $userNotifications ?? collect();
-        $hasAlerts = !empty($alerts);
-        $hasNotifications = $userNotifications->isNotEmpty();
-        $totalUnread = $userNotifications->whereNull('read_at')->count();
-        $totalRead = $userNotifications->whereNotNull('read_at')->count();
-    @endphp
 
     @if(!$hasAlerts && !$hasNotifications)
         <!-- Empty State - Modern All Clear -->
@@ -95,12 +111,12 @@
                     Your notification center is quiet. No system alerts or notifications require your attention at this moment.
                 </p>
                 <div class="mt-8 flex items-center justify-center gap-4">
-                    <button onclick="window.location.reload()" 
-                            class="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-5 py-2.5 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition-all">
-                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <button type="button" class="js-notifications-refresh inline-flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-700 shadow-sm transition-all hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                            aria-label="Refresh notifications"
+                            title="Refresh notifications">
+                        <svg class="h-4 w-4 js-refresh-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
                         </svg>
-                        Check Again
                     </button>
                 </div>
             </div>
@@ -118,18 +134,23 @@
                                 </svg>
                             </div>
                             <div>
-                                <h2 class="text-lg font-semibold text-gray-900 dark:text-white">System Notifications</h2>
-                                <p class="text-xs text-gray-500 dark:text-gray-400">{{ count($alerts) }} active</p>
+                                <h2 class="text-lg font-semibold text-gray-900 dark:text-white">System Alerts</h2>
+                                <p class="text-xs text-gray-500 dark:text-gray-400"><span id="system-unread-section-count">{{ $unreadSystemAlertCount }}</span> unread</p>
                             </div>
                         </div>
                     </div>
 
-                    <div class="grid gap-3">
-                        @foreach($alerts as $index => $alert)
-                            @php
-                                $message = is_array($alert) ? ($alert['message'] ?? '') : $alert;
-                                $variant = is_array($alert) ? ($alert['variant'] ?? 'error') : 'error';
-                                $alertStyles = [
+                    <div class="space-y-5">
+                        @foreach($groupedSystemAlerts as $groupLabel => $groupAlerts)
+                            <div class="space-y-3">
+                                <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ $groupLabel }}</p>
+                                <div class="grid gap-3">
+                                    @foreach($groupAlerts as $index => $alert)
+                                        @php
+                                            $message = is_array($alert) ? ($alert['message'] ?? '') : $alert;
+                                            $variant = is_array($alert) ? ($alert['variant'] ?? 'error') : 'error';
+                                            $alertKey = is_array($alert) ? ($alert['key'] ?? null) : null;
+                                            $alertStyles = [
                                     'error' => [
                                         'ring' => 'border-error-300/60 bg-error-500/10 dark:border-error-700/60 dark:bg-error-500/12',
                                         'dot' => 'bg-error-500',
@@ -160,16 +181,47 @@
                                     'label' => 'Notice',
                                     'labelClass' => 'text-gray-600 dark:text-gray-300',
                                 ];
-                            @endphp
-                            <div class="rounded-xl border px-4 py-3 {{ $alertStyles['ring'] }}">
-                                <div class="mb-1.5 flex items-center justify-between gap-2">
-                                    <div class="flex items-center gap-2">
-                                        <span class="h-2 w-2 rounded-full {{ $alertStyles['dot'] }}"></span>
-                                        <span class="text-[11px] font-semibold uppercase tracking-wide {{ $alertStyles['labelClass'] }}">{{ $alertStyles['label'] }}</span>
-                                    </div>
-                                    <span class="text-[11px] text-gray-500 dark:text-gray-400">{{ now()->format('d M Y, H:i') }}</span>
-                                </div>
-                                <p class="leading-5 text-gray-800 dark:text-gray-100">{{ $message }}</p>
+                                $sourceLabel = is_array($alert)
+                                    ? ($alert['source'] ?? $alertStyles['label'])
+                                    : $alertStyles['label'];
+                                $isUnreadSystemAlert = !((is_array($alert) && ($alert['is_read'] ?? false)));
+                                $systemAlertCardClass = $isUnreadSystemAlert
+                                    ? $alertStyles['ring']
+                                    : 'border-gray-200 bg-white/60 dark:border-gray-700 dark:bg-gray-900/40';
+                                $alertCreatedAt = is_array($alert) ? ($alert['created_at'] ?? null) : null;
+                                $alertTime = $alertCreatedAt
+                                    ? \Carbon\Carbon::parse($alertCreatedAt)->format('d M Y, H:i')
+                                    : now()->format('d M Y, H:i');
+                                $notificationId = is_array($alert) ? ($alert['id'] ?? null) : null;
+                                        @endphp
+                                        <div class="system-alert-card rounded-xl border px-4 py-3 {{ $systemAlertCardClass }}"
+                                            data-read="{{ $isUnreadSystemAlert ? 'false' : 'true' }}"
+                                            data-unread-class="{{ $alertStyles['ring'] }}"
+                                            data-read-class="border-gray-200 bg-white/60 dark:border-gray-700 dark:bg-gray-900/40"
+                                            data-unread-dot="{{ $alertStyles['dot'] }}"
+                                            data-unread-label-class="{{ $alertStyles['labelClass'] }}">
+                                            <div class="mb-1.5 flex items-center justify-between gap-2">
+                                                <div class="flex items-center gap-2">
+                                                    <span class="system-alert-dot h-2 w-2 rounded-full {{ $isUnreadSystemAlert ? $alertStyles['dot'] : 'bg-gray-400' }}"></span>
+                                                    <span class="system-alert-label text-[11px] font-semibold uppercase tracking-wide {{ $isUnreadSystemAlert ? $alertStyles['labelClass'] : 'text-gray-500 dark:text-gray-400' }}">{{ $sourceLabel }}</span>
+                                                </div>
+                                                <div class="flex items-center gap-2">
+                                                    <span class="text-[11px] text-gray-500 dark:text-gray-400">{{ $alertTime }}</span>
+                                                    @if($notificationId && Route::has('admin.notifications.mark-read'))
+                                                        <form action="{{ route('admin.notifications.mark-read', $notificationId) }}" method="POST" class="system-mark-read-form {{ $isUnreadSystemAlert ? '' : 'hidden' }}">
+                                                            @csrf
+                                                            <button type="submit"
+                                                                class="system-mark-read-btn inline-flex items-center rounded-md border border-gray-300/70 px-2 py-1 text-[11px] font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white"
+                                                                title="Mark as read">
+                                                                Mark as read
+                                                            </button>
+                                                        </form>
+                                                    @endif
+                                                </div>
+                                            </div>
+                                            <p class="system-alert-message leading-5 {{ $isUnreadSystemAlert ? 'text-gray-800 dark:text-gray-100' : 'text-gray-600 dark:text-gray-300' }}">{{ $message }}</p>
+                                        </div>
+                                @endforeach
                             </div>
                         @endforeach
                     </div>
@@ -179,27 +231,8 @@
             <!-- User Notifications Section - Modern Redesign with Read/Unread -->
             @if($hasNotifications)
                 <div class="space-y-6">
-                    <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                        <div class="flex items-center gap-4">
-                            <div class="relative">
-                                <div class="absolute -inset-1 bg-gradient-to-r from-brand-500 to-brand-600 rounded-xl blur opacity-20"></div>
-                                <div class="relative flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-brand-600 text-white shadow-lg">
-                                    <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
-                                    </svg>
-                                </div>
-                            </div>
-                            <div>
-                                <h2 class="text-2xl font-bold text-gray-900 dark:text-white">Your Notifications</h2>
-                                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                                    <span class="font-semibold text-brand-600 dark:text-brand-400">{{ $totalUnread }} unread</span> · 
-                                    <span class="text-gray-500 dark:text-gray-400">{{ $totalRead }} read</span>
-                                </p>
-                            </div>
-                        </div>
-                        
-                        <!-- Filter Tabs -->
-                        <div class="flex flex-wrap items-center gap-2 bg-gray-100 dark:bg-gray-800 rounded-xl p-1 justify-start md:justify-end">
+                    <div class="flex justify-start md:justify-end">
+                        <div class="flex flex-wrap items-center gap-2 rounded-xl bg-gray-100 p-1 dark:bg-gray-800">
                             <button type="button" 
                                     id="show-all-btn"
                                     class="px-4 py-2 text-sm font-medium rounded-lg bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 shadow-sm transition-all">
@@ -218,11 +251,17 @@
                         </div>
                     </div>
 
-                    <div id="notifications-container" class="grid gap-4">
-                        @foreach($userNotifications as $notification)
+                    <div id="notifications-container" class="space-y-5">
+                        @foreach($groupedUserNotifications as $groupLabel => $groupNotifications)
+                            <div class="space-y-3">
+                                <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ $groupLabel }}</p>
+                                <div class="grid gap-4">
+                        @foreach($groupNotifications as $notification)
                             @php
                                 $data = $notification->data;
-                                $title = $data['title'] ?? 'New Notification';
+                                $title = $data['sender_name']
+                                    ?? $data['source']
+                                    ?? (($data['title'] ?? '') === 'System alert' ? 'System' : ($data['title'] ?? 'New Notification'));
                                 $message = $data['message'] ?? '';
                                 $type = $data['type'] ?? 'info';
                                 $link = $data['link'] ?? null;
@@ -273,9 +312,7 @@
                             
                             <div class="notification-item group relative overflow-hidden rounded-2xl border {{ $typeBorder }} bg-white p-6 shadow-sm transition-all hover:shadow-lg dark:bg-gray-900 {{ $readClass }}" 
                                  data-read="{{ $isRead ? 'true' : 'false' }}">
-                                <!-- Decorative gradient line -->
-                                <div class="absolute inset-y-0 left-0 w-1.5 bg-gradient-to-b {{ $typeGradient }}"></div>
-                                
+                                <div class="notification-unread-glow pointer-events-none absolute -inset-3 rounded-3xl bg-brand-500/20 blur-2xl {{ $isRead ? 'hidden' : '' }}"></div>
                                 <div class="flex flex-col sm:flex-row sm:items-start gap-4 pl-3">
                                     <!-- Icon with gradient background -->
                                     <div class="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br {{ $typeGradient }} text-white shadow-md">
@@ -290,10 +327,7 @@
                                             <div>
                                                 <div class="flex items-center gap-3 flex-wrap">
                                                     <h3 class="text-base font-semibold text-gray-900 dark:text-white">{{ $title }}</h3>
-                                                    <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium {{ $typeBadge }}">
-                                                        {{ ucfirst($type) }}
-                                                    </span>
-                                                    {!! $readBadge !!}
+                                                    <span class="notification-read-badge">{!! $readBadge !!}</span>
                                                 </div>
                                                 <p class="mt-2 text-sm text-gray-600 dark:text-gray-400 leading-relaxed">{{ $message }}</p>
                                             </div>
@@ -316,8 +350,8 @@
                                     
                                     <!-- Actions -->
                                     <div class="flex flex-shrink-0 items-start gap-2">
-                                        @if(Route::has('admin.notifications.mark-read') && !$isRead)
-                                        <form action="{{ route('admin.notifications.mark-read', $notification->id) }}" method="POST" class="mark-read-form">
+                                        @if(Route::has('admin.notifications.mark-read'))
+                                        <form action="{{ route('admin.notifications.mark-read', $notification->id) }}" method="POST" class="mark-read-form {{ $isRead ? 'hidden' : '' }}">
                                             @csrf
                                             <button type="submit" 
                                                     class="inline-flex items-center justify-center rounded-xl border border-gray-200 bg-white/80 backdrop-blur-sm p-2.5 text-gray-500 shadow-xs hover:bg-white hover:text-brand-600 dark:border-gray-700 dark:bg-gray-800/80 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-brand-400 transition-all group"
@@ -329,8 +363,8 @@
                                         </form>
                                         @endif
                                         
-                                        @if(Route::has('admin.notifications.mark-unread') && $isRead)
-                                        <form action="{{ route('admin.notifications.mark-unread', $notification->id) }}" method="POST" class="mark-unread-form">
+                                        @if(Route::has('admin.notifications.mark-unread'))
+                                        <form action="{{ route('admin.notifications.mark-unread', $notification->id) }}" method="POST" class="mark-unread-form {{ $isRead ? '' : 'hidden' }}">
                                             @csrf
                                             <button type="submit" 
                                                     class="inline-flex items-center justify-center rounded-xl border border-gray-200 bg-white/80 backdrop-blur-sm p-2.5 text-gray-500 shadow-xs hover:bg-white hover:text-gray-700 dark:border-gray-700 dark:bg-gray-800/80 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-300 transition-all group"
@@ -345,13 +379,11 @@
                                 </div>
                             </div>
                         @endforeach
+                                </div>
+                            </div>
+                        @endforeach
                     </div>
 
-                    @if(method_exists($userNotifications, 'links'))
-                        <div class="mt-8">
-                            {{ $userNotifications->links() }}
-                        </div>
-                    @endif
                 </div>
             @endif
         </div>
@@ -360,36 +392,183 @@
 
 @push('scripts')
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Filter functionality
+function initNotificationsPage() {
+    const pageRoot = document.getElementById('notifications-page-root');
+    let serverUnreadCountState = Number.parseInt(pageRoot?.dataset?.serverUnreadCount ?? '', 10);
+    if (!Number.isInteger(serverUnreadCountState)) {
+        serverUnreadCountState = null;
+    }
+
     const allBtn = document.getElementById('show-all-btn');
     const unreadBtn = document.getElementById('show-unread-btn');
     const readBtn = document.getElementById('show-read-btn');
-    const notificationItems = document.querySelectorAll('.notification-item');
-    
+    let activeFilter = 'all';
+
+    function getNotificationItems() {
+        return Array.from(document.querySelectorAll('.notification-item'));
+    }
+
     function setActiveFilter(activeBtn) {
         [allBtn, unreadBtn, readBtn].forEach(btn => {
+            if (!btn) {
+                return;
+            }
             btn.classList.remove('bg-white', 'dark:bg-gray-900', 'shadow-sm', 'text-gray-700', 'dark:text-gray-300');
             btn.classList.add('text-gray-600', 'dark:text-gray-400');
         });
-        activeBtn.classList.add('bg-white', 'dark:bg-gray-900', 'shadow-sm', 'text-gray-700', 'dark:text-gray-300');
-        activeBtn.classList.remove('text-gray-600', 'dark:text-gray-400');
+        if (activeBtn) {
+            activeBtn.classList.add('bg-white', 'dark:bg-gray-900', 'shadow-sm', 'text-gray-700', 'dark:text-gray-300');
+            activeBtn.classList.remove('text-gray-600', 'dark:text-gray-400');
+        }
     }
-    
+
     function filterNotifications(filter) {
-        notificationItems.forEach(item => {
+        activeFilter = filter;
+        getNotificationItems().forEach(item => {
             const isRead = item.dataset.read === 'true';
-            
             if (filter === 'all') {
                 item.style.display = '';
             } else if (filter === 'unread') {
                 item.style.display = isRead ? 'none' : '';
-            } else if (filter === 'read') {
+            } else {
                 item.style.display = isRead ? '' : 'none';
             }
         });
     }
-    
+
+    function setSystemAlertState(card, isRead) {
+        if (!card) {
+            return;
+        }
+        card.dataset.read = isRead ? 'true' : 'false';
+
+        const unreadClass = card.dataset.unreadClass || '';
+        const readClass = card.dataset.readClass || '';
+        unreadClass.split(' ').filter(Boolean).forEach(cls => card.classList.remove(cls));
+        readClass.split(' ').filter(Boolean).forEach(cls => card.classList.remove(cls));
+        (isRead ? readClass : unreadClass).split(' ').filter(Boolean).forEach(cls => card.classList.add(cls));
+
+        const dot = card.querySelector('.system-alert-dot');
+        const label = card.querySelector('.system-alert-label');
+        const message = card.querySelector('.system-alert-message');
+        const readForm = card.querySelector('.system-mark-read-form');
+        const unreadDot = card.dataset.unreadDot || '';
+        const unreadLabelClass = card.dataset.unreadLabelClass || '';
+
+        if (dot) {
+            dot.classList.remove('bg-gray-400');
+            unreadDot.split(' ').filter(Boolean).forEach(cls => dot.classList.remove(cls));
+            if (isRead) {
+                dot.classList.add('bg-gray-400');
+            } else {
+                unreadDot.split(' ').filter(Boolean).forEach(cls => dot.classList.add(cls));
+            }
+        }
+        if (label) {
+            label.classList.remove('text-gray-500', 'dark:text-gray-400');
+            unreadLabelClass.split(' ').filter(Boolean).forEach(cls => label.classList.remove(cls));
+            if (isRead) {
+                label.classList.add('text-gray-500', 'dark:text-gray-400');
+            } else {
+                unreadLabelClass.split(' ').filter(Boolean).forEach(cls => label.classList.add(cls));
+            }
+        }
+        if (message) {
+            message.classList.toggle('text-gray-800', !isRead);
+            message.classList.toggle('dark:text-gray-100', !isRead);
+            message.classList.toggle('text-gray-600', isRead);
+            message.classList.toggle('dark:text-gray-300', isRead);
+        }
+        if (readForm) {
+            readForm.classList.toggle('hidden', isRead);
+        }
+    }
+
+    function setUserNotificationState(item, isRead) {
+        if (!item) {
+            return;
+        }
+        item.dataset.read = isRead ? 'true' : 'false';
+        item.classList.toggle('opacity-75', isRead);
+
+        const unreadGlow = item.querySelector('.notification-unread-glow');
+        if (unreadGlow) {
+            unreadGlow.classList.toggle('hidden', isRead);
+        }
+
+        const markReadForm = item.querySelector('.mark-read-form');
+        const markUnreadForm = item.querySelector('.mark-unread-form');
+        if (markReadForm) {
+            markReadForm.classList.toggle('hidden', isRead);
+        }
+        if (markUnreadForm) {
+            markUnreadForm.classList.toggle('hidden', !isRead);
+        }
+
+        const badgeWrap = item.querySelector('.notification-read-badge');
+        if (badgeWrap) {
+            badgeWrap.innerHTML = isRead
+                ? '<span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600 dark:bg-gray-800 dark:text-gray-400">Read</span>'
+                : '<span class="inline-flex items-center rounded-full bg-brand-100 px-2.5 py-0.5 text-xs font-medium text-brand-700 dark:bg-brand-900 dark:text-brand-300">Unread</span>';
+        }
+    }
+
+    function refreshCounts(serverUnreadCount = null) {
+        const unreadUser = getNotificationItems().filter(item => item.dataset.read !== 'true').length;
+        const systemCards = Array.from(document.querySelectorAll('.system-alert-card'));
+        const unreadSystem = systemCards.filter(card => card.dataset.read !== 'true').length;
+        const computedTotalUnread = unreadUser + unreadSystem;
+        if (Number.isInteger(serverUnreadCount)) {
+            serverUnreadCountState = serverUnreadCount;
+            if (pageRoot) {
+                pageRoot.dataset.serverUnreadCount = String(serverUnreadCountState);
+            }
+        }
+        const finalHeaderUnread = Number.isInteger(serverUnreadCountState) ? serverUnreadCountState : computedTotalUnread;
+
+        const systemSectionCount = document.getElementById('system-unread-section-count');
+        if (systemCards.length > 0) {
+            if (systemSectionCount) {
+                systemSectionCount.textContent = String(unreadSystem);
+            }
+        }
+
+        document.querySelectorAll('.js-header-alert-count').forEach(badge => {
+            badge.textContent = String(finalHeaderUnread);
+            badge.classList.toggle('hidden', finalHeaderUnread === 0);
+        });
+
+        document.querySelectorAll('.js-header-alert-active-count').forEach(el => {
+            el.textContent = String(finalHeaderUnread);
+        });
+    }
+
+    function handleFormSubmit(form, successCallback) {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            fetch(this.action, {
+                method: this.method,
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    successCallback(this);
+                    refreshCounts(Number.isInteger(data.unread_count) ? data.unread_count : null);
+                    filterNotifications(activeFilter);
+                }
+            })
+            .catch(() => {
+                this.submit();
+            });
+        });
+    }
+
     if (allBtn) {
         allBtn.addEventListener('click', function(e) {
             e.preventDefault();
@@ -397,7 +576,6 @@ document.addEventListener('DOMContentLoaded', function() {
             filterNotifications('all');
         });
     }
-    
     if (unreadBtn) {
         unreadBtn.addEventListener('click', function(e) {
             e.preventDefault();
@@ -405,7 +583,6 @@ document.addEventListener('DOMContentLoaded', function() {
             filterNotifications('unread');
         });
     }
-    
     if (readBtn) {
         readBtn.addEventListener('click', function(e) {
             e.preventDefault();
@@ -413,52 +590,75 @@ document.addEventListener('DOMContentLoaded', function() {
             filterNotifications('read');
         });
     }
-    
-    // Handle mark as read/unread via AJAX for better UX
-    function handleFormSubmit(form, successCallback) {
-        form.addEventListener('submit', function(e) {
+
+    document.querySelectorAll('.mark-read-form').forEach(form => {
+        handleFormSubmit(form, function(currentForm) {
+            setUserNotificationState(currentForm.closest('.notification-item'), true);
+        });
+    });
+
+    document.querySelectorAll('.mark-unread-form').forEach(form => {
+        handleFormSubmit(form, function(currentForm) {
+            setUserNotificationState(currentForm.closest('.notification-item'), false);
+        });
+    });
+
+    document.querySelectorAll('.system-mark-read-form').forEach(form => {
+        handleFormSubmit(form, function(currentForm) {
+            setSystemAlertState(currentForm.closest('.system-alert-card'), true);
+        });
+    });
+
+    document.querySelectorAll('.js-notifications-refresh').forEach(button => {
+        if (button.dataset.boundRefresh === '1') {
+            return;
+        }
+        button.dataset.boundRefresh = '1';
+
+        button.addEventListener('click', function (e) {
             e.preventDefault();
-            
-            const formData = new FormData(this);
-            const action = this.action;
-            const method = this.method;
-            
-            fetch(action, {
-                method: method,
-                body: formData,
+            const icon = button.querySelector('.js-refresh-icon');
+            button.disabled = true;
+            if (icon) {
+                icon.classList.add('animate-spin');
+            }
+            fetch(window.location.href, {
+                method: 'GET',
                 headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'text/html'
                 }
             })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    successCallback();
-                    // Optional: Show toast notification
+            .then(response => response.text())
+            .then(html => {
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const currentRoot = document.getElementById('notifications-page-root');
+                const nextRoot = doc.getElementById('notifications-page-root');
+                if (currentRoot && nextRoot) {
+                    if (nextRoot.dataset.serverUnreadCount !== undefined) {
+                        currentRoot.dataset.serverUnreadCount = nextRoot.dataset.serverUnreadCount;
+                    }
+                    currentRoot.innerHTML = nextRoot.innerHTML;
+                    initNotificationsPage();
                 }
             })
-            .catch(error => {
-                console.error('Error:', error);
-                // Fallback: submit form normally
-                form.submit();
+            .catch(() => {
+                window.location.reload();
+            })
+            .finally(() => {
+                button.disabled = false;
+                if (icon) {
+                    icon.classList.remove('animate-spin');
+                }
             });
         });
-    }
-    
-    // Mark as read forms
-    document.querySelectorAll('.mark-read-form').forEach(form => {
-        handleFormSubmit(form, function() {
-            location.reload(); // Simple reload to update UI
-        });
     });
-    
-    // Mark as unread forms
-    document.querySelectorAll('.mark-unread-form').forEach(form => {
-        handleFormSubmit(form, function() {
-            location.reload(); // Simple reload to update UI
-        });
-    });
-});
+
+    refreshCounts();
+}
+
+document.addEventListener('DOMContentLoaded', initNotificationsPage);
 </script>
 @endpush
 @endsection

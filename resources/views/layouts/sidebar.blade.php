@@ -1,6 +1,69 @@
 @php
     use App\Helpers\MenuHelper;
+    use App\Helpers\Permission;
+    use Illuminate\Support\Facades\Route;
+
     $menuGroups = MenuHelper::getMenuGroups();
+    $authUser = auth()->user();
+    $knownPaths = collect(Route::getRoutes())
+        ->map(fn ($route) => '/' . ltrim($route->uri(), '/'))
+        ->all();
+
+    $isValidPath = function (?string $path) use ($knownPaths): bool {
+        if (empty($path) || $path === '#') {
+            return true;
+        }
+
+        if (!str_starts_with($path, '/admin')) {
+            return true;
+        }
+
+        return in_array($path, $knownPaths, true);
+    };
+
+    $menuGroups = collect($menuGroups)
+        ->map(function ($group) use ($authUser, $isValidPath) {
+            $items = collect($group['items'] ?? [])
+                ->map(function ($item) use ($authUser, $isValidPath) {
+                    $itemPermission = $item['permission'] ?? null;
+                    $canSeeItem = empty($itemPermission) || Permission::can($authUser, $itemPermission);
+
+                    if (isset($item['subItems']) && is_array($item['subItems'])) {
+                        $filteredSubItems = collect($item['subItems'])
+                            ->filter(function ($subItem) use ($authUser, $isValidPath) {
+                                $permission = $subItem['permission'] ?? null;
+                                $hasPermission = empty($permission) || Permission::can($authUser, $permission);
+                                $path = $subItem['path'] ?? null;
+                                return $hasPermission && $isValidPath($path);
+                            })
+                            ->values()
+                            ->all();
+
+                        if (empty($filteredSubItems)) {
+                            return null;
+                        }
+
+                        $item['subItems'] = $filteredSubItems;
+
+                        return $item;
+                    }
+
+                    $path = $item['path'] ?? null;
+                    return ($canSeeItem && $isValidPath($path)) ? $item : null;
+                })
+                ->filter()
+                ->values()
+                ->all();
+
+            return [
+                'title' => $group['title'] ?? '',
+                'items' => $items,
+            ];
+        })
+        ->filter(fn ($group) => !empty($group['items']))
+        ->values()
+        ->all();
+
     $appName = config('app.name', 'ERP');
     $nameParts = preg_split('/[^A-Za-z0-9]+/', $appName, -1, PREG_SPLIT_NO_EMPTY) ?: [];
     $initialSeed = collect($nameParts)->map(fn ($part) => mb_substr($part, 0, 1))->implode('');

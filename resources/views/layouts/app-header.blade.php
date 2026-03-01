@@ -1,7 +1,62 @@
 @php
     use App\Helpers\MenuHelper;
+    use App\Helpers\Permission;
+    use Illuminate\Support\Facades\Route;
 
-    $__menuSearchItems = collect(MenuHelper::getMenuGroups())
+    $__knownPaths = collect(Route::getRoutes())
+        ->map(fn ($route) => '/' . ltrim($route->uri(), '/'))
+        ->all();
+    $__authUser = auth()->user();
+    $__menuGroups = collect(MenuHelper::getMenuGroups())
+        ->map(function ($group) use ($__authUser, $__knownPaths) {
+            $items = collect($group['items'] ?? [])
+                ->map(function ($item) use ($__authUser, $__knownPaths) {
+                    $itemPermission = $item['permission'] ?? null;
+                    $canSeeItem = empty($itemPermission) || Permission::can($__authUser, $itemPermission);
+
+                    if (!$canSeeItem) {
+                        return null;
+                    }
+
+                    if (!empty($item['path']) && $item['path'] !== '#' && str_starts_with($item['path'], '/admin') && !in_array($item['path'], $__knownPaths, true)) {
+                        return null;
+                    }
+
+                    if (isset($item['subItems']) && is_array($item['subItems'])) {
+                        $item['subItems'] = collect($item['subItems'])
+                            ->filter(function ($subItem) use ($__authUser, $__knownPaths) {
+                                $permission = $subItem['permission'] ?? null;
+                                $hasPermission = empty($permission) || Permission::can($__authUser, $permission);
+                                if (!$hasPermission) {
+                                    return false;
+                                }
+
+                                $path = $subItem['path'] ?? null;
+                                if (!empty($path) && $path !== '#' && str_starts_with($path, '/admin') && !in_array($path, $__knownPaths, true)) {
+                                    return false;
+                                }
+
+                                return true;
+                            })
+                            ->values()
+                            ->all();
+                    }
+
+                    return $item;
+                })
+                ->filter()
+                ->values()
+                ->all();
+
+            return [
+                'title' => $group['title'] ?? '',
+                'items' => $items,
+            ];
+        })
+        ->filter(fn ($group) => !empty($group['items']))
+        ->values();
+
+    $__menuSearchItems = $__menuGroups
         ->flatMap(function ($group) {
             return collect($group['items'])->flatMap(function ($item) use ($group) {
                 $items = [];
@@ -411,8 +466,8 @@
                 {{-- Alerts dropdown (behaviour handled by resources/js/app.js via .header-alert / .header-alert-toggle) --}}
                 @auth
                     @php
-                        $alertCollection = isset($alerts)
-                            ? collect($alerts)
+                        $alertCollection = isset($headerAlerts)
+                            ? collect($headerAlerts)
                                 ->values()
                                 ->map(function ($alert) {
                                     return is_array($alert)
@@ -420,10 +475,10 @@
                                         : ['message' => (string) $alert, 'variant' => 'error'];
                                 })
                             : collect();
-                        $alertCount = $alertCollection->count();
+                        $alertCount = isset($headerAlertCount) ? (int) $headerAlertCount : $alertCollection->count();
                         $trayAlerts = $alertCollection->take(10);
                     @endphp
-                    <div class="header-alert relative">
+                    <div class="header-alert js-header-alert-root relative" data-fetch-url="{{ route('admin.notifications.header-data') }}">
                         {{-- Trigger button --}}
                         <button type="button"
                             class="header-alert-toggle relative flex h-11 w-11 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-500 shadow-theme-xs transition-colors hover:border-brand-300 hover:bg-brand-50 hover:text-brand-600 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400 dark:hover:border-brand-700 dark:hover:bg-brand-500/10 dark:hover:text-brand-300"
@@ -436,12 +491,10 @@
                             </svg>
 
                             {{-- Counter badge --}}
-                            @if ($alertCount)
-                                <span
-                                    class="absolute -right-0.5 -top-0.5 inline-flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-error-500 px-1 text-[10px] font-semibold text-white">
-                                    {{ $alertCount }}
-                                </span>
-                            @endif
+                            <span
+                                class="js-header-alert-count absolute -right-0.5 -top-0.5 inline-flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-error-500 px-1 text-[10px] font-semibold text-white {{ $alertCount ? '' : 'hidden' }}">
+                                {{ $alertCount }}
+                            </span>
                         </button>
 
                         {{-- Dropdown tray --}}
@@ -453,7 +506,7 @@
                                     <h3 class="text-sm font-semibold text-gray-900 dark:text-white">
                                         Notifications
                                     </h3>
-                                    <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{{ $alertCount }} active</p>
+                                    <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400"><span class="js-header-alert-active-count">{{ $alertCount }}</span> active</p>
                                 </div>
                                 <button type="button"
                                         class="header-alert-menu-close flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700"
@@ -465,7 +518,7 @@
                             </div>
 
                             @if ($alertCount)
-                                <ul class="max-h-[430px] space-y-2 overflow-y-auto p-4 text-[13px] text-gray-700 dark:text-gray-300">
+                                <ul class="js-header-alert-list max-h-[430px] space-y-2 overflow-y-auto p-4 text-[13px] text-gray-700 dark:text-gray-300">
                                     @foreach ($trayAlerts as $alert)
                                         @php
                                             $message = $alert['message'] ?? '';
@@ -501,15 +554,28 @@
                                                 'label' => 'Notice',
                                                 'labelClass' => 'text-gray-600 dark:text-gray-300',
                                             ];
+                                            $sourceLabel = $alert['source'] ?? $alertStyles['label'];
+                                            $notificationId = $alert['id'] ?? null;
                                         @endphp
-                                        <li>
+                                        <li class="js-header-alert-item">
                                             <div class="rounded-xl border px-3 py-2.5 {{ $alertStyles['ring'] }}">
                                                 <div class="mb-1 flex items-center justify-between gap-2">
                                                     <div class="flex items-center gap-2">
                                                         <span class="h-2 w-2 rounded-full {{ $alertStyles['dot'] }}"></span>
-                                                        <span class="text-[11px] font-semibold uppercase tracking-wide {{ $alertStyles['labelClass'] }}">{{ $alertStyles['label'] }}</span>
+                                                        <span class="text-[11px] font-semibold uppercase tracking-wide {{ $alertStyles['labelClass'] }}">{{ $sourceLabel }}</span>
                                                     </div>
-                                                    <span class="text-[11px] text-gray-500 dark:text-gray-400">Now</span>
+                                                    <div class="flex items-center gap-2">
+                                                        <span class="text-[11px] text-gray-500 dark:text-gray-400">Now</span>
+                                                        @if($notificationId && Route::has('admin.notifications.mark-read'))
+                                                            <form action="{{ route('admin.notifications.mark-read', $notificationId) }}" method="POST" class="header-mark-read-form">
+                                                                @csrf
+                                                                <button type="submit"
+                                                                    class="inline-flex items-center rounded-md border border-gray-300/70 px-1.5 py-0.5 text-[10px] font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white">
+                                                                    Read
+                                                                </button>
+                                                            </form>
+                                                        @endif
+                                                    </div>
                                                 </div>
                                                 <p class="leading-5 text-gray-800 dark:text-gray-100">{{ $message }}</p>
                                             </div>
@@ -517,7 +583,7 @@
                                     @endforeach
                                 </ul>
                             @else
-                                <div class="p-4">
+                                <div class="js-header-alert-empty p-4">
                                     <p class="rounded-xl border border-gray-200 bg-gray-50 px-3 py-3 text-[13px] text-gray-500 dark:border-gray-700 dark:bg-white/5 dark:text-gray-400">
                                         No current alerts.
                                     </p>
@@ -635,3 +701,219 @@
         </div>
     </div>
 </header>
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+
+    function escapeHtml(value) {
+        return String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
+    function variantStyles(variant) {
+        const map = {
+            error: {
+                ring: 'border-error-300/70 bg-error-50/70 dark:border-error-700/60 dark:bg-error-500/10',
+                dot: 'bg-error-500',
+                label: 'text-error-700 dark:text-error-300',
+            },
+            warning: {
+                ring: 'border-warning-300/70 bg-warning-50/70 dark:border-warning-700/60 dark:bg-warning-500/10',
+                dot: 'bg-warning-500',
+                label: 'text-warning-700 dark:text-warning-300',
+            },
+            success: {
+                ring: 'border-success-300/70 bg-success-50/70 dark:border-success-700/60 dark:bg-success-500/10',
+                dot: 'bg-success-500',
+                label: 'text-success-700 dark:text-success-300',
+            },
+            info: {
+                ring: 'border-brand-300/70 bg-brand-50/70 dark:border-brand-700/60 dark:bg-brand-500/10',
+                dot: 'bg-brand-500',
+                label: 'text-brand-700 dark:text-brand-300',
+            },
+        };
+
+        return map[variant] || {
+            ring: 'border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800/50',
+            dot: 'bg-gray-400',
+            label: 'text-gray-600 dark:text-gray-300',
+        };
+    }
+
+    function updateHeaderCounts(unreadCount) {
+        document.querySelectorAll('.js-header-alert-count').forEach((badge) => {
+            badge.textContent = String(unreadCount);
+            badge.classList.toggle('hidden', unreadCount === 0);
+        });
+
+        document.querySelectorAll('.js-header-alert-active-count').forEach((text) => {
+            text.textContent = String(unreadCount);
+        });
+    }
+
+    function renderHeaderAlerts(root, alerts, unreadCount) {
+        const menu = root.querySelector('.header-alert-menu');
+        if (!menu) {
+            return;
+        }
+
+        updateHeaderCounts(unreadCount);
+
+        const footer = menu.querySelector('.border-t');
+        let list = menu.querySelector('.js-header-alert-list');
+        let empty = menu.querySelector('.js-header-alert-empty');
+
+        if (alerts.length > 0) {
+            if (!list) {
+                list = document.createElement('ul');
+                list.className = 'js-header-alert-list max-h-[430px] space-y-2 overflow-y-auto p-4 text-[13px] text-gray-700 dark:text-gray-300';
+                if (footer) {
+                    menu.insertBefore(list, footer);
+                } else {
+                    menu.appendChild(list);
+                }
+            }
+
+            list.innerHTML = alerts.map((alert) => {
+                const styles = variantStyles(alert.variant || 'info');
+                const source = escapeHtml(alert.source || 'System');
+                const message = escapeHtml(alert.message || '');
+                const timeLabel = escapeHtml(alert.time_label || 'Now');
+                const readUrl = escapeHtml(alert.read_url || '#');
+
+                return `
+                    <li class="js-header-alert-item">
+                        <div class="rounded-xl border px-3 py-2.5 ${styles.ring}">
+                            <div class="mb-1 flex items-center justify-between gap-2">
+                                <div class="flex items-center gap-2">
+                                    <span class="h-2 w-2 rounded-full ${styles.dot}"></span>
+                                    <span class="text-[11px] font-semibold uppercase tracking-wide ${styles.label}">${source}</span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-[11px] text-gray-500 dark:text-gray-400">${timeLabel}</span>
+                                    <form action="${readUrl}" method="POST" class="header-mark-read-form">
+                                        <input type="hidden" name="_token" value="${escapeHtml(csrfToken)}">
+                                        <button type="submit"
+                                            class="inline-flex items-center rounded-md border border-gray-300/70 px-1.5 py-0.5 text-[10px] font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white">
+                                            Read
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                            <p class="leading-5 text-gray-800 dark:text-gray-100">${message}</p>
+                        </div>
+                    </li>
+                `;
+            }).join('');
+
+            if (empty) {
+                empty.remove();
+            }
+            return;
+        }
+
+        if (list) {
+            list.remove();
+        }
+
+        if (!empty) {
+            empty = document.createElement('div');
+            empty.className = 'js-header-alert-empty p-4';
+            empty.innerHTML = '<p class="rounded-xl border border-gray-200 bg-gray-50 px-3 py-3 text-[13px] text-gray-500 dark:border-gray-700 dark:bg-white/5 dark:text-gray-400">No current alerts.</p>';
+            if (footer) {
+                menu.insertBefore(empty, footer);
+            } else {
+                menu.appendChild(empty);
+            }
+        }
+    }
+
+    function loadHeaderAlerts(root) {
+        const url = root.dataset.fetchUrl;
+        if (!url || root.dataset.loadingAjax === '1') {
+            return Promise.resolve();
+        }
+
+        root.dataset.loadingAjax = '1';
+        return fetch(url, {
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json'
+            }
+        })
+            .then((response) => response.json())
+            .then((data) => {
+                if (!data || data.success !== true) {
+                    return;
+                }
+                const alerts = Array.isArray(data.alerts) ? data.alerts : [];
+                const unreadCount = Number.isInteger(data.unread_count) ? data.unread_count : alerts.length;
+                renderHeaderAlerts(root, alerts, unreadCount);
+            })
+            .catch(() => {})
+            .finally(() => {
+                root.dataset.loadingAjax = '0';
+            });
+    }
+
+    document.querySelectorAll('.js-header-alert-root').forEach((root) => {
+        loadHeaderAlerts(root);
+
+        const toggle = root.querySelector('.header-alert-toggle');
+        if (toggle) {
+            toggle.addEventListener('click', () => {
+                loadHeaderAlerts(root);
+            });
+        }
+
+        const menu = root.querySelector('.header-alert-menu');
+        if (menu) {
+            menu.addEventListener('submit', (event) => {
+                const form = event.target.closest('.header-mark-read-form');
+                if (!form) {
+                    return;
+                }
+                event.preventDefault();
+
+                const formData = new FormData(form);
+                fetch(form.action, {
+                    method: form.method,
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json'
+                    }
+                })
+                    .then((response) => response.json())
+                    .then((data) => {
+                        if (!data || data.success !== true) {
+                            return;
+                        }
+                        const unreadCount = Number.isInteger(data.unread_count) ? data.unread_count : 0;
+                        updateHeaderCounts(unreadCount);
+                        loadHeaderAlerts(root);
+                    })
+                    .catch(() => {
+                        form.submit();
+                    });
+            });
+        }
+
+        setInterval(() => {
+            if (document.hidden) {
+                return;
+            }
+            loadHeaderAlerts(root);
+        }, 60000);
+    });
+});
+</script>
+@endpush

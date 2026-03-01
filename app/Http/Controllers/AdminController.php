@@ -84,13 +84,15 @@ class AdminController extends Controller
 
         $outstandingReceivables = 0;
         if ($invoiceReady) {
-            $openInvoices = Invoice::with('receipts')
+            $openInvoices = Invoice::query()
+                ->select(['id', 'net_total', 'vat_amount', 'withholding'])
+                ->withSum('receipts', 'amount')
                 ->whereIn('status', ['issued', 'adjusted'])
                 ->get();
 
             $outstandingReceivables = $openInvoices->sum(function (Invoice $invoice) {
                 $gross = ($invoice->net_total + $invoice->vat_amount) - $invoice->withholding;
-                $paid = $invoice->receipts->sum('amount');
+                $paid = (float) ($invoice->receipts_sum_amount ?? 0);
 
                 return max($gross - $paid, 0);
             });
@@ -209,29 +211,37 @@ class AdminController extends Controller
 
         if ($expiringSoonCount > 0) {
             $alerts[] = [
+                'key' => 'expiring_batches_' . $expiringSoonCount,
                 'message' => "{$expiringSoonCount} batches expiring within 30 days",
                 'variant' => 'error', // bad / urgent
+                'source' => 'Inventory',
             ];
         }
 
         if ($exceptionDeliveriesToday > 0) {
             $alerts[] = [
+                'key' => 'delivery_exceptions_' . Carbon::today()->toDateString() . '_' . $exceptionDeliveriesToday,
                 'message' => "{$exceptionDeliveriesToday} deliveries marked as exception today",
                 'variant' => 'error', // bad / exception
+                'source' => 'Delivery',
             ];
         }
 
         if ($todayOrders > 0) {
             $alerts[] = [
+                'key' => 'orders_due_' . Carbon::today()->toDateString() . '_' . $todayOrders,
                 'message' => "{$todayOrders} orders scheduled for delivery today",
                 'variant' => 'success', // good news
+                'source' => 'Sales',
             ];
         }
 
         if ($outstandingReceivables > 0) {
             $alerts[] = [
+                'key' => 'receivables_' . number_format($outstandingReceivables, 2, '.', ''),
                 'message' => 'Outstanding receivables of BDT ' . number_format($outstandingReceivables, 2),
                 'variant' => 'error', // bad / attention needed
+                'source' => 'Finance',
             ];
         }
 
@@ -270,84 +280,86 @@ class AdminController extends Controller
      */
     public function notifications()
     {
-        $alerts = [];
+        $alerts = collect();
+        $userNotifications = collect();
+        $totalUnreadCount = 0;
 
-        $batchReady = Schema::hasTable('batches');
-        $orderReady = Schema::hasTable('orders');
-        $deliveryReady = Schema::hasTable('deliveries');
-        $invoiceReady = Schema::hasTable('invoices');
-        $receiptReady = Schema::hasTable('receipts');
+        if (Schema::hasTable('notifications') && auth()->check()) {
+            $user = auth()->user();
+            $totalUnreadCount = $user->unreadNotifications()->count();
 
-        if ($batchReady) {
-            $expiringSoonCount = Batch::whereNotNull('expiry_date')
-                ->whereBetween('expiry_date', [Carbon::today(), Carbon::today()->copy()->addDays(30)])
-                ->count();
-
-            if ($expiringSoonCount > 0) {
-                $alerts[] = [
-                    'message' => "{$expiringSoonCount} batches expiring within 30 days",
-                    'variant' => 'error',
-                ];
-            }
-        }
-
-        if ($deliveryReady) {
-            $exceptionDeliveriesToday = Delivery::where('status', 'exception')
-                ->whereDate('updated_at', Carbon::today())
-                ->count();
-
-            if ($exceptionDeliveriesToday > 0) {
-                $alerts[] = [
-                    'message' => "{$exceptionDeliveriesToday} deliveries marked as exception today",
-                    'variant' => 'error',
-                ];
-            }
-        }
-
-        if ($orderReady) {
-            $todayOrders = Order::whereDate('delivery_date', Carbon::today())->count();
-
-            if ($todayOrders > 0) {
-                $alerts[] = [
-                    'message' => "{$todayOrders} orders scheduled for delivery today",
-                    'variant' => 'success',
-                ];
-            }
-        }
-
-        if ($invoiceReady && $receiptReady) {
-            $openInvoices = Invoice::with('receipts')
-                ->whereIn('status', ['issued', 'adjusted'])
+            $systemNotifications = $user->notifications()
+                ->where('type', SystemAlertNotification::class)
+                ->latest()
+                ->take(20)
                 ->get();
 
-            $outstandingReceivables = $openInvoices->sum(function (Invoice $invoice) {
-                $gross = ($invoice->net_total + $invoice->vat_amount) - $invoice->withholding;
-                $paid = $invoice->receipts->sum('amount');
+            $alerts = $systemNotifications
+                ->map(function ($notification) {
+                    $data = $notification->data;
 
-                return max($gross - $paid, 0);
-            });
+                    return [
+                        'id' => $notification->id,
+                        'key' => $data['dedupe_key'] ?? $notification->id,
+                        'message' => $data['message'] ?? '',
+                        'variant' => $data['type'] ?? 'info',
+                        'source' => $data['source'] ?? 'System',
+                        'created_at' => $notification->created_at,
+                        'is_read' => !is_null($notification->read_at),
+                    ];
+                })
+                ->values();
 
-            if ($outstandingReceivables > 0) {
-                $alerts[] = [
-                    'message' => 'Outstanding receivables of BDT ' . number_format($outstandingReceivables, 2),
-                    'variant' => 'error',
-                ];
-            }
-        }
-
-        // Load user-specific notifications (e.g. new batches) if the notifications table exists
-        $userNotifications = collect();
-        if (Schema::hasTable('notifications') && auth()->check()) {
-            $userNotifications = auth()->user()
-                ->notifications()
+            $userNotifications = $user->notifications()
+                ->where('type', '!=', SystemAlertNotification::class)
                 ->latest()
                 ->take(20)
                 ->get();
         }
 
         return view('admin.notifications.index', [
-            'alerts' => $alerts,
+            'alerts' => $alerts->all(),
             'userNotifications' => $userNotifications,
+            'totalUnreadCount' => $totalUnreadCount,
+        ]);
+    }
+
+    public function headerNotifications()
+    {
+        if (!auth()->check() || !Schema::hasTable('notifications')) {
+            return response()->json([
+                'success' => true,
+                'unread_count' => 0,
+                'alerts' => [],
+            ]);
+        }
+
+        $user = auth()->user();
+
+        $alerts = $user->unreadNotifications()
+            ->latest()
+            ->take(10)
+            ->get()
+            ->map(function ($notification) {
+                $data = $notification->data;
+                $variant = $data['type'] ?? 'info';
+                $source = $data['sender_name'] ?? $data['source'] ?? 'System';
+
+                return [
+                    'id' => $notification->id,
+                    'message' => $data['message'] ?? '',
+                    'variant' => $variant,
+                    'source' => $source,
+                    'time_label' => $notification->created_at?->diffForHumans() ?? 'Now',
+                    'read_url' => route('admin.notifications.mark-read', $notification->id),
+                ];
+            })
+            ->values();
+
+        return response()->json([
+            'success' => true,
+            'unread_count' => $user->unreadNotifications()->count(),
+            'alerts' => $alerts,
         ]);
     }
 
@@ -362,8 +374,11 @@ class AdminController extends Controller
             $notification->markAsRead();
         }
 
-        if (request()->expectsJson()) {
-            return response()->json(['success' => true]);
+        if (request()->ajax() || request()->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'unread_count' => auth()->user()->unreadNotifications()->count(),
+            ]);
         }
 
         return back()->with('status', 'Notification marked as read.');
@@ -380,8 +395,11 @@ class AdminController extends Controller
             $notification->markAsUnread();
         }
 
-        if (request()->expectsJson()) {
-            return response()->json(['success' => true]);
+        if (request()->ajax() || request()->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'unread_count' => auth()->user()->unreadNotifications()->count(),
+            ]);
         }
 
         return back()->with('status', 'Notification marked as unread.');
@@ -392,8 +410,11 @@ class AdminController extends Controller
         $user = auth()->user();
         $user->unreadNotifications->markAsRead();
 
-        if (request()->expectsJson()) {
-            return response()->json(['success' => true]);
+        if (request()->ajax() || request()->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'unread_count' => auth()->user()->unreadNotifications()->count(),
+            ]);
         }
 
         return back()->with('status', 'All notifications marked as read.');
@@ -404,8 +425,11 @@ class AdminController extends Controller
         $user = auth()->user();
         $user->readNotifications()->update(['read_at' => null]);
 
-        if (request()->expectsJson()) {
-            return response()->json(['success' => true]);
+        if (request()->ajax() || request()->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'unread_count' => auth()->user()->unreadNotifications()->count(),
+            ]);
         }
 
         return back()->with('status', 'All notifications marked as unread.');

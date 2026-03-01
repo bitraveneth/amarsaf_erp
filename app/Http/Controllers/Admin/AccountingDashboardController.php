@@ -17,7 +17,10 @@ class AccountingDashboardController extends Controller
         $startOfMonth = $today->copy()->startOfMonth();
         $endOfMonth = $today->copy()->endOfMonth();
 
-        $invoices = Invoice::with(['receipts', 'creditNotes'])
+        $invoices = Invoice::query()
+            ->select(['id', 'issued_at', 'net_total', 'vat_amount', 'withholding'])
+            ->withSum('receipts', 'amount')
+            ->withSum('creditNotes', 'amount')
             ->whereBetween('issued_at', [$startOfMonth, $endOfMonth])
             ->get();
 
@@ -31,8 +34,8 @@ class AccountingDashboardController extends Controller
         $outstanding = $invoices->sum(function (Invoice $invoice) {
             $grossTotal = $invoice->net_total + $invoice->vat_amount;
             $cashTotal = $grossTotal - $invoice->withholding;
-            $credited = $invoice->creditNotes->sum('amount');
-            $paid = $invoice->receipts->sum('amount');
+            $credited = (float) ($invoice->credit_notes_sum_amount ?? 0);
+            $paid = (float) ($invoice->receipts_sum_amount ?? 0);
 
             return max($cashTotal - $credited - $paid, 0);
         });
@@ -61,4 +64,3 @@ class AccountingDashboardController extends Controller
         ]);
     }
 }
-

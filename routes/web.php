@@ -72,7 +72,7 @@ Route::get('/', function () {
 
 Route::middleware('guest')->group(function () {
     Route::get('login', [LoginController::class, 'show'])->name('login');
-    Route::post('login', [LoginController::class, 'authenticate']);
+    Route::post('login', [LoginController::class, 'authenticate'])->middleware('throttle:login');
 });
 
 Route::post('logout', [LoginController::class, 'logout'])->middleware('auth')->name('logout');
@@ -311,8 +311,9 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::get('inventory/materials', [InventoryController::class, 'materials'])->middleware('perm:inventory.manage')->name('inventory.materials');
 
     Route::get('notifications', [AdminController::class, 'notifications'])->name('notifications.index');
-    Route::match(['get', 'post'], 'notifications/mark-all-read', [AdminController::class, 'markAllNotificationsRead'])->name('notifications.mark-all-read');
-    Route::match(['get', 'post'], 'notifications/mark-all-unread', [AdminController::class, 'markAllNotificationsUnread'])->name('notifications.mark-all-unread');
+    Route::get('notifications/header-data', [AdminController::class, 'headerNotifications'])->name('notifications.header-data');
+    Route::post('notifications/mark-all-read', [AdminController::class, 'markAllNotificationsRead'])->name('notifications.mark-all-read');
+    Route::post('notifications/mark-all-unread', [AdminController::class, 'markAllNotificationsUnread'])->name('notifications.mark-all-unread');
     Route::post('notifications/{notification}/mark-read', [AdminController::class, 'markNotificationRead'])->name('notifications.mark-read');
     Route::post('notifications/{notification}/mark-unread', [AdminController::class, 'markNotificationUnread'])->name('notifications.mark-unread');
 
