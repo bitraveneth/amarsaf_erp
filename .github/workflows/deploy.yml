@@ -41,6 +41,11 @@ jobs:
           ssh "$VPS_USER@$VPS_HOST" "bash -se" <<EOF
             set -Eeuo pipefail
 
+            log_step() {
+              echo
+              echo "========== [STEP] \$1 =========="
+            }
+
             APP_DOWN=0
             cleanup() {
               if [ "\$APP_DOWN" -eq 1 ]; then
@@ -49,41 +54,50 @@ jobs:
             }
             trap cleanup EXIT
 
+            log_step "Enter project directory"
             cd "$VPS_PATH"
 
-            # Ensure Laravel scheduler cron exists (idempotent)
+            log_step "Ensure scheduler cron"
             CRON_MARKER="# saferpv1-laravel-scheduler"
             CRON_ENTRY="* * * * * cd \"$VPS_PATH\" && php artisan schedule:run >> /dev/null 2>&1 $CRON_MARKER"
             ( crontab -l 2>/dev/null | grep -v "$CRON_MARKER" || true; echo "$CRON_ENTRY" ) | crontab -
+            echo "[INFO] Scheduler cron ensured."
 
-            # Ensure .env exists (first deploy only)
+            log_step "Ensure environment file"
             if [ ! -f .env ] && [ -f .env.example ]; then
                 cp .env.example .env
+                echo "[INFO] .env created from .env.example"
+            else
+                echo "[INFO] .env already exists"
             fi
 
-            # Ensure APP_KEY exists once
+            log_step "Ensure APP_KEY"
             if [ -f .env ] && ( ! grep -q '^APP_KEY=' .env || grep -q '^APP_KEY=$' .env ); then
               php artisan key:generate --force
+              echo "[INFO] APP_KEY generated."
+            else
+              echo "[INFO] APP_KEY already set."
             fi
 
-            # Enforce non-debug runtime on server
+            log_step "Set APP_DEBUG=false"
             if [ -f .env ]; then
               if grep -q '^APP_DEBUG=' .env; then
                 sed -i 's/^APP_DEBUG=.*/APP_DEBUG=false/' .env
               else
                 echo 'APP_DEBUG=false' >> .env
               fi
+              echo "[INFO] APP_DEBUG=false ensured."
             fi
 
-            # Pull latest code safely (no hard reset, no data loss)
+            log_step "Pull latest code"
             git fetch --prune origin
             git checkout "$DEPLOY_BRANCH"
             git pull --ff-only origin "$DEPLOY_BRANCH"
 
-            # PHP dependencies for production
+            log_step "Install PHP dependencies"
             composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev
 
-            # Frontend build (Vite is a devDependency)
+            log_step "Build frontend assets"
             if command -v npm >/dev/null 2>&1; then
               if [ -f package-lock.json ]; then
                 npm ci --include=dev
@@ -96,23 +110,30 @@ jobs:
               echo "npm not found on server - skipping frontend build"
             fi
 
-            # Keep downtime short: only around migration/cache swap
+            log_step "Enable maintenance mode"
             php artisan down --retry=60 || true
             APP_DOWN=1
 
-            # Safe incremental migration (no fresh/wipe)
+            log_step "Run migrations"
             php artisan migrate --force
 
-            # Cache refresh
+            log_step "Refresh Laravel caches"
             php artisan optimize:clear
             php artisan config:cache
             php artisan route:cache
             php artisan view:cache
 
-            # Storage link (idempotent)
-            php artisan storage:link || true
+            log_step "Ensure storage symlink"
+            if [ -L public/storage ]; then
+              echo "[INFO] public/storage symlink already exists."
+            elif [ -e public/storage ]; then
+              echo "[WARN] public/storage exists but is not a symlink. Skipping auto-link."
+            else
+              php artisan storage:link
+              echo "[INFO] public/storage symlink created."
+            fi
 
-            # Runtime directory permissions
+            log_step "Set runtime permissions"
             if command -v sudo >/dev/null 2>&1; then
               sudo chown -R www-data:www-data storage bootstrap/cache || true
             else
@@ -123,6 +144,9 @@ jobs:
             find bootstrap/cache -type d -exec chmod 775 {} \\; || true
             find bootstrap/cache -type f -exec chmod 664 {} \\; || true
 
+            log_step "Disable maintenance mode"
             php artisan up
             APP_DOWN=0
+            echo
+            echo "========== [DONE] Deploy completed successfully =========="
           EOF
