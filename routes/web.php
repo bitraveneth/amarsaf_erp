@@ -311,6 +311,10 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::get('inventory/materials', [InventoryController::class, 'materials'])->middleware('perm:inventory.manage')->name('inventory.materials');
 
     Route::get('notifications', [AdminController::class, 'notifications'])->name('notifications.index');
+    Route::match(['get', 'post'], 'notifications/mark-all-read', [AdminController::class, 'markAllNotificationsRead'])->name('notifications.mark-all-read');
+    Route::match(['get', 'post'], 'notifications/mark-all-unread', [AdminController::class, 'markAllNotificationsUnread'])->name('notifications.mark-all-unread');
+    Route::post('notifications/{notification}/mark-read', [AdminController::class, 'markNotificationRead'])->name('notifications.mark-read');
+    Route::post('notifications/{notification}/mark-unread', [AdminController::class, 'markNotificationUnread'])->name('notifications.mark-unread');
 
     Route::get('warehouses', [WarehouseController::class, 'index'])->middleware('perm:control.warehouses')->name('warehouses.index');
     Route::get('warehouses/create', [WarehouseController::class, 'create'])->middleware('perm:control.warehouses')->name('warehouses.create');

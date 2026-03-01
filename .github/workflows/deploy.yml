@@ -57,12 +57,12 @@ jobs:
             # Incremental migrations
             php artisan migrate --force
 
-            # Frontend build – only if Node/npm is available
+            # Frontend build – include devDependencies because Vite is a dev dependency
             if command -v npm >/dev/null 2>&1; then
               if [ -f package-lock.json ]; then
-                npm ci --omit=dev || npm ci
+                npm ci --include=dev
               else
-                npm install
+                npm install --include=dev
               fi
               npm run build
             else

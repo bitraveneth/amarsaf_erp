@@ -350,4 +350,64 @@ class AdminController extends Controller
             'userNotifications' => $userNotifications,
         ]);
     }
+
+    public function markNotificationRead(string $notificationId)
+    {
+        $notification = auth()->user()
+            ->notifications()
+            ->whereKey($notificationId)
+            ->firstOrFail();
+
+        if (is_null($notification->read_at)) {
+            $notification->markAsRead();
+        }
+
+        if (request()->expectsJson()) {
+            return response()->json(['success' => true]);
+        }
+
+        return back()->with('status', 'Notification marked as read.');
+    }
+
+    public function markNotificationUnread(string $notificationId)
+    {
+        $notification = auth()->user()
+            ->notifications()
+            ->whereKey($notificationId)
+            ->firstOrFail();
+
+        if (!is_null($notification->read_at)) {
+            $notification->markAsUnread();
+        }
+
+        if (request()->expectsJson()) {
+            return response()->json(['success' => true]);
+        }
+
+        return back()->with('status', 'Notification marked as unread.');
+    }
+
+    public function markAllNotificationsRead()
+    {
+        $user = auth()->user();
+        $user->unreadNotifications->markAsRead();
+
+        if (request()->expectsJson()) {
+            return response()->json(['success' => true]);
+        }
+
+        return back()->with('status', 'All notifications marked as read.');
+    }
+
+    public function markAllNotificationsUnread()
+    {
+        $user = auth()->user();
+        $user->readNotifications()->update(['read_at' => null]);
+
+        if (request()->expectsJson()) {
+            return response()->json(['success' => true]);
+        }
+
+        return back()->with('status', 'All notifications marked as unread.');
+    }
 }
