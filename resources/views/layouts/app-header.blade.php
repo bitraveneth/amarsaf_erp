@@ -202,9 +202,9 @@
                 <div
                     class="relative hidden md:block"
                     x-data="{
-                        open: true,
+                        open: false,
                         dragging: false,
-                        isMobileView: false,
+                        isMobileView: window.matchMedia('(max-width: 767px)').matches,
                         storageKeyOpen: 'headerAnalogClockOpen',
                         storageKeyPos: 'headerAnalogClockPos',
                         nowDate: '',
@@ -456,7 +456,7 @@
                             x-transition:leave="transition ease-in duration-90"
                             x-transition:leave-start="opacity-100"
                             x-transition:leave-end="opacity-0"
-                            class="group/clock fixed z-[99999] w-44 max-w-[calc(100vw-1rem)] bg-transparent p-0 shadow-none"
+                            class="group/clock fixed z-[99999] hidden w-44 max-w-[calc(100vw-1rem)] bg-transparent p-0 shadow-none"
                             :style="`left:${posX}px; top:${posY}px;`"
                         >
                             <button
