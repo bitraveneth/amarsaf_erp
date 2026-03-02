@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\Permission;
 use App\Models\Agent;
 use App\Models\Batch;
 use App\Models\Delivery;
@@ -24,6 +25,33 @@ class AdminController extends Controller
      */
     public function index()
     {
+        $user = auth()->user();
+
+        // Role/permission-based dashboard routing:
+        // non-admin users should land on their functional dashboard.
+        if ($user && ! $user->hasAnyRole(['admin', 'super_admin'])) {
+            if (Permission::can($user, 'sales.manage')) {
+                return redirect()->route('admin.sales.dashboard');
+            }
+
+            if (Permission::can($user, 'manufacturing.manage')) {
+                return redirect()->route('admin.manufacturing.dashboard');
+            }
+
+            if (Permission::can($user, 'accounting.manage')) {
+                return redirect()->route('admin.accounting.dashboard');
+            }
+
+            if (Permission::can($user, 'reports.view')) {
+                return redirect()->route('admin.reports.dashboard');
+            }
+
+            return view('admin.dashboard-not-implemented', [
+                'roleKeys' => $user->roleKeys(),
+                'userName' => $user->name,
+            ]);
+        }
+
         $usersTableReady = Schema::hasTable('users');
         $productTableReady = Schema::hasTable('products');
         $packagingReady = Schema::hasTable('packaging_types');

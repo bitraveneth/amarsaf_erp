@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 
 class RoleController extends Controller
 {
@@ -83,16 +84,26 @@ class RoleController extends Controller
 
         // Only super admin can create new roles.
         if (! $request->user()?->hasRole('super_admin')) {
-            abort(403, 'Only super admin can create roles.');
+            return redirect()
+                ->route('admin.roles.index')
+                ->withErrors(['role_create' => 'Only super admin can create roles.']);
         }
 
         $data = $request->validate([
-            'key'   => 'required|string|max:50|alpha_dash|unique:roles,key',
+            'key'   => 'required|string|max:50|alpha_dash',
             'label' => 'required|string|max:100',
         ]);
 
+        $roleKey = Str::lower(trim($data['key']));
+        if (Role::query()->where('key', $roleKey)->exists()) {
+            return redirect()
+                ->route('admin.roles.index')
+                ->withErrors(['key' => 'Role key already exists.'])
+                ->withInput();
+        }
+
         Role::create([
-            'key'       => $data['key'],
+            'key'       => $roleKey,
             'label'     => $data['label'],
             'is_system' => false,
         ]);

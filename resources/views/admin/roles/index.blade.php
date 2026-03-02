@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="space-y-6" x-data="{ showCreateRole: false }">
+<div class="space-y-6" x-data="{ showCreateRole: {{ $errors->has('key') || $errors->has('label') || $errors->has('role_create') ? 'true' : 'false' }} }">
     {{-- Header --}}
     <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -27,6 +27,12 @@
     @if(session('status'))
         <div class="rounded-xl border border-success-200 bg-success-50 px-4 py-3 text-sm text-success-700 dark:border-success-500/40 dark:bg-success-500/10 dark:text-success-300">
             {{ session('status') }}
+        </div>
+    @endif
+
+    @if($errors->has('role_create'))
+        <div class="rounded-xl border border-error-200 bg-error-50 px-4 py-3 text-sm text-error-700 dark:border-error-500/40 dark:bg-error-500/10 dark:text-error-300">
+            {{ $errors->first('role_create') }}
         </div>
     @endif
 
@@ -89,10 +95,14 @@
                         <input
                             type="text"
                             name="key"
+                            value="{{ old('key') }}"
                             placeholder="e.g. finance_manager"
                             required
                             class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
                         />
+                        @error('key')
+                            <p class="mt-1 text-xs text-error-600 dark:text-error-400">{{ $message }}</p>
+                        @enderror
                     </div>
 
                     <div>
@@ -102,10 +112,14 @@
                         <input
                             type="text"
                             name="label"
+                            value="{{ old('label') }}"
                             placeholder="Visible name, e.g. Finance manager"
                             required
                             class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
                         />
+                        @error('label')
+                            <p class="mt-1 text-xs text-error-600 dark:text-error-400">{{ $message }}</p>
+                        @enderror
                     </div>
 
                     <div class="mt-4 flex items-center justify-end gap-2">
