@@ -43,7 +43,6 @@
             Alpine.store('sidebar', {
                 isExpanded: window.innerWidth >= 1280,
                 isMobileOpen: false,
-                isHovered: false,
 
                 toggleExpanded() {
                     this.isExpanded = !this.isExpanded;
@@ -57,31 +56,38 @@
                 setMobileOpen(val) {
                     this.isMobileOpen = val;
                 },
-
-                setHovered(val) {
-                    if (window.innerWidth >= 1280 && !this.isExpanded) {
-                        this.isHovered = val;
-                    }
-                },
             });
 
             Alpine.store('loader', {
                 show: true,
+                fallbackTimer: null,
                 init() {
-                    // Wait for page to be fully loaded
-                    window.addEventListener('load', () => {
-                        setTimeout(() => {
-                            this.show = false;
-                        }, 500); // Smooth fade out after load
-                    });
-                    
-                    // Fallback: hide after 3 seconds max
-                    setTimeout(() => {
-                        this.show = false;
-                    }, 3000);
+                    const hideSoon = () => {
+                        window.setTimeout(() => this.hide(), 150);
+                    };
+
+                    if (document.readyState === 'complete') {
+                        hideSoon();
+                    } else {
+                        window.addEventListener('load', hideSoon, { once: true });
+                    }
+
+                    this.fallbackTimer = window.setTimeout(() => {
+                        this.hide();
+                    }, 2000);
                 },
                 hide() {
+                    if (!this.show) {
+                        return;
+                    }
+
+                    if (this.fallbackTimer) {
+                        window.clearTimeout(this.fallbackTimer);
+                        this.fallbackTimer = null;
+                    }
+
                     this.show = false;
+                    window.dispatchEvent(new CustomEvent('app:content-visible'));
                 }
             });
         });
@@ -127,7 +133,7 @@
     </style>
 </head>
 
-<body x-data="{ loaded: false }"
+<body x-data
       x-init="$store.sidebar.isExpanded = window.innerWidth >= 1280;
         const checkMobile = () => {
             if (window.innerWidth < 1280) {
@@ -138,10 +144,7 @@
                 $store.sidebar.isExpanded = true;
             }
         };
-        window.addEventListener('resize', checkMobile);
-        
-        // Set loaded to true after Alpine is initialized
-        setTimeout(() => { loaded = true; }, 100);">
+        window.addEventListener('resize', checkMobile);">
 
     {{-- Page Loader --}}
     <div x-show="$store.loader.show" 
@@ -194,21 +197,16 @@
         @endif
     </div>
 
-    {{-- Main content - hidden until loader is done --}}
-    <div x-show="!$store.loader.show" 
-         x-transition:enter="transition ease-out duration-500"
-         x-transition:enter-start="opacity-0"
-         x-transition:enter-end="opacity-100"
-         class="min-h-screen xl:flex"
-         style="display: none;">
+    {{-- Main content renders behind the loader overlay --}}
+    <div class="min-h-screen xl:flex">
         
         @include('layouts.backdrop')
         @include('layouts.sidebar')
 
         <div class="flex-1 transition-all duration-300 ease-in-out"
              :class="{
-                'xl:ml-[290px]': $store.sidebar.isExpanded || $store.sidebar.isHovered,
-                'xl:ml-[90px]': !$store.sidebar.isExpanded && !$store.sidebar.isHovered,
+                'xl:ml-[290px]': $store.sidebar.isExpanded,
+                'xl:ml-[90px]': !$store.sidebar.isExpanded,
                 'ml-0': $store.sidebar.isMobileOpen
              }">
             @include('layouts.app-header')
@@ -241,14 +239,5 @@
 
     @stack('scripts')
 
-    <script>
-        // Force hide loader after maximum wait time
-        setTimeout(() => {
-            const root = document.querySelector('body[x-data]');
-            if (root && root.__x && root.__x.$store?.loader?.show) {
-                root.__x.$store.loader.hide();
-            }
-        }, 4000);
-    </script>
 </body>
 </html>

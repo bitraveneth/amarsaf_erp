@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Helpers\MenuHelper;
 use App\Http\Controllers\Controller;
 use App\Models\MenuGroup;
 use App\Models\MenuItem;
 use App\Models\Permission;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 class MenuController extends Controller
 {
@@ -94,6 +96,8 @@ class MenuController extends Controller
             'permission'    => 'nullable|string|max:100',
         ]);
 
+        $this->assertValidMenuPath($data['path'] ?? null);
+
         $position = (MenuItem::where('menu_group_id', $data['menu_group_id'])
             ->where('parent_id', $data['parent_id'] ?? null)
             ->max('position') ?? 0) + 1;
@@ -122,6 +126,10 @@ class MenuController extends Controller
             'path'       => 'nullable|string|max:255',
             'permission' => 'nullable|string|max:100',
         ]);
+
+        if (array_key_exists('path', $data)) {
+            $this->assertValidMenuPath($data['path']);
+        }
 
         if (array_key_exists('name', $data) && $data['name'] !== null) {
             $item->name = $data['name'];
@@ -209,5 +217,16 @@ class MenuController extends Controller
         if (! auth()->user()?->hasRole('super_admin')) {
             abort(403, 'Only super admin can manage menu.');
         }
+    }
+
+    protected function assertValidMenuPath(?string $path): void
+    {
+        if (MenuHelper::isValidMenuPath($path)) {
+            return;
+        }
+
+        throw ValidationException::withMessages([
+            'path' => 'Menu path must be a valid admin URL, `#`, or a non-admin external/internal link.',
+        ]);
     }
 }

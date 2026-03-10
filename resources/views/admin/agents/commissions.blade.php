@@ -26,14 +26,14 @@
                 View Settlements
             </a>
             <div class="flex items-center gap-1 rounded-lg border border-gray-300 bg-white shadow-theme-xs dark:border-gray-700 dark:bg-gray-800">
-                <a href="{{ route('admin.commissions.summary', ['month' => $month->copy()->subMonth()->format('Y-m')]) }}" 
+                <a href="{{ route('admin.commissions.index', ['month' => $month->copy()->subMonth()->format('Y-m')]) }}" 
                    class="inline-flex h-9 w-9 items-center justify-center rounded-l-lg text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/[0.03]">
                     <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
                     </svg>
                 </a>
                 <span class="h-4 w-px bg-gray-200 dark:bg-gray-700"></span>
-                <a href="{{ route('admin.commissions.summary', ['month' => $month->copy()->addMonth()->format('Y-m')]) }}" 
+                <a href="{{ route('admin.commissions.index', ['month' => $month->copy()->addMonth()->format('Y-m')]) }}" 
                    class="inline-flex h-9 w-9 items-center justify-center rounded-r-lg text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/[0.03]">
                     <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>

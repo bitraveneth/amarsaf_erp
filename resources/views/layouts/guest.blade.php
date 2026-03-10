@@ -14,18 +14,28 @@
         document.addEventListener('alpine:init', () => {
             Alpine.store('loader', {
                 show: true,
+                fallbackTimer: null,
                 init() {
-                    window.addEventListener('load', () => {
-                        setTimeout(() => {
-                            this.show = false;
-                        }, 500);
-                    });
+                    const hideSoon = () => {
+                        window.setTimeout(() => this.hide(), 150);
+                    };
 
-                    setTimeout(() => {
-                        this.show = false;
-                    }, 3000);
+                    if (document.readyState === 'complete') {
+                        hideSoon();
+                    } else {
+                        window.addEventListener('load', hideSoon, { once: true });
+                    }
+
+                    this.fallbackTimer = window.setTimeout(() => {
+                        this.hide();
+                    }, 2000);
                 },
                 hide() {
+                    if (this.fallbackTimer) {
+                        window.clearTimeout(this.fallbackTimer);
+                        this.fallbackTimer = null;
+                    }
+
                     this.show = false;
                 }
             });
@@ -63,12 +73,7 @@
         </p>
     </div>
 
-    <div class="flex min-h-screen flex-col"
-         x-show="!$store.loader.show"
-         x-transition:enter="transition ease-out duration-500"
-         x-transition:enter-start="opacity-0"
-         x-transition:enter-end="opacity-100"
-         style="display:none;">
+    <div class="flex min-h-screen flex-col">
         {{-- Optional minimal header for guest pages --}}
         <header class="absolute left-0 right-0 top-0 z-50">
             <div class="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">

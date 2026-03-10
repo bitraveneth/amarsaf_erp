@@ -274,6 +274,8 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::patch('agents/{agent}/pricing', [AgentPricingController::class, 'update'])->middleware('perm:control.agents')->name('agents.pricing.update');
     Route::get('agents/{agent}/ledger', [AgentLedgerController::class, 'show'])->middleware('perm:control.agents')->name('agents.ledger.show');
     Route::get('commissions', [CommissionReportController::class, 'index'])->middleware('perm:control.agents')->name('commissions.index');
+    Route::get('commissions/summary', [CommissionReportController::class, 'index'])->middleware('perm:control.agents')->name('commissions.summary');
+    Route::get('commissions/export', [CommissionReportController::class, 'export'])->middleware('perm:control.agents')->name('commissions.export');
     Route::get('commission-rules', [CommissionReportController::class, 'rules'])->middleware('perm:control.agents')->name('commissions.rules');
     Route::get('settlements', [CommissionSettlementController::class, 'index'])->middleware('perm:control.agents')->name('settlements.index');
     Route::post('settlements/generate', [CommissionSettlementController::class, 'generate'])->middleware('perm:control.agents')->name('settlements.generate');

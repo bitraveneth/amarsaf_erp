@@ -20,6 +20,12 @@
         </div>
     @endif
 
+    @if($errors->any())
+        <div class="rounded-xl border border-error-200 bg-error-50 px-4 py-3 text-sm text-error-700 dark:border-error-500/40 dark:bg-error-500/10 dark:text-error-300">
+            {{ $errors->first() }}
+        </div>
+    @endif
+
     <div class="grid gap-6 lg:grid-cols-[320px,minmax(0,1fr)]">
         {{-- Groups column --}}
         <div class="rounded-2xl border border-gray-200 bg-white p-4 shadow-theme-xs dark:border-gray-800 dark:bg-gray-900">

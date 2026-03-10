@@ -3,6 +3,7 @@
 namespace App\Helpers;
 
 use App\Models\MenuGroup;
+use Illuminate\Support\Facades\Route;
 
 class MenuHelper
 {
@@ -13,9 +14,14 @@ class MenuHelper
      */
     public static function getMenuGroups(): array
     {
-        $groups = MenuGroup::with(['items.children' => function ($query) {
-            $query->where('is_active', true)->orderBy('position');
-        }])
+        $groups = MenuGroup::with([
+            'items.children' => function ($query) {
+                $query->where('is_active', true)->orderBy('position');
+            },
+            'items.children.children' => function ($query) {
+                $query->where('is_active', true)->orderBy('position');
+            },
+        ])
             ->where('is_active', true)
             ->orderBy('position')
             ->get();
@@ -84,6 +90,61 @@ class MenuHelper
                     ->all(),
             ];
         })->all();
+    }
+
+    public static function isValidMenuPath(?string $path): bool
+    {
+        if ($path === null) {
+            return true;
+        }
+
+        $path = trim($path);
+
+        if ($path === '' || $path === '#') {
+            return true;
+        }
+
+        if (! str_starts_with($path, '/admin')) {
+            return true;
+        }
+
+        return in_array($path, self::knownAdminPaths(), true);
+    }
+
+    public static function matchesCurrentPath(?string $menuPath, ?string $currentPath): bool
+    {
+        if ($menuPath === null || $currentPath === null) {
+            return false;
+        }
+
+        $menuPath = rtrim(trim($menuPath), '/');
+        $currentPath = '/' . trim($currentPath, '/');
+        $currentPath = rtrim($currentPath, '/');
+
+        if ($menuPath === '') {
+            return false;
+        }
+
+        if ($menuPath === '/admin') {
+            return $currentPath === '/admin';
+        }
+
+        return $currentPath === $menuPath || str_starts_with($currentPath, $menuPath . '/');
+    }
+
+    public static function knownAdminPaths(): array
+    {
+        static $knownPaths = null;
+
+        if ($knownPaths !== null) {
+            return $knownPaths;
+        }
+
+        $knownPaths = collect(Route::getRoutes())
+            ->map(fn ($route) => '/' . ltrim($route->uri(), '/'))
+            ->all();
+
+        return $knownPaths;
     }
 
     /**

@@ -1,16 +1,11 @@
 @php
     use App\Helpers\MenuHelper;
     use App\Helpers\Permission;
-    use Illuminate\Support\Facades\Route;
-
-    $__knownPaths = collect(Route::getRoutes())
-        ->map(fn ($route) => '/' . ltrim($route->uri(), '/'))
-        ->all();
     $__authUser = auth()->user();
     $__menuGroups = collect(MenuHelper::getMenuGroups())
-        ->map(function ($group) use ($__authUser, $__knownPaths) {
+        ->map(function ($group) use ($__authUser) {
             $items = collect($group['items'] ?? [])
-                ->map(function ($item) use ($__authUser, $__knownPaths) {
+                ->map(function ($item) use ($__authUser) {
                     $itemPermission = $item['permission'] ?? null;
                     $canSeeItem = empty($itemPermission) || Permission::can($__authUser, $itemPermission);
 
@@ -18,21 +13,20 @@
                         return null;
                     }
 
-                    if (!empty($item['path']) && $item['path'] !== '#' && str_starts_with($item['path'], '/admin') && !in_array($item['path'], $__knownPaths, true)) {
+                    if (! MenuHelper::isValidMenuPath($item['path'] ?? null)) {
                         return null;
                     }
 
                     if (isset($item['subItems']) && is_array($item['subItems'])) {
                         $item['subItems'] = collect($item['subItems'])
-                            ->filter(function ($subItem) use ($__authUser, $__knownPaths) {
+                            ->filter(function ($subItem) use ($__authUser) {
                                 $permission = $subItem['permission'] ?? null;
                                 $hasPermission = empty($permission) || Permission::can($__authUser, $permission);
                                 if (!$hasPermission) {
                                     return false;
                                 }
 
-                                $path = $subItem['path'] ?? null;
-                                if (!empty($path) && $path !== '#' && str_starts_with($path, '/admin') && !in_array($path, $__knownPaths, true)) {
+                                if (! MenuHelper::isValidMenuPath($subItem['path'] ?? null)) {
                                     return false;
                                 }
 
@@ -681,9 +675,6 @@
                             @endif
                         </span>
                         <span class="hidden text-left xl:block">
-                            <span class="mb-0.5 inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-gray-600 dark:bg-gray-800 dark:text-gray-300">
-                                {{ $roleLabels[$role] ?? strtoupper(str_replace('_', ' ', $role)) }}
-                            </span>
                             <span class="block text-sm font-semibold text-gray-900 dark:text-white">
                                 {{ $user->name ?? $user->email }}
                             </span>
