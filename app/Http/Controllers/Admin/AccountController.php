@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Account;
+use App\Models\LedgerEntry;
 use Illuminate\Http\Request;
 
 class AccountController extends Controller
@@ -42,6 +43,12 @@ class AccountController extends Controller
 
     public function destroy(Account $account)
     {
+        if (LedgerEntry::where('account', $account->name)->exists()) {
+            return redirect()
+                ->route('admin.accounts.index')
+                ->with('status', 'Account is referenced by ledger entries and cannot be deleted.');
+        }
+
         $account->delete();
 
         return redirect()->route('admin.accounts.index')->with('status', 'Account deleted.');
@@ -57,4 +64,3 @@ class AccountController extends Controller
         ]) + ['is_active' => $request->boolean('is_active', true)];
     }
 }
-

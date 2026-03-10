@@ -48,7 +48,7 @@ class AccountingDashboardController extends Controller
             return $d->base_salary + $d->bonus + $d->ta_allowances + $d->da_allowances + $d->commission;
         });
 
-        $netProfitEstimate = ($netSales + $vatTotal - $withholdingTotal) - ($totalExpenses + $totalPayroll);
+        $netProfitEstimate = $netSales - ($totalExpenses + $totalPayroll);
 
         return view('admin.accounting.dashboard', [
             'periodLabel' => $startOfMonth->format('d M Y') . ' – ' . $endOfMonth->format('d M Y'),

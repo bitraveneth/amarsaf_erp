@@ -23,7 +23,7 @@ class ReportsDashboardController extends Controller
             ->whereBetween('issued_at', [$startOfYear, $endOfYear])
             ->get();
 
-        $grossRevenue = $invoices->sum(fn ($inv) => $inv->net_total + $inv->vat_amount);
+        $grossRevenue = $invoices->sum('net_total');
         $withholdingTotal = $invoices->sum('withholding');
 
         $totalCollections = $invoices->flatMap->receipts->sum('amount');
@@ -52,7 +52,7 @@ class ReportsDashboardController extends Controller
 
         $activeAgents = Agent::count();
 
-        $netProfitEstimate = ($grossRevenue - $withholdingTotal) - ($totalExpenses + $totalPayroll);
+        $netProfitEstimate = $grossRevenue - ($totalExpenses + $totalPayroll);
 
         return view('admin.reports.dashboard', [
             'yearLabel'          => $startOfYear->format('Y'),
@@ -68,4 +68,3 @@ class ReportsDashboardController extends Controller
         ]);
     }
 }
-

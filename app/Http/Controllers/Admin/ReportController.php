@@ -21,12 +21,11 @@ class ReportController extends Controller
 {
     public function profitAndLoss(Request $request)
     {
-        $from = $request->query('from')
-            ? Carbon::parse($request->query('from'))
-            : Carbon::now()->startOfMonth();
-        $to = $request->query('to')
-            ? Carbon::parse($request->query('to'))
-            : Carbon::now()->endOfMonth();
+        [$from, $to] = $this->resolveDateRange(
+            $request,
+            Carbon::now()->startOfMonth(),
+            Carbon::now()->endOfMonth()
+        );
 
         $entries = LedgerEntry::whereBetween('created_at', [$from, $to])->get();
 
@@ -100,7 +99,7 @@ class ReportController extends Controller
     public function vat(Request $request)
     {
         $month = $request->query('month')
-            ? Carbon::parse($request->query('month') . '-01')
+            ? Carbon::parse($request->query('month') . '-01')->startOfMonth()
             : Carbon::now()->startOfMonth();
 
         $from = $month->copy()->startOfMonth();
@@ -126,8 +125,8 @@ class ReportController extends Controller
 
             return [
                 'date'        => $invoice->issued_at,
-                'number'      => $invoice->invoice_number ?? $invoice->id,
-            'customer'    => $invoice->order?->agent?->name,
+                'number'      => $invoice->number ?? $invoice->id,
+                'customer'    => $invoice->order?->agent?->name,
                 'taxable'     => $taxable,
                 'vat'         => $vat,
                 'vat_rate'    => $rate,
@@ -191,12 +190,11 @@ class ReportController extends Controller
 
     public function cashflow(Request $request)
     {
-        $from = $request->query('from')
-            ? Carbon::parse($request->query('from'))
-            : Carbon::now()->startOfMonth();
-        $to = $request->query('to')
-            ? Carbon::parse($request->query('to'))
-            : Carbon::now()->endOfMonth();
+        [$from, $to] = $this->resolveDateRange(
+            $request,
+            Carbon::now()->startOfMonth(),
+            Carbon::now()->endOfMonth()
+        );
 
         $bankAccounts = Account::where('type', 'asset')->where('code', 'like', '1%')->pluck('name')->all();
 
@@ -289,12 +287,11 @@ class ReportController extends Controller
 
     public function productionSummary(Request $request)
     {
-        $from = $request->query('from')
-            ? Carbon::parse($request->query('from'))
-            : Carbon::now()->startOfMonth();
-        $to = $request->query('to')
-            ? Carbon::parse($request->query('to'))
-            : Carbon::now()->endOfMonth();
+        [$from, $to] = $this->resolveDateRange(
+            $request,
+            Carbon::now()->startOfMonth(),
+            Carbon::now()->endOfMonth()
+        );
 
         $production = ProductionRun::with('product')
             ->whereBetween('created_at', [$from, $to])
@@ -367,13 +364,16 @@ class ReportController extends Controller
 
         $expensesTotal = Expense::whereBetween('date', [$from, $to])->sum('amount');
 
+        $materialCostTotal = $byProduct->sum(fn (array $row) => (float) ($row['total_cost'] ?? 0));
+
         return view('admin.finance.production_summary', [
             'from' => $from,
             'to' => $to,
             'byProduct' => $byProduct,
             'salesTotal' => $salesTotal,
             'expensesTotal' => $expensesTotal,
-            'approxProfit' => $salesTotal - $expensesTotal,
+            'materialCostTotal' => $materialCostTotal,
+            'approxProfit' => $salesTotal - $materialCostTotal - $expensesTotal,
         ]);
     }
 
@@ -450,5 +450,18 @@ class ReportController extends Controller
         ];
 
         return view('admin.finance.payroll_summary', compact('from', 'to', 'rows', 'totals'));
+    }
+
+    protected function resolveDateRange(Request $request, Carbon $defaultFrom, Carbon $defaultTo): array
+    {
+        $from = $request->query('from')
+            ? Carbon::parse($request->query('from'))->startOfDay()
+            : $defaultFrom->copy()->startOfDay();
+
+        $to = $request->query('to')
+            ? Carbon::parse($request->query('to'))->endOfDay()
+            : $defaultTo->copy()->endOfDay();
+
+        return [$from, $to];
     }
 }

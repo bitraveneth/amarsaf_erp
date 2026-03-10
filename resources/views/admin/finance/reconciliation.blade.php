@@ -219,20 +219,14 @@
                                 @endphp
                                 <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
                                     <td class="px-4 py-3">
-                                        @if(!$receipt->reconciled)
-                                            <label class="inline-flex items-center">
-                                                <input type="checkbox" 
-                                                       name="reconciled[]" 
-                                                       value="{{ $receipt->id }}"
-                                                       class="receipt-checkbox h-4 w-4 rounded border-gray-300 bg-white text-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800 dark:checked:bg-brand-500">
-                                            </label>
-                                        @else
-                                            <span class="inline-flex items-center justify-center w-4 h-4">
-                                                <svg class="h-4 w-4 text-success-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                                                </svg>
-                                            </span>
-                                        @endif
+                                        <input type="hidden" name="visible_receipts[]" value="{{ $receipt->id }}">
+                                        <label class="inline-flex items-center">
+                                            <input type="checkbox" 
+                                                   name="reconciled[]" 
+                                                   value="{{ $receipt->id }}"
+                                                   @checked($receipt->reconciled)
+                                                   class="receipt-checkbox h-4 w-4 rounded border-gray-300 bg-white text-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800 dark:checked:bg-brand-500">
+                                        </label>
                                     </td>
                                     <td class="px-4 py-3 whitespace-nowrap">
                                         <div class="flex items-center gap-2">
@@ -288,11 +282,11 @@
                     </table>
                 </div>
 
-                @if($pendingCount > 0)
+                @if($totalReceipts > 0)
                     <div class="mt-6 flex items-center justify-between">
                         <div class="flex items-center gap-2">
                             <span id="selected-count" class="text-sm text-gray-600 dark:text-gray-400">
-                                0 of {{ $pendingCount }} receipts selected
+                                0 of {{ $totalReceipts }} receipts selected
                             </span>
                         </div>
                         <div class="flex items-center gap-3">
@@ -301,7 +295,7 @@
                                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                                 </svg>
-                                Mark Selected as Reconciled
+                                Save Reconciliation
                             </button>
                         </div>
                     </div>
@@ -320,8 +314,7 @@
                 <div class="flex-1">
                     <h3 class="text-sm font-semibold text-gray-900 dark:text-white">About Bank Reconciliation</h3>
                     <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                        Marking receipts as reconciled confirms they have been matched with your bank statement. 
-                        Once reconciled, receipts cannot be modified and are considered final for accounting purposes.
+                        Use the checkboxes to match or unmatch receipts against the current bank statement for this period.
                     </p>
                     <div class="mt-4 flex items-center gap-4">
                         <div class="flex items-center gap-2">
@@ -349,8 +342,8 @@
         function updateSelectedCount() {
             if (selectedCountSpan) {
                 const checkedCount = document.querySelectorAll('.receipt-checkbox:checked').length;
-                const totalPending = {{ $pendingCount ?? 0 }};
-                selectedCountSpan.textContent = `${checkedCount} of ${totalPending} receipts selected`;
+                const totalReceipts = {{ $totalReceipts ?? 0 }};
+                selectedCountSpan.textContent = `${checkedCount} of ${totalReceipts} receipts selected`;
             }
         }
 

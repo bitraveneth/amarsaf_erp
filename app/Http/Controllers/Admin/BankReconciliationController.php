@@ -28,14 +28,30 @@ class BankReconciliationController extends Controller
 
     public function update(Request $request)
     {
-        $ids = $request->input('reconciled', []);
-        if (!is_array($ids)) {
-            $ids = [];
+        $data = $request->validate([
+            'visible_receipts' => 'array',
+            'visible_receipts.*' => 'integer|exists:receipts,id',
+            'reconciled' => 'array',
+            'reconciled.*' => 'integer|exists:receipts,id',
+        ]);
+
+        $visibleIds = collect($data['visible_receipts'] ?? [])
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values();
+
+        $reconciledIds = collect($data['reconciled'] ?? [])
+            ->map(fn ($id) => (int) $id)
+            ->intersect($visibleIds)
+            ->values();
+
+        if ($visibleIds->isNotEmpty()) {
+            Receipt::whereIn('id', $visibleIds)->update(['reconciled' => false]);
+            Receipt::whereIn('id', $reconciledIds)->update(['reconciled' => true]);
         }
 
-        Receipt::whereIn('id', $ids)->update(['reconciled' => true]);
-
-        return redirect()->route('admin.finance.reconciliation')->with('status', 'Receipts marked as reconciled.');
+        return redirect()
+            ->route('admin.finance.reconciliation')
+            ->with('status', 'Receipt reconciliation updated.');
     }
 }
-

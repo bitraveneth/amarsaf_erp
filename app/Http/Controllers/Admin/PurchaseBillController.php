@@ -14,6 +14,7 @@ use App\Models\Warehouse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class PurchaseBillController extends Controller
 {
@@ -61,48 +62,56 @@ class PurchaseBillController extends Controller
             $netTotal += $item['quantity'] * $item['unit_price'];
         }
 
-        $bill = PurchaseBill::create([
-            'supplier_id' => $data['supplier_id'],
-            'number' => 'PB-' . str_pad((string)(PurchaseBill::max('id') + 1), 6, '0', STR_PAD_LEFT),
-            'bill_date' => $data['bill_date'],
-            'due_date' => $data['due_date'] ?? null,
-            'net_total' => $netTotal,
-            'vat_amount' => 0,
-            'status' => 'open',
-        ]);
+        $bill = null;
 
-        foreach ($data['items'] as $item) {
-            PurchaseBillItem::create([
-                'purchase_bill_id' => $bill->id,
-                'product_id' => $item['product_id'] ?? null,
-                'description' => $item['description'],
-                'quantity' => $item['quantity'],
-                'unit_price' => $item['unit_price'],
-                'line_total' => $item['quantity'] * $item['unit_price'],
+        DB::transaction(function () use ($data, $netTotal, &$bill) {
+            $bill = PurchaseBill::create([
+                'supplier_id' => $data['supplier_id'],
+                'number' => 'PB-TMP-' . Str::uuid(),
+                'bill_date' => $data['bill_date'],
+                'due_date' => $data['due_date'] ?? null,
+                'net_total' => $netTotal,
+                'vat_amount' => 0,
+                'status' => 'open',
             ]);
-        }
 
-        LedgerEntry::create([
-            'account' => 'Purchases',
-            'description' => 'Purchase bill ' . $bill->number,
-            'debit' => $netTotal,
-            'credit' => 0,
-            'order_id' => null,
-            'invoice_id' => null,
-        ]);
+            $bill->update([
+                'number' => $this->formatPurchaseBillNumber($bill->id),
+            ]);
 
-        LedgerEntry::create([
-            'account' => 'Accounts Payable',
-            'description' => 'Purchase bill ' . $bill->number,
-            'debit' => 0,
-            'credit' => $netTotal,
-            'order_id' => null,
-            'invoice_id' => null,
-        ]);
+            foreach ($data['items'] as $item) {
+                PurchaseBillItem::create([
+                    'purchase_bill_id' => $bill->id,
+                    'product_id' => $item['product_id'] ?? null,
+                    'description' => $item['description'],
+                    'quantity' => $item['quantity'],
+                    'unit_price' => $item['unit_price'],
+                    'line_total' => $item['quantity'] * $item['unit_price'],
+                ]);
+            }
 
-        // Post raw material stock into default warehouse so that
-        // Material stock & BOM consumption can work end-to-end.
-        $this->postMaterialStockForBill($bill, $data['items'], $data['warehouse_id'] ?? null);
+            LedgerEntry::create([
+                'account' => 'Purchases',
+                'description' => 'Purchase bill ' . $bill->number,
+                'debit' => $netTotal,
+                'credit' => 0,
+                'order_id' => null,
+                'invoice_id' => null,
+            ]);
+
+            LedgerEntry::create([
+                'account' => 'Accounts Payable',
+                'description' => 'Purchase bill ' . $bill->number,
+                'debit' => 0,
+                'credit' => $netTotal,
+                'order_id' => null,
+                'invoice_id' => null,
+            ]);
+
+            // Post raw material stock into default warehouse so that
+            // Material stock & BOM consumption can work end-to-end.
+            $this->postMaterialStockForBill($bill, $data['items'], $data['warehouse_id'] ?? null);
+        });
 
         return redirect()->route('admin.bills.index')->with('status', 'Purchase bill recorded.');
     }
@@ -308,5 +317,10 @@ class PurchaseBillController extends Controller
                 'status' => 'available',
             ]);
         }
+    }
+
+    protected function formatPurchaseBillNumber(int $purchaseBillId): string
+    {
+        return 'PB-' . str_pad((string) $purchaseBillId, 6, '0', STR_PAD_LEFT);
     }
 }

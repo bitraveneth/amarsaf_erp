@@ -11,6 +11,8 @@ use App\Models\Order;
 use App\Models\Receipt;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Barryvdh\DomPDF\Facade\Pdf;
 
 class FinanceController extends Controller
@@ -53,6 +55,13 @@ class FinanceController extends Controller
             abort(400, 'Only delivered orders can be invoiced.');
         }
 
+        $existingInvoice = Invoice::where('order_id', $order->id)->first();
+        if ($existingInvoice) {
+            return redirect()
+                ->route('admin.finance.show', $existingInvoice)
+                ->with('status', 'Invoice already exists for this order.');
+        }
+
         $order->loadMissing('items.product.taxClass', 'agent');
 
         $netTotal = 0;
@@ -76,7 +85,6 @@ class FinanceController extends Controller
 
         $invoiceData = [
             'order_id' => $order->id,
-            'number' => 'INV-' . str_pad((string)(Invoice::max('id') + 1), 6, '0', STR_PAD_LEFT),
             'issued_at' => Carbon::today(),
             'due_at' => Carbon::today()->addDays(7),
             'net_total' => $netTotal,
@@ -92,47 +100,57 @@ class FinanceController extends Controller
             $invoiceData['withholding'] = round($grossTotal * ($agent->withholding_rate / 100), 2);
         }
 
-        $invoice = Invoice::create($invoiceData);
+        $invoice = null;
 
-        foreach ($order->items as $item) {
-            InvoiceItem::create([
-                'invoice_id' => $invoice->id,
-                'product_id' => $item->product_id,
-                'description' => $item->product?->name ?? 'Order item',
-                'quantity' => $item->quantity,
-                'unit_price' => $item->unit_price,
-                'line_total' => $item->quantity * $item->unit_price,
+        DB::transaction(function () use ($invoiceData, $order, $netTotal, $vatAmount, &$invoice) {
+            $invoice = Invoice::create(array_merge($invoiceData, [
+                'number' => 'INV-TMP-' . Str::uuid(),
+            ]));
+
+            $invoice->update([
+                'number' => $this->formatInvoiceNumber($invoice->id),
             ]);
-        }
 
-        LedgerEntry::create([
-            'account' => 'Accounts Receivable',
-            'description' => 'Invoice ' . $invoice->number,
-            'debit' => $netTotal + $vatAmount,
-            'credit' => 0,
-            'order_id' => $order->id,
-            'invoice_id' => $invoice->id,
-        ]);
+            foreach ($order->items as $item) {
+                InvoiceItem::create([
+                    'invoice_id' => $invoice->id,
+                    'product_id' => $item->product_id,
+                    'description' => $item->product?->name ?? 'Order item',
+                    'quantity' => $item->quantity,
+                    'unit_price' => $item->unit_price,
+                    'line_total' => $item->quantity * $item->unit_price,
+                ]);
+            }
 
-        LedgerEntry::create([
-            'account' => 'Sales Revenue',
-            'description' => 'Invoice ' . $invoice->number,
-            'debit' => 0,
-            'credit' => $netTotal,
-            'order_id' => $order->id,
-            'invoice_id' => $invoice->id,
-        ]);
-
-        if ($vatAmount > 0) {
             LedgerEntry::create([
-                'account' => 'VAT Payable',
-                'description' => 'VAT on ' . $invoice->number,
-                'debit' => 0,
-                'credit' => $vatAmount,
+                'account' => 'Accounts Receivable',
+                'description' => 'Invoice ' . $invoice->number,
+                'debit' => $netTotal + $vatAmount,
+                'credit' => 0,
                 'order_id' => $order->id,
                 'invoice_id' => $invoice->id,
             ]);
-        }
+
+            LedgerEntry::create([
+                'account' => 'Sales Revenue',
+                'description' => 'Invoice ' . $invoice->number,
+                'debit' => 0,
+                'credit' => $netTotal,
+                'order_id' => $order->id,
+                'invoice_id' => $invoice->id,
+            ]);
+
+            if ($vatAmount > 0) {
+                LedgerEntry::create([
+                    'account' => 'VAT Payable',
+                    'description' => 'VAT on ' . $invoice->number,
+                    'debit' => 0,
+                    'credit' => $vatAmount,
+                    'order_id' => $order->id,
+                    'invoice_id' => $invoice->id,
+                ]);
+            }
+        });
 
         return redirect()->route('admin.finance.index')->with('status', 'Invoice created from order.');
     }
@@ -146,32 +164,39 @@ class FinanceController extends Controller
             'notes' => 'nullable|string',
         ]);
 
-        $receipt = Receipt::create([
-            'invoice_id' => $invoice->id,
-            'amount' => $data['amount'],
-            'payment_method' => $data['payment_method'] ?? null,
-            'received_at' => $data['received_at'] ?? Carbon::today(),
-            'notes' => $data['notes'] ?? null,
-        ]);
+        $receipt = null;
 
-        LedgerEntry::create([
-            'account' => 'Bank',
-            'description' => 'Receipt for ' . $invoice->number,
-            'debit' => $receipt->amount,
-            'credit' => 0,
-            'order_id' => $invoice->order_id,
-            'invoice_id' => $invoice->id,
-        ]);
+        DB::transaction(function () use ($invoice, $data, &$receipt) {
+            $receipt = Receipt::create([
+                'invoice_id' => $invoice->id,
+                'amount' => $data['amount'],
+                'payment_method' => $data['payment_method'] ?? null,
+                'received_at' => $data['received_at'] ?? Carbon::today(),
+                'notes' => $data['notes'] ?? null,
+            ]);
 
-        LedgerEntry::create([
-            'account' => 'Accounts Receivable',
-            'description' => 'Receipt for ' . $invoice->number,
-            'debit' => 0,
-            'credit' => $receipt->amount,
-            'order_id' => $invoice->order_id,
-            'invoice_id' => $invoice->id,
-        ]);
-        $invoice->recalculateStatus();
+            $description = $this->receiptLedgerDescription($receipt, $invoice);
+
+            LedgerEntry::create([
+                'account' => 'Bank',
+                'description' => $description,
+                'debit' => $receipt->amount,
+                'credit' => 0,
+                'order_id' => $invoice->order_id,
+                'invoice_id' => $invoice->id,
+            ]);
+
+            LedgerEntry::create([
+                'account' => 'Accounts Receivable',
+                'description' => $description,
+                'debit' => 0,
+                'credit' => $receipt->amount,
+                'order_id' => $invoice->order_id,
+                'invoice_id' => $invoice->id,
+            ]);
+
+            $invoice->recalculateStatus();
+        });
 
         return redirect()->route('admin.finance.show', $invoice)->with('status', 'Receipt recorded.');
     }
@@ -181,20 +206,13 @@ class FinanceController extends Controller
         $invoice = $receipt->invoice;
 
         if ($invoice) {
-            LedgerEntry::where('invoice_id', $invoice->id)
-                ->whereIn('account', ['Bank', 'Accounts Receivable'])
-                ->where(function ($query) use ($receipt) {
-                    $query->where('debit', $receipt->amount)
-                          ->orWhere('credit', $receipt->amount);
-                })
-                ->delete();
-        }
-
-        $amount = $receipt->amount;
-        $receipt->delete();
-
-        if ($invoice) {
-            $invoice->recalculateStatus();
+            DB::transaction(function () use ($invoice, $receipt) {
+                $this->deleteReceiptLedgerEntries($invoice, $receipt);
+                $receipt->delete();
+                $invoice->recalculateStatus();
+            });
+        } else {
+            $receipt->delete();
         }
 
         return redirect()->route('admin.finance.show', $invoice)->with('status', 'Receipt deleted.');
@@ -222,35 +240,42 @@ class FinanceController extends Controller
             return back()->withErrors(['amount' => 'Credit amount exceeds remaining invoice value.']);
         }
 
-        $credit = CreditNote::create([
-            'invoice_id' => $invoice->id,
-            'order_id' => $invoice->order_id,
-            'number' => 'CN-' . str_pad((string)(CreditNote::max('id') + 1), 6, '0', STR_PAD_LEFT),
-            'issued_at' => Carbon::today(),
-            'amount' => $data['amount'],
-            'reason' => $data['reason'] ?? null,
-        ]);
+        $credit = null;
 
-        LedgerEntry::create([
-            'account' => 'Sales Returns',
-            'description' => 'Credit note ' . $credit->number,
-            'debit' => $credit->amount,
-            'credit' => 0,
-            'order_id' => $invoice->order_id,
-            'invoice_id' => $invoice->id,
-        ]);
+        DB::transaction(function () use ($invoice, $data, &$credit) {
+            $credit = CreditNote::create([
+                'invoice_id' => $invoice->id,
+                'order_id' => $invoice->order_id,
+                'number' => 'CN-TMP-' . Str::uuid(),
+                'issued_at' => Carbon::today(),
+                'amount' => $data['amount'],
+                'reason' => $data['reason'] ?? null,
+            ]);
 
-        LedgerEntry::create([
-            'account' => 'Accounts Receivable',
-            'description' => 'Credit note ' . $credit->number,
-            'debit' => 0,
-            'credit' => $credit->amount,
-            'order_id' => $invoice->order_id,
-            'invoice_id' => $invoice->id,
-        ]);
+            $credit->update([
+                'number' => $this->formatCreditNoteNumber($credit->id),
+            ]);
 
-        // Recalculate status after applying credit
-        $invoice->recalculateStatus();
+            LedgerEntry::create([
+                'account' => 'Sales Returns',
+                'description' => 'Credit note ' . $credit->number,
+                'debit' => $credit->amount,
+                'credit' => 0,
+                'order_id' => $invoice->order_id,
+                'invoice_id' => $invoice->id,
+            ]);
+
+            LedgerEntry::create([
+                'account' => 'Accounts Receivable',
+                'description' => 'Credit note ' . $credit->number,
+                'debit' => 0,
+                'credit' => $credit->amount,
+                'order_id' => $invoice->order_id,
+                'invoice_id' => $invoice->id,
+            ]);
+
+            $invoice->recalculateStatus();
+        });
 
         return redirect()->route('admin.finance.show', $invoice)->with('status', 'Credit note created.');
     }
@@ -308,5 +333,51 @@ class FinanceController extends Controller
         $invoice->delete();
 
         return redirect()->route('admin.finance.index')->with('status', 'Invoice deleted.');
+    }
+
+    protected function formatInvoiceNumber(int $invoiceId): string
+    {
+        return 'INV-' . str_pad((string) $invoiceId, 6, '0', STR_PAD_LEFT);
+    }
+
+    protected function formatCreditNoteNumber(int $creditNoteId): string
+    {
+        return 'CN-' . str_pad((string) $creditNoteId, 6, '0', STR_PAD_LEFT);
+    }
+
+    protected function receiptLedgerDescription(Receipt $receipt, Invoice $invoice): string
+    {
+        return 'Receipt #' . $receipt->id . ' for ' . $invoice->number;
+    }
+
+    protected function deleteReceiptLedgerEntries(Invoice $invoice, Receipt $receipt): void
+    {
+        $exactDescription = $this->receiptLedgerDescription($receipt, $invoice);
+
+        $exactEntries = LedgerEntry::where('invoice_id', $invoice->id)
+            ->where('description', $exactDescription)
+            ->get();
+
+        if ($exactEntries->isNotEmpty()) {
+            LedgerEntry::whereKey($exactEntries->pluck('id'))->delete();
+
+            return;
+        }
+
+        $legacyEntries = LedgerEntry::where('invoice_id', $invoice->id)
+            ->where('description', 'Receipt for ' . $invoice->number)
+            ->where(function ($query) use ($receipt) {
+                $query->where('debit', $receipt->amount)
+                    ->orWhere('credit', $receipt->amount);
+            })
+            ->get();
+
+        $isSafeLegacyPair = $legacyEntries->count() === 2
+            && $legacyEntries->contains(fn (LedgerEntry $entry) => $entry->account === 'Bank' && (float) $entry->debit === (float) $receipt->amount)
+            && $legacyEntries->contains(fn (LedgerEntry $entry) => $entry->account === 'Accounts Receivable' && (float) $entry->credit === (float) $receipt->amount);
+
+        if ($isSafeLegacyPair) {
+            LedgerEntry::whereKey($legacyEntries->pluck('id'))->delete();
+        }
     }
 }
