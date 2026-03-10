@@ -12,7 +12,7 @@
     @endphp
 
     <!-- Header with gradient -->
-    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4" data-tour="reconciliation-overview-header">
         <div>
             <div class="flex items-center gap-3">
                 <div class="relative">

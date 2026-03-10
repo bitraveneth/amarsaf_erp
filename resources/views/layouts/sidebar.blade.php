@@ -81,7 +81,7 @@
          :class="!isSidebarVisible()
             ? 'xl:justify-center'
             : 'justify-start'">
-        <a href="{{ route('admin.dashboard') }}" class="flex items-center gap-3">
+        <a href="{{ route('admin.dashboard') }}" data-tour="sidebar-brand" class="flex items-center gap-3">
             @if(!empty($appLogoUrl))
                 <img src="{{ $appLogoUrl }}" alt="{{ $appName }}" class="h-10 w-10 rounded-xl border border-gray-200 object-cover dark:border-gray-700" />
             @else
@@ -125,6 +125,12 @@
                                     $itemPath = $item['path'] ?? null;
                                     $subItems = $item['subItems'] ?? [];
                                     $hasSubItems = !empty($subItems);
+                                    $tourKey = null;
+                                    if ($itemPath === '/admin') {
+                                        $tourKey = 'sidebar-dashboard';
+                                    } elseif ($itemPath === '/admin/products' || (($subItems[0]['path'] ?? null) === '/admin/products')) {
+                                        $tourKey = 'sidebar-products';
+                                    }
                                     $activeSubItemPath = collect($subItems)
                                         ->filter(fn ($subItem) => $matchesCurrent($subItem['path'] ?? null))
                                         ->sortByDesc(fn ($subItem) => strlen((string) ($subItem['path'] ?? '')))
@@ -143,6 +149,7 @@
                                         @endphp
                                         <div class="flex items-center gap-2">
                                             <a href="{{ $parentTarget }}"
+                                                @if($tourKey) data-tour="{{ $tourKey }}" @endif
                                                 @class([
                                                     'menu-item group min-w-0 flex-1',
                                                     'menu-item-active' => $itemIsActive || $subtreeIsActive,
@@ -240,6 +247,7 @@
                                     @else
                                         <!-- Simple Menu Item -->
                                         <a href="{{ $item['path'] }}"
+                                            @if($tourKey) data-tour="{{ $tourKey }}" @endif
                                             @class([
                                                 'menu-item group',
                                                 'menu-item-active' => $itemIsActive,

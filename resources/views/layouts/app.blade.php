@@ -1,3 +1,6 @@
+@php
+    require resource_path('views/layouts/partials/system-tour-steps.php');
+@endphp
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="h-full">
 
@@ -21,6 +24,10 @@
     @endif
 
     @stack('styles')
+
+    <script>
+        window.erpTourSteps = @json($tourSteps);
+    </script>
 
     <script>
         document.addEventListener('alpine:init', () => {
@@ -100,6 +107,7 @@
                     window.dispatchEvent(new CustomEvent('app:content-visible'));
                 }
             });
+
         });
     </script>
 
@@ -119,6 +127,10 @@
     </script>
 
     <style>
+        [x-cloak] {
+            display: none !important;
+        }
+
         /* Loader animations */
         @keyframes spin {
             from { transform: rotate(0deg); }
@@ -139,6 +151,13 @@
             opacity: 0;
             transition: opacity 0.5s ease-in-out;
             pointer-events: none;
+        }
+
+        .tour-target-active {
+            position: relative;
+            z-index: 100003 !important;
+            border-radius: 18px;
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2), 0 18px 50px rgba(15, 23, 42, 0.28);
         }
     </style>
 </head>
@@ -221,7 +240,7 @@
              }">
             @include('layouts.app-header')
 
-            <div class="mx-auto max-w-(--breakpoint-2xl) p-4 md:p-6">
+            <div class="mx-auto max-w-(--breakpoint-2xl) p-4 md:p-6" data-tour="page-content">
                 @if(session('status'))
                     <div x-data="{ open: true }"
                          x-init="setTimeout(() => open = false, 2600)"
@@ -269,6 +288,143 @@
                 @endif
 
                 @yield('content')
+            </div>
+        </div>
+    </div>
+
+    <div class="fixed bottom-5 right-5 z-[1001]" x-data>
+        <div class="flex flex-col items-end gap-3">
+            <div x-show="$store.tour.launcherOpen"
+                 x-cloak
+                 x-transition:enter="transition ease-out duration-200"
+                 x-transition:enter-start="opacity-0 translate-y-2"
+                 x-transition:enter-end="opacity-100 translate-y-0"
+                 x-transition:leave="transition ease-in duration-150"
+                 x-transition:leave-start="opacity-100 translate-y-0"
+                 x-transition:leave-end="opacity-0 translate-y-2"
+                 class="w-[22rem] rounded-3xl border border-gray-200 bg-white p-5 shadow-2xl dark:border-gray-800 dark:bg-gray-900">
+                <div class="flex items-start justify-between gap-3">
+                    <div>
+                        <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Understand the ERP cycle</h3>
+                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                            Follow the real business flow: setup, procurement, production, inventory, sales, accounting, and reporting.
+                        </p>
+                    </div>
+                    <button type="button"
+                            @click="$store.tour.closeLauncher()"
+                            class="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="mt-4 rounded-2xl bg-gray-50 px-4 py-3 text-xs text-gray-600 dark:bg-gray-800/80 dark:text-gray-300">
+                    <div class="font-semibold text-gray-800 dark:text-white">Tour path</div>
+                    <div class="mt-1 leading-5">Control setup → Purchase orders → GRN → BOM → Production → Inventory → Orders → Invoices → Reconciliation → Reports</div>
+                </div>
+
+                <div class="mt-4 space-y-2">
+                    <button type="button"
+                            @click="$store.tour.start()"
+                            class="inline-flex w-full items-center justify-center rounded-xl bg-brand-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-600">
+                        <span x-text="$store.tour.hasSavedProgress ? 'Restart system tour' : 'Start full system tour'"></span>
+                    </button>
+                    <button type="button"
+                            x-show="$store.tour.hasSavedProgress"
+                            x-cloak
+                            @click="$store.tour.resumeIfNeeded(); $store.tour.closeLauncher()"
+                            class="inline-flex w-full items-center justify-center rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800">
+                        Resume saved step
+                    </button>
+                    <a href="{{ route('admin.products.index') }}"
+                       class="inline-flex w-full items-center justify-center rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800">
+                        Start with products
+                    </a>
+                    @if(Route::has('admin.client-guide'))
+                        <a href="{{ route('admin.client-guide') }}"
+                           class="inline-flex w-full items-center justify-center rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800">
+                            Open full manual
+                        </a>
+                    @endif
+                </div>
+            </div>
+
+            <button type="button"
+                    data-tour="help-launcher"
+                    @click="$store.tour.toggleLauncher()"
+                    class="flex h-14 w-14 items-center justify-center rounded-full bg-brand-500 text-xl font-semibold text-white shadow-2xl transition hover:bg-brand-600">
+                ?
+            </button>
+        </div>
+    </div>
+
+    <div x-show="$store.tour.isActive"
+         x-cloak
+         class="fixed inset-0 z-[100002]">
+        <div x-show="$store.tour.spotlight.width > 0 && $store.tour.spotlight.height > 0" class="absolute inset-0 bg-gray-950/55"></div>
+
+        <div x-show="$store.tour.spotlight.width > 0 && $store.tour.spotlight.height > 0"
+             class="pointer-events-none absolute rounded-[28px] border-2 border-white/80 shadow-[0_0_0_9999px_rgba(3,7,18,0.55)] transition-all duration-200"
+             :style="`top:${$store.tour.spotlight.top}px;left:${$store.tour.spotlight.left}px;width:${$store.tour.spotlight.width}px;height:${$store.tour.spotlight.height}px;`">
+        </div>
+
+        <div data-tour-tooltip
+             class="pointer-events-auto absolute z-[100004] w-[24rem] rounded-3xl border border-gray-200 bg-white p-6 shadow-2xl dark:border-gray-800 dark:bg-gray-900"
+             :style="`top:${$store.tour.tooltip.top};left:${$store.tour.tooltip.left};right:${$store.tour.tooltip.right};bottom:${$store.tour.tooltip.bottom};`">
+            <div class="flex items-start justify-between gap-3">
+                <div>
+                    <div class="text-xs font-semibold uppercase tracking-[0.16em] text-brand-500">
+                        Step <span x-text="$store.tour.activeIndex + 1"></span>
+                        of <span x-text="$store.tour.steps.length"></span>
+                    </div>
+                    <div class="mt-1 text-xs font-medium uppercase tracking-[0.16em] text-gray-400"
+                         x-text="$store.tour.currentStep()?.section ?? ''">
+                    </div>
+                    <h3 class="mt-1 text-xl font-semibold text-gray-900 dark:text-white"
+                        x-text="$store.tour.currentStep()?.title ?? ''">
+                    </h3>
+                </div>
+                <button type="button"
+                        @click="$store.tour.end()"
+                        class="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+
+            <div class="mt-4 space-y-4 text-[15px] leading-7 text-gray-600 dark:text-gray-300">
+                <div>
+                    <div class="text-xs font-semibold uppercase tracking-[0.14em] text-gray-400">Why this matters</div>
+                    <p class="mt-1" x-text="$store.tour.currentStep()?.purpose ?? ''"></p>
+                </div>
+                <div>
+                    <div class="text-xs font-semibold uppercase tracking-[0.14em] text-gray-400">What to do here</div>
+                    <p class="mt-1" x-text="$store.tour.currentStep()?.action ?? ''"></p>
+                </div>
+            </div>
+
+            <div class="mt-5 flex items-center justify-between gap-3">
+                <button type="button"
+                        @click="$store.tour.previous()"
+                        :disabled="$store.tour.activeIndex === 0"
+                        class="inline-flex items-center justify-center rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800">
+                    Previous
+                </button>
+
+                <div class="flex items-center gap-2">
+                    <button type="button"
+                            @click="$store.tour.end()"
+                            class="inline-flex items-center justify-center rounded-xl px-4 py-2.5 text-sm font-medium text-gray-500 transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                        Skip
+                    </button>
+                    <button type="button"
+                            @click="$store.tour.next()"
+                            class="inline-flex items-center justify-center rounded-xl bg-brand-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-600">
+                        <span x-text="$store.tour.activeIndex === ($store.tour.steps.length - 1) ? 'Finish' : 'Next'"></span>
+                    </button>
+                </div>
             </div>
         </div>
     </div>

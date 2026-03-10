@@ -7,7 +7,7 @@
             <h1 class="text-2xl font-semibold text-gray-900 dark:text-white">Purchase Orders</h1>
             <p class="text-sm text-gray-500 dark:text-gray-400">Procurement planning and approval before GRN posting.</p>
         </div>
-        <a href="{{ route('admin.purchase-orders.create') }}" class="inline-flex items-center rounded-lg bg-brand-500 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-600">New PO</a>
+        <a href="{{ route('admin.purchase-orders.create') }}" data-tour="purchase-orders-primary-action" class="inline-flex items-center rounded-lg bg-brand-500 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-600">New PO</a>
     </div>
 
     <div class="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">

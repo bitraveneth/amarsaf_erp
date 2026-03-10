@@ -7,7 +7,7 @@
             <h1 class="text-2xl font-semibold text-gray-900 dark:text-white">Goods Receipts (GRN)</h1>
             <p class="text-sm text-gray-500 dark:text-gray-400">Posted receipts update material stock automatically.</p>
         </div>
-        <a href="{{ route('admin.goods-receipts.create') }}" class="inline-flex items-center rounded-lg bg-brand-500 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-600">New GRN</a>
+        <a href="{{ route('admin.goods-receipts.create') }}" data-tour="goods-receipts-primary-action" class="inline-flex items-center rounded-lg bg-brand-500 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-600">New GRN</a>
     </div>
 
     <div class="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">

@@ -172,6 +172,7 @@
                         <input
                             type="text"
                             placeholder="Search or type command..."
+                            data-tour="command-search"
                             data-command-search
                             data-search-index='@json($__menuSearchItems)'
                             class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-200 bg-transparent py-2.5 pl-12 pr-14 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-white/3 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800 xl:w-[430px]" />
@@ -524,6 +525,7 @@
                     <div class="header-alert js-header-alert-root relative" data-fetch-url="{{ route('admin.notifications.header-data') }}">
                         {{-- Trigger button --}}
                         <button type="button"
+                            data-tour="header-alerts"
                             class="header-alert-toggle relative flex h-11 w-11 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-500 shadow-theme-xs transition-colors hover:border-brand-300 hover:bg-brand-50 hover:text-brand-600 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400 dark:hover:border-brand-700 dark:hover:bg-brand-500/10 dark:hover:text-brand-300"
                             title="View notifications">
                             {{-- Bell icon --}}
@@ -670,6 +672,7 @@
                 <div class="header-user relative">
                     {{-- Trigger button (behaviour handled by setupDropdown in app.js) --}}
                     <button type="button"
+                        data-tour="header-user"
                         class="header-user-toggle flex items-center gap-2 rounded-full border border-gray-200 bg-white px-2.5 py-1.5 text-sm font-medium text-gray-700 shadow-theme-xs transition hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800">
                         <span class="flex h-9 w-9 items-center justify-center rounded-full bg-brand-500 text-sm font-semibold text-white overflow-hidden">
                             @if($avatarUrl)

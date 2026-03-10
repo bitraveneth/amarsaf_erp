@@ -37,7 +37,7 @@
             @csrf
 
             <!-- Section 1: Basic Details -->
-            <div class="space-y-4">
+            <div class="space-y-4" data-tour="product-form-basics">
                 <div class="border-b border-gray-100 pb-4 dark:border-gray-800">
                     <h3 class="text-lg font-medium text-gray-900 dark:text-white">
                         {{ $isMaterials ? 'Material Details' : 'Product Details' }}
@@ -354,6 +354,7 @@
             <!-- Form Actions -->
             <div class="flex items-center justify-end gap-3 border-t border-gray-100 pt-6 dark:border-gray-800">
                 <button type="submit"
+                        data-tour="product-form-submit"
                         class="inline-flex items-center rounded-lg bg-brand-500 px-5 py-2.5 text-sm font-semibold text-white shadow-theme-sm hover:bg-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500/50">
                     <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>

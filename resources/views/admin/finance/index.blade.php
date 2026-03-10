@@ -3,7 +3,7 @@
 @section('content')
 <div class="space-y-8">
     <!-- Header with gradient -->
-    <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
+    <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6" data-tour="finance-overview-header">
         <div>
             <div class="flex items-start gap-4">
                 <!-- Finance Icon -->

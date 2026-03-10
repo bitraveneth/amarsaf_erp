@@ -22,6 +22,7 @@ use Illuminate\Support\Str;
             </p>
         </div>
         <a href="{{ route('admin.warehouses.create') }}"
+            data-tour="warehouses-primary-action"
             class="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-semibold text-white shadow-theme-sm hover:bg-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500/50">
             <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />

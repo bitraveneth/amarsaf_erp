@@ -1,5 +1,6 @@
 import './bootstrap';
 import './invoice';
+import { registerSystemTour } from './system-tour';
 import Alpine from 'alpinejs';
 import ApexCharts from 'apexcharts';
 import flatpickr from 'flatpickr';
@@ -7,6 +8,11 @@ import flatpickr from 'flatpickr';
 window.Alpine = Alpine;
 window.ApexCharts = ApexCharts;
 window.flatpickr = flatpickr;
+
+document.addEventListener('alpine:init', () => {
+    registerSystemTour(Alpine, window.erpTourSteps || []);
+});
+
 Alpine.start();
 
 document.addEventListener('DOMContentLoaded', () => {

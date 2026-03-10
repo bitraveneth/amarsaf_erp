@@ -18,6 +18,7 @@
                 Export CSV
             </a>
             <a href="{{ route('admin.products.create') }}"
+               data-tour="products-primary-action"
                class="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-semibold text-white shadow-theme-xs hover:bg-brand-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/50">
                 Add product
             </a>

@@ -1,9 +1,74 @@
 @extends('layouts.app')
 
 @section('content')
+@php
+    $currencyOptions = [
+        ['code' => 'AED', 'label' => 'AED · UAE Dirham'],
+        ['code' => 'AUD', 'label' => 'AUD · Australian Dollar'],
+        ['code' => 'BDT', 'label' => 'BDT · Bangladeshi Taka'],
+        ['code' => 'CAD', 'label' => 'CAD · Canadian Dollar'],
+        ['code' => 'CHF', 'label' => 'CHF · Swiss Franc'],
+        ['code' => 'CNY', 'label' => 'CNY · Chinese Yuan'],
+        ['code' => 'EUR', 'label' => 'EUR · Euro'],
+        ['code' => 'GBP', 'label' => 'GBP · British Pound'],
+        ['code' => 'HKD', 'label' => 'HKD · Hong Kong Dollar'],
+        ['code' => 'INR', 'label' => 'INR · Indian Rupee'],
+        ['code' => 'JPY', 'label' => 'JPY · Japanese Yen'],
+        ['code' => 'KWD', 'label' => 'KWD · Kuwaiti Dinar'],
+        ['code' => 'MYR', 'label' => 'MYR · Malaysian Ringgit'],
+        ['code' => 'NPR', 'label' => 'NPR · Nepalese Rupee'],
+        ['code' => 'PKR', 'label' => 'PKR · Pakistani Rupee'],
+        ['code' => 'QAR', 'label' => 'QAR · Qatari Riyal'],
+        ['code' => 'SAR', 'label' => 'SAR · Saudi Riyal'],
+        ['code' => 'SGD', 'label' => 'SGD · Singapore Dollar'],
+        ['code' => 'THB', 'label' => 'THB · Thai Baht'],
+        ['code' => 'USD', 'label' => 'USD · US Dollar'],
+    ];
+    $settingsPageState = [
+        'primary' => old('brand_primary_color', $settings['brand_primary_color']),
+        'secondary' => old('brand_secondary_color', $settings['brand_secondary_color']),
+        'currencyCode' => old('currency_code', $settings['currency_code']),
+        'currencySymbol' => old('currency_symbol', $settings['currency_symbol']),
+        'currencySymbols' => [
+            'AED' => 'د.إ',
+            'AUD' => '$',
+            'BDT' => '৳',
+            'CAD' => '$',
+            'CHF' => 'CHF',
+            'CNY' => '¥',
+            'EUR' => '€',
+            'GBP' => '£',
+            'HKD' => '$',
+            'INR' => '₹',
+            'JPY' => '¥',
+            'KWD' => 'د.ك',
+            'MYR' => 'RM',
+            'NPR' => 'रू',
+            'PKR' => '₨',
+            'QAR' => 'ر.ق',
+            'SAR' => '﷼',
+            'SGD' => '$',
+            'THB' => '฿',
+            'USD' => '$',
+        ],
+    ];
+    $currencySymbolOptions = collect($settingsPageState['currencySymbols'])
+        ->map(fn ($symbol, $code) => ['code' => $code, 'symbol' => $symbol])
+        ->values()
+        ->all();
+@endphp
 <div x-data="{
-        primary: '{{ old('brand_primary_color', $settings['brand_primary_color']) }}',
-        secondary: '{{ old('brand_secondary_color', $settings['brand_secondary_color']) }}'
+        primary: @js($settingsPageState['primary']),
+        secondary: @js($settingsPageState['secondary']),
+        currencyCode: @js($settingsPageState['currencyCode']),
+        currencySymbol: @js($settingsPageState['currencySymbol']),
+        currencySymbols: @js($settingsPageState['currencySymbols']),
+        syncCurrencySymbol() {
+            const mapped = this.currencySymbols[this.currencyCode];
+            if (mapped) {
+                this.currencySymbol = mapped;
+            }
+        }
     }"
     class="space-y-6">
     <div class="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
@@ -39,7 +104,7 @@
         @method('PATCH')
 
         <div class="grid gap-6 xl:grid-cols-[1.15fr,0.85fr]">
-            <section class="rounded-2xl border border-gray-200 bg-white p-6 shadow-theme-xs dark:border-gray-800 dark:bg-gray-900">
+            <section class="rounded-2xl border border-gray-200 bg-white p-6 shadow-theme-xs dark:border-gray-800 dark:bg-gray-900" data-tour="settings-brand-identity">
                 <div class="mb-6 flex items-start justify-between gap-4">
                     <div>
                         <h2 class="text-sm font-semibold text-gray-900 dark:text-white">Brand identity</h2>
@@ -191,13 +256,30 @@
                 <div class="grid gap-5 md:grid-cols-2">
                     <div>
                         <label class="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Currency code</label>
-                        <input type="text" name="currency_code" value="{{ old('currency_code', $settings['currency_code']) }}"
-                               class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white" />
+                        <select name="currency_code"
+                                x-model="currencyCode"
+                                @change="syncCurrencySymbol()"
+                                class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white">
+                            @php $selectedCurrencyCode = old('currency_code', $settings['currency_code']); @endphp
+                            @foreach($currencyOptions as $currency)
+                                <option value="{{ $currency['code'] }}" {{ $selectedCurrencyCode === $currency['code'] ? 'selected' : '' }}>
+                                    {{ $currency['label'] }}
+                                </option>
+                            @endforeach
+                        </select>
                     </div>
                     <div>
                         <label class="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Currency symbol</label>
-                        <input type="text" name="currency_symbol" value="{{ old('currency_symbol', $settings['currency_symbol']) }}"
-                               class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white" />
+                        <select name="currency_symbol"
+                                x-model="currencySymbol"
+                                class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white">
+                            @php $selectedCurrencySymbol = old('currency_symbol', $settings['currency_symbol']); @endphp
+                            @foreach($currencySymbolOptions as $option)
+                                <option value="{{ $option['symbol'] }}" {{ $selectedCurrencySymbol === $option['symbol'] ? 'selected' : '' }}>
+                                    {{ $option['symbol'] }} · {{ $option['code'] }}
+                                </option>
+                            @endforeach
+                        </select>
                     </div>
                 </div>
             </section>
