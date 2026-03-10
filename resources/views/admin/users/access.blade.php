@@ -39,7 +39,7 @@
         <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-theme-sm dark:border-gray-800 dark:bg-gray-900">
                 <h2 class="text-base font-semibold text-gray-900 dark:text-white">Primary role</h2>
-                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">This remains in `users.role` for compatibility.</p>
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">This remains in `users.role` for compatibility and is the default role used across the app.</p>
                 <div class="mt-4">
                     <select name="primary_role"
                         class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white">
@@ -52,7 +52,7 @@
 
             <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-theme-sm dark:border-gray-800 dark:bg-gray-900">
                 <h2 class="text-base font-semibold text-gray-900 dark:text-white">Additional roles</h2>
-                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">User can hold multiple roles in `user_roles`.</p>
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Optional extra roles stored in `user_roles`. The primary role above is not repeated here.</p>
 
                 @if(! $hasUserRolesTable)
                     <p class="mt-4 rounded-lg border border-warning-200 bg-warning-50 px-3 py-2 text-xs text-warning-700 dark:border-warning-500/40 dark:bg-warning-500/10 dark:text-warning-300">
@@ -60,16 +60,23 @@
                     </p>
                 @else
                     @php
-                        $currentRoles = collect(old('extra_roles', $selectedRoleKeys))->map(fn($v) => (string) $v)->all();
+                        $currentPrimaryRole = (string) old('primary_role', $primaryRole);
+                        $currentRoles = collect(old('extra_roles', array_diff($selectedRoleKeys, [$primaryRole])))
+                            ->map(fn($v) => (string) $v)
+                            ->reject(fn($v) => $v === $currentPrimaryRole)
+                            ->values()
+                            ->all();
                     @endphp
                     <div class="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
                         @foreach($roles as $value => $label)
-                            <label class="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 dark:border-gray-700 dark:text-gray-300">
-                                <input type="checkbox" name="extra_roles[]" value="{{ $value }}"
-                                    @checked(in_array($value, $currentRoles, true))
-                                    class="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500/30 dark:border-gray-700 dark:bg-gray-800">
-                                <span>{{ $label }}</span>
-                            </label>
+                            @if($value !== $currentPrimaryRole)
+                                <label class="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 dark:border-gray-700 dark:text-gray-300">
+                                    <input type="checkbox" name="extra_roles[]" value="{{ $value }}"
+                                        @checked(in_array($value, $currentRoles, true))
+                                        class="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500/30 dark:border-gray-700 dark:bg-gray-800">
+                                    <span>{{ $label }}</span>
+                                </label>
+                            @endif
                         @endforeach
                     </div>
                 @endif
@@ -105,11 +112,11 @@
             @endif
         </div>
 
-        <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-theme-sm dark:border-gray-800 dark:bg-gray-900">
-            <h2 class="text-base font-semibold text-gray-900 dark:text-white">Permission overrides</h2>
-            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                Use override only for exceptional cases. Inherit = from role mapping.
-            </p>
+            <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-theme-sm dark:border-gray-800 dark:bg-gray-900">
+                <h2 class="text-base font-semibold text-gray-900 dark:text-white">Permission overrides</h2>
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    Use override only for exceptional cases. Inherit means the effective access comes from the assigned role set.
+                </p>
 
             @if(! $hasUserPermissionsTable)
                 <p class="mt-4 rounded-lg border border-warning-200 bg-warning-50 px-3 py-2 text-xs text-warning-700 dark:border-warning-500/40 dark:bg-warning-500/10 dark:text-warning-300">
@@ -177,4 +184,3 @@
     </form>
 </div>
 @endsection
-

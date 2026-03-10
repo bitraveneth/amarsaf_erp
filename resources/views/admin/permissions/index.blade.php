@@ -15,6 +15,9 @@
             <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
                 Set what each role can access. Start by choosing a role, then enable only required permissions.
             </p>
+            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                `super_admin` always has full access. `admin` follows these mappings once explicit admin permissions are saved.
+            </p>
         </div>
         <button
             type="button"
@@ -93,7 +96,7 @@
                     <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <div>
                             <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Editing: {{ $selectedRoleLabel ?? $selectedRoleKey }}</h3>
-                            <p class="text-xs text-gray-500 dark:text-gray-400">Use search to quickly find a permission key.</p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">Use search to quickly find a permission key. These permissions are role-level defaults.</p>
                         </div>
                         <input
                             type="text"
@@ -209,7 +212,7 @@
                 <div class="flex items-center justify-between gap-2">
                     <div>
                         <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Advanced Matrix (All Roles)</h3>
-                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Open a full-screen matrix and edit role access in one place.</p>
+                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Open a full-screen matrix and edit role-level access in one place.</p>
                     </div>
                     <button
                         type="button"
@@ -238,7 +241,7 @@
             <div class="flex items-center justify-between border-b border-gray-200 px-5 py-4 dark:border-gray-700">
                 <div>
                     <h2 class="text-base font-semibold text-gray-900 dark:text-white">Advanced Matrix (All Roles)</h2>
-                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Toggle permissions for all roles from one popup.</p>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Toggle role-level permissions for all roles from one popup.</p>
                 </div>
                 <button type="button" @click="showAdvancedMatrix = false" class="rounded-full p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800">
                     <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

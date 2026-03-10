@@ -21,9 +21,25 @@ class Permission
         }
 
         $roleKeys = $user->roleKeys();
-        if (in_array('admin', $roleKeys, true) || in_array('super_admin', $roleKeys, true)) {
-            // Admin and Super Admin can do everything.
+        if (in_array('super_admin', $roleKeys, true)) {
+            // Super Admin can do everything.
             return true;
+        }
+
+        // Transitional fallback: if the admin role has not been mapped yet,
+        // preserve legacy full access to avoid locking out local installs.
+        // Once any explicit admin permission rows exist, admin becomes
+        // permission-driven like every other role.
+        static $adminUsesLegacyFullAccess = null;
+        if (in_array('admin', $roleKeys, true)) {
+            if ($adminUsesLegacyFullAccess === null) {
+                $adminUsesLegacyFullAccess = ! Schema::hasTable('role_permissions')
+                    || ! RolePermission::query()->where('role', 'admin')->exists();
+            }
+
+            if ($adminUsesLegacyFullAccess) {
+                return true;
+            }
         }
 
         $candidates = self::permissionCandidates($permission);

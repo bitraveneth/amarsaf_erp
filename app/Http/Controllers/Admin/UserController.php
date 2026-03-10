@@ -20,7 +20,7 @@ class UserController extends Controller
     {
         $this->ensureAdmin();
 
-        $roles = $this->availableRoles();
+        $roles = $this->availableRoles($request->user());
         $hasUserRolesTable = Schema::hasTable('user_roles');
         $hasUserPermissionsTable = Schema::hasTable('user_permissions');
         $hasWarehouseScopesTable = Schema::hasTable('user_warehouse_scopes');
@@ -77,7 +77,8 @@ class UserController extends Controller
     {
         $this->ensureAdmin();
 
-        $roles = $this->availableRoles();
+        $actor = $request->user();
+        $roles = $this->availableRoles($actor);
 
         $data = $request->validate([
             'name'     => 'required|string|max:255',
@@ -105,7 +106,7 @@ class UserController extends Controller
     {
         $this->ensureAdmin();
 
-        $roles = $this->availableRoles();
+        $roles = $this->availableRoles(auth()->user());
         $primaryRole = $user->role;
 
         $hasUserRolesTable = Schema::hasTable('user_roles');
@@ -155,7 +156,8 @@ class UserController extends Controller
     {
         $this->ensureAdmin();
 
-        $roles = $this->availableRoles();
+        $actor = $request->user();
+        $roles = $this->availableRoles($actor);
         $roleKeys = array_keys($roles);
 
         $data = $request->validate([
@@ -166,6 +168,16 @@ class UserController extends Controller
             'warehouse_ids.*' => 'integer|exists:warehouses,id',
             'overrides' => 'nullable|array',
         ]);
+
+        if (! $actor?->hasRole('super_admin')) {
+            if (($data['primary_role'] ?? null) === 'super_admin'
+                || in_array('super_admin', $data['extra_roles'] ?? [], true)
+                || $user->hasRole('super_admin')) {
+                return redirect()
+                    ->route('admin.users.access.edit', $user)
+                    ->withErrors(['primary_role' => 'Only super admin can assign or modify the super admin role.']);
+            }
+        }
 
         DB::transaction(function () use ($data, $user) {
             $primaryRole = $data['primary_role'];
@@ -249,12 +261,12 @@ class UserController extends Controller
         }
     }
 
-    protected function availableRoles(): array
+    protected function availableRoles(?User $actor = null): array
     {
         $roles = Role::orderBy('label')->get(['key', 'label']);
 
         if ($roles->isEmpty()) {
-            return [
+            $legacyRoles = [
                 'super_admin'        => 'Super admin',
                 'admin'              => 'Admin',
                 'purchase_executive' => 'Purchase executive',
@@ -265,9 +277,21 @@ class UserController extends Controller
                 'accounts_officer'   => 'Accounts officer',
                 'qc_officer'         => 'QC officer',
             ];
+
+            if ($actor && ! $actor->hasRole('super_admin')) {
+                unset($legacyRoles['super_admin']);
+            }
+
+            return $legacyRoles;
         }
 
-        return $roles->pluck('label', 'key')->all();
+        $roleMap = $roles->pluck('label', 'key')->all();
+
+        if ($actor && ! $actor->hasRole('super_admin')) {
+            unset($roleMap['super_admin']);
+        }
+
+        return $roleMap;
     }
 
     protected function syncPrimaryRole(User $user): void

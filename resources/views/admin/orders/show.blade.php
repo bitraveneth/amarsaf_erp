@@ -232,8 +232,8 @@
                             @php
                                 $statusOptions = ['draft','confirmed','picked','packed','dispatched','delivered'];
                             @endphp
-                            @foreach($statusOptions as $status)
-                                @php
+                            <?php foreach ($statusOptions as $status): ?>
+                                <?php
                                     $disabled = false;
                                     $currentIndex = array_search($order->status, $statusOptions, true);
                                     $targetIndex = array_search($status, $statusOptions, true);
@@ -243,13 +243,13 @@
                                     if ($order->status === 'delivered' && $status !== 'delivered') {
                                         $disabled = true;
                                     }
-                                @endphp
+                                ?>
                                 <option value="{{ $status }}"
                                         {{ $order->status === $status ? ' selected' : '' }}
                                         {{ $disabled ? 'disabled' : '' }}>
                                     {{ ucfirst($status) }}
                                 </option>
-                            @endforeach
+                            <?php endforeach; ?>
                         </select>
                         <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
                             <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -329,10 +329,7 @@
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
-                    @foreach($order->items as $item)
-                        @php
-                            $lineTotal = $item->quantity * $item->unit_price;
-                        @endphp
+                    <?php foreach ($order->items as $item): ?>
                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
                             <td class="px-6 py-4">
                                 <span class="font-mono text-sm font-medium text-gray-900 dark:text-white">
@@ -363,7 +360,7 @@
                                 <span class="text-sm text-gray-700 dark:text-gray-300">BDT {{ number_format($item->unit_price, 2) }}</span>
                             </td>
                             <td class="px-6 py-4 text-right">
-                                <span class="text-sm font-bold text-gray-900 dark:text-white">BDT {{ number_format($lineTotal, 2) }}</span>
+                                <span class="text-sm font-bold text-gray-900 dark:text-white">BDT {{ number_format($item->quantity * $item->unit_price, 2) }}</span>
                             </td>
                             <td class="px-6 py-4 text-right">
                                 <div>
@@ -378,7 +375,7 @@
                                 </div>
                             </td>
                         </tr>
-                    @endforeach
+                    <?php endforeach; ?>
                 </tbody>
                 <tfoot class="bg-gray-50 dark:bg-gray-800/50">
                     <tr>
@@ -386,7 +383,7 @@
                             Subtotal
                         </td>
                         <td class="px-6 py-4 text-right text-sm font-bold text-gray-900 dark:text-white">
-                            BDT {{ number_format($order->items->sum(fn($item) => $item->quantity * $item->unit_price), 2) }}
+                            BDT {{ number_format($order->items->sum(function ($item) { return $item->quantity * $item->unit_price; }), 2) }}
                         </td>
                         <td></td>
                     </tr>
@@ -430,9 +427,13 @@
         </div>
         <div class="p-6">
             <div class="flow-root">
+                <?php
+                    $sortedStatusHistory = $order->statusHistory->sortByDesc('changed_at')->values();
+                    $statusHistoryCount = $sortedStatusHistory->count();
+                ?>
                 <ul role="list" class="-mb-8">
-                    @foreach($order->statusHistory->sortByDesc('changed_at') as $index => $entry)
-                        @php
+                    <?php foreach ($sortedStatusHistory as $index => $entry): ?>
+                        <?php
                             $statusColors = [
                                 'draft' => 'bg-gray-500',
                                 'confirmed' => 'bg-success-500',
@@ -442,8 +443,8 @@
                                 'delivered' => 'bg-success-500',
                             ];
                             $dotColor = $statusColors[$entry->status] ?? 'bg-gray-500';
-                            $isLast = $loop->last;
-                        @endphp
+                            $isLast = $index === ($statusHistoryCount - 1);
+                        ?>
                         <li class="relative pb-8">
                             @if(!$isLast)
                                 <span class="absolute left-4 top-4 -ml-px h-full w-0.5 bg-gray-200 dark:bg-gray-700" aria-hidden="true"></span>
@@ -473,7 +474,7 @@
                                 </div>
                             </div>
                         </li>
-                    @endforeach
+                    <?php endforeach; ?>
                 </ul>
             </div>
         </div>

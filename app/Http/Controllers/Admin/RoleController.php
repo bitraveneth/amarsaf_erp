@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Helpers\Permission as PermissionHelper;
 use App\Http\Controllers\Controller;
 use App\Models\Role;
 use App\Models\User;
@@ -17,9 +18,9 @@ class RoleController extends Controller
      */
     public function index(Request $request)
     {
-        $this->ensureAdmin();
+        $this->ensureCanManageRoles();
 
-        $roles = $this->availableRoles();
+        $roles = $this->availableRoles($request->user());
         $hasUserRolesTable = Schema::hasTable('user_roles');
 
         $filterRole = $request->input('role');
@@ -62,16 +63,30 @@ class RoleController extends Controller
 
     public function update(Request $request, User $user)
     {
-        $this->ensureAdmin();
+        $this->ensureCanManageRoles();
 
-        $roles = $this->availableRoles();
+        $actor = $request->user();
+        $roles = $this->availableRoles($actor);
         $request->validate([
             'role' => 'required|string|in:' . implode(',', array_keys($roles)),
         ]);
 
-        $user->role = $request->input('role');
-        $user->save();
-        $this->syncPrimaryRole($user);
+        $newRole = $request->input('role');
+        $oldPrimaryRole = $user->role;
+
+        if (! $actor?->hasRole('super_admin')) {
+            if ($newRole === 'super_admin' || $user->hasRole('super_admin')) {
+                return redirect()
+                    ->route('admin.roles.index', $request->only('role', 'q', 'page'))
+                    ->withErrors(['role' => 'Only super admin can assign or modify the super admin role.']);
+            }
+        }
+
+        DB::transaction(function () use ($user, $newRole, $oldPrimaryRole) {
+            $user->role = $newRole;
+            $user->save();
+            $this->syncPrimaryRole($user, $oldPrimaryRole);
+        });
 
         return redirect()
             ->route('admin.roles.index', $request->only('role', 'q', 'page'))
@@ -80,7 +95,7 @@ class RoleController extends Controller
 
     public function create(Request $request)
     {
-        $this->ensureAdmin();
+        $this->ensureCanManageRoles();
 
         // Only super admin can create new roles.
         if (! $request->user()?->hasRole('super_admin')) {
@@ -113,23 +128,23 @@ class RoleController extends Controller
             ->with('status', 'Role ' . $data['label'] . ' created.');
     }
 
-    protected function ensureAdmin(): void
+    protected function ensureCanManageRoles(): void
     {
-        if (! auth()->user()?->hasAnyRole(['admin', 'super_admin'])) {
-            abort(403, 'Only admin or super admin users can manage roles.');
+        if (! PermissionHelper::can(auth()->user(), 'roles.manage')) {
+            abort(403, 'You do not have permission to manage roles.');
         }
     }
 
     /**
      * Central list of available roles used by the role manager.
      */
-    protected function availableRoles(): array
+    protected function availableRoles(?User $actor = null): array
     {
         $roles = Role::orderBy('label')->get(['key', 'label']);
 
         // Fallback to legacy list if table is empty.
         if ($roles->isEmpty()) {
-            return [
+            $legacyRoles = [
                 'super_admin'        => 'Super admin',
                 'admin'              => 'Admin',
                 'purchase_executive' => 'Purchase executive',
@@ -140,15 +155,34 @@ class RoleController extends Controller
                 'accounts_officer'   => 'Accounts officer',
                 'qc_officer'         => 'QC officer',
             ];
+
+            if ($actor && ! $actor->hasRole('super_admin')) {
+                unset($legacyRoles['super_admin']);
+            }
+
+            return $legacyRoles;
         }
 
-        return $roles->pluck('label', 'key')->all();
+        $roleMap = $roles->pluck('label', 'key')->all();
+
+        if ($actor && ! $actor->hasRole('super_admin')) {
+            unset($roleMap['super_admin']);
+        }
+
+        return $roleMap;
     }
 
-    protected function syncPrimaryRole(User $user): void
+    protected function syncPrimaryRole(User $user, ?string $previousPrimaryRole = null): void
     {
         if (! Schema::hasTable('user_roles') || empty($user->role)) {
             return;
+        }
+
+        if (! empty($previousPrimaryRole) && $previousPrimaryRole !== $user->role) {
+            DB::table('user_roles')
+                ->where('user_id', $user->id)
+                ->where('role_key', $previousPrimaryRole)
+                ->delete();
         }
 
         DB::table('user_roles')->updateOrInsert(

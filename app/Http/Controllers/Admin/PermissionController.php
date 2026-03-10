@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Helpers\Permission as PermissionHelper;
 use App\Http\Controllers\Controller;
 use App\Models\Permission;
 use App\Models\RolePermission;
@@ -40,7 +41,7 @@ class PermissionController extends Controller
 
     public function index(Request $request)
     {
-        $this->ensureSuperAdmin();
+        $this->ensureCanManagePermissions();
 
         $permissions = Permission::orderBy('group')->orderBy('name')->get();
 
@@ -108,7 +109,7 @@ class PermissionController extends Controller
 
     public function store(Request $request)
     {
-        $this->ensureSuperAdmin();
+        $this->ensureCanManagePermissions();
 
         $data = $request->validate([
             'name'  => 'required|string|max:100|alpha_dash|unique:permissions,name',
@@ -128,19 +129,38 @@ class PermissionController extends Controller
 
     public function updateRoles(Request $request)
     {
-        $this->ensureSuperAdmin();
+        $this->ensureCanManagePermissions();
 
         $data = $request->validate([
             'role_permissions' => 'array',
         ]);
 
-        $rolePermissions = $data['role_permissions'] ?? [];
+        $validRoles = array_keys($this->availableRoles());
+        $validPermissions = Permission::pluck('name')->all();
+        $rolePermissions = collect($data['role_permissions'] ?? []);
 
-        // Replace mappings per role
         foreach ($rolePermissions as $role => $permissionNames) {
+            if (! in_array($role, $validRoles, true)) {
+                return redirect()->route('admin.permissions.index')
+                    ->withErrors(['role_permissions' => 'Invalid role submitted.']);
+            }
+
+            $invalidPermissionNames = collect($permissionNames ?? [])
+                ->map(fn ($value) => (string) $value)
+                ->filter(fn ($value) => ! in_array($value, $validPermissions, true))
+                ->values();
+
+            if ($invalidPermissionNames->isNotEmpty()) {
+                return redirect()->route('admin.permissions.index')
+                    ->withErrors(['role_permissions' => 'Invalid permission submitted: ' . $invalidPermissionNames->implode(', ')]);
+            }
+        }
+
+        // Replace mappings per editable role, including clearing unchecked roles.
+        foreach ($validRoles as $role) {
             RolePermission::where('role', $role)->delete();
 
-            foreach ($permissionNames as $permissionName) {
+            foreach (($rolePermissions->get($role, []) ?? []) as $permissionName) {
                 RolePermission::create([
                     'role'            => $role,
                     'permission_name' => $permissionName,
@@ -157,7 +177,13 @@ class PermissionController extends Controller
      */
     public function updateRole(Request $request, string $role)
     {
-        $this->ensureSuperAdmin();
+        $this->ensureCanManagePermissions();
+
+        if (! in_array($role, array_keys($this->availableRoles(true)), true)) {
+            return redirect()
+                ->route('admin.permissions.index')
+                ->withErrors(['role' => 'Invalid role selected.']);
+        }
 
         // Super admin is treated as having all permissions; nothing to update.
         if ($role === 'super_admin') {
@@ -166,7 +192,22 @@ class PermissionController extends Controller
                 ->with('status', 'Super admin already has access to everything. No changes needed.');
         }
 
-        $permissions = $request->input('permissions', []);
+        $validPermissions = Permission::pluck('name')->all();
+        $permissions = collect($request->input('permissions', []))
+            ->map(fn ($value) => (string) $value)
+            ->filter()
+            ->unique()
+            ->values();
+
+        $invalidPermissionNames = $permissions
+            ->filter(fn ($value) => ! in_array($value, $validPermissions, true))
+            ->values();
+
+        if ($invalidPermissionNames->isNotEmpty()) {
+            return redirect()
+                ->route('admin.permissions.index', ['role' => $role])
+                ->withErrors(['permissions' => 'Invalid permission submitted: ' . $invalidPermissionNames->implode(', ')]);
+        }
 
         RolePermission::where('role', $role)->delete();
 
@@ -184,7 +225,7 @@ class PermissionController extends Controller
 
     public function destroy(Permission $permission)
     {
-        $this->ensureSuperAdmin();
+        $this->ensureCanManagePermissions();
 
         RolePermission::where('permission_name', $permission->name)->delete();
         $permission->delete();
@@ -195,7 +236,7 @@ class PermissionController extends Controller
 
     public function renameGroup(Request $request)
     {
-        $this->ensureSuperAdmin();
+        $this->ensureCanManagePermissions();
 
         $data = $request->validate([
             'current_group' => 'nullable|string|max:100',
@@ -212,7 +253,7 @@ class PermissionController extends Controller
 
     public function deleteGroup(Request $request)
     {
-        $this->ensureSuperAdmin();
+        $this->ensureCanManagePermissions();
 
         $data = $request->validate([
             'group' => 'nullable|string|max:100',
@@ -234,11 +275,36 @@ class PermissionController extends Controller
             ->with('status', 'Group and its permissions deleted.');
     }
 
-    protected function ensureSuperAdmin(): void
+    protected function ensureCanManagePermissions(): void
     {
-        if (! auth()->user()?->hasRole('super_admin')) {
-            abort(403, 'Only super admin can manage permissions.');
+        if (! PermissionHelper::can(auth()->user(), 'permissions.manage')) {
+            abort(403, 'You do not have permission to manage permissions.');
         }
+    }
+
+    protected function availableRoles(bool $includeSuperAdmin = false): array
+    {
+        $roles = Role::orderBy('label')->pluck('label', 'key')->all();
+
+        if (empty($roles)) {
+            $roles = [
+                'super_admin'        => 'Super admin',
+                'admin'              => 'Admin',
+                'purchase_executive' => 'Purchase executive',
+                'warehouse_officer'  => 'Warehouse officer',
+                'production_officer' => 'Production officer',
+                'sales_officer'      => 'Sales officer',
+                'delivery_coordinator' => 'Delivery coordinator',
+                'accounts_officer'   => 'Accounts officer',
+                'qc_officer'         => 'QC officer',
+            ];
+        }
+
+        if (! $includeSuperAdmin) {
+            unset($roles['super_admin']);
+        }
+
+        return $roles;
     }
 
     protected function normalizeGroupKey(?string $group): string

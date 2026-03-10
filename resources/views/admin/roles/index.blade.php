@@ -6,10 +6,10 @@
     <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
             <h1 class="text-2xl font-semibold text-gray-900 dark:text-white">
-                Role manager
+                Primary Role Manager
             </h1>
             <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                View all users and adjust their roles from a single place. Super admin can also define new roles.
+                Review assigned role sets and update each user's primary role from one place. Use User Access for extra roles and per-user overrides.
             </p>
         </div>
         @if(auth()->user()?->hasRole('super_admin'))
@@ -181,12 +181,15 @@
 
     {{-- Users table --}}
     <div class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-theme-sm dark:border-gray-800 dark:bg-gray-900">
+        <div class="border-b border-gray-100 px-4 py-3 text-xs text-gray-500 dark:border-gray-800 dark:text-gray-400">
+            This screen changes only the primary role stored in `users.role`. Additional roles stay in User Access.
+        </div>
         <table class="min-w-full text-sm">
             <thead class="bg-gray-50 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:bg-gray-800 dark:text-gray-400">
                 <tr>
                     <th class="px-4 py-2 text-left">User</th>
-                    <th class="px-4 py-2 text-left">Current role</th>
-                    <th class="px-4 py-2 text-right">Change role</th>
+                    <th class="px-4 py-2 text-left">Assigned roles</th>
+                    <th class="px-4 py-2 text-right">Primary role</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
@@ -215,31 +218,40 @@
                             </div>
                         </td>
                         <td class="px-4 py-3 align-top text-right">
+                            @php
+                                $canEditUserPrimaryRole = auth()->user()?->hasRole('super_admin') || ! in_array('super_admin', $roleKeys, true);
+                            @endphp
                             <div class="flex flex-col items-end gap-2 sm:flex-row sm:justify-end">
                                 <a
                                     href="{{ route('admin.permissions.index', ['role' => $user->role ?? ($roleKeys[0] ?? null)]) }}"
                                     class="inline-flex items-center rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-[11px] font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800"
                                 >
-                                    View permissions
+                                    View primary permissions
                                 </a>
-                                <form method="POST" action="{{ route('admin.roles.update', $user) }}" class="inline-flex items-center gap-2">
-                                    @csrf
-                                    @method('PATCH')
-                                    <select
-                                        name="role"
-                                        class="rounded-lg border border-gray-200 bg-white py-1.5 px-2 text-xs text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-                                    >
-                                        @foreach($roles as $value => $label)
-                                            <option value="{{ $value }}" @selected($user->role === $value)>{{ $label }}</option>
-                                        @endforeach
-                                    </select>
-                                    <button
-                                        type="submit"
-                                        class="inline-flex items-center gap-1 rounded-lg bg-brand-500 px-3 py-1.5 text-xs font-semibold text-white shadow-theme-xs hover:bg-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500/40"
-                                    >
-                                        Save
-                                    </button>
-                                </form>
+                                @if($canEditUserPrimaryRole)
+                                    <form method="POST" action="{{ route('admin.roles.update', $user) }}" class="inline-flex items-center gap-2">
+                                        @csrf
+                                        @method('PATCH')
+                                        <select
+                                            name="role"
+                                            class="rounded-lg border border-gray-200 bg-white py-1.5 px-2 text-xs text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                                        >
+                                            @foreach($roles as $value => $label)
+                                                <option value="{{ $value }}" @selected($user->role === $value)>{{ $label }}</option>
+                                            @endforeach
+                                        </select>
+                                        <button
+                                            type="submit"
+                                            class="inline-flex items-center gap-1 rounded-lg bg-brand-500 px-3 py-1.5 text-xs font-semibold text-white shadow-theme-xs hover:bg-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500/40"
+                                        >
+                                            Save primary role
+                                        </button>
+                                    </form>
+                                @else
+                                    <span class="inline-flex items-center rounded-lg border border-brand-200 bg-brand-50 px-3 py-1.5 text-[11px] font-medium text-brand-700 dark:border-brand-500/40 dark:bg-brand-500/10 dark:text-brand-300">
+                                        Super admin role is protected
+                                    </span>
+                                @endif
                             </div>
                         </td>
                     </tr>

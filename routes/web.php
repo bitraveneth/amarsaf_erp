@@ -114,9 +114,9 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::patch('profile', [ProfileController::class, 'update'])->name('profile.update');
 
     // Role manager
-    Route::get('roles', [RoleController::class, 'index'])->name('roles.index');
-    Route::post('roles', [RoleController::class, 'create'])->name('roles.create');
-    Route::patch('roles/{user}', [RoleController::class, 'update'])->name('roles.update');
+    Route::get('roles', [RoleController::class, 'index'])->middleware('perm:roles.manage')->name('roles.index');
+    Route::post('roles', [RoleController::class, 'create'])->middleware('perm:roles.manage')->name('roles.create');
+    Route::patch('roles/{user}', [RoleController::class, 'update'])->middleware('perm:roles.manage')->name('roles.update');
 
     // User manager
     Route::get('users', [UserController::class, 'index'])->name('users.index');
@@ -125,17 +125,18 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::patch('users/{user}/access', [UserController::class, 'updateAccess'])->name('users.access.update');
 
     // Permission manager (super admin)
-    Route::get('permissions', [PermissionController::class, 'index'])->name('permissions.index');
-    Route::post('permissions', [PermissionController::class, 'store'])->name('permissions.store');
-    Route::post('permissions/roles', [PermissionController::class, 'updateRoles'])->name('permissions.roles.update');
-    Route::post('permissions/roles/{role}', [PermissionController::class, 'updateRole'])->name('permissions.roles.update-single');
-    Route::delete('permissions/{permission}', [PermissionController::class, 'destroy'])->name('permissions.destroy');
-    Route::post('permissions/groups/rename', [PermissionController::class, 'renameGroup'])->name('permissions.groups.rename');
-    Route::post('permissions/groups/delete', [PermissionController::class, 'deleteGroup'])->name('permissions.groups.delete');
+    Route::get('permissions', [PermissionController::class, 'index'])->middleware('perm:permissions.manage')->name('permissions.index');
+    Route::post('permissions', [PermissionController::class, 'store'])->middleware('perm:permissions.manage')->name('permissions.store');
+    Route::post('permissions/roles', [PermissionController::class, 'updateRoles'])->middleware('perm:permissions.manage')->name('permissions.roles.update');
+    Route::post('permissions/roles/{role}', [PermissionController::class, 'updateRole'])->middleware('perm:permissions.manage')->name('permissions.roles.update-single');
+    Route::delete('permissions/{permission}', [PermissionController::class, 'destroy'])->middleware('perm:permissions.manage')->name('permissions.destroy');
+    Route::post('permissions/groups/rename', [PermissionController::class, 'renameGroup'])->middleware('perm:permissions.manage')->name('permissions.groups.rename');
+    Route::post('permissions/groups/delete', [PermissionController::class, 'deleteGroup'])->middleware('perm:permissions.manage')->name('permissions.groups.delete');
 
     // Menu manager (sidebar groups & items)
     Route::get('menu', [MenuController::class, 'index'])->name('menu.index');
     Route::post('menu/groups', [MenuController::class, 'storeGroup'])->name('menu.groups.store');
+    Route::patch('menu/groups/{group}', [MenuController::class, 'updateGroup'])->name('menu.groups.update');
     Route::delete('menu/groups/{group}', [MenuController::class, 'deleteGroup'])->name('menu.groups.delete');
     Route::post('menu/groups/{group}/move', [MenuController::class, 'moveGroup'])->name('menu.groups.move');
     Route::post('menu/items', [MenuController::class, 'storeItem'])->name('menu.items.store');

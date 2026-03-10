@@ -45,6 +45,20 @@ class MenuController extends Controller
         return redirect()->route('admin.menu.index')->with('status', 'Group created.');
     }
 
+    public function updateGroup(Request $request, MenuGroup $group)
+    {
+        $this->ensureSuperAdmin();
+
+        $data = $request->validate([
+            'title' => 'required|string|max:100',
+        ]);
+
+        $group->title = $data['title'];
+        $group->save();
+
+        return redirect()->route('admin.menu.index')->with('status', 'Group updated.');
+    }
+
     public function deleteGroup(MenuGroup $group)
     {
         $this->ensureSuperAdmin();
