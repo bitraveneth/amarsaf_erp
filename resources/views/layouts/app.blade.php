@@ -10,6 +10,16 @@
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
+    @if(!empty($brandThemeVariables))
+        <style>
+            :root {
+                @foreach($brandThemeVariables as $variable => $value)
+                    {{ $variable }}: {{ $value }};
+                @endforeach
+            }
+        </style>
+    @endif
+
     @stack('styles')
 
     <script>
@@ -212,23 +222,49 @@
             @include('layouts.app-header')
 
             <div class="mx-auto max-w-(--breakpoint-2xl) p-4 md:p-6">
-                @if(session('status') || ($errors ?? null) && $errors->any())
-                    <div class="mb-4 space-y-3">
-                        @if(session('status'))
-                            <div class="rounded-lg border border-success-100 bg-success-50 px-4 py-3 text-sm text-success-700">
-                                {{ session('status') }}
+                @if(session('status'))
+                    <div x-data="{ open: true }"
+                         x-init="setTimeout(() => open = false, 2600)"
+                         x-show="open"
+                         x-cloak
+                         x-transition:enter="transition ease-out duration-200"
+                         x-transition:enter-start="opacity-0 translate-y-2"
+                         x-transition:enter-end="opacity-100 translate-y-0"
+                         x-transition:leave="transition ease-in duration-150"
+                         x-transition:leave-start="opacity-100 translate-y-0"
+                         x-transition:leave-end="opacity-0 translate-y-2"
+                         class="fixed right-5 top-20 z-[1000] w-full max-w-sm rounded-2xl border border-brand-200 bg-white p-4 shadow-2xl dark:border-brand-500/30 dark:bg-gray-900">
+                        <div class="flex items-start gap-3">
+                            <div class="mt-0.5 flex h-8 w-8 items-center justify-center rounded-full bg-brand-50 text-brand-700 dark:bg-brand-500/10 dark:text-brand-300">
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                </svg>
                             </div>
-                        @endif
-                        @if(($errors ?? null) && $errors->any())
-                            <div class="rounded-lg border border-error-100 bg-error-50 px-4 py-3 text-sm text-error-700">
-                                <strong class="font-semibold">Something went wrong.</strong>
-                                <ul class="mt-1 list-disc space-y-0.5 pl-5">
-                                    @foreach($errors->all() as $error)
-                                        <li>{{ $error }}</li>
-                                    @endforeach
-                                </ul>
+                            <div class="min-w-0 flex-1">
+                                <div class="text-sm font-semibold text-brand-700 dark:text-brand-300">Success</div>
+                                <div class="mt-1 text-sm text-gray-600 dark:text-gray-300">{{ session('status') }}</div>
                             </div>
-                        @endif
+                            <button type="button"
+                                    @click="open = false"
+                                    class="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300">
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                @endif
+
+                @if(($errors ?? null) && $errors->any())
+                    <div class="mb-4">
+                        <div class="rounded-lg border border-error-100 bg-error-50 px-4 py-3 text-sm text-error-700">
+                            <strong class="font-semibold">Something went wrong.</strong>
+                            <ul class="mt-1 list-disc space-y-0.5 pl-5">
+                                @foreach($errors->all() as $error)
+                                    <li>{{ $error }}</li>
+                                @endforeach
+                            </ul>
+                        </div>
                     </div>
                 @endif
 

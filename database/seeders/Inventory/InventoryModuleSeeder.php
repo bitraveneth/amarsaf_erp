@@ -9,6 +9,7 @@ use Illuminate\Database\Seeder;
  *
  * Delegates to:
  * - InventoryDashboardSeeder
+ * - GoodsReceiptsSeeder
  * - TransfersModuleSeeder
  * - DeliveriesPodModuleSeeder
  * - VehicleLoadsModuleSeeder
@@ -22,6 +23,7 @@ class InventoryModuleSeeder extends Seeder
         $this->call([
             InventoryDashboardSeeder::class,
             MaterialStockSeeder::class,
+            GoodsReceiptsSeeder::class,
             TransfersModuleSeeder::class,
             DeliveriesPodModuleSeeder::class,
             VehicleLoadsModuleSeeder::class,
@@ -30,4 +32,3 @@ class InventoryModuleSeeder extends Seeder
         ]);
     }
 }
-

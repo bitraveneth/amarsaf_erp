@@ -16,7 +16,7 @@
                 </div>
                 <div>
                     <h1 class="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
-                        Inventory Health
+                        Inventory Dashboard
                     </h1>
                     <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
                         View reserved vs. available stock and expiring batches

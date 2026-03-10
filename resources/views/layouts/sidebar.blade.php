@@ -12,7 +12,7 @@
                     $itemPermission = $item['permission'] ?? null;
                     $canSeeItem = empty($itemPermission) || Permission::can($authUser, $itemPermission);
 
-                    if (isset($item['subItems']) && is_array($item['subItems'])) {
+                    if (!empty($item['subItems']) && is_array($item['subItems'])) {
                         // Enforce parent-level permission for dropdown sections.
                         if (!$canSeeItem) {
                             return null;
@@ -82,9 +82,13 @@
             ? 'xl:justify-center'
             : 'justify-start'">
         <a href="{{ route('admin.dashboard') }}" class="flex items-center gap-3">
-            <div class="flex h-10 w-10 items-center justify-center rounded-full bg-brand-500 text-sm font-semibold text-white">
-                {{ $appInitials }}
-            </div>
+            @if(!empty($appLogoUrl))
+                <img src="{{ $appLogoUrl }}" alt="{{ $appName }}" class="h-10 w-10 rounded-xl border border-gray-200 object-cover dark:border-gray-700" />
+            @else
+                <div class="flex h-10 w-10 items-center justify-center rounded-full bg-brand-500 text-sm font-semibold text-white">
+                    {{ $appInitials }}
+                </div>
+            @endif
             <div class="flex flex-col"
                  x-show="isSidebarVisible()">
                 <span class="text-sm font-semibold text-gray-900 dark:text-white">{{ $appName }}</span>
@@ -121,11 +125,16 @@
                                     $itemPath = $item['path'] ?? null;
                                     $subItems = $item['subItems'] ?? [];
                                     $hasSubItems = !empty($subItems);
-                                    $itemIsActive = $matchesCurrent($itemPath);
-                                    $subtreeIsActive = collect($subItems)->contains(fn ($subItem) => $matchesCurrent($subItem['path'] ?? null));
+                                    $activeSubItemPath = collect($subItems)
+                                        ->filter(fn ($subItem) => $matchesCurrent($subItem['path'] ?? null))
+                                        ->sortByDesc(fn ($subItem) => strlen((string) ($subItem['path'] ?? '')))
+                                        ->pluck('path')
+                                        ->first();
+                                    $subtreeIsActive = !empty($activeSubItemPath);
+                                    $itemIsActive = !$subtreeIsActive && $matchesCurrent($itemPath);
                                 @endphp
                                 <li @if($hasSubItems) x-data="{ open: {{ ($itemIsActive || $subtreeIsActive) ? 'true' : 'false' }} }" @endif>
-                                    @if (isset($item['subItems']))
+                                    @if ($hasSubItems)
                                         <!-- Menu Item with Submenu -->
                                         @php
                                             $parentTarget = (!empty($item['path']) && $item['path'] !== '#')
@@ -189,10 +198,10 @@
                                              x-transition:leave="transition-all ease-in duration-150"
                                              x-transition:leave-start="opacity-100 max-h-64 translate-y-0"
                                              x-transition:leave-end="opacity-0 max-h-0 -translate-y-1"
-                                             class="overflow-hidden">
+                                                class="overflow-hidden">
                                             <ul class="mt-2 space-y-1 ml-9">
                                                 @foreach ($item['subItems'] as $subItem)
-                                                    @php $subItemIsActive = $matchesCurrent($subItem['path'] ?? null); @endphp
+                                                    @php $subItemIsActive = ($subItem['path'] ?? null) === $activeSubItemPath; @endphp
                                                     <li>
                                                         <a href="{{ $subItem['path'] }}"
                                                             @class([

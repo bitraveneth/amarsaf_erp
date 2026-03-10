@@ -82,11 +82,6 @@
         </form>
     </div>
 
-    @if(session('status'))
-        <p class="text-sm text-gray-600 dark:text-gray-300">
-            {{ session('status') }}
-        </p>
-    @endif
 
     <!-- Products table -->
     <div class="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">

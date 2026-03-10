@@ -14,11 +14,6 @@
         </a>
     </div>
 
-    @if(session('status'))
-        <div class="rounded-xl border border-success-200 bg-success-50 px-4 py-3 text-sm text-success-700 dark:border-success-500/40 dark:bg-success-500/10 dark:text-success-300">
-            {{ session('status') }}
-        </div>
-    @endif
 
     @if($errors->any())
         <div class="rounded-xl border border-error-200 bg-error-50 px-4 py-3 text-sm text-error-700 dark:border-error-500/40 dark:bg-error-500/10 dark:text-error-300">
@@ -49,9 +44,6 @@
                     @foreach($groups as $group)
                         <div x-data="{ showGroupModal: false }" @keydown.escape.window="showGroupModal = false" class="rounded-xl border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-900/60">
                             <div class="flex items-start gap-3">
-                                <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-50 text-sm font-bold text-brand-700 dark:bg-brand-500/10 dark:text-brand-300">
-                                    {{ $group->position }}
-                                </div>
                                 <div class="min-w-0 flex-1">
                                     <div class="truncate text-sm font-semibold text-gray-900 dark:text-white">{{ $group->title }}</div>
                                     <div class="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-gray-500 dark:text-gray-400">
@@ -186,13 +178,10 @@
             @else
                 <div class="space-y-4">
                     @foreach($groups as $group)
-                        <section x-data="{ showCreateItemModal: false, openGroup: {{ $loop->first ? 'true' : 'false' }} }" @keydown.escape.window="showCreateItemModal = false" class="rounded-xl border border-gray-200 bg-gray-50/80 dark:border-gray-700 dark:bg-gray-900/60">
+                        <section x-data="{ showCreateItemModal: false, openGroup: false }" @keydown.escape.window="showCreateItemModal = false" class="rounded-xl border border-gray-200 bg-gray-50/80 dark:border-gray-700 dark:bg-gray-900/60">
                             <div class="flex items-center justify-between border-b border-gray-200 px-4 py-3 dark:border-gray-700">
                                 <button type="button" @click="openGroup = !openGroup" class="min-w-0 flex-1 text-left">
                                     <div class="flex items-center gap-3">
-                                        <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-50 text-sm font-bold text-brand-700 dark:bg-brand-500/10 dark:text-brand-300">
-                                            {{ $group->items->count() }}
-                                        </div>
                                         <div class="min-w-0">
                                             <h3 class="truncate text-sm font-semibold text-gray-900 dark:text-white">{{ $group->title }}</h3>
                                             <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Group key: {{ $group->key }}</p>
@@ -216,7 +205,7 @@
 
                             <div x-show="openGroup" x-transition style="display: none;" class="space-y-3 p-4">
                                 @forelse($group->items as $item)
-                                    <div x-data="{ openItem: {{ $loop->first ? 'true' : 'false' }}, showEditItemModal: false, showCreateChildModal: false }" @keydown.escape.window="showEditItemModal = false; showCreateChildModal = false" class="rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
+                                    <div x-data="{ openItem: false, showEditItemModal: false, showCreateChildModal: false }" @keydown.escape.window="showEditItemModal = false; showCreateChildModal = false" class="rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
                                         <div class="flex items-center gap-3 px-4 py-3">
                                             <button type="button" @click="openItem = !openItem" class="min-w-0 flex-1 text-left">
                                                 <div class="flex items-center justify-between gap-3">

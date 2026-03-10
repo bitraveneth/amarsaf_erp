@@ -24,11 +24,6 @@
     </div>
 
     {{-- Status --}}
-    @if(session('status'))
-        <div class="rounded-xl border border-success-200 bg-success-50 px-4 py-3 text-sm text-success-700 dark:border-success-500/40 dark:bg-success-500/10 dark:text-success-300">
-            {{ session('status') }}
-        </div>
-    @endif
 
     @if($errors->has('role_create'))
         <div class="rounded-xl border border-error-200 bg-error-50 px-4 py-3 text-sm text-error-700 dark:border-error-500/40 dark:bg-error-500/10 dark:text-error-300">

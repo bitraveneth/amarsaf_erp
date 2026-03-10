@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="max-w-7xl mx-auto space-y-8">
+<div class="screen-order-view max-w-7xl mx-auto space-y-8">
     <!-- Header with gradient -->
     <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
         <div>
@@ -499,48 +499,160 @@
     @endif
 </div>
 
+<div class="print-only mt-6 text-[12px] leading-relaxed text-gray-900">
+    <div class="flex items-start justify-between mb-6">
+        <div class="flex items-center gap-3">
+            @if(!empty($appLogoUrl))
+                <img src="{{ $appLogoUrl }}" alt="{{ config('app.name') }}" class="h-12 w-12 rounded-full object-cover" />
+            @else
+                <div class="flex h-12 w-12 items-center justify-center rounded-full bg-brand-500 text-sm font-semibold text-white">
+                    {{ strtoupper(mb_substr(config('app.name'), 0, 2)) }}
+                </div>
+            @endif
+            <div>
+                <h2 class="text-lg font-semibold text-gray-900">{{ config('app.name') }}</h2>
+                <p class="mt-1 text-xs text-gray-600">Order &amp; Delivery</p>
+            </div>
+        </div>
+        <div class="text-right space-y-1">
+            <h1 class="text-xl font-bold text-gray-900">Order #{{ $order->id }}</h1>
+            <p class="text-xs text-gray-600">Customer: {{ $order->agent->name }}</p>
+            <p class="text-xs text-gray-600">Issued: {{ $order->created_at?->format('d M Y') ?? now()->format('d M Y') }}</p>
+            @if($order->delivery_date)
+                <p class="text-xs text-gray-600">Delivery: {{ $order->delivery_date->format('d M Y') }}</p>
+            @endif
+            <p class="text-xs text-gray-600">Status: {{ ucfirst($order->status) }}</p>
+        </div>
+    </div>
+
+    <div class="flex justify-between mb-4">
+        <div>
+            <h3 class="font-semibold text-sm">Bill to</h3>
+            <p class="mt-1">
+                {{ $order->agent->name }}<br>
+                @if($order->agent->zone)
+                    {{ $order->agent->zone }}<br>
+                @endif
+                @if($order->agent_reference)
+                    Ref: {{ $order->agent_reference }}
+                @endif
+            </p>
+
+            @if($order->delivery_address)
+                <div class="mt-6">
+                    <h3 class="font-semibold text-sm uppercase tracking-wide">Delivery address</h3>
+                    <p class="mt-1">{{ $order->delivery_address }}</p>
+                </div>
+            @endif
+
+            @if($order->notes)
+                <div class="mt-6">
+                    <h3 class="font-semibold text-sm uppercase tracking-wide">Notes</h3>
+                    <p class="mt-1">{{ $order->notes }}</p>
+                </div>
+            @endif
+        </div>
+        <div class="text-right">
+            <p>Order No: <strong>#{{ $order->id }}</strong></p>
+            <p>Order type: {{ ucfirst($order->order_type) }}</p>
+            @if($order->payment_mode)
+                <p>Payment: {{ ucfirst(str_replace('_', ' ', $order->payment_mode)) }}</p>
+            @endif
+            @if($order->delivery_contact_name)
+                <p>Contact: <strong>{{ $order->delivery_contact_name }}</strong></p>
+            @endif
+            @if($order->delivery_contact_phone)
+                <p>Phone: {{ $order->delivery_contact_phone }}</p>
+            @endif
+        </div>
+    </div>
+
+    <table class="w-full border-collapse text-[11px]">
+        <thead>
+            <tr>
+                <th class="border border-gray-300 px-2 py-1 text-left">#</th>
+                <th class="border border-gray-300 px-2 py-1 text-left">Description</th>
+                <th class="border border-gray-300 px-2 py-1 text-right">Qty</th>
+                <th class="border border-gray-300 px-2 py-1 text-right">Unit Price</th>
+                <th class="border border-gray-300 px-2 py-1 text-right">Line Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach($order->items as $index => $item)
+                <tr>
+                    <td class="border border-gray-200 px-2 py-1 text-left">{{ $index + 1 }}</td>
+                    <td class="border border-gray-200 px-2 py-1 text-left">
+                        {{ $item->product->name ?? '—' }}
+                        @if($item->product?->size)
+                            <div class="text-[10px] text-gray-500">{{ $item->product->size }}</div>
+                        @endif
+                        @if($item->product?->sku)
+                            <div class="text-[10px] text-gray-500">SKU: {{ $item->product->sku }}</div>
+                        @endif
+                    </td>
+                    <td class="border border-gray-200 px-2 py-1 text-right">{{ number_format($item->quantity, 0) }}</td>
+                    <td class="border border-gray-200 px-2 py-1 text-right">{{ number_format($item->unit_price, 2) }}</td>
+                    <td class="border border-gray-200 px-2 py-1 text-right">{{ number_format($item->quantity * $item->unit_price, 2) }}</td>
+                </tr>
+            @endforeach
+        </tbody>
+    </table>
+
+    <div class="mt-4 flex justify-end">
+        <table class="text-[11px]">
+            <tr>
+                <td class="px-3 py-1 text-right">Net total:</td>
+                <td class="px-3 py-1 text-right">{{ number_format($order->items->sum(function ($item) { return $item->quantity * $item->unit_price; }), 2) }}</td>
+            </tr>
+            @if(($order->tax_total ?? 0) > 0)
+                <tr>
+                    <td class="px-3 py-1 text-right">VAT:</td>
+                    <td class="px-3 py-1 text-right">{{ number_format((float) ($order->tax_total ?? 0), 2) }}</td>
+                </tr>
+            @endif
+            @if(($order->commission_total ?? 0) > 0)
+                <tr>
+                    <td class="px-3 py-1 text-right">Commission:</td>
+                    <td class="px-3 py-1 text-right">{{ number_format((float) ($order->commission_total ?? 0), 2) }}</td>
+                </tr>
+            @endif
+            <tr>
+                <td class="px-3 py-1 text-right font-semibold border-t border-gray-300">Total:</td>
+                <td class="px-3 py-1 text-right font-semibold border-t border-gray-300">{{ number_format((float) $order->total, 2) }}</td>
+            </tr>
+        </table>
+    </div>
+</div>
+
 @push('styles')
 <style media="print">
     @page {
         size: A4;
-        margin: 1.5cm;
+        margin: 12mm;
     }
-    body {
-        background: white;
-        color: black;
+</style>
+
+<style>
+    @media print {
+        body {
+            background: #ffffff !important;
+        }
+
+        #sidebar,
+        header,
+        .screen-order-view {
+            display: none !important;
+        }
+
+        .print-only {
+            display: block !important;
+        }
     }
-    .no-print, .sidebar, .header-alert, .header-user, footer,
-    button, .flex.items-center.gap-3 a:not(.print\\:block) {
-        display: none !important;
-    }
-    .print-only {
-        display: block !important;
-    }
-    .rounded-2xl, .rounded-xl, .rounded-lg {
-        border: 1px solid #e5e7eb !important;
-        box-shadow: none !important;
-    }
-    .bg-white, .bg-gray-50, .bg-gray-100 {
-        background: white !important;
-    }
-    .dark\:bg-gray-900, .dark\:bg-gray-800 {
-        background: white !important;
-    }
-    .text-gray-900, .text-gray-700, .text-gray-600 {
-        color: black !important;
-    }
-    .border-gray-200, .border-gray-300 {
-        border-color: #e5e7eb !important;
-    }
-    .bg-gradient-to-r, .bg-gradient-to-br {
-        background: white !important;
-        color: black !important;
-        border: 1px solid #e5e7eb !important;
-    }
-    .inline-flex.items-center.gap-2.rounded-xl.bg-gradient-to-r {
-        background: white !important;
-        color: black !important;
-        border: 1px solid #e5e7eb !important;
+
+    @media screen {
+        .print-only {
+            display: none !important;
+        }
     }
 </style>
 @endpush

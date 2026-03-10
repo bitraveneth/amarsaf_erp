@@ -71,18 +71,6 @@
     </div>
 
     <!-- Status Message -->
-    @if(session('status'))
-        <div class="rounded-xl border-l-4 border-success-500 bg-success-50 p-4 dark:border-success-400 dark:bg-success-950/30">
-            <div class="flex items-center gap-3">
-                <div class="flex-shrink-0">
-                    <svg class="h-5 w-5 text-success-600 dark:text-success-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-5m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                    </svg>
-                </div>
-                <p class="text-sm font-medium text-success-700 dark:text-success-400">{{ session('status') }}</p>
-            </div>
-        </div>
-    @endif
 
     @if($logs->isNotEmpty())
         @php

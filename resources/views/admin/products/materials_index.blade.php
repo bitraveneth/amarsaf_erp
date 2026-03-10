@@ -50,11 +50,6 @@
     </div>
 
     <!-- Status Message -->
-    @if(session('status'))
-        <div class="rounded-lg bg-success-50 p-4 border border-success-200 dark:bg-success-500/10 dark:border-success-500/20">
-            <p class="text-sm text-success-700 dark:text-success-400">{{ session('status') }}</p>
-        </div>
-    @endif
 
     <!-- Materials Table -->
     @if($materials->isNotEmpty())

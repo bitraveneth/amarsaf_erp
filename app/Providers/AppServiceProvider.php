@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Helpers\SystemSettings;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\View;
@@ -22,6 +23,33 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        $appName = SystemSettings::get('app_name', config('app.name'));
+        $currencyCode = SystemSettings::get('currency_code', config('app.currency', 'BDT'));
+        $currencySymbol = SystemSettings::get('currency_symbol', '৳');
+        $logoUrl = SystemSettings::logoUrl();
+        $brandThemeVariables = SystemSettings::brandThemeVariables();
+
+        config([
+            'app.name' => $appName,
+            'app.currency' => $currencyCode,
+            'app.currency_symbol' => $currencySymbol,
+            'mail.mailers.smtp.host' => SystemSettings::get('smtp_host', config('mail.mailers.smtp.host')),
+            'mail.mailers.smtp.port' => (int) SystemSettings::get('smtp_port', config('mail.mailers.smtp.port')),
+            'mail.mailers.smtp.encryption' => SystemSettings::get('smtp_encryption', config('mail.mailers.smtp.encryption')),
+            'mail.mailers.smtp.username' => SystemSettings::get('smtp_username', config('mail.mailers.smtp.username')),
+            'mail.mailers.smtp.password' => SystemSettings::get('smtp_password', config('mail.mailers.smtp.password')),
+            'mail.from.address' => SystemSettings::get('mail_from_address', config('mail.from.address')),
+            'mail.from.name' => SystemSettings::get('mail_from_name', $appName),
+            'services.sms.provider' => SystemSettings::get('sms_provider'),
+            'services.sms.base_url' => SystemSettings::get('sms_base_url'),
+            'services.sms.api_key' => SystemSettings::get('sms_api_key'),
+            'services.sms.api_secret' => SystemSettings::get('sms_api_secret'),
+            'services.sms.sender_id' => SystemSettings::get('sms_sender_id'),
+        ]);
+
+        View::share('appLogoUrl', $logoUrl);
+        View::share('brandThemeVariables', $brandThemeVariables);
+
         View::composer(['layouts.app-header', 'layouts.partials.admin-header'], function ($view) {
             if (!auth()->check()) {
                 return;

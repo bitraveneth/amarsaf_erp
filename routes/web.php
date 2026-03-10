@@ -55,6 +55,7 @@ use App\Http\Controllers\Admin\SalesDashboardController;
 use App\Http\Controllers\Admin\ManufacturingDashboardController;
 use App\Http\Controllers\Admin\AccountingDashboardController;
 use App\Http\Controllers\Admin\ReportsDashboardController;
+use App\Http\Controllers\Admin\SystemSettingController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -88,6 +89,11 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::get('/', [AdminController::class, 'index'])->name('dashboard');
     Route::view('help', 'admin.help')->name('help');
     Route::view('client-guide', 'admin.client-guide')->name('client-guide');
+    Route::get('settings', [SystemSettingController::class, 'index'])->middleware('perm:system.settings')->name('settings.index');
+    Route::patch('settings', [SystemSettingController::class, 'update'])->middleware('perm:system.settings')->name('settings.update');
+    Route::post('settings/backups', [SystemSettingController::class, 'createBackup'])->middleware('perm:system.settings')->name('settings.backups.create');
+    Route::get('settings/backups/{filename}', [SystemSettingController::class, 'downloadBackup'])->middleware('perm:system.settings')->where('filename', '.*')->name('settings.backups.download');
+    Route::post('settings/backups/restore', [SystemSettingController::class, 'restoreBackup'])->middleware('perm:system.settings')->name('settings.backups.restore');
 
     // Sales dashboard
     Route::get('sales-dashboard', SalesDashboardController::class)

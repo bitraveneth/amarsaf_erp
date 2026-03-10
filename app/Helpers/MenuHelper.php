@@ -27,10 +27,12 @@ class MenuHelper
             ->get();
 
         if ($groups->isEmpty()) {
-            return self::getFallbackMenu();
+            return self::normalizeSidebarGroups(
+                self::ensureSystemSettingsLinks(self::getFallbackMenu())
+            );
         }
 
-        return $groups->map(function (MenuGroup $group) {
+        return self::normalizeSidebarGroups(self::ensureSystemSettingsLinks($groups->map(function (MenuGroup $group) {
             return [
                 'title' => $group->title,
                 'items' => $group->items
@@ -89,7 +91,7 @@ class MenuHelper
                     ->values()
                     ->all(),
             ];
-        })->all();
+        })->all()));
     }
 
     public static function isValidMenuPath(?string $path): bool
@@ -234,7 +236,7 @@ class MenuHelper
                         'path' => '#',
                         'permission' => 'system.settings',
                         'subItems' => [
-                            ['name' => 'Help & configuration guide', 'path' => '/admin/help', 'permission' => 'system.settings'],
+                            ['name' => 'Application settings', 'path' => '/admin/settings', 'permission' => 'system.settings'],
                             ['name' => 'Client manual', 'path' => '/admin/client-guide', 'permission' => 'system.settings'],
                             ['name' => 'User manager', 'path' => '/admin/users', 'permission' => 'roles.manage'],
                             ['name' => 'Role manager', 'path' => '/admin/roles', 'permission' => 'roles.manage'],
@@ -258,7 +260,6 @@ class MenuHelper
                             ['name' => 'Production orders & runs', 'path' => '/admin/production', 'permission' => 'manufacturing.manage'],
                             ['name' => 'Pending receipts', 'path' => '/admin/production/pending-receipts', 'permission' => 'manufacturing.manage'],
                             ['name' => 'Batches & lots', 'path' => '/admin/batches', 'permission' => 'manufacturing.manage'],
-                            ['name' => 'Production analysis', 'path' => '/admin/reports/production', 'permission' => 'manufacturing.manage'],
                         ],
                     ],
                 ],
@@ -272,7 +273,7 @@ class MenuHelper
                         'path' => '#',
                         'permission' => 'inventory.manage',
                         'subItems' => [
-                            ['name' => 'Inventory dashboard', 'path' => '/admin/inventory', 'permission' => 'inventory.manage'],
+                            ['name' => 'Inventory Dashboard', 'path' => '/admin/inventory', 'permission' => 'inventory.manage'],
                             ['name' => 'Material stock', 'path' => '/admin/inventory/materials', 'permission' => 'inventory.manage'],
                             ['name' => 'Goods receipts (GRN)', 'path' => '/admin/goods-receipts', 'permission' => 'inventory.manage'],
                             ['name' => 'Transfers', 'path' => '/admin/stock/transfers', 'permission' => 'inventory.manage'],
@@ -347,6 +348,57 @@ class MenuHelper
                 ],
             ],
         ];
+    }
+
+    protected static function ensureSystemSettingsLinks(array $groups): array
+    {
+        foreach ($groups as &$group) {
+            foreach ($group['items'] as &$item) {
+                if (mb_strtolower($item['name'] ?? '') !== 'system settings') {
+                    continue;
+                }
+
+                $subItems = collect($item['subItems'] ?? []);
+                $subItems->push([
+                    'name' => 'Application settings',
+                    'path' => '/admin/settings',
+                    'permission' => 'system.settings',
+                ]);
+
+                $item['subItems'] = $subItems
+                    ->unique(fn (array $sub) => mb_strtolower(trim(($sub['name'] ?? '') . '|' . ($sub['path'] ?? ''))))
+                    ->values()
+                    ->all();
+            }
+        }
+
+        return $groups;
+    }
+
+    protected static function normalizeSidebarGroups(array $groups): array
+    {
+        foreach ($groups as &$group) {
+            $groupTitle = mb_strtolower(trim($group['title'] ?? ''));
+
+            foreach ($group['items'] as &$item) {
+                $subItems = collect($item['subItems'] ?? []);
+
+                if ($groupTitle !== 'reports & analytics') {
+                    $subItems = $subItems->reject(function (array $subItem) {
+                        $name = mb_strtolower(trim($subItem['name'] ?? ''));
+                        $path = trim($subItem['path'] ?? '');
+
+                        return ($name === 'production analysis' && $path === '/admin/reports/production')
+                            || ($name === 'help & configuration guide' && $path === '/admin/help')
+                            || $path === '/admin/help';
+                    });
+                }
+
+                $item['subItems'] = $subItems->values()->all();
+            }
+        }
+
+        return $groups;
     }
 
     public static function getIconSvg(string $key): string

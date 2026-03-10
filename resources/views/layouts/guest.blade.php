@@ -8,6 +8,16 @@
     <title>@yield('title', config('app.name'))</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
+    @if(!empty($brandThemeVariables))
+        <style>
+            :root {
+                @foreach($brandThemeVariables as $variable => $value)
+                    {{ $variable }}: {{ $value }};
+                @endforeach
+            }
+        </style>
+    @endif
+
     @stack('styles')
 
     <script>
@@ -52,13 +62,17 @@
          class="fixed inset-0 z-[99999] flex flex-col items-center justify-center bg-white dark:bg-gray-950"
          style="will-change: opacity;">
         <div class="mb-6 animate-pulse">
-            <div class="flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-50 shadow-theme-md dark:bg-brand-500/10">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="text-brand-600 dark:text-brand-400">
-                    <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                    <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                    <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-            </div>
+            @if(!empty($appLogoUrl))
+                <img src="{{ $appLogoUrl }}" alt="{{ config('app.name') }}" class="h-16 w-16 rounded-2xl border border-gray-200 object-cover shadow-theme-md dark:border-gray-700" />
+            @else
+                <div class="flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-50 shadow-theme-md dark:bg-brand-500/10">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="text-brand-600 dark:text-brand-400">
+                        <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+            @endif
         </div>
         <h1 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
             {{ config('app.name') }}
@@ -79,7 +93,14 @@
             <div class="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
                 {{-- Brand --}}
                 <a href="{{ route('login') }}" class="text-title-sm font-semibold text-gray-900 dark:text-white">
-                    {{ config('app.name') }}
+                    @if(!empty($appLogoUrl))
+                        <span class="flex items-center gap-2">
+                            <img src="{{ $appLogoUrl }}" alt="{{ config('app.name') }}" class="h-8 w-8 rounded-lg border border-gray-200 object-cover dark:border-gray-700" />
+                            <span>{{ config('app.name') }}</span>
+                        </span>
+                    @else
+                        {{ config('app.name') }}
+                    @endif
                 </a>
 
                 {{-- Right side actions --}}

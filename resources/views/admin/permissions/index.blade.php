@@ -28,11 +28,6 @@
         </button>
     </div>
 
-    @if(session('status'))
-        <div class="rounded-xl border border-success-200 bg-success-50 px-4 py-3 text-sm text-success-700 dark:border-success-500/40 dark:bg-success-500/10 dark:text-success-300">
-            {{ session('status') }}
-        </div>
-    @endif
 
     @if($errors->any())
         <div class="rounded-xl border border-error-200 bg-error-50 px-4 py-3 text-sm text-error-700 dark:border-error-500/40 dark:bg-error-500/10 dark:text-error-300">
@@ -236,7 +231,7 @@
         <div
             x-show="showAdvancedMatrix"
             x-transition
-            class="flex h-[92vh] w-full max-w-7xl flex-col rounded-2xl border border-gray-200 bg-white shadow-theme-lg dark:border-gray-700 dark:bg-gray-900"
+            class="flex h-[92vh] w-full flex-col rounded-2xl border border-gray-200 bg-white shadow-theme-lg dark:border-gray-700 dark:bg-gray-900"
         >
             <div class="flex items-center justify-between border-b border-gray-200 px-5 py-4 dark:border-gray-700">
                 <div>

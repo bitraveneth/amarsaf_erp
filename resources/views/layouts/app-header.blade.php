@@ -137,9 +137,13 @@
                 $appInitials = strtoupper(mb_substr($initialSeed !== '' ? $initialSeed : $appName, 0, 2));
             @endphp
             <a href="{{ route('admin.dashboard') }}" class="flex items-center gap-2 xl:hidden">
-                <span class="flex h-9 w-9 items-center justify-center rounded-full bg-brand-500 text-sm font-semibold text-white">
-                    {{ $appInitials }}
-                </span>
+                @if(!empty($appLogoUrl))
+                    <img src="{{ $appLogoUrl }}" alt="{{ $appName }}" class="h-9 w-9 rounded-xl border border-gray-200 object-cover dark:border-gray-700" />
+                @else
+                    <span class="flex h-9 w-9 items-center justify-center rounded-full bg-brand-500 text-sm font-semibold text-white">
+                        {{ $appInitials }}
+                    </span>
+                @endif
                 <span class="text-sm font-semibold text-gray-900 dark:text-white">{{ $appName }}</span>
             </a>
 

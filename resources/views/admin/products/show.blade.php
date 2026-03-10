@@ -27,11 +27,6 @@
         </div>
     </div>
 
-    @if(session('status'))
-        <p class="text-sm text-gray-600 dark:text-gray-300">
-            {{ session('status') }}
-        </p>
-    @endif
 
     <!-- Summary cards -->
     <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

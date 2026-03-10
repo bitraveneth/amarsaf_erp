@@ -24,11 +24,6 @@
         </div>
 
         <!-- Status Message -->
-        @if(session('status'))
-            <div class="rounded-lg bg-success-50 p-4 border border-success-200 dark:bg-success-500/10 dark:border-success-500/20">
-                <p class="text-sm text-success-700 dark:text-success-400">{{ session('status') }}</p>
-            </div>
-        @endif
 
         <!-- Add Packaging Form -->
         <div class="rounded-2xl border border-gray-200 bg-white shadow-theme-sm dark:border-gray-800 dark:bg-gray-900">

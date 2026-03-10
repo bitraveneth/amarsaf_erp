@@ -31,16 +31,6 @@ use Illuminate\Support\Str;
     </div>
 
     <!-- Status Message -->
-    @if(session('status'))
-    <div class="rounded-lg bg-success-50 p-4 border border-success-200 dark:bg-success-500/10 dark:border-success-500/20">
-        <div class="flex items-center gap-3">
-            <svg class="h-5 w-5 text-success-600 dark:text-success-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-5m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <p class="text-sm text-success-700 dark:text-success-400">{{ session('status') }}</p>
-        </div>
-    </div>
-    @endif
 
     <!-- Summary Stats -->
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
