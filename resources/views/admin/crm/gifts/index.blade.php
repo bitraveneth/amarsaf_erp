@@ -188,8 +188,8 @@
                         @foreach($gifts as $gift)
                             @php
                                 $statusColors = [
-                                    'pending' => 'bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-400',
-                                    'delivered' => 'bg-success-100 text-success-700 dark:bg-success-500/20 dark:text-success-400',
+                                    'planned' => 'bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-400',
+                                    'given' => 'bg-success-100 text-success-700 dark:bg-success-500/20 dark:text-success-400',
                                     'cancelled' => 'bg-error-100 text-error-700 dark:bg-error-500/20 dark:text-error-400',
                                 ];
                                 $statusColor = $statusColors[$gift->status] ?? 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400';
@@ -288,7 +288,7 @@
                                 </td>
                                 <td class="px-6 py-4">
                                     <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium {{ $statusColor }}">
-                                        <span class="h-1.5 w-1.5 rounded-full {{ $gift->status === 'delivered' ? 'bg-success-500' : ($gift->status === 'cancelled' ? 'bg-error-500' : 'bg-orange-500') }}"></span>
+                                        <span class="h-1.5 w-1.5 rounded-full {{ $gift->status === 'given' ? 'bg-success-500' : ($gift->status === 'cancelled' ? 'bg-error-500' : 'bg-orange-500') }}"></span>
                                         {{ ucfirst($gift->status) }}
                                     </span>
                                 </td>

@@ -2,8 +2,9 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Helpers\Permission as PermissionGate;
 use App\Http\Controllers\Controller;
-use App\Models\Permission;
+use App\Models\Permission as PermissionModel;
 use App\Models\Role;
 use App\Models\User;
 use App\Models\UserPermission;
@@ -122,7 +123,7 @@ class UserController extends Controller
 
         $permissionsGrouped = collect();
         if ($hasPermissionsTable) {
-            $permissionsGrouped = Permission::query()
+            $permissionsGrouped = PermissionModel::query()
                 ->orderBy('group')
                 ->orderBy('name')
                 ->get()
@@ -228,7 +229,7 @@ class UserController extends Controller
             }
 
             if (Schema::hasTable('user_permissions') && Schema::hasTable('permissions')) {
-                $validPermissions = Permission::pluck('name')->all();
+                $validPermissions = PermissionModel::pluck('name')->all();
                 $overrides = collect($data['overrides'] ?? [])
                     ->filter(function ($value, $permissionName) use ($validPermissions) {
                         return in_array($permissionName, $validPermissions, true)
@@ -256,8 +257,8 @@ class UserController extends Controller
 
     protected function ensureAdmin(): void
     {
-        if (! auth()->user()?->hasAnyRole(['admin', 'super_admin'])) {
-            abort(403, 'Only admin or super admin users can manage users.');
+        if (! PermissionGate::can(auth()->user(), 'system.settings')) {
+            abort(403, 'You do not have permission to manage users.');
         }
     }
 

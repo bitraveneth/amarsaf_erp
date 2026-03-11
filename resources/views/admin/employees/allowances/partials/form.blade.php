@@ -143,6 +143,7 @@
                         $statusColors = [
                             'submitted' => 'bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-400',
                             'approved' => 'bg-success-100 text-success-700 dark:bg-success-500/20 dark:text-success-400',
+                            'paid' => 'bg-brand-100 text-brand-700 dark:bg-brand-500/20 dark:text-brand-400',
                             'rejected' => 'bg-error-100 text-error-700 dark:bg-error-500/20 dark:text-error-400',
                         ];
                         $statusColor = $statusColors[$currentStatus] ?? 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400';
@@ -152,6 +153,7 @@
                             class="w-full rounded-xl border border-gray-200 bg-white/50 pl-10 pr-10 py-3 text-sm text-gray-900 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800/50 dark:text-white appearance-none transition-all">
                         <option value="submitted" {{ $currentStatus === 'submitted' ? 'selected' : '' }}>Submitted</option>
                         <option value="approved" {{ $currentStatus === 'approved' ? 'selected' : '' }}>Approved</option>
+                        <option value="paid" {{ $currentStatus === 'paid' ? 'selected' : '' }}>Paid</option>
                         <option value="rejected" {{ $currentStatus === 'rejected' ? 'selected' : '' }}>Rejected</option>
                     </select>
                     <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
@@ -164,7 +166,8 @@
                     <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium {{ $statusColor }}">
                         <span class="h-1.5 w-1.5 rounded-full 
                             {{ $currentStatus === 'approved' ? 'bg-success-500' : 
-                               ($currentStatus === 'rejected' ? 'bg-error-500' : 'bg-orange-500') }}">
+                               ($currentStatus === 'paid' ? 'bg-brand-500' :
+                               ($currentStatus === 'rejected' ? 'bg-error-500' : 'bg-orange-500')) }}">
                         </span>
                         {{ ucfirst($currentStatus) }}
                     </span>

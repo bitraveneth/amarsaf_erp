@@ -8,6 +8,7 @@ use App\Models\ProductionRun;
 use App\Models\WarehouseLocation;
 use App\Models\Warehouse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class WarehouseController extends Controller
 {
@@ -112,10 +113,35 @@ class WarehouseController extends Controller
     {
         $this->ensureWarehouseAccess($warehouse);
 
-        foreach ($warehouse->entries as $entry) {
-            $entry->movements()->delete();
-            $entry->delete();
+        $warehouse->load('entries.movements');
+
+        $hasProtectedEntries = $warehouse->entries->contains(function (StockEntry $entry) {
+            return $entry->status !== 'available' || ! is_null($entry->order_id);
+        });
+
+        if ($hasProtectedEntries) {
+            return redirect()
+                ->route('admin.warehouses.index')
+                ->with('status', 'Warehouse contains reserved or order-linked stock and cannot be cleared automatically.');
         }
+
+        DB::transaction(function () use ($warehouse) {
+            foreach ($warehouse->entries as $entry) {
+                $quantity = (float) $entry->quantity;
+                if ($quantity <= 0) {
+                    continue;
+                }
+
+                $entry->quantity = 0;
+                $entry->save();
+
+                $entry->movements()->create([
+                    'type' => 'other',
+                    'quantity' => $quantity * -1,
+                    'notes' => 'Cleared from warehouse maintenance screen.',
+                ]);
+            }
+        });
 
         return redirect()->route('admin.warehouses.index')->with('status', 'All stock cleared from warehouse.');
     }

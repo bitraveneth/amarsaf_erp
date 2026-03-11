@@ -379,16 +379,6 @@ class OrderController extends Controller
                     ->lockForUpdate()
                     ->get();
 
-                // Backward compatibility for older rows created before order_id was added.
-                if ($reservedEntries->isEmpty()) {
-                    $reservedEntries = StockEntry::whereNull('order_id')
-                        ->where('product_id', $item->product_id)
-                        ->where('status', 'reserved')
-                        ->orderByDesc('created_at')
-                        ->lockForUpdate()
-                        ->get();
-                }
-
                 foreach ($reservedEntries as $reservedEntry) {
                     if ($remaining <= 0) {
                         break;
@@ -429,6 +419,12 @@ class OrderController extends Controller
                     $availableEntry->save();
 
                     $remaining -= $releaseQty;
+                }
+
+                if ($remaining > 0.00001) {
+                    throw ValidationException::withMessages([
+                        'order' => ['Reserved stock could not be safely matched to this order. Review legacy reservations before deleting it.'],
+                    ]);
                 }
             }
 

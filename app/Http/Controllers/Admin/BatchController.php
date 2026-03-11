@@ -8,32 +8,54 @@ use App\Models\Product;
 use App\Models\User;
 use App\Notifications\NewBatchCreated;
 use Illuminate\Http\Request;
+use Illuminate\Database\Query\Builder as QueryBuilder;
+use Illuminate\Validation\Rule;
 
 class BatchController extends Controller
 {
     public function index()
     {
-        $batches = Batch::with('product')->latest('production_date')->paginate(10);
-        // Only finished products should be selectable for batches
-        $products = Product::where(function ($q) {
-                $q->whereNull('product_type')
-                    ->orWhere('product_type', 'finished');
+        $warehouseIds = $this->accessibleWarehouseIds();
+
+        $batches = Batch::with('product')
+            ->when($warehouseIds !== null, function ($query) use ($warehouseIds) {
+                $query->where(function ($batchQuery) use ($warehouseIds) {
+                    $batchQuery
+                        ->whereHas('stockEntries', function ($stockQuery) use ($warehouseIds) {
+                            $stockQuery->whereIn('warehouse_id', $warehouseIds);
+                        })
+                        ->orWhereHas('productionRuns', function ($runQuery) use ($warehouseIds) {
+                            $runQuery->whereIn('warehouse_id', $warehouseIds);
+                        })
+                        ->orWhere(function ($unlinkedQuery) {
+                            $unlinkedQuery->whereDoesntHave('stockEntries')
+                                ->whereDoesntHave('productionRuns');
+                        });
+                });
             })
-            ->where('is_active', true)
-            ->orderBy('name')
-            ->get();
+            ->latest('production_date')
+            ->paginate(10);
+        $products = $this->batchProducts();
 
         return view('admin.batches.index', compact('batches', 'products'));
     }
 
     public function show(Batch $batch)
     {
+        $warehouseIds = $this->ensureBatchAccess($batch);
+
         $batch->load([
             'product',
-            'productionRuns.warehouse',
-            'stockEntries.warehouse',
-            'stockEntries.location',
-            'stockEntries.movements.order.agent',
+            'productionRuns' => function ($query) use ($warehouseIds) {
+                $query->when($warehouseIds !== null, function ($runQuery) use ($warehouseIds) {
+                    $runQuery->whereIn('warehouse_id', $warehouseIds);
+                })->with('warehouse');
+            },
+            'stockEntries' => function ($query) use ($warehouseIds) {
+                $query->when($warehouseIds !== null, function ($stockQuery) use ($warehouseIds) {
+                    $stockQuery->whereIn('warehouse_id', $warehouseIds);
+                })->with(['warehouse', 'location', 'movements.order.agent']);
+            },
         ]);
 
         $producedQty = $batch->productionRuns->sum('quantity');
@@ -69,14 +91,7 @@ class BatchController extends Controller
 
     public function store(Request $request)
     {
-        $data = $request->validate([
-            'product_id' => 'required|exists:products,id',
-            'batch_code' => 'required|string',
-            'production_date' => 'required|date',
-            'expiry_date' => 'nullable|date|after_or_equal:production_date',
-            'qc_status' => 'required|in:pending,approved,rejected',
-            'notes' => 'nullable|string',
-        ]);
+        $data = $this->validated($request);
 
         $batch = Batch::create($data);
 
@@ -91,26 +106,15 @@ class BatchController extends Controller
 
     public function edit(Batch $batch)
     {
-        $products = Product::where(function ($q) {
-                $q->whereNull('product_type')
-                    ->orWhere('product_type', 'finished');
-            })
-            ->where('is_active', true)
-            ->orderBy('name')
-            ->get();
+        $this->ensureBatchAccess($batch);
+        $products = $this->batchProducts();
         return view('admin.batches.edit', compact('batch', 'products'));
     }
 
     public function update(Request $request, Batch $batch)
     {
-        $data = $request->validate([
-            'product_id' => 'required|exists:products,id',
-            'batch_code' => 'required|string',
-            'production_date' => 'required|date',
-            'expiry_date' => 'nullable|date|after_or_equal:production_date',
-            'qc_status' => 'required|in:pending,approved,rejected',
-            'notes' => 'nullable|string',
-        ]);
+        $this->ensureBatchAccess($batch);
+        $data = $this->validated($request, $batch);
 
         $batch->update($data);
         return redirect()->route('admin.batches.index')->with('status', 'Batch updated.');
@@ -118,6 +122,8 @@ class BatchController extends Controller
 
     public function destroy(Batch $batch)
     {
+        $this->ensureBatchAccess($batch);
+
         if ($batch->productionRuns()->exists()) {
             return redirect()->route('admin.batches.index')
                 ->with('status', 'Batch is linked to production runs and cannot be deleted.');
@@ -131,5 +137,73 @@ class BatchController extends Controller
         $batch->delete();
 
         return redirect()->route('admin.batches.index')->with('status', 'Batch deleted.');
+    }
+
+    protected function batchProducts()
+    {
+        return Product::sellable()
+            ->orderBy('name')
+            ->get();
+    }
+
+    protected function validated(Request $request, ?Batch $batch = null): array
+    {
+        return $request->validate([
+            'product_id' => [
+                'required',
+                Rule::exists('products', 'id')->where(function (QueryBuilder $query) {
+                    $query->where('is_active', true)
+                        ->where(function (QueryBuilder $productQuery) {
+                            $productQuery->whereNull('product_type')
+                                ->orWhere('product_type', 'finished');
+                        });
+                }),
+            ],
+            'batch_code' => [
+                'required',
+                'string',
+                Rule::unique('batches', 'batch_code')
+                    ->ignore($batch?->id)
+                    ->where(function ($query) use ($request) {
+                        $query->where('product_id', $request->input('product_id'));
+                    }),
+            ],
+            'production_date' => 'required|date',
+            'expiry_date' => 'nullable|date|after_or_equal:production_date',
+            'qc_status' => 'required|in:pending,approved,rejected',
+            'notes' => 'nullable|string',
+        ]);
+    }
+
+    protected function accessibleWarehouseIds(): ?array
+    {
+        return auth()->user()?->accessibleWarehouseIds();
+    }
+
+    protected function ensureBatchAccess(Batch $batch): ?array
+    {
+        $warehouseIds = $this->accessibleWarehouseIds();
+
+        if ($warehouseIds === null) {
+            return null;
+        }
+
+        $hasAnyWarehouseLinkedData = $batch->stockEntries()->exists() || $batch->productionRuns()->exists();
+        if (! $hasAnyWarehouseLinkedData) {
+            return $warehouseIds;
+        }
+
+        $isVisible = $batch->stockEntries()
+            ->whereIn('warehouse_id', $warehouseIds)
+            ->exists()
+            || $batch->productionRuns()
+                ->whereIn('warehouse_id', $warehouseIds)
+                ->exists();
+
+        if (! $isVisible) {
+            abort(403, 'You do not have access to this batch.');
+        }
+
+        return $warehouseIds;
     }
 }

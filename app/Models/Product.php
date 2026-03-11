@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 
 class Product extends Model
@@ -45,6 +46,37 @@ class Product extends Model
     public function packagingType()
     {
         return $this->belongsTo(PackagingType::class);
+    }
+
+    public function scopeSellable(Builder $query): Builder
+    {
+        return $query
+            ->where(function (Builder $builder) {
+                $builder->whereNull('product_type')
+                    ->orWhere('product_type', 'finished');
+            })
+            ->where('is_active', true);
+    }
+
+    public function scopeMaterials(Builder $query): Builder
+    {
+        return $query
+            ->whereIn('product_type', ['raw', 'service', 'inhouse'])
+            ->where('is_active', true);
+    }
+
+    public function scopeStockTracked(Builder $query): Builder
+    {
+        return $query->where(function (Builder $builder) {
+            $builder->whereNull('product_type')
+                ->orWhereIn('product_type', ['finished', 'raw', 'inhouse']);
+        });
+    }
+
+    public function isStockTracked(): bool
+    {
+        return $this->product_type === null
+            || in_array($this->product_type, ['finished', 'raw', 'inhouse'], true);
     }
 
     public function taxClass()

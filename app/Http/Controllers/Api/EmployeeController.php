@@ -376,6 +376,7 @@ class EmployeeController extends Controller
 
         $leaves = EmployeeLeave::where('employee_id', $employee->id)
             ->whereYear('start_date', $year)
+            ->where('status', 'approved')
             ->get();
 
         $usedByType = [];

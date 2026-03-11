@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Helpers\Permission as PermissionHelper;
 use App\Http\Controllers\Controller;
 use App\Models\Employee;
 use App\Models\User;
@@ -80,6 +81,8 @@ class EmployeeController extends Controller
      */
     public function createUser(Employee $employee)
     {
+        $this->ensureCanManageEmployeeUsers();
+
         // Prevent creating multiple accounts for the same employee.
         if ($employee->user) {
             return redirect()
@@ -96,9 +99,7 @@ class EmployeeController extends Controller
     public function storeUser(Request $request, Employee $employee)
     {
         $actor = auth()->user();
-        if (! $actor?->hasAnyRole(['admin', 'super_admin'])) {
-            abort(403, 'Only admin or super admin users can create login accounts for employees.');
-        }
+        $this->ensureCanManageEmployeeUsers();
 
         if ($employee->user) {
             return redirect()
@@ -131,6 +132,13 @@ class EmployeeController extends Controller
         return redirect()
             ->route('admin.employees.show', $employee)
             ->with('status', 'Login account created for this employee. Temporary password: ' . $plainPassword);
+    }
+
+    protected function ensureCanManageEmployeeUsers(): void
+    {
+        if (! PermissionHelper::can(auth()->user(), 'system.settings')) {
+            abort(403, 'You do not have permission to create employee login accounts.');
+        }
     }
 
     protected function syncPrimaryRole(User $user): void

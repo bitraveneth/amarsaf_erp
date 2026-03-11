@@ -76,8 +76,8 @@
         @php
             $totalItems = $equipment instanceof \Illuminate\Pagination\LengthAwarePaginator ? $equipment->total() : $equipment->count();
             $activeItems = $equipment->where('status', 'active')->count();
-            $maintenanceItems = $equipment->where('status', 'maintenance')->count();
-            $retiredItems = $equipment->where('status', 'retired')->count();
+            $returnedItems = $equipment->where('status', 'returned')->count();
+            $lostItems = $equipment->where('status', 'lost')->count();
             $withIdentifier = $equipment->filter(fn($item) => !empty($item->device_identifier))->count();
             
             $statusBreakdown = $equipment->groupBy('status')->map->count();
@@ -103,7 +103,7 @@
                     <p class="mt-3 text-3xl font-bold text-gray-900 dark:text-white">{{ $totalItems }}</p>
                     <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
                         <span class="font-medium text-brand-600 dark:text-brand-400">{{ $activeItems }}</span> active,
-                        <span class="font-medium text-orange-600 dark:text-orange-400">{{ $maintenanceItems }}</span> maintenance
+                        <span class="font-medium text-orange-600 dark:text-orange-400">{{ $returnedItems }}</span> returned
                     </p>
                 </div>
             </div>
@@ -143,8 +143,8 @@
                             </svg>
                         </div>
                     </div>
-                    <p class="mt-3 text-3xl font-bold text-orange-600 dark:text-orange-400">{{ $maintenanceItems }}</p>
-                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Needs repair/service</p>
+                    <p class="mt-3 text-3xl font-bold text-orange-600 dark:text-orange-400">{{ $returnedItems }}</p>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Returned to inventory/company</p>
                 </div>
             </div>
 
@@ -182,8 +182,8 @@
                             $percentage = $totalItems > 0 ? round(($count / $totalItems) * 100) : 0;
                             $statusColors = [
                                 'active' => 'bg-success-500',
-                                'maintenance' => 'bg-orange-500',
-                                'retired' => 'bg-gray-500',
+                                'returned' => 'bg-orange-500',
+                                'lost' => 'bg-gray-500',
                             ];
                             $statusColor = $statusColors[$status] ?? 'bg-brand-500';
                         @endphp
@@ -238,8 +238,8 @@
                             @php
                                 $statusColors = [
                                     'active' => 'bg-success-100 text-success-700 dark:bg-success-500/20 dark:text-success-400',
-                                    'maintenance' => 'bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-400',
-                                    'retired' => 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400',
+                                    'returned' => 'bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-400',
+                                    'lost' => 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400',
                                 ];
                                 $statusColor = $statusColors[$item->status] ?? 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400';
                             @endphp
@@ -293,7 +293,7 @@
                                     <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium {{ $statusColor }}">
                                         <span class="h-1.5 w-1.5 rounded-full 
                                             {{ $item->status === 'active' ? 'bg-success-500' : 
-                                               ($item->status === 'maintenance' ? 'bg-orange-500' : 'bg-gray-500') }}">
+                                               ($item->status === 'returned' ? 'bg-orange-500' : 'bg-gray-500') }}">
                                         </span>
                                         {{ ucfirst($item->status) }}
                                     </span>

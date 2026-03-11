@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Agent;
 use App\Models\AgentCommissionSettlement;
 use App\Models\OrderItem;
 use Illuminate\Http\Request;
@@ -37,9 +36,12 @@ class CommissionSettlementController extends Controller
         $from = $month->copy()->startOfMonth();
         $to = $month->copy()->endOfMonth();
 
-        $items = OrderItem::with('order.agent')
+        $items = OrderItem::with(['order.agent', 'order.delivery.items'])
             ->whereHas('order', function ($q) use ($from, $to) {
-                $q->whereBetween('created_at', [$from, $to]);
+                $q->where('status', 'delivered')
+                    ->whereHas('invoice', function ($invoiceQuery) use ($from, $to) {
+                        $invoiceQuery->whereBetween('issued_at', [$from, $to]);
+                    });
             })
             ->get();
 
@@ -57,9 +59,8 @@ class CommissionSettlementController extends Controller
                 ];
             }
 
-            $lineTotal = $item->quantity * $item->unit_price;
-            $byAgent[$agentId]['sales'] += $lineTotal;
-            $byAgent[$agentId]['commission'] += $item->commission_amount ?? 0;
+            $byAgent[$agentId]['sales'] += $item->realizedSalesTotal();
+            $byAgent[$agentId]['commission'] += $item->realizedCommissionTotal();
         }
 
         foreach ($byAgent as $agentId => $totals) {
@@ -90,4 +91,3 @@ class CommissionSettlementController extends Controller
         return redirect()->route('admin.settlements.index')->with('status', 'Settlement updated.');
     }
 }
-

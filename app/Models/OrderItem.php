@@ -40,4 +40,57 @@ class OrderItem extends Model
     {
         return $this->hasMany(DeliveryItem::class);
     }
+
+    public function realizedQuantity(): float
+    {
+        $quantity = (float) $this->quantity;
+        $deliveryItem = $this->order?->delivery?->items?->firstWhere('order_item_id', $this->id);
+
+        if ($deliveryItem) {
+            $quantity = (float) $deliveryItem->qty_delivered;
+
+            if (
+                $quantity <= 0
+                && ((float) $deliveryItem->qty_dispatched > 0
+                    || (float) $deliveryItem->qty_short > 0
+                    || (float) $deliveryItem->qty_damaged > 0)
+            ) {
+                $quantity = max(
+                    (float) $deliveryItem->qty_dispatched
+                        - (float) $deliveryItem->qty_short
+                        - (float) $deliveryItem->qty_damaged,
+                    0
+                );
+            }
+        }
+
+        return max($quantity, 0);
+    }
+
+    public function realizedSalesTotal(): float
+    {
+        return round($this->realizedQuantity() * (float) $this->unit_price, 2);
+    }
+
+    public function realizedCommissionTotal(): float
+    {
+        $salesTotal = $this->realizedSalesTotal();
+
+        if ($salesTotal <= 0) {
+            return 0.0;
+        }
+
+        if ($this->commission_rate !== null) {
+            return round($salesTotal * ((float) $this->commission_rate / 100), 2);
+        }
+
+        $orderedSalesTotal = (float) $this->quantity * (float) $this->unit_price;
+        if ($orderedSalesTotal <= 0 || $this->commission_amount === null) {
+            return 0.0;
+        }
+
+        $effectiveRate = (float) $this->commission_amount / $orderedSalesTotal;
+
+        return round($salesTotal * $effectiveRate, 2);
+    }
 }

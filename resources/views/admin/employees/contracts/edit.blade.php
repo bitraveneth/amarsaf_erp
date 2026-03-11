@@ -67,7 +67,7 @@
     <!-- Current Contract Status Banner -->
     <div class="rounded-xl border-l-4 
         {{ $contract->status === 'active' ? 'border-success-500 bg-success-50 dark:border-success-400 dark:bg-success-950/30' : 
-           ($contract->status === 'draft' ? 'border-brand-500 bg-brand-50 dark:border-brand-400 dark:bg-brand-950/30' : 
+           ($contract->status === 'on_hold' ? 'border-brand-500 bg-brand-50 dark:border-brand-400 dark:bg-brand-950/30' : 
            'border-gray-500 bg-gray-50 dark:border-gray-400 dark:bg-gray-950/30') }} p-4">
         <div class="flex items-center gap-3">
             <div class="flex-shrink-0">
@@ -75,7 +75,7 @@
                     <svg class="h-5 w-5 text-success-600 dark:text-success-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                @elseif($contract->status === 'draft')
+                @elseif($contract->status === 'on_hold')
                     <svg class="h-5 w-5 text-brand-600 dark:text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
                     </svg>
@@ -91,9 +91,9 @@
                     <span class="inline-flex items-center gap-1.5 ml-1.5">
                         <span class="h-1.5 w-1.5 rounded-full 
                             {{ $contract->status === 'active' ? 'bg-success-500' : 
-                               ($contract->status === 'draft' ? 'bg-brand-500' : 'bg-gray-500') }}">
+                               ($contract->status === 'on_hold' ? 'bg-brand-500' : 'bg-gray-500') }}">
                         </span>
-                        <span class="capitalize">{{ $contract->status }}</span>
+                        <span>{{ ucfirst(str_replace('_', ' ', $contract->status)) }}</span>
                     </span>
                 </p>
                 <p class="text-xs text-gray-600 dark:text-gray-400 mt-0.5">

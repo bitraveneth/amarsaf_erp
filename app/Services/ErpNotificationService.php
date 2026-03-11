@@ -26,7 +26,7 @@ class ErpNotificationService
 
             if ($expiringSoonCount > 0) {
                 $alerts[] = [
-                    'key' => 'expiring_batches_' . $expiringSoonCount,
+                    'key' => 'expiring_batches_' . Carbon::today()->toDateString() . '_' . $expiringSoonCount,
                     'message' => "{$expiringSoonCount} batches expiring within 30 days",
                     'variant' => 'error',
                     'source' => 'Inventory',
@@ -83,7 +83,7 @@ class ErpNotificationService
             if ($outstandingReceivables > 0) {
                 $formatted = number_format($outstandingReceivables, 2);
                 $alerts[] = [
-                    'key' => 'receivables_' . number_format($outstandingReceivables, 2, '.', ''),
+                    'key' => 'receivables_' . Carbon::today()->toDateString() . '_' . number_format($outstandingReceivables, 2, '.', ''),
                     'message' => 'Outstanding receivables of BDT ' . $formatted,
                     'variant' => 'error',
                     'source' => 'Finance',

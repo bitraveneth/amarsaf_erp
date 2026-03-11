@@ -17,7 +17,16 @@ class VehicleLoadController extends Controller
             : Carbon::today();
 
         $deliveries = Delivery::with('order.items', 'vehicle')
-            ->whereDate('created_at', $date)
+            ->where(function ($query) use ($date) {
+                $query->whereHas('order', function ($orderQuery) use ($date) {
+                    $orderQuery->whereDate('delivery_date', $date);
+                })->orWhere(function ($legacyQuery) use ($date) {
+                    $legacyQuery->whereDate('created_at', $date)
+                        ->whereHas('order', function ($orderQuery) {
+                            $orderQuery->whereNull('delivery_date');
+                        });
+                });
+            })
             ->get();
 
         $byVehicle = [];
@@ -53,4 +62,3 @@ class VehicleLoadController extends Controller
         ]);
     }
 }
-

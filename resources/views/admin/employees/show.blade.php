@@ -230,7 +230,7 @@
                                 @foreach($recentAllowances as $allowance)
                                     @php
                                         $statusColors = [
-                                            'pending' => 'bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-400',
+                                            'submitted' => 'bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-400',
                                             'approved' => 'bg-success-100 text-success-700 dark:bg-success-500/20 dark:text-success-400',
                                             'paid' => 'bg-brand-100 text-brand-700 dark:bg-brand-500/20 dark:text-brand-400',
                                             'rejected' => 'bg-error-100 text-error-700 dark:bg-error-500/20 dark:text-error-400',

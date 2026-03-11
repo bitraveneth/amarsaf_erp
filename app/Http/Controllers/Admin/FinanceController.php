@@ -12,6 +12,7 @@ use App\Models\Receipt;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Barryvdh\DomPDF\Facade\Pdf;
 
@@ -62,19 +63,58 @@ class FinanceController extends Controller
                 ->with('status', 'Invoice already exists for this order.');
         }
 
-        $order->loadMissing('items.product.taxClass', 'agent');
+        $relations = ['items.product.taxClass', 'agent'];
+        if (Schema::hasTable('deliveries') && Schema::hasTable('delivery_items')) {
+            $relations[] = 'delivery.items';
+        }
+        $order->loadMissing($relations);
+
+        $deliveryItems = (Schema::hasTable('deliveries') && Schema::hasTable('delivery_items') && $order->delivery)
+            ? $order->delivery->items->keyBy('order_item_id')
+            : collect();
 
         $netTotal = 0;
         $vatAmount = 0;
+        $invoiceLines = [];
 
         foreach ($order->items as $item) {
-            $lineTotal = $item->quantity * $item->unit_price;
+            $quantity = (float) $item->quantity;
+            $deliveryItem = $deliveryItems->get($item->id);
+
+            if ($deliveryItem) {
+                $quantity = (float) $deliveryItem->qty_delivered;
+
+                if ($quantity <= 0 && ((float) $deliveryItem->qty_dispatched > 0 || (float) $deliveryItem->qty_short > 0 || (float) $deliveryItem->qty_damaged > 0)) {
+                    $quantity = max(
+                        (float) $deliveryItem->qty_dispatched - (float) $deliveryItem->qty_short - (float) $deliveryItem->qty_damaged,
+                        0
+                    );
+                }
+            }
+
+            if ($quantity <= 0) {
+                continue;
+            }
+
+            $lineTotal = $quantity * $item->unit_price;
             $netTotal += $lineTotal;
 
             $rate = optional($item->product->taxClass)->rate ?? 0;
             if ($rate > 0) {
                 $vatAmount += $lineTotal * ($rate / 100);
             }
+
+            $invoiceLines[] = [
+                'product_id' => $item->product_id,
+                'description' => $item->product?->name ?? 'Order item',
+                'quantity' => (int) round($quantity),
+                'unit_price' => $item->unit_price,
+                'line_total' => $lineTotal,
+            ];
+        }
+
+        if ($netTotal == 0 && empty($invoiceLines)) {
+            abort(400, 'No delivered quantity is available to invoice for this order.');
         }
 
         if ($netTotal == 0) {
@@ -102,7 +142,7 @@ class FinanceController extends Controller
 
         $invoice = null;
 
-        DB::transaction(function () use ($invoiceData, $order, $netTotal, $vatAmount, &$invoice) {
+        DB::transaction(function () use ($invoiceData, $order, $netTotal, $vatAmount, $invoiceLines, &$invoice) {
             $invoice = Invoice::create(array_merge($invoiceData, [
                 'number' => 'INV-TMP-' . Str::uuid(),
             ]));
@@ -111,14 +151,14 @@ class FinanceController extends Controller
                 'number' => $this->formatInvoiceNumber($invoice->id),
             ]);
 
-            foreach ($order->items as $item) {
+            foreach ($invoiceLines as $line) {
                 InvoiceItem::create([
                     'invoice_id' => $invoice->id,
-                    'product_id' => $item->product_id,
-                    'description' => $item->product?->name ?? 'Order item',
-                    'quantity' => $item->quantity,
-                    'unit_price' => $item->unit_price,
-                    'line_total' => $item->quantity * $item->unit_price,
+                    'product_id' => $line['product_id'],
+                    'description' => $line['description'],
+                    'quantity' => $line['quantity'],
+                    'unit_price' => $line['unit_price'],
+                    'line_total' => $line['line_total'],
                 ]);
             }
 
@@ -163,6 +203,12 @@ class FinanceController extends Controller
             'received_at' => 'nullable|date',
             'notes' => 'nullable|string',
         ]);
+
+        if ((float) $data['amount'] > (float) $invoice->outstanding) {
+            return back()->withErrors([
+                'amount' => 'Receipt amount exceeds the remaining outstanding amount for this invoice.',
+            ]);
+        }
 
         $receipt = null;
 

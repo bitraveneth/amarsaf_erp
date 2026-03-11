@@ -42,7 +42,7 @@
             $totalReach = $campaigns->sum('reach');
             $totalImpressions = $campaigns->sum('impressions');
             $totalCost = $campaigns->sum('cost');
-            $activeCampaigns = $campaigns->where('status', 'active')->count();
+            $activeCampaigns = $campaigns->where('status', 'running')->count();
             $avgCPM = $totalImpressions > 0 ? ($totalCost / $totalImpressions) * 1000 : 0;
             $avgCPR = $totalReach > 0 ? $totalCost / $totalReach : 0;
             
@@ -70,7 +70,7 @@
                     </div>
                     <p class="mt-3 text-3xl font-bold text-gray-900 dark:text-white">{{ $totalCampaigns }}</p>
                     <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                        <span class="font-medium text-brand-600 dark:text-brand-400">{{ $activeCampaigns }} active</span> · {{ $totalCampaigns - $activeCampaigns }} inactive
+                        <span class="font-medium text-brand-600 dark:text-brand-400">{{ $activeCampaigns }} running</span> · {{ $totalCampaigns - $activeCampaigns }} not running
                     </p>
                 </div>
             </div>
@@ -190,11 +190,11 @@
                     <div class="flex items-center gap-2">
                         <span class="inline-flex items-center gap-1 rounded-full bg-success-100 px-2.5 py-0.5 text-xs font-medium text-success-700 dark:bg-success-900/30 dark:text-success-400">
                             <span class="h-1.5 w-1.5 rounded-full bg-success-500"></span>
-                            Active: {{ $activeCampaigns }}
+                            Running: {{ $activeCampaigns }}
                         </span>
                         <span class="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-400">
                             <span class="h-1.5 w-1.5 rounded-full bg-gray-500"></span>
-                            Inactive: {{ $totalCampaigns - $activeCampaigns }}
+                            Not running: {{ $totalCampaigns - $activeCampaigns }}
                         </span>
                     </div>
                 </div>
@@ -243,10 +243,9 @@
                         @foreach($campaigns as $campaign)
                             @php
                                 $statusColors = [
-                                    'active' => 'bg-success-100 text-success-700 dark:bg-success-900/30 dark:text-success-400',
-                                    'paused' => 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
-                                    'completed' => 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400',
-                                    'draft' => 'bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400',
+                                    'planned' => 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400',
+                                    'running' => 'bg-success-100 text-success-700 dark:bg-success-900/30 dark:text-success-400',
+                                    'completed' => 'bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400',
                                 ];
                                 $statusColor = $statusColors[$campaign->status] ?? 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400';
                                 
@@ -305,7 +304,7 @@
                                 </td>
                                 <td class="px-6 py-4">
                                     <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium {{ $statusColor }}">
-                                        <span class="h-1.5 w-1.5 rounded-full {{ $campaign->status === 'active' ? 'bg-success-500' : 'bg-gray-500' }}"></span>
+                                        <span class="h-1.5 w-1.5 rounded-full {{ $campaign->status === 'running' ? 'bg-success-500' : ($campaign->status === 'completed' ? 'bg-brand-500' : 'bg-gray-500') }}"></span>
                                         {{ ucfirst($campaign->status) }}
                                     </span>
                                 </td>

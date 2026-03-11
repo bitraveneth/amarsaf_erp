@@ -68,9 +68,12 @@ class CommissionReportController extends Controller
         $from = $month->copy()->startOfMonth();
         $to = $month->copy()->endOfMonth();
 
-        $items = OrderItem::with('order.agent')
+        $items = OrderItem::with(['order.agent', 'order.delivery.items'])
             ->whereHas('order', function ($q) use ($from, $to) {
-                $q->whereBetween('created_at', [$from, $to]);
+                $q->where('status', 'delivered')
+                    ->whereHas('invoice', function ($invoiceQuery) use ($from, $to) {
+                        $invoiceQuery->whereBetween('issued_at', [$from, $to]);
+                    });
             })
             ->get();
 
@@ -91,9 +94,8 @@ class CommissionReportController extends Controller
                 ];
             }
 
-            $lineTotal = $item->quantity * $item->unit_price;
-            $byAgent[$agentId]['sales'] += $lineTotal;
-            $byAgent[$agentId]['commission'] += $item->commission_amount ?? 0;
+            $byAgent[$agentId]['sales'] += $item->realizedSalesTotal();
+            $byAgent[$agentId]['commission'] += $item->realizedCommissionTotal();
         }
 
         uasort($byAgent, function (array $left, array $right) {

@@ -4,11 +4,18 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Expense;
+use App\Models\LedgerEntry;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class ExpenseController extends Controller
 {
+    private const VALID_STATUSES = [
+        Expense::STATUS_RECORDED,
+        Expense::STATUS_REVIEWED,
+    ];
+
     public function index(Request $request)
     {
         $from = $request->query('from')
@@ -47,7 +54,10 @@ class ExpenseController extends Controller
     {
         $data = $this->validated($request);
 
-        Expense::create($data);
+        DB::transaction(function () use ($data) {
+            $expense = Expense::create($data);
+            $this->syncLedgerEntries($expense);
+        });
 
         return redirect()->route('admin.expenses.index')->with('status', 'Expense recorded.');
     }
@@ -61,14 +71,20 @@ class ExpenseController extends Controller
     {
         $data = $this->validated($request);
 
-        $expense->update($data);
+        DB::transaction(function () use ($expense, $data) {
+            $expense->update($data);
+            $this->syncLedgerEntries($expense);
+        });
 
         return redirect()->route('admin.expenses.index')->with('status', 'Expense updated.');
     }
 
     public function destroy(Expense $expense)
     {
-        $expense->delete();
+        DB::transaction(function () use ($expense) {
+            $this->deleteLedgerEntries($expense);
+            $expense->delete();
+        });
 
         return redirect()->route('admin.expenses.index')->with('status', 'Expense deleted.');
     }
@@ -81,7 +97,62 @@ class ExpenseController extends Controller
             'description' => 'nullable|string|max:255',
             'amount' => 'required|numeric|min:0',
             'reference' => 'nullable|string|max:100',
-            'status' => 'required|string|max:50',
+            'status' => 'required|in:' . implode(',', self::VALID_STATUSES),
         ]);
+    }
+
+    protected function syncLedgerEntries(Expense $expense): void
+    {
+        $this->deleteLedgerEntries($expense);
+
+        if ((float) $expense->amount <= 0 || ! in_array($expense->status, self::VALID_STATUSES, true)) {
+            return;
+        }
+
+        $description = $this->ledgerDescription($expense);
+        $account = $this->expenseAccount($expense);
+
+        LedgerEntry::create([
+            'account' => $account,
+            'description' => $description,
+            'debit' => $expense->amount,
+            'credit' => 0,
+        ]);
+
+        LedgerEntry::create([
+            'account' => 'Bank',
+            'description' => $description,
+            'debit' => 0,
+            'credit' => $expense->amount,
+        ]);
+    }
+
+    protected function deleteLedgerEntries(Expense $expense): void
+    {
+        LedgerEntry::where('description', $this->ledgerDescription($expense))->delete();
+    }
+
+    protected function ledgerDescription(Expense $expense): string
+    {
+        return 'Expense #' . $expense->id;
+    }
+
+    protected function expenseAccount(Expense $expense): string
+    {
+        $category = strtolower(trim((string) $expense->category));
+
+        if (str_contains($category, 'marketing')) {
+            return 'Marketing Expense';
+        }
+
+        if (str_contains($category, 'salary') || str_contains($category, 'payroll')) {
+            return 'Payroll Expense';
+        }
+
+        if (str_contains($category, 'utility')) {
+            return 'Utilities Expense';
+        }
+
+        return 'Selling & Distribution Expense';
     }
 }

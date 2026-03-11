@@ -7,6 +7,7 @@ use App\Models\Employee;
 use App\Models\SalaryDistribution;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Validation\Rule;
 
 class SalaryDistributionController extends Controller
 {
@@ -97,8 +98,20 @@ class SalaryDistributionController extends Controller
 
     protected function validated(Request $request): array
     {
+        $salaryDistribution = $request->route('salaryDistribution');
+
         return $request->validate([
-            'employee_id' => 'required|exists:employees,id',
+            'employee_id' => [
+                'required',
+                'exists:employees,id',
+                Rule::unique('salary_distributions')
+                    ->ignore($salaryDistribution?->id)
+                    ->where(function ($query) use ($request) {
+                        return $query
+                            ->where('period_start', $request->input('period_start'))
+                            ->where('period_end', $request->input('period_end'));
+                    }),
+            ],
             'period_start' => 'required|date',
             'period_end' => 'required|date|after_or_equal:period_start',
             'base_salary' => 'required|numeric|min:0',
@@ -112,4 +125,3 @@ class SalaryDistributionController extends Controller
         ]);
     }
 }
-

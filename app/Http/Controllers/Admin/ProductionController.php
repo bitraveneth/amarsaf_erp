@@ -13,6 +13,8 @@ use App\Models\StockEntry;
 use App\Models\Warehouse;
 use App\Models\Employee;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class ProductionController extends Controller
 {
@@ -394,21 +396,23 @@ class ProductionController extends Controller
                 ->with('status', 'Stock already confirmed for this production run.');
         }
 
-        // Post finished goods + consume BOM materials
-        $this->postStockForApprovedRun($production);
+        DB::transaction(function () use ($production) {
+            // Post finished goods + consume BOM materials atomically.
+            $this->postStockForApprovedRun($production);
 
-        $production->stock_confirmed_at = now();
-        if (auth()->check()) {
-            $production->stock_confirmed_by = auth()->id();
-        }
+            $production->stock_confirmed_at = now();
+            if (auth()->check()) {
+                $production->stock_confirmed_by = auth()->id();
+            }
 
-        // Once stock is confirmed we can safely treat the production order / run
-        // as completed from a process point of view.
-        if (! in_array($production->status, ['cancelled'])) {
-            $production->status = 'completed';
-        }
+            // Once stock is confirmed we can safely treat the production order / run
+            // as completed from a process point of view.
+            if (! in_array($production->status, ['cancelled'], true)) {
+                $production->status = 'completed';
+            }
 
-        $production->save();
+            $production->save();
+        });
 
         return redirect()->route('admin.production.index')
             ->with('status', 'Stock confirmed and posted to warehouse.');
@@ -435,15 +439,6 @@ class ProductionController extends Controller
             return;
         }
 
-        // Finished goods stock
-        StockEntry::create([
-            'warehouse_id' => $run->warehouse_id,
-            'product_id' => $run->product_id,
-            'batch_id' => $run->batch_id,
-            'quantity' => $run->quantity,
-            'status' => 'available',
-        ]);
-
         // Consume raw materials based on active BOM, if any
         $bom = BillOfMaterial::where('product_id', $run->product_id)
             ->where('is_active', true)
@@ -452,7 +447,58 @@ class ProductionController extends Controller
             ->first();
 
         if (! $bom || $bom->items->isEmpty()) {
+            StockEntry::create([
+                'warehouse_id' => $run->warehouse_id,
+                'product_id' => $run->product_id,
+                'batch_id' => $run->batch_id,
+                'quantity' => $run->quantity,
+                'status' => 'available',
+            ]);
+
             return;
+        }
+
+        $requirements = [];
+        foreach ($bom->items as $item) {
+            $component = $item->component;
+            $totalRequired = (float) $item->quantity * (float) $run->quantity;
+
+            if ($totalRequired <= 0) {
+                continue;
+            }
+
+            if (! $component || ! $component->isStockTracked()) {
+                throw ValidationException::withMessages([
+                    'materials' => ['The active BOM contains a non-stock or missing component and cannot be confirmed to stock.'],
+                ]);
+            }
+
+            if ((int) $component->id === (int) $run->product_id) {
+                throw ValidationException::withMessages([
+                    'materials' => ['The active BOM contains the same product as both finished good and component.'],
+                ]);
+            }
+
+            $entries = StockEntry::where('warehouse_id', $run->warehouse_id)
+                ->where('product_id', $item->component_product_id)
+                ->where('status', 'available')
+                ->orderBy('created_at')
+                ->lockForUpdate()
+                ->get();
+
+            $available = (float) $entries->sum('quantity');
+            if ($available < $totalRequired) {
+                throw ValidationException::withMessages([
+                    'materials' => ['Insufficient available stock for component ' . ($component->name ?? ('#' . $item->component_product_id)) . '.'],
+                ]);
+            }
+
+            $requirements[] = [
+                'bom_item' => $item,
+                'component' => $component,
+                'entries' => $entries,
+                'required' => $totalRequired,
+            ];
         }
 
         $materialIssue = ProductionMaterialIssue::create([
@@ -470,38 +516,28 @@ class ProductionController extends Controller
             $unitCostAccumulator = 0.0;
         }
 
-        foreach ($bom->items as $item) {
-            $totalRequired = $item->quantity * $run->quantity;
-            if ($totalRequired <= 0) {
-                continue;
-            }
+        foreach ($requirements as $requirement) {
+            $item = $requirement['bom_item'];
+            $component = $requirement['component'];
+            $remaining = $requirement['required'];
 
-            // Simple FEFO/FIFO: use oldest stock entries first
-            $entries = StockEntry::where('warehouse_id', $run->warehouse_id)
-                ->where('product_id', $item->component_product_id)
-                ->where('status', 'available')
-                ->orderBy('created_at')
-                ->get();
-
-            $remaining = $totalRequired;
-
-            foreach ($entries as $entry) {
+            foreach ($requirement['entries'] as $entry) {
                 if ($remaining <= 0) {
                     break;
                 }
 
-                $consume = min($remaining, $entry->quantity);
+                $consume = min($remaining, (float) $entry->quantity);
                 if ($consume <= 0) {
                     continue;
                 }
 
-                $entry->quantity -= $consume;
-                if ($entry->quantity <= 0) {
+                $entry->quantity = (float) $entry->quantity - $consume;
+                if ((float) $entry->quantity <= 0) {
+                    $entry->quantity = 0;
                     $entry->status = 'sold'; // treated as consumed in production
                 }
                 $entry->save();
 
-                $component = $item->component;
                 $baseCost = null;
                 if ($item->unit_cost !== null) {
                     $baseCost = (float) $item->unit_cost;
@@ -521,10 +557,15 @@ class ProductionController extends Controller
                 $remaining -= $consume;
             }
 
+            if ($remaining > 0.00001) {
+                throw ValidationException::withMessages([
+                    'materials' => ['Unable to consume all required stock for component ' . ($component->name ?? ('#' . $item->component_product_id)) . '.'],
+                ]);
+            }
+
             // If BOM-level override not set, accumulate from components
             if ($bom->material_unit_cost === null || $bom->material_unit_cost <= 0) {
                 // Cost contribution from this component for ONE finished unit
-                $component = $item->component;
                 // Prefer BOM-level custom unit_cost if provided; fall back to product standard_cost
                 $baseCost = null;
                 if ($item->unit_cost !== null) {
@@ -536,9 +577,15 @@ class ProductionController extends Controller
                     $unitCostAccumulator += $baseCost * (float) $item->quantity;
                 }
             }
-
-            // If remaining > 0, it means negative stock; we currently keep it simple and do not create it.
         }
+
+        StockEntry::create([
+            'warehouse_id' => $run->warehouse_id,
+            'product_id' => $run->product_id,
+            'batch_id' => $run->batch_id,
+            'quantity' => $run->quantity,
+            'status' => 'available',
+        ]);
 
         // Persist material cost snapshot on the production run so that future
         // reports / COGS calculations can use a stable value.

@@ -67,7 +67,7 @@
     <!-- Current Equipment Banner -->
     <div class="rounded-xl border-l-4 
         {{ $item->status === 'active' ? 'border-success-500 bg-success-50 dark:border-success-400 dark:bg-success-950/30' : 
-           ($item->status === 'maintenance' ? 'border-orange-500 bg-orange-50 dark:border-orange-400 dark:bg-orange-950/30' : 
+           ($item->status === 'returned' ? 'border-orange-500 bg-orange-50 dark:border-orange-400 dark:bg-orange-950/30' : 
            'border-gray-500 bg-gray-50 dark:border-gray-400 dark:bg-gray-950/30') }} p-4">
         <div class="flex items-center gap-3">
             <div class="flex-shrink-0">
@@ -75,7 +75,7 @@
                     <svg class="h-5 w-5 text-success-600 dark:text-success-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                @elseif($item->status === 'maintenance')
+                @elseif($item->status === 'returned')
                     <svg class="h-5 w-5 text-orange-600 dark:text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 11-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.14a4.5 4.5 0 004.486-6.336l-3.276 3.277a3.004 3.004 0 01-2.25-2.25l3.276-3.276a4.5 4.5 0 00-6.336 4.486c.091 1.076-.071 2.264-.904 2.95l-.102.085" />
                     </svg>
@@ -91,7 +91,7 @@
                     <span class="inline-flex items-center gap-1.5 ml-1.5">
                         <span class="h-1.5 w-1.5 rounded-full 
                             {{ $item->status === 'active' ? 'bg-success-500' : 
-                               ($item->status === 'maintenance' ? 'bg-orange-500' : 'bg-gray-500') }}">
+                               ($item->status === 'returned' ? 'bg-orange-500' : 'bg-gray-500') }}">
                         </span>
                         <span class="capitalize">{{ $item->status }}</span>
                     </span>

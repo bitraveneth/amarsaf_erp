@@ -68,7 +68,7 @@
                 </svg>
                 <div class="text-sm">
                     <span class="font-semibold">Tip:</span> 
-                    <span class="ml-1">Equipment status defaults to "active" when assigned. You can update it later if needed.</span>
+                    <span class="ml-1">Equipment status defaults to "active" when assigned. Use "returned" or "lost" when the asset is no longer in service.</span>
                 </div>
             </div>
         </div>
@@ -183,7 +183,7 @@
                     </li>
                     <li class="flex items-start gap-2">
                         <span class="text-brand-500 mt-0.5">•</span>
-                        <span><span class="font-medium">Status:</span> Active, Maintenance, or Retired</span>
+                        <span><span class="font-medium">Status:</span> Active, Returned, or Lost</span>
                     </li>
                     <li class="flex items-start gap-2">
                         <span class="text-brand-500 mt-0.5">•</span>

@@ -8,12 +8,14 @@ use App\Models\GoodsReceiptItem;
 use App\Models\Product;
 use App\Models\PurchaseBill;
 use App\Models\PurchaseOrder;
+use App\Models\PurchaseOrderItem;
 use App\Models\StockEntry;
 use App\Models\Supplier;
 use App\Models\Warehouse;
 use App\Models\WarehouseLocation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class GoodsReceiptController extends Controller
 {
@@ -92,9 +94,46 @@ class GoodsReceiptController extends Controller
 
         $this->ensureWarehouseAccess((int) $data['warehouse_id']);
 
+        $purchaseOrder = null;
+        if (! empty($data['purchase_order_id'])) {
+            $purchaseOrder = PurchaseOrder::with('items')
+                ->findOrFail($data['purchase_order_id']);
+
+            if (! in_array($purchaseOrder->status, ['approved', 'partial_received'], true)) {
+                throw ValidationException::withMessages([
+                    'purchase_order_id' => 'Only approved or partially received purchase orders can be received.',
+                ]);
+            }
+
+            if ((int) $purchaseOrder->supplier_id !== (int) $data['supplier_id']) {
+                throw ValidationException::withMessages([
+                    'supplier_id' => 'Selected supplier does not match the purchase order supplier.',
+                ]);
+            }
+        }
+
+        $purchaseBill = null;
+        if (! empty($data['purchase_bill_id'])) {
+            $purchaseBill = PurchaseBill::findOrFail($data['purchase_bill_id']);
+
+            if ((int) $purchaseBill->supplier_id !== (int) $data['supplier_id']) {
+                throw ValidationException::withMessages([
+                    'supplier_id' => 'Selected supplier does not match the purchase bill supplier.',
+                ]);
+            }
+
+            if (StockEntry::where('purchase_bill_id', $purchaseBill->id)->exists()) {
+                throw ValidationException::withMessages([
+                    'purchase_bill_id' => 'This purchase bill has already posted inventory. Create the receipt without re-posting stock from the bill.',
+                ]);
+            }
+        }
+
+        $validatedItems = $this->validateReceiptItems($data, $purchaseOrder);
+
         $receipt = null;
 
-        DB::transaction(function () use ($data, &$receipt) {
+        DB::transaction(function () use ($data, $validatedItems, $purchaseOrder, &$receipt) {
             $receipt = GoodsReceipt::create([
                 'purchase_order_id' => $data['purchase_order_id'] ?? null,
                 'purchase_bill_id' => $data['purchase_bill_id'] ?? null,
@@ -107,32 +146,27 @@ class GoodsReceiptController extends Controller
                 'notes' => $data['notes'] ?? null,
             ]);
 
-            foreach ($data['items'] as $item) {
-                $qty = (float) $item['quantity'];
-                $unitCost = isset($item['unit_cost']) ? (float) $item['unit_cost'] : null;
-
+            foreach ($validatedItems as $item) {
                 $grnItem = GoodsReceiptItem::create([
                     'goods_receipt_id' => $receipt->id,
                     'purchase_order_item_id' => $item['purchase_order_item_id'] ?? null,
-                    'product_id' => $item['product_id'] ?? null,
+                    'product_id' => $item['product_id'],
                     'batch_id' => $item['batch_id'] ?? null,
                     'warehouse_location_id' => $item['warehouse_location_id'] ?? null,
-                    'quantity' => $qty,
-                    'unit_cost' => $unitCost,
-                    'line_total' => $unitCost !== null ? ($qty * $unitCost) : null,
+                    'quantity' => $item['quantity'],
+                    'unit_cost' => $item['unit_cost'],
+                    'line_total' => $item['unit_cost'] !== null ? ($item['quantity'] * $item['unit_cost']) : null,
                     'qc_status' => $item['qc_status'],
                     'remarks' => $item['remarks'] ?? null,
                 ]);
 
-                if ($grnItem->purchase_order_item_id) {
+                if ($grnItem->qc_status === 'approved' && $grnItem->purchase_order_item_id) {
                     $poItem = $grnItem->purchaseOrderItem;
-                    if ($poItem) {
-                        $poItem->received_quantity = (float) $poItem->received_quantity + $qty;
-                        $poItem->save();
-                    }
+                    $poItem->received_quantity = (float) $poItem->received_quantity + (float) $item['quantity'];
+                    $poItem->save();
                 }
 
-                if ($grnItem->qc_status === 'approved' && $grnItem->product_id) {
+                if ($grnItem->qc_status === 'approved' && $item['stock_tracked']) {
                     StockEntry::create([
                         'purchase_bill_id' => $receipt->purchase_bill_id,
                         'goods_receipt_id' => $receipt->id,
@@ -140,31 +174,15 @@ class GoodsReceiptController extends Controller
                         'warehouse_location_id' => $grnItem->warehouse_location_id,
                         'product_id' => $grnItem->product_id,
                         'batch_id' => $grnItem->batch_id,
-                        'quantity' => $qty,
+                        'quantity' => $item['quantity'],
                         'status' => 'available',
                     ]);
                 }
             }
 
-            if ($receipt->purchase_order_id) {
-                $po = PurchaseOrder::with('items')->find($receipt->purchase_order_id);
-                if ($po) {
-                    $allReceived = $po->items->every(function ($item) {
-                        return (float) $item->received_quantity >= (float) $item->quantity;
-                    });
-
-                    $hasAnyReceived = $po->items->contains(function ($item) {
-                        return (float) $item->received_quantity > 0;
-                    });
-
-                    if ($allReceived) {
-                        $po->status = 'received';
-                    } elseif ($hasAnyReceived) {
-                        $po->status = 'partial_received';
-                    }
-
-                    $po->save();
-                }
+            if ($purchaseOrder) {
+                $purchaseOrder->refresh()->load('items');
+                $this->recalculatePurchaseOrderStatus($purchaseOrder);
             }
         });
 
@@ -197,5 +215,134 @@ class GoodsReceiptController extends Controller
         if (! auth()->user()?->canAccessWarehouse($warehouseId)) {
             abort(403, 'You do not have access to this warehouse.');
         }
+    }
+
+    protected function validateReceiptItems(array $data, ?PurchaseOrder $purchaseOrder): array
+    {
+        $purchaseOrderItems = $purchaseOrder
+            ? $purchaseOrder->items->keyBy('id')
+            : collect();
+
+        $productIds = collect($data['items'])
+            ->pluck('product_id')
+            ->filter()
+            ->values()
+            ->all();
+
+        if ($purchaseOrder) {
+            $productIds = array_values(array_unique(array_merge(
+                $productIds,
+                $purchaseOrder->items->pluck('product_id')->filter()->all()
+            )));
+        }
+
+        $products = Product::whereIn('id', $productIds)->get()->keyBy('id');
+        $locations = WarehouseLocation::whereIn(
+            'id',
+            collect($data['items'])->pluck('warehouse_location_id')->filter()->all()
+        )->get()->keyBy('id');
+
+        $validatedItems = [];
+
+        foreach ($data['items'] as $index => $item) {
+            $lineKey = 'items.' . $index;
+            $poItem = null;
+
+            if (! empty($item['purchase_order_item_id'])) {
+                if (! $purchaseOrder) {
+                    throw ValidationException::withMessages([
+                        $lineKey . '.purchase_order_item_id' => 'Purchase order items can only be used when a purchase order is selected.',
+                    ]);
+                }
+
+                $poItem = $purchaseOrderItems->get((int) $item['purchase_order_item_id']);
+                if (! $poItem instanceof PurchaseOrderItem) {
+                    throw ValidationException::withMessages([
+                        $lineKey . '.purchase_order_item_id' => 'Selected purchase order item does not belong to the chosen purchase order.',
+                    ]);
+                }
+            }
+
+            $productId = $item['product_id'] ?? $poItem?->product_id;
+            $product = $productId ? $products->get((int) $productId) : null;
+
+            if ($poItem && (int) $productId !== (int) $poItem->product_id) {
+                throw ValidationException::withMessages([
+                    $lineKey . '.product_id' => 'Receipt line product must match the selected purchase order item.',
+                ]);
+            }
+
+            if ($item['qc_status'] === 'approved') {
+                if (! $product) {
+                    throw ValidationException::withMessages([
+                        $lineKey . '.product_id' => 'Approved receipt lines must reference a valid product.',
+                    ]);
+                }
+
+                if (! $product->isStockTracked()) {
+                    throw ValidationException::withMessages([
+                        $lineKey . '.product_id' => 'Non-stock products cannot be posted through goods receipts.',
+                    ]);
+                }
+
+                if ($poItem) {
+                    $remainingQty = max(
+                        (float) $poItem->quantity - (float) $poItem->received_quantity,
+                        0
+                    );
+
+                    if ((float) $item['quantity'] > $remainingQty) {
+                        throw ValidationException::withMessages([
+                            $lineKey . '.quantity' => 'Approved quantity exceeds the remaining open quantity on the purchase order line.',
+                        ]);
+                    }
+                }
+            }
+
+            if (! empty($item['warehouse_location_id'])) {
+                $location = $locations->get((int) $item['warehouse_location_id']);
+                if (! $location || (int) $location->warehouse_id !== (int) $data['warehouse_id']) {
+                    throw ValidationException::withMessages([
+                        $lineKey . '.warehouse_location_id' => 'Selected warehouse location does not belong to the chosen warehouse.',
+                    ]);
+                }
+            }
+
+            $validatedItems[] = [
+                'purchase_order_item_id' => $poItem?->id,
+                'product_id' => $product?->id,
+                'batch_id' => $item['batch_id'] ?? null,
+                'warehouse_location_id' => $item['warehouse_location_id'] ?? null,
+                'quantity' => (float) $item['quantity'],
+                'unit_cost' => isset($item['unit_cost']) ? (float) $item['unit_cost'] : null,
+                'qc_status' => $item['qc_status'],
+                'remarks' => $item['remarks'] ?? null,
+                'stock_tracked' => $product?->isStockTracked() ?? false,
+            ];
+        }
+
+        return $validatedItems;
+    }
+
+    protected function recalculatePurchaseOrderStatus(PurchaseOrder $purchaseOrder): void
+    {
+        $allReceived = $purchaseOrder->items->isNotEmpty()
+            && $purchaseOrder->items->every(function (PurchaseOrderItem $item) {
+                return (float) $item->received_quantity >= (float) $item->quantity;
+            });
+
+        $hasAnyReceived = $purchaseOrder->items->contains(function (PurchaseOrderItem $item) {
+            return (float) $item->received_quantity > 0;
+        });
+
+        if ($allReceived) {
+            $purchaseOrder->status = 'received';
+        } elseif ($hasAnyReceived) {
+            $purchaseOrder->status = 'partial_received';
+        } else {
+            $purchaseOrder->status = 'approved';
+        }
+
+        $purchaseOrder->save();
     }
 }

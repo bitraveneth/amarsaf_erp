@@ -8,7 +8,9 @@ use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderItem;
 use App\Models\Supplier;
 use Illuminate\Http\Request;
+use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class PurchaseOrderController extends Controller
 {
@@ -24,7 +26,10 @@ class PurchaseOrderController extends Controller
     public function create()
     {
         $suppliers = Supplier::orderBy('name')->get();
-        $products = Product::orderBy('name')->get();
+        $products = Product::stockTracked()
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get();
 
         return view('admin.purchase_orders.create', compact('suppliers', 'products'));
     }
@@ -38,7 +43,16 @@ class PurchaseOrderController extends Controller
             'notes' => 'nullable|string',
             'items' => 'required|array|min:1',
             'items.*.description' => 'required|string|max:255',
-            'items.*.product_id' => 'nullable|exists:products,id',
+            'items.*.product_id' => [
+                'required',
+                Rule::exists('products', 'id')->where(function (QueryBuilder $query) {
+                    $query->where('is_active', true)
+                        ->where(function (QueryBuilder $productQuery) {
+                            $productQuery->whereNull('product_type')
+                                ->orWhereIn('product_type', ['finished', 'raw', 'inhouse']);
+                        });
+                }),
+            ],
             'items.*.quantity' => 'required|numeric|min:0.01',
             'items.*.unit_price' => 'nullable|numeric|min:0',
         ]);
@@ -61,7 +75,7 @@ class PurchaseOrderController extends Controller
 
                 PurchaseOrderItem::create([
                     'purchase_order_id' => $po->id,
-                    'product_id' => $item['product_id'] ?? null,
+                    'product_id' => $item['product_id'],
                     'description' => $item['description'],
                     'quantity' => $qty,
                     'unit_price' => $unitPrice,

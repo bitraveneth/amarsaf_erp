@@ -14,9 +14,13 @@ class ManufacturingDashboardController extends Controller
         $today = Carbon::today();
         $startOfMonth = $today->copy()->startOfMonth();
         $endOfMonth = $today->copy()->endOfMonth();
+        $warehouseIds = auth()->user()?->accessibleWarehouseIds();
 
         $runQuery = ProductionRun::with(['product', 'warehouse'])
-            ->whereBetween('created_at', [$startOfMonth, $endOfMonth]);
+            ->whereBetween('created_at', [$startOfMonth, $endOfMonth])
+            ->when($warehouseIds !== null, function ($query) use ($warehouseIds) {
+                $query->whereIn('warehouse_id', $warehouseIds);
+            });
 
         $runs = $runQuery->get();
 
@@ -31,6 +35,11 @@ class ManufacturingDashboardController extends Controller
         // Batches produced this month
         $batches = Batch::with('product')
             ->whereBetween('production_date', [$startOfMonth, $endOfMonth])
+            ->when($warehouseIds !== null, function ($query) use ($warehouseIds) {
+                $query->whereHas('productionRuns', function ($runQuery) use ($warehouseIds) {
+                    $runQuery->whereIn('warehouse_id', $warehouseIds);
+                });
+            })
             ->get();
 
         $batchCount = $batches->count();
@@ -38,6 +47,11 @@ class ManufacturingDashboardController extends Controller
         $expiringSoon = Batch::with('product')
             ->whereNotNull('expiry_date')
             ->whereBetween('expiry_date', [$today, $today->copy()->addDays(60)])
+            ->when($warehouseIds !== null, function ($query) use ($warehouseIds) {
+                $query->whereHas('stockEntries', function ($stockQuery) use ($warehouseIds) {
+                    $stockQuery->whereIn('warehouse_id', $warehouseIds);
+                });
+            })
             ->get();
 
         // Top products by produced quantity
@@ -76,4 +90,3 @@ class ManufacturingDashboardController extends Controller
         ]);
     }
 }
-

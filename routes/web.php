@@ -125,10 +125,10 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::patch('roles/{user}', [RoleController::class, 'update'])->middleware('perm:roles.manage')->name('roles.update');
 
     // User manager
-    Route::get('users', [UserController::class, 'index'])->name('users.index');
-    Route::post('users', [UserController::class, 'store'])->name('users.store');
-    Route::get('users/{user}/access', [UserController::class, 'editAccess'])->name('users.access.edit');
-    Route::patch('users/{user}/access', [UserController::class, 'updateAccess'])->name('users.access.update');
+    Route::get('users', [UserController::class, 'index'])->middleware('perm:system.settings')->name('users.index');
+    Route::post('users', [UserController::class, 'store'])->middleware('perm:system.settings')->name('users.store');
+    Route::get('users/{user}/access', [UserController::class, 'editAccess'])->middleware('perm:system.settings')->name('users.access.edit');
+    Route::patch('users/{user}/access', [UserController::class, 'updateAccess'])->middleware('perm:system.settings')->name('users.access.update');
 
     // Permission manager (super admin)
     Route::get('permissions', [PermissionController::class, 'index'])->middleware('perm:permissions.manage')->name('permissions.index');
@@ -205,8 +205,8 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::delete('employees/{employee}', [EmployeeController::class, 'destroy'])->middleware('perm:control.employees')->name('employees.destroy');
 
     // Create login account for an employee
-    Route::get('employees/{employee}/user', [EmployeeController::class, 'createUser'])->middleware('perm:control.employees')->name('employees.user.create');
-    Route::post('employees/{employee}/user', [EmployeeController::class, 'storeUser'])->middleware('perm:control.employees')->name('employees.user.store');
+    Route::get('employees/{employee}/user', [EmployeeController::class, 'createUser'])->middleware(['perm:control.employees', 'perm:system.settings'])->name('employees.user.create');
+    Route::post('employees/{employee}/user', [EmployeeController::class, 'storeUser'])->middleware(['perm:control.employees', 'perm:system.settings'])->name('employees.user.store');
 
     Route::get('contracts', [EmployeeContractController::class, 'all'])->middleware('perm:control.employees')->name('contracts.index');
     Route::get('contracts/create', [EmployeeContractController::class, 'createGlobal'])->middleware('perm:control.employees')->name('contracts.create');

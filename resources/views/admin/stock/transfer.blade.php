@@ -77,7 +77,7 @@
                                                 $availableQty = $entry->quantity;
                                                 $hasBatch = isset($entry->batch) && $entry->batch;
                                             @endphp
-                                            <option value="{{ $entry->id }}" data-quantity="{{ $availableQty }}">
+                                            <option value="{{ $entry->id }}" data-quantity="{{ $availableQty }}" {{ old('entry_id') == $entry->id ? 'selected' : '' }}>
                                                 {{ $entry->warehouse->name }} · {{ $entry->product->name }}
                                                 · {{ number_format($availableQty, 0) }} {{ $entry->product->uom ?? 'units' }}
                                                 @if($hasBatch)
@@ -95,7 +95,7 @@
                                                 $availableQty = $entry->quantity;
                                                 $hasBatch = isset($entry->batch) && $entry->batch;
                                             @endphp
-                                            <option value="{{ $entry->id }}" data-quantity="{{ $availableQty }}">
+                                            <option value="{{ $entry->id }}" data-quantity="{{ $availableQty }}" {{ old('entry_id') == $entry->id ? 'selected' : '' }}>
                                                 {{ $entry->warehouse->name }} · {{ $entry->product->name }}
                                                 @if($hasBatch)
                                                     · Batch {{ $entry->batch->batch_code }}
@@ -137,7 +137,7 @@
                                     class="w-full rounded-xl border border-gray-200 bg-white/50 pl-10 pr-10 py-3.5 text-sm text-gray-900 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800/50 dark:text-white appearance-none transition-all">
                                 <option value="">Select destination warehouse</option>
                                 @foreach($warehouses as $warehouse)
-                                    <option value="{{ $warehouse->id }}">
+                                    <option value="{{ $warehouse->id }}" {{ old('destination_warehouse_id') == $warehouse->id ? 'selected' : '' }}>
                                         {{ $warehouse->name }} · {{ $warehouse->type ?? 'Depot' }}
                                         @if($warehouse->code)
                                             ({{ $warehouse->code }})
@@ -156,6 +156,35 @@
                         @enderror
                     </div>
 
+                    <div class="space-y-2">
+                        <label for="destination_warehouse_location_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Destination Location
+                        </label>
+                        <div class="relative group">
+                            <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                                <svg class="h-5 w-5 text-gray-400 group-focus-within:text-brand-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 21a8.966 8.966 0 01-5.657-2A8.966 8.966 0 013 12a9 9 0 1118 0 8.966 8.966 0 01-3.343 7A8.966 8.966 0 0112 21zm0 0v-6m0 0a3 3 0 100-6 3 3 0 000 6z" />
+                                </svg>
+                            </div>
+                            <select id="destination_warehouse_location_id"
+                                    name="destination_warehouse_location_id"
+                                    class="w-full rounded-xl border border-gray-200 bg-white/50 pl-10 pr-10 py-3.5 text-sm text-gray-900 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800/50 dark:text-white appearance-none transition-all">
+                                <option value="">Select destination location</option>
+                            </select>
+                            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
+                                <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                </svg>
+                            </div>
+                        </div>
+                        <div id="destination-location-help" class="text-xs text-gray-500 dark:text-gray-400">
+                            Select a warehouse first to see available locations.
+                        </div>
+                        @error('destination_warehouse_location_id')
+                            <p class="text-sm text-error-600 dark:text-error-500">{{ $message }}</p>
+                        @enderror
+                    </div>
+
                     <!-- Quantity -->
                     <div class="space-y-2">
                         <label for="quantity" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -170,6 +199,7 @@
                             <input type="number" 
                                    id="quantity" 
                                    name="quantity" 
+                                   value="{{ old('quantity') }}"
                                    step="0.01" 
                                    min="0.01"
                                    placeholder="0.00"
@@ -246,10 +276,50 @@
 document.addEventListener('DOMContentLoaded', function() {
     const entrySelect = document.getElementById('entry_id');
     const destWarehouseSelect = document.getElementById('destination_warehouse_id');
+    const destLocationSelect = document.getElementById('destination_warehouse_location_id');
+    const destinationLocationHelp = document.getElementById('destination-location-help');
     const quantityInput = document.getElementById('quantity');
     const selectedStockInfo = document.getElementById('selected-stock-info');
     const quantityLimit = document.getElementById('quantity-limit');
     const transferSummary = document.getElementById('transfer-summary');
+    const locations = @json(($locations ?? collect())->map(fn ($location) => [
+        'id' => $location->id,
+        'warehouse_id' => $location->warehouse_id,
+        'code' => $location->code,
+    ])->values());
+    const oldLocationId = @json(old('destination_warehouse_location_id'));
+
+    function updateDestinationLocations() {
+        const warehouseId = parseInt(destWarehouseSelect.value || 0, 10);
+        const matchingLocations = locations.filter(location => location.warehouse_id === warehouseId);
+
+        destLocationSelect.innerHTML = '<option value="">Select destination location</option>';
+
+        if (! warehouseId) {
+            destLocationSelect.disabled = true;
+            destinationLocationHelp.textContent = 'Select a warehouse first to see available locations.';
+            return;
+        }
+
+        if (matchingLocations.length === 0) {
+            destLocationSelect.disabled = true;
+            destinationLocationHelp.textContent = 'This warehouse has no configured locations. Stock will be placed without a bin location.';
+            return;
+        }
+
+        matchingLocations.forEach(location => {
+            const option = document.createElement('option');
+            option.value = location.id;
+            option.textContent = location.code;
+            if (String(oldLocationId || '') === String(location.id)) {
+                option.selected = true;
+            }
+            destLocationSelect.appendChild(option);
+        });
+
+        destLocationSelect.disabled = false;
+        destinationLocationHelp.textContent = 'Choose the destination bin or rack for this transfer.';
+    }
 
     function updateStockInfo() {
         const selectedOption = entrySelect.options[entrySelect.selectedIndex];
@@ -292,6 +362,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function updateTransferSummary() {
         const selectedOption = entrySelect.options[entrySelect.selectedIndex];
         const destOption = destWarehouseSelect.options[destWarehouseSelect.selectedIndex];
+        const destLocationOption = destLocationSelect.options[destLocationSelect.selectedIndex];
         const quantity = parseFloat(quantityInput.value) || 0;
         
         if (selectedOption && selectedOption.value && destOption && destOption.value) {
@@ -311,6 +382,18 @@ document.addEventListener('DOMContentLoaded', function() {
                         <span class="text-gray-500 dark:text-gray-400">Destination:</span>
                         <span class="font-medium text-gray-900 dark:text-white">${destWarehouse}</span>
                     </div>
+            `;
+
+            if (destLocationOption && destLocationOption.value) {
+                summaryHtml += `
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-500 dark:text-gray-400">Destination Location:</span>
+                        <span class="font-medium text-gray-900 dark:text-white">${destLocationOption.textContent.trim()}</span>
+                    </div>
+                `;
+            }
+
+            summaryHtml += `
                     <div class="flex items-center justify-between">
                         <span class="text-gray-500 dark:text-gray-400">Product:</span>
                         <span class="font-medium text-gray-900 dark:text-white">${productName}</span>
@@ -342,12 +425,19 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Event listeners
     entrySelect.addEventListener('change', updateStockInfo);
-    destWarehouseSelect.addEventListener('change', updateTransferSummary);
+    destWarehouseSelect.addEventListener('change', function () {
+        updateDestinationLocations();
+        updateTransferSummary();
+    });
+    destLocationSelect.addEventListener('change', updateTransferSummary);
     quantityInput.addEventListener('input', updateTransferSummary);
     
     // Initial update if values are pre-selected
+    updateDestinationLocations();
     if (entrySelect.value) {
         updateStockInfo();
+    } else {
+        updateTransferSummary();
     }
 });
 </script>

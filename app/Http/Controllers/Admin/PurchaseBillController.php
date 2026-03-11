@@ -108,12 +108,11 @@ class PurchaseBillController extends Controller
                 'invoice_id' => null,
             ]);
 
-            // Post raw material stock into default warehouse so that
-            // Material stock & BOM consumption can work end-to-end.
-            $this->postMaterialStockForBill($bill, $data['items'], $data['warehouse_id'] ?? null);
         });
 
-        return redirect()->route('admin.bills.index')->with('status', 'Purchase bill recorded.');
+        return redirect()
+            ->route('admin.bills.index')
+            ->with('status', 'Purchase bill recorded. Inventory will be updated from the goods receipt process.');
     }
 
     public function update(Request $request, PurchaseBill $bill)
@@ -225,6 +224,12 @@ class PurchaseBillController extends Controller
                 ->with('status', 'This bill is already fully paid.');
         }
 
+        if ($data['amount'] > $totalDue) {
+            return redirect()
+                ->route('admin.bills.index')
+                ->withErrors(['amount' => 'Payment amount exceeds the remaining amount due for this bill.']);
+        }
+
         $payment = BillPayment::create([
             'purchase_bill_id' => $bill->id,
             'amount' => $data['amount'],
@@ -281,44 +286,6 @@ class PurchaseBillController extends Controller
 
         return redirect()->route('admin.bills.index')->with('status', 'Purchase bill deleted.');
     }
-
-    /**
-     * Simple helper to create StockEntry rows for each material on a bill.
-     * For now we post everything into the "Factory" warehouse (or the first
-     * warehouse found) so that material stock and BOM consumption can work.
-     */
-    protected function postMaterialStockForBill(PurchaseBill $bill, array $items, ?int $explicitWarehouseId = null): void
-    {
-        // Determine target warehouse for these materials
-        $warehouseId = $explicitWarehouseId
-            ?? Warehouse::where('type', 'factory')->orderBy('id')->value('id')
-            ?? Warehouse::orderBy('id')->value('id');
-
-        if (! $warehouseId) {
-            // No warehouse defined yet – nothing we can do.
-            return;
-        }
-
-        foreach ($items as $item) {
-            $productId = $item['product_id'] ?? null;
-            $qty = $item['quantity'] ?? 0;
-
-            if (! $productId || $qty <= 0) {
-                continue;
-            }
-
-            StockEntry::create([
-                'purchase_bill_id' => $bill->id,
-                'warehouse_id' => $warehouseId,
-                'warehouse_location_id' => null,
-                'product_id' => $productId,
-                'batch_id' => null,
-                'quantity' => $qty,
-                'status' => 'available',
-            ]);
-        }
-    }
-
     protected function formatPurchaseBillNumber(int $purchaseBillId): string
     {
         return 'PB-' . str_pad((string) $purchaseBillId, 6, '0', STR_PAD_LEFT);

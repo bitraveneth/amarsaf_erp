@@ -10,6 +10,13 @@ use Illuminate\Support\Facades\Storage;
 
 class EmployeeAllowanceController extends Controller
 {
+    private const VALID_STATUSES = [
+        EmployeeAllowance::STATUS_SUBMITTED,
+        EmployeeAllowance::STATUS_APPROVED,
+        EmployeeAllowance::STATUS_PAID,
+        EmployeeAllowance::STATUS_REJECTED,
+    ];
+
     public function all()
     {
         $allowances = EmployeeAllowance::with('employee')
@@ -38,7 +45,7 @@ class EmployeeAllowanceController extends Controller
             'reference' => 'nullable|string|max:255',
             'amount' => 'required|numeric|min:0',
             'description' => 'nullable|string',
-            'status' => 'required|string|max:50',
+            'status' => 'required|in:' . implode(',', self::VALID_STATUSES),
             'attachment' => 'nullable|file|max:5120',
         ]);
 
@@ -144,7 +151,7 @@ class EmployeeAllowanceController extends Controller
             'reference' => 'nullable|string|max:255',
             'amount' => 'required|numeric|min:0',
             'description' => 'nullable|string',
-            'status' => 'required|string|max:50',
+            'status' => 'required|in:' . implode(',', self::VALID_STATUSES),
             'attachment' => 'nullable|file|max:5120',
         ]);
 

@@ -11,12 +11,7 @@ class BankReconciliationController extends Controller
 {
     public function index(Request $request)
     {
-        $from = $request->query('from')
-            ? Carbon::parse($request->query('from'))
-            : Carbon::now()->startOfMonth();
-        $to = $request->query('to')
-            ? Carbon::parse($request->query('to'))
-            : Carbon::now()->endOfMonth();
+        [$from, $to] = $this->resolvePeriod($request);
 
         $receipts = Receipt::with('invoice')
             ->whereBetween('received_at', [$from, $to])
@@ -29,15 +24,18 @@ class BankReconciliationController extends Controller
     public function update(Request $request)
     {
         $data = $request->validate([
-            'visible_receipts' => 'array',
-            'visible_receipts.*' => 'integer|exists:receipts,id',
+            'from' => 'nullable|date',
+            'to' => 'nullable|date',
             'reconciled' => 'array',
             'reconciled.*' => 'integer|exists:receipts,id',
         ]);
 
-        $visibleIds = collect($data['visible_receipts'] ?? [])
+        [$from, $to] = $this->resolvePeriod($request);
+
+        $visibleIds = Receipt::query()
+            ->whereBetween('received_at', [$from, $to])
+            ->pluck('id')
             ->map(fn ($id) => (int) $id)
-            ->unique()
             ->values();
 
         $reconciledIds = collect($data['reconciled'] ?? [])
@@ -51,7 +49,22 @@ class BankReconciliationController extends Controller
         }
 
         return redirect()
-            ->route('admin.finance.reconciliation')
+            ->route('admin.finance.reconciliation', [
+                'from' => $from->toDateString(),
+                'to' => $to->toDateString(),
+            ])
             ->with('status', 'Receipt reconciliation updated.');
+    }
+
+    protected function resolvePeriod(Request $request): array
+    {
+        $from = $request->input('from')
+            ? Carbon::parse($request->input('from'))
+            : Carbon::now()->startOfMonth();
+        $to = $request->input('to')
+            ? Carbon::parse($request->input('to'))
+            : Carbon::now()->endOfMonth();
+
+        return [$from, $to];
     }
 }

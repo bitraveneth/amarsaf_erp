@@ -4,11 +4,17 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\AgentPriceList;
+use App\Models\BomItem;
+use App\Models\DeliveryItem;
+use App\Models\GoodsReceiptItem;
 use App\Models\InvoiceItem;
 use App\Models\OrderItem;
 use App\Models\Batch;
+use App\Models\ProductionMaterialIssueItem;
 use App\Models\StockEntry;
 use App\Models\ProductionRun;
+use App\Models\PurchaseBillItem;
+use App\Models\PurchaseOrderItem;
 use App\Models\PackagingType;
 use App\Models\Product;
 use App\Models\TaxClass;
@@ -354,6 +360,30 @@ class ProductController extends Controller
 
         if (StockEntry::where('product_id', $product->id)->exists()) {
             $reasons[] = 'stock entries';
+        }
+
+        if (BomItem::where('component_product_id', $product->id)->exists()) {
+            $reasons[] = 'bills of material';
+        }
+
+        if (DeliveryItem::where('product_id', $product->id)->exists()) {
+            $reasons[] = 'delivery records';
+        }
+
+        if (ProductionMaterialIssueItem::where('component_product_id', $product->id)->exists()) {
+            $reasons[] = 'production material issues';
+        }
+
+        if (GoodsReceiptItem::where('product_id', $product->id)->exists()) {
+            $reasons[] = 'goods receipts';
+        }
+
+        if (PurchaseBillItem::where('product_id', $product->id)->exists()) {
+            $reasons[] = 'purchase bills';
+        }
+
+        if (PurchaseOrderItem::where('product_id', $product->id)->exists()) {
+            $reasons[] = 'purchase orders';
         }
 
         if (! empty($reasons)) {

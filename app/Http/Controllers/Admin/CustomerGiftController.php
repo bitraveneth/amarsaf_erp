@@ -6,8 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Models\Agent;
 use App\Models\CustomerGift;
 use App\Models\Employee;
+use App\Models\LedgerEntry;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class CustomerGiftController extends Controller
 {
@@ -29,7 +31,9 @@ class CustomerGiftController extends Controller
 
         $gifts = $query->orderByDesc('date')->paginate(20)->withQueryString();
 
-        $total = (clone $query)->sum('amount');
+        $total = (clone $query)
+            ->whereIn('status', [CustomerGift::STATUS_GIVEN, 'delivered'])
+            ->sum('amount');
 
         $agents = Agent::orderBy('name')->get();
 
@@ -44,7 +48,7 @@ class CustomerGiftController extends Controller
         return view('admin.crm.gifts.create', [
             'gift' => new CustomerGift([
                 'date' => Carbon::today(),
-                'status' => 'given',
+                'status' => CustomerGift::STATUS_PLANNED,
             ]),
             'agents' => $agents,
             'employees' => $employees,
@@ -55,7 +59,10 @@ class CustomerGiftController extends Controller
     {
         $data = $this->validated($request);
 
-        CustomerGift::create($data);
+        DB::transaction(function () use ($data) {
+            $gift = CustomerGift::create($data);
+            $this->syncLedgerEntries($gift);
+        });
 
         return redirect()->route('admin.gifts.index')->with('status', 'Customer gift recorded.');
     }
@@ -72,14 +79,20 @@ class CustomerGiftController extends Controller
     {
         $data = $this->validated($request);
 
-        $gift->update($data);
+        DB::transaction(function () use ($gift, $data) {
+            $gift->update($data);
+            $this->syncLedgerEntries($gift);
+        });
 
         return redirect()->route('admin.gifts.index')->with('status', 'Customer gift updated.');
     }
 
     public function destroy(CustomerGift $gift)
     {
-        $gift->delete();
+        DB::transaction(function () use ($gift) {
+            $this->deleteLedgerEntries($gift);
+            $gift->delete();
+        });
 
         return redirect()->route('admin.gifts.index')->with('status', 'Customer gift deleted.');
     }
@@ -95,7 +108,42 @@ class CustomerGiftController extends Controller
             'description' => 'nullable|string|max:255',
             'amount' => 'nullable|numeric|min:0',
             'campaign_code' => 'nullable|string|max:100',
-            'status' => 'required|string|max:50',
+            'status' => 'required|in:planned,given,cancelled',
         ]);
+    }
+
+    protected function syncLedgerEntries(CustomerGift $gift): void
+    {
+        $this->deleteLedgerEntries($gift);
+
+        if ((float) $gift->amount <= 0 || $gift->status !== CustomerGift::STATUS_GIVEN) {
+            return;
+        }
+
+        $description = $this->ledgerDescription($gift);
+
+        LedgerEntry::create([
+            'account' => 'Selling & Distribution Expense',
+            'description' => $description,
+            'debit' => $gift->amount,
+            'credit' => 0,
+        ]);
+
+        LedgerEntry::create([
+            'account' => 'Bank',
+            'description' => $description,
+            'debit' => 0,
+            'credit' => $gift->amount,
+        ]);
+    }
+
+    protected function deleteLedgerEntries(CustomerGift $gift): void
+    {
+        LedgerEntry::where('description', $this->ledgerDescription($gift))->delete();
+    }
+
+    protected function ledgerDescription(CustomerGift $gift): string
+    {
+        return 'Customer gift #' . $gift->id;
     }
 }

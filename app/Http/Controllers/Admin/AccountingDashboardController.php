@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Campaign;
+use App\Models\CustomerGift;
 use App\Models\Expense;
 use App\Models\Invoice;
 use App\Models\Receipt;
@@ -40,8 +42,22 @@ class AccountingDashboardController extends Controller
             return max($cashTotal - $credited - $paid, 0);
         });
 
-        $expenses = Expense::whereBetween('date', [$startOfMonth, $endOfMonth])->get();
-        $totalExpenses = $expenses->sum('amount');
+        $expenses = (float) Expense::whereBetween('date', [$startOfMonth, $endOfMonth])
+            ->whereIn('status', [Expense::STATUS_RECORDED, Expense::STATUS_REVIEWED, 'paid', 'overdue'])
+            ->sum('amount');
+        $giftExpenses = (float) CustomerGift::whereBetween('date', [$startOfMonth, $endOfMonth])
+            ->whereIn('status', [CustomerGift::STATUS_GIVEN, 'delivered'])
+            ->sum('amount');
+        $campaignExpenses = Campaign::where(function ($query) use ($startOfMonth, $endOfMonth) {
+            $query->whereBetween('created_at', [$startOfMonth, $endOfMonth])
+                ->orWhereBetween('start_date', [$startOfMonth->toDateString(), $endOfMonth->toDateString()]);
+        })->whereIn('status', [
+            Campaign::STATUS_RUNNING,
+            Campaign::STATUS_COMPLETED,
+            'active',
+            'paused',
+        ])->sum('cost');
+        $totalExpenses = $expenses + $giftExpenses + $campaignExpenses;
 
         $salaryDistributions = SalaryDistribution::whereBetween('period_start', [$startOfMonth, $endOfMonth])->get();
         $totalPayroll = $salaryDistributions->sum(function ($d) {

@@ -76,8 +76,8 @@
         @php
             $totalContracts = $contracts instanceof \Illuminate\Pagination\LengthAwarePaginator ? $contracts->total() : $contracts->count();
             $activeContracts = $contracts->where('status', 'active')->count();
-            $expiredContracts = $contracts->where('status', 'expired')->count();
-            $draftContracts = $contracts->where('status', 'draft')->count();
+            $endedContracts = $contracts->where('status', 'ended')->count();
+            $onHoldContracts = $contracts->where('status', 'on_hold')->count();
             
             $currentContract = $contracts->where('status', 'active')->sortByDesc('start_date')->first();
             
@@ -132,7 +132,7 @@
                     <p class="mt-3 text-3xl font-bold text-gray-900 dark:text-white">{{ $totalContracts }}</p>
                     <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
                         <span class="font-medium text-success-600 dark:text-success-400">{{ $activeContracts }}</span> active,
-                        <span class="font-medium text-gray-600 dark:text-gray-400">{{ $expiredContracts }}</span> expired
+                        <span class="font-medium text-gray-600 dark:text-gray-400">{{ $endedContracts }}</span> ended
                     </p>
                 </div>
             </div>
@@ -211,8 +211,8 @@
                             $percentage = $totalContracts > 0 ? round(($count / $totalContracts) * 100) : 0;
                             $statusColors = [
                                 'active' => 'bg-success-500',
-                                'expired' => 'bg-gray-500',
-                                'draft' => 'bg-brand-500',
+                                'ended' => 'bg-gray-500',
+                                'on_hold' => 'bg-brand-500',
                             ];
                             $statusColor = $statusColors[$status] ?? 'bg-brand-500';
                         @endphp
@@ -269,8 +269,8 @@
                             @php
                                 $statusColors = [
                                     'active' => 'bg-success-100 text-success-700 dark:bg-success-500/20 dark:text-success-400',
-                                    'expired' => 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400',
-                                    'draft' => 'bg-brand-100 text-brand-700 dark:bg-brand-500/20 dark:text-brand-400',
+                                    'ended' => 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400',
+                                    'on_hold' => 'bg-brand-100 text-brand-700 dark:bg-brand-500/20 dark:text-brand-400',
                                 ];
                                 $statusColor = $statusColors[$contract->status] ?? 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400';
                                 
@@ -338,9 +338,9 @@
                                     <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium {{ $statusColor }}">
                                         <span class="h-1.5 w-1.5 rounded-full 
                                             {{ $contract->status === 'active' ? 'bg-success-500' : 
-                                               ($contract->status === 'draft' ? 'bg-brand-500' : 'bg-gray-500') }}">
+                                               ($contract->status === 'on_hold' ? 'bg-brand-500' : 'bg-gray-500') }}">
                                         </span>
-                                        {{ ucfirst($contract->status) }}
+                                        {{ ucfirst(str_replace('_', ' ', $contract->status)) }}
                                     </span>
                                 </td>
                                 <td class="px-6 py-4 text-right">

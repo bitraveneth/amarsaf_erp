@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Account;
+use App\Models\Campaign;
+use App\Models\CustomerGift;
 use App\Models\Invoice;
 use App\Models\LedgerEntry;
 use App\Models\ProductionRun;
@@ -13,6 +15,7 @@ use App\Models\Employee;
 use App\Models\EmployeeContract;
 use App\Models\EmployeeAllowance;
 use App\Models\BillOfMaterial;
+use App\Models\SalaryDistribution;
 use Illuminate\Support\Collection;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -34,8 +37,16 @@ class ReportController extends Controller
         $commissions = $entries->where('account', 'Commission Expense')->sum('debit');
 
         // Include simple period expenses recorded in the expenses module.
-        $otherExpenses = Expense::whereBetween('date', [$from->toDateString(), $to->toDateString()])
-            ->sum('amount');
+        $otherExpenses = $this->operatingExpensesTotal($from, $to);
+        $payroll = SalaryDistribution::whereBetween('period_start', [$from, $to])
+            ->get()
+            ->sum(function (SalaryDistribution $distribution) {
+                return (float) $distribution->base_salary
+                    + (float) $distribution->bonus
+                    + (float) $distribution->ta_allowances
+                    + (float) $distribution->da_allowances
+                    + (float) $distribution->commission;
+            });
 
         $netSales = $sales - $returns;
 
@@ -65,7 +76,7 @@ class ReportController extends Controller
         }
 
         $grossProfit = $netSales - $cogs;
-        $profit = $grossProfit - $commissions - $otherExpenses;
+        $profit = $grossProfit - $commissions - $otherExpenses - $payroll;
 
         // Detailed ledger breakdown by account for the period
         $accountRows = $entries->groupBy('account')->map(function (Collection $rows, string $account) {
@@ -88,6 +99,7 @@ class ReportController extends Controller
             'returns',
             'commissions',
             'otherExpenses',
+            'payroll',
             'netSales',
             'cogs',
             'grossProfit',
@@ -196,7 +208,14 @@ class ReportController extends Controller
             Carbon::now()->endOfMonth()
         );
 
-        $bankAccounts = Account::where('type', 'asset')->where('code', 'like', '1%')->pluck('name')->all();
+        $bankAccounts = Account::where('type', 'asset')
+            ->where(function ($query) {
+                $query->where('name', 'like', '%Bank%')
+                    ->orWhere('name', 'like', '%Cash%')
+                    ->orWhere('code', 'like', '10%');
+            })
+            ->pluck('name')
+            ->all();
 
         $entries = LedgerEntry::whereIn('account', $bankAccounts ?: ['Bank'])
             ->whereBetween('created_at', [$from, $to])
@@ -362,7 +381,7 @@ class ReportController extends Controller
             return ($invoice->net_total + $invoice->vat_amount) - $invoice->withholding;
         });
 
-        $expensesTotal = Expense::whereBetween('date', [$from, $to])->sum('amount');
+        $expensesTotal = $this->operatingExpensesTotal($from, $to);
 
         $materialCostTotal = $byProduct->sum(fn (array $row) => (float) ($row['total_cost'] ?? 0));
 
@@ -386,60 +405,43 @@ class ReportController extends Controller
             ? Carbon::parse($request->query('to'))
             : Carbon::now()->endOfMonth();
 
-        $employees = Employee::with(['contracts', 'allowances' => function ($query) use ($from, $to) {
-            $query->whereBetween('date', [$from, $to]);
-        }])->orderBy('name')->get();
+        $distributions = SalaryDistribution::with('employee')
+            ->whereBetween('period_start', [$from, $to])
+            ->orderBy('employee_id')
+            ->orderBy('period_start')
+            ->get()
+            ->groupBy('employee_id');
 
-        $rows = $employees->map(function (Employee $employee) use ($from, $to) {
-            $contracts = $employee->contracts->filter(function (EmployeeContract $contract) use ($from, $to) {
-                if ($contract->status === 'ended') {
-                    return false;
-                }
-
-                $startsBeforeEnd = $contract->start_date ? $contract->start_date <= $to : true;
-                $endsAfterStart = $contract->end_date ? $contract->end_date >= $from : true;
-
-                return $startsBeforeEnd && $endsAfterStart;
-            });
-
-            $baseSalary = $contracts->sum('salary_amount');
-
-            $baseTa = $contracts->sum('travel_allowance');
-            $baseDa = $contracts->sum('dearness_allowance');
-            $baseBonus = $contracts->sum('bonus');
-
-            $allowances = $employee->allowances ?? collect();
-
-            $taAllowances = $allowances->where('type', 'TA')->sum('amount');
-            $daAllowances = $allowances->where('type', 'DA')->sum('amount');
-            $bonusAllowances = $allowances->where('type', 'BONUS')->sum('amount');
-
-            $totalSalary = $baseSalary;
-            $totalTa = $baseTa + $taAllowances;
-            $totalDa = $baseDa + $daAllowances;
-            $totalBonus = $baseBonus + $bonusAllowances;
-
-            $grandTotal = $totalSalary + $totalTa + $totalDa + $totalBonus;
+        $rows = $distributions->map(function ($employeeDistributions) {
+            $employee = $employeeDistributions->first()->employee;
+            $baseSalary = $employeeDistributions->sum('base_salary');
+            $totalTa = $employeeDistributions->sum('ta_allowances');
+            $totalDa = $employeeDistributions->sum('da_allowances');
+            $totalBonus = $employeeDistributions->sum('bonus');
+            $commission = $employeeDistributions->sum('commission');
+            $grandTotal = $baseSalary + $totalTa + $totalDa + $totalBonus + $commission;
 
             return [
                 'employee' => $employee,
-                'contracts' => $contracts,
+                'contracts' => collect(),
+                'distributions' => $employeeDistributions,
                 'base_salary' => $baseSalary,
-                'base_ta' => $baseTa,
-                'base_da' => $baseDa,
-                'base_bonus' => $baseBonus,
-                'ta_allowances' => $taAllowances,
-                'da_allowances' => $daAllowances,
-                'bonus_allowances' => $bonusAllowances,
-                'total_salary' => $totalSalary,
+                'base_ta' => 0,
+                'base_da' => 0,
+                'base_bonus' => 0,
+                'ta_allowances' => $totalTa,
+                'da_allowances' => $totalDa,
+                'bonus_allowances' => $totalBonus,
+                'commission' => $commission,
+                'total_salary' => $baseSalary,
                 'total_ta' => $totalTa,
                 'total_da' => $totalDa,
-                'total_bonus' => $totalBonus,
+                'total_bonus' => $totalBonus + $commission,
                 'grand_total' => $grandTotal,
             ];
         })->filter(function (array $row) {
             return $row['grand_total'] > 0;
-        });
+        })->values();
 
         $totals = [
             'salary' => $rows->sum('total_salary'),
@@ -463,5 +465,30 @@ class ReportController extends Controller
             : $defaultTo->copy()->endOfDay();
 
         return [$from, $to];
+    }
+
+    protected function operatingExpensesTotal(Carbon $from, Carbon $to): float
+    {
+        $expenses = (float) Expense::whereBetween('date', [$from->toDateString(), $to->toDateString()])
+            ->whereIn('status', [Expense::STATUS_RECORDED, Expense::STATUS_REVIEWED, 'paid', 'overdue'])
+            ->sum('amount');
+
+        $giftExpenses = (float) CustomerGift::whereBetween('date', [$from->toDateString(), $to->toDateString()])
+            ->whereIn('status', [CustomerGift::STATUS_GIVEN, 'delivered'])
+            ->sum('amount');
+
+        $campaignExpenses = (float) Campaign::where(function ($query) use ($from, $to) {
+            $query->whereBetween('created_at', [$from, $to])
+                ->orWhere(function ($campaignQuery) use ($from, $to) {
+                    $campaignQuery->whereBetween('start_date', [$from->toDateString(), $to->toDateString()]);
+                });
+        })->whereIn('status', [
+            Campaign::STATUS_RUNNING,
+            Campaign::STATUS_COMPLETED,
+            'active',
+            'paused',
+        ])->sum('cost');
+
+        return $expenses + $giftExpenses + $campaignExpenses;
     }
 }

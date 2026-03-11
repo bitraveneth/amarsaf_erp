@@ -88,7 +88,7 @@
                 </svg>
                 <div class="text-sm">
                     <span class="font-semibold">Tip:</span> 
-                    <span class="ml-1">You can attach a receipt or approval slip for this allowance. Status defaults to "pending".</span>
+                    <span class="ml-1">You can attach a receipt or approval slip for this allowance. Status defaults to "submitted".</span>
                 </div>
             </div>
         </div>
@@ -151,7 +151,7 @@
                     </li>
                     <li class="flex items-start gap-2">
                         <span class="text-brand-500 mt-0.5">•</span>
-                        <span><span class="font-medium">Status:</span> Defaults to "pending" - can be updated after creation</span>
+                        <span><span class="font-medium">Status:</span> Defaults to "submitted" and can later move to approved, paid, or rejected</span>
                     </li>
                 </ul>
             </div>

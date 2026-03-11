@@ -45,7 +45,7 @@ class AgentLedgerController extends Controller
                 'date' => $invoice->issued_at,
                 'type' => 'invoice',
                 'ref' => $invoice->number,
-                'debit' => $invoice->net_total + $invoice->vat_amount,
+                'debit' => ($invoice->net_total + $invoice->vat_amount) - $invoice->withholding,
                 'credit' => 0,
             ];
         }

@@ -11,6 +11,8 @@ use App\Models\Vehicle;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class DeliveryController extends Controller
 {
@@ -51,6 +53,7 @@ class DeliveryController extends Controller
         // that packing can be confirmed from the packing slips screen.
         $orders = Order::with('agent')
             ->whereIn('status', ['picked', 'packed'])
+            ->whereDoesntHave('deliveries')
             ->get();
         $routes = DeliveryRoute::orderBy('name')->get();
         $vehicles = Vehicle::orderBy('name')->get();
@@ -60,13 +63,20 @@ class DeliveryController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
-            'order_id' => 'required|exists:orders,id',
+            'order_id' => [
+                'required',
+                Rule::exists('orders', 'id')->where(function ($query) {
+                    $query->whereIn('status', ['picked', 'packed']);
+                }),
+                Rule::unique('deliveries', 'order_id'),
+            ],
             'route_id' => 'nullable|exists:delivery_routes,id',
             'vehicle_id' => 'nullable|exists:vehicles,id',
-            'status' => 'required|in:scheduled,in_transit,delivered,exception',
+            'status' => 'required|in:scheduled,in_transit,exception',
             'exception_notes' => 'nullable|string',
             'pod_photo' => 'nullable|image',
         ]);
+        $data = $this->normalizeRouteVehicleSelection($data);
 
         if ($request->hasFile('pod_photo')) {
             $data['pod_photo'] = $request->file('pod_photo')->store('deliveries', 'public');
@@ -123,6 +133,7 @@ class DeliveryController extends Controller
             'items.*.qty_damaged' => 'nullable|numeric|min:0',
             'items.*.notes' => 'nullable|string',
         ]);
+        $data = $this->normalizeRouteVehicleSelection($data, $delivery);
 
         $originalStatus = $delivery->status;
 
@@ -132,11 +143,11 @@ class DeliveryController extends Controller
 
         DB::transaction(function () use ($delivery, $data, $originalStatus) {
             $delivery->update([
-                'route_id' => $data['route_id'] ?? null,
-                'vehicle_id' => $data['vehicle_id'] ?? null,
+                'route_id' => $data['route_id'],
+                'vehicle_id' => $data['vehicle_id'],
                 'status' => $data['status'],
-                'sequence' => $data['sequence'] ?? $delivery->sequence,
-                'exception_notes' => $data['exception_notes'] ?? null,
+                'sequence' => array_key_exists('sequence', $data) ? $data['sequence'] : $delivery->sequence,
+                'exception_notes' => array_key_exists('exception_notes', $data) ? $data['exception_notes'] : $delivery->exception_notes,
                 'pod_photo' => $data['pod_photo'] ?? $delivery->pod_photo,
             ]);
 
@@ -191,16 +202,6 @@ class DeliveryController extends Controller
                         ->lockForUpdate()
                         ->get();
 
-                    // Backward compatibility for older rows created before order_id was added.
-                    if ($reservedEntries->isEmpty()) {
-                        $reservedEntries = StockEntry::whereNull('order_id')
-                            ->where('product_id', $item->product_id)
-                            ->where('status', 'reserved')
-                            ->orderBy('created_at')
-                            ->lockForUpdate()
-                            ->get();
-                    }
-
                     foreach ($reservedEntries as $entry) {
                         if ($toShip <= 0) {
                             break;
@@ -224,11 +225,46 @@ class DeliveryController extends Controller
 
                         $toShip -= $shipQty;
                     }
+
+                    if ($toShip > 0.00001) {
+                        throw ValidationException::withMessages([
+                            'items' => ['Reserved stock could not be safely matched to this order for delivery.'],
+                        ]);
+                    }
                 }
             }
         });
 
         return back()->with('status', 'Delivery updated.');
+    }
+
+    protected function normalizeRouteVehicleSelection(array $data, ?Delivery $delivery = null): array
+    {
+        $routeId = array_key_exists('route_id', $data)
+            ? $data['route_id']
+            : $delivery?->route_id;
+        $vehicleId = array_key_exists('vehicle_id', $data)
+            ? $data['vehicle_id']
+            : $delivery?->vehicle_id;
+
+        if ($routeId) {
+            $route = DeliveryRoute::findOrFail($routeId);
+
+            if ($route->vehicle_id) {
+                if ($vehicleId && (int) $vehicleId !== (int) $route->vehicle_id) {
+                    throw ValidationException::withMessages([
+                        'vehicle_id' => 'Selected vehicle must match the route default vehicle.',
+                    ]);
+                }
+
+                $vehicleId = (int) $route->vehicle_id;
+            }
+        }
+
+        $data['route_id'] = $routeId ?: null;
+        $data['vehicle_id'] = $vehicleId ?: null;
+
+        return $data;
     }
 
     public function optimize(Request $request)
@@ -241,7 +277,16 @@ class DeliveryController extends Controller
         $date = $data['date'];
 
         $query = Delivery::with('order.agent')
-            ->whereDate('created_at', $date);
+            ->where(function ($builder) use ($date) {
+                $builder->whereHas('order', function ($orderQuery) use ($date) {
+                    $orderQuery->whereDate('delivery_date', $date);
+                })->orWhere(function ($legacyQuery) use ($date) {
+                    $legacyQuery->whereDate('created_at', $date)
+                        ->whereHas('order', function ($orderQuery) {
+                            $orderQuery->whereNull('delivery_date');
+                        });
+                });
+            });
 
         if (!empty($data['vehicle_id'])) {
             $query->where('vehicle_id', $data['vehicle_id']);
@@ -283,12 +328,18 @@ class DeliveryController extends Controller
 
     protected function syncDeliveryItems(Delivery $delivery, array $data)
     {
+        $order = $delivery->order()->with('items')->first();
+        $orderItems = collect($order?->items ?? [])->keyBy('id');
+
         $rows = collect($data['items'] ?? [])->filter(function ($row) {
             return isset($row['order_item_id'], $row['product_id']);
         });
 
         if ($rows->isEmpty()) {
-            $order = $delivery->order()->with('items')->first();
+            if (! array_key_exists('items', $data) && $delivery->items()->exists()) {
+                return $delivery->items()->get();
+            }
+
             $rows = collect($order?->items ?? [])->map(function ($item) {
                 $qty = (float) $item->quantity;
                 return [
@@ -307,6 +358,19 @@ class DeliveryController extends Controller
         $delivery->items()->delete();
 
         foreach ($rows as $row) {
+            $orderItem = $orderItems->get((int) $row['order_item_id']);
+            if (! $orderItem) {
+                throw ValidationException::withMessages([
+                    'items' => ['Delivery items must belong to the selected order.'],
+                ]);
+            }
+
+            if ((int) $orderItem->product_id !== (int) $row['product_id']) {
+                throw ValidationException::withMessages([
+                    'items' => ['Delivery item product must match its order line.'],
+                ]);
+            }
+
             $qtyDelivered = isset($row['qty_delivered']) ? (float) $row['qty_delivered'] : 0;
             $qtyShort = isset($row['qty_short']) ? (float) $row['qty_short'] : 0;
             $qtyDamaged = isset($row['qty_damaged']) ? (float) $row['qty_damaged'] : 0;
@@ -316,6 +380,19 @@ class DeliveryController extends Controller
 
             if ($qtyDispatched <= 0 && ($qtyDelivered + $qtyShort + $qtyDamaged) > 0) {
                 $qtyDispatched = $qtyDelivered + $qtyShort + $qtyDamaged;
+            }
+
+            $reportedTotal = $qtyDelivered + $qtyShort + $qtyDamaged;
+            if ($reportedTotal > (float) $orderItem->quantity + 0.00001) {
+                throw ValidationException::withMessages([
+                    'items' => ['Delivery line quantities cannot exceed the original ordered quantity.'],
+                ]);
+            }
+
+            if ($qtyDispatched + 0.00001 < $reportedTotal) {
+                throw ValidationException::withMessages([
+                    'items' => ['Dispatched quantity cannot be less than delivered, short, plus damaged quantity.'],
+                ]);
             }
 
             $delivery->items()->create([
@@ -335,15 +412,16 @@ class DeliveryController extends Controller
 
     protected function syncDeliveryPod(Delivery $delivery, array $data): void
     {
+        $existingPod = $delivery->pod;
         $podPayload = [
-            'signed_by' => $data['pod_signed_by'] ?? null,
-            'signature_path' => $data['pod_photo'] ?? $delivery->pod?->signature_path,
-            'receiver_name' => $data['pod_receiver_name'] ?? null,
-            'receiver_phone' => $data['pod_receiver_phone'] ?? null,
-            'notes' => $data['pod_notes'] ?? null,
-            'delivered_at' => $data['pod_delivered_at'] ?? null,
-            'latitude' => $data['pod_latitude'] ?? null,
-            'longitude' => $data['pod_longitude'] ?? null,
+            'signed_by' => array_key_exists('pod_signed_by', $data) ? $data['pod_signed_by'] : $existingPod?->signed_by,
+            'signature_path' => $data['pod_photo'] ?? $existingPod?->signature_path,
+            'receiver_name' => array_key_exists('pod_receiver_name', $data) ? $data['pod_receiver_name'] : $existingPod?->receiver_name,
+            'receiver_phone' => array_key_exists('pod_receiver_phone', $data) ? $data['pod_receiver_phone'] : $existingPod?->receiver_phone,
+            'notes' => array_key_exists('pod_notes', $data) ? $data['pod_notes'] : $existingPod?->notes,
+            'delivered_at' => array_key_exists('pod_delivered_at', $data) ? $data['pod_delivered_at'] : $existingPod?->delivered_at,
+            'latitude' => array_key_exists('pod_latitude', $data) ? $data['pod_latitude'] : $existingPod?->latitude,
+            'longitude' => array_key_exists('pod_longitude', $data) ? $data['pod_longitude'] : $existingPod?->longitude,
         ];
 
         $shouldPersist = collect($podPayload)->filter(function ($value) {

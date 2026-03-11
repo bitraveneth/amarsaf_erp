@@ -117,13 +117,11 @@
                                 <td class="px-5 py-4">
                                     @php
                                         $statusColors = [
-                                            'paid' => ['bg' => 'success-50', 'text' => 'success-700', 'dark' => ['bg' => 'success-500/20', 'text' => 'success-400']],
-                                            'pending' => ['bg' => 'warning-50', 'text' => 'warning-700', 'dark' => ['bg' => 'warning-500/20', 'text' => 'warning-400']],
-                                            'overdue' => ['bg' => 'error-50', 'text' => 'error-700', 'dark' => ['bg' => 'error-500/20', 'text' => 'error-400']],
-                                            'draft' => ['bg' => 'gray-100', 'text' => 'gray-700', 'dark' => ['bg' => 'gray-500/20', 'text' => 'gray-400']],
+                                            'reviewed' => ['bg' => 'success-50', 'text' => 'success-700', 'dark' => ['bg' => 'success-500/20', 'text' => 'success-400']],
+                                            'recorded' => ['bg' => 'warning-50', 'text' => 'warning-700', 'dark' => ['bg' => 'warning-500/20', 'text' => 'warning-400']],
                                         ];
-                                        $status = $expense->status ?? 'draft';
-                                        $colors = $statusColors[$status] ?? $statusColors['draft'];
+                                        $status = $expense->status ?? 'recorded';
+                                        $colors = $statusColors[$status] ?? $statusColors['recorded'];
                                     @endphp
                                     <span class="inline-flex rounded-full bg-{{ $colors['bg'] }} px-2.5 py-1 text-theme-xs font-medium text-{{ $colors['text'] }} dark:bg-{{ $colors['dark']['bg'] }} dark:text-{{ $colors['dark']['text'] }}">
                                         {{ ucfirst($status) }}

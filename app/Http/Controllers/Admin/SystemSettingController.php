@@ -159,9 +159,24 @@ class SystemSettingController extends Controller
             'confirm_restore' => 'required|accepted',
         ]);
 
+        $safetyBackup = null;
+
         try {
+            $safetyBackup = $backupManager->create();
             $backupManager->restore($data['filename']);
         } catch (RuntimeException $exception) {
+            if ($safetyBackup) {
+                try {
+                    $backupManager->restore($safetyBackup);
+                } catch (RuntimeException $rollbackException) {
+                    return redirect()
+                        ->route('admin.settings.index')
+                        ->withErrors([
+                            'backup' => $exception->getMessage() . ' Automatic rollback also failed. Safety backup: ' . $safetyBackup,
+                        ]);
+                }
+            }
+
             return redirect()
                 ->route('admin.settings.index')
                 ->withErrors(['backup' => $exception->getMessage()]);
@@ -169,6 +184,6 @@ class SystemSettingController extends Controller
 
         return redirect()
             ->route('admin.settings.index')
-            ->with('status', 'Database restored from backup.');
+            ->with('status', 'Database restored from backup. A pre-restore safety backup was created as ' . $safetyBackup . '.');
     }
 }

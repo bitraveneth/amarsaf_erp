@@ -203,13 +203,14 @@
                         </svg>
                     </div>
                     @php
-                        $currentStatus = strtolower(old('status', $gift->status ?? 'given'));
+                        $currentStatus = strtolower(old('status', $gift->status ?? 'planned'));
                     @endphp
                     <select id="status" 
                             name="status"
                             class="w-full rounded-xl border border-gray-200 bg-white/50 pl-10 pr-10 py-3 text-sm text-gray-900 focus:border-pink-500 focus:ring-2 focus:ring-pink-500/20 dark:border-gray-700 dark:bg-gray-800/50 dark:text-white appearance-none transition-all">
                         <option value="planned" {{ $currentStatus === 'planned' ? 'selected' : '' }}>Planned</option>
                         <option value="given" {{ $currentStatus === 'given' ? 'selected' : '' }}>Given</option>
+                        <option value="cancelled" {{ $currentStatus === 'cancelled' ? 'selected' : '' }}>Cancelled</option>
                     </select>
                     <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
                         <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">

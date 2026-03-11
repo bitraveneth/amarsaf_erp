@@ -88,7 +88,7 @@
                 </svg>
                 <div class="text-sm">
                     <span class="font-semibold">Tip:</span> 
-                    <span class="ml-1">Leave end date blank for open-ended contracts. Contract status defaults to "draft" - you can activate it later.</span>
+                    <span class="ml-1">Leave end date blank for open-ended contracts. Contract status defaults to "on hold" until it becomes active.</span>
                 </div>
             </div>
         </div>
@@ -151,7 +151,7 @@
                     </li>
                     <li class="flex items-start gap-2">
                         <span class="text-brand-500 mt-0.5">•</span>
-                        <span><span class="font-medium">Status:</span> Draft, Active, or Expired - only one active contract per employee</span>
+                        <span><span class="font-medium">Status:</span> On Hold, Active, or Ended - only one active contract per employee</span>
                     </li>
                 </ul>
             </div>

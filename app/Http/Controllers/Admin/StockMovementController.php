@@ -6,7 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Models\StockEntry;
 use App\Models\StockMovement;
 use App\Models\Warehouse;
+use App\Models\WarehouseLocation;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class StockMovementController extends Controller
 {
@@ -52,7 +55,15 @@ class StockMovementController extends Controller
             })
             ->orderBy('name')
             ->get();
-        return view('admin.stock.transfer', compact('materialEntries', 'finishedEntries', 'warehouses'));
+        $locations = WarehouseLocation::query()
+            ->when($warehouseIds !== null, function ($query) use ($warehouseIds) {
+                $query->whereIn('warehouse_id', $warehouseIds);
+            })
+            ->orderBy('warehouse_id')
+            ->orderBy('code')
+            ->get(['id', 'warehouse_id', 'code']);
+
+        return view('admin.stock.transfer', compact('materialEntries', 'finishedEntries', 'warehouses', 'locations'));
     }
 
     public function store(Request $request)
@@ -60,42 +71,78 @@ class StockMovementController extends Controller
         $data = $request->validate([
             'entry_id' => 'required|exists:stock_entries,id',
             'destination_warehouse_id' => 'required|exists:warehouses,id',
+            'destination_warehouse_location_id' => 'nullable|exists:warehouse_locations,id',
             'quantity' => 'required|numeric|min:0.01',
             'notes' => 'nullable|string',
         ]);
 
-        $entry = StockEntry::findOrFail($data['entry_id']);
-        $this->ensureStockEntryAccess($entry);
         $this->ensureWarehouseAccess((int) $data['destination_warehouse_id']);
+        $destinationLocationId = $this->resolveDestinationLocationId($data);
 
-        if ($entry->quantity < $data['quantity']) {
-            return back()->withErrors(['quantity' => 'Cannot transfer more than available quantity.']);
-        }
+        DB::transaction(function () use ($data, $destinationLocationId) {
+            $entry = StockEntry::whereKey($data['entry_id'])->lockForUpdate()->firstOrFail();
+            $this->ensureStockEntryAccess($entry);
 
-        $entry->quantity -= $data['quantity'];
-        $entry->save();
+            if ($entry->status !== 'available') {
+                throw ValidationException::withMessages([
+                    'entry_id' => 'Only available stock can be transferred.',
+                ]);
+            }
 
-        $newEntry = StockEntry::create([
-            'warehouse_id' => $data['destination_warehouse_id'],
-            'product_id' => $entry->product_id,
-            'batch_id' => $entry->batch_id,
-            'quantity' => $data['quantity'],
-            'status' => 'available',
-        ]);
+            if ((int) $entry->warehouse_id === (int) $data['destination_warehouse_id']) {
+                throw ValidationException::withMessages([
+                    'destination_warehouse_id' => 'Choose a different destination warehouse for transfers.',
+                ]);
+            }
 
-        StockMovement::create([
-            'stock_entry_id' => $entry->id,
-            'type' => 'transfer-out',
-            'quantity' => $data['quantity'] * -1,
-            'notes' => 'Transferred to warehouse ' . $data['destination_warehouse_id'],
-        ]);
+            if ((float) $entry->quantity < (float) $data['quantity']) {
+                throw ValidationException::withMessages([
+                    'quantity' => 'Cannot transfer more than available quantity.',
+                ]);
+            }
 
-        StockMovement::create([
-            'stock_entry_id' => $newEntry->id,
-            'type' => 'transfer-in',
-            'quantity' => $data['quantity'],
-            'notes' => $data['notes'],
-        ]);
+            $entry->quantity = (float) $entry->quantity - (float) $data['quantity'];
+            $entry->save();
+
+            $newEntry = StockEntry::firstOrCreate(
+                [
+                    'warehouse_id' => $data['destination_warehouse_id'],
+                    'warehouse_location_id' => $destinationLocationId,
+                    'product_id' => $entry->product_id,
+                    'batch_id' => $entry->batch_id,
+                    'status' => 'available',
+                ],
+                [
+                    'quantity' => 0,
+                ]
+            );
+            $newEntry->quantity = (float) $newEntry->quantity + (float) $data['quantity'];
+            $newEntry->save();
+
+            $destinationNote = 'Transferred to warehouse ' . $data['destination_warehouse_id'];
+            if ($destinationLocationId) {
+                $destinationNote .= ' location ' . $destinationLocationId;
+            }
+
+            StockMovement::create([
+                'stock_entry_id' => $entry->id,
+                'type' => 'transfer-out',
+                'quantity' => (float) $data['quantity'] * -1,
+                'notes' => $destinationNote,
+            ]);
+
+            $notes = $data['notes'] ?? 'Transferred from warehouse ' . $entry->warehouse_id;
+            if ($entry->warehouse_location_id) {
+                $notes .= ' location ' . $entry->warehouse_location_id;
+            }
+
+            StockMovement::create([
+                'stock_entry_id' => $newEntry->id,
+                'type' => 'transfer-in',
+                'quantity' => (float) $data['quantity'],
+                'notes' => $notes,
+            ]);
+        });
 
         return redirect()->route('admin.stock.movements')->with('status', 'Stock transferred.');
     }
@@ -138,47 +185,93 @@ class StockMovementController extends Controller
             'notes' => 'nullable|string',
         ]);
 
-        $entry = StockEntry::findOrFail($data['entry_id']);
-        $this->ensureStockEntryAccess($entry);
+        DB::transaction(function () use ($data) {
+            $entry = StockEntry::whereKey($data['entry_id'])->lockForUpdate()->firstOrFail();
+            $this->ensureStockEntryAccess($entry);
 
-        if ($entry->quantity < $data['quantity']) {
-            return back()->withErrors(['quantity' => 'Cannot write off more than available quantity.']);
-        }
+            if ($entry->status !== 'available') {
+                throw ValidationException::withMessages([
+                    'entry_id' => 'Only available stock can be written off.',
+                ]);
+            }
 
-        $entry->quantity -= $data['quantity'];
-        $entry->save();
+            if ((float) $entry->quantity < (float) $data['quantity']) {
+                throw ValidationException::withMessages([
+                    'quantity' => 'Cannot write off more than available quantity.',
+                ]);
+            }
 
-        StockMovement::create([
-            'stock_entry_id' => $entry->id,
-            'type' => $data['reason'],
-            'quantity' => $data['quantity'] * -1,
-            'notes' => $data['notes'],
-        ]);
+            $entry->quantity = (float) $entry->quantity - (float) $data['quantity'];
+            $entry->save();
+
+            StockMovement::create([
+                'stock_entry_id' => $entry->id,
+                'type' => $data['reason'],
+                'quantity' => (float) $data['quantity'] * -1,
+                'notes' => $data['notes'],
+            ]);
+        });
 
         return redirect()->route('admin.stock.movements')->with('status', 'Stock written off.');
     }
 
     public function writeOffEntry(StockEntry $entry)
     {
-        $this->ensureStockEntryAccess($entry);
+        $result = DB::transaction(function () use ($entry) {
+            $lockedEntry = StockEntry::whereKey($entry->id)->lockForUpdate()->firstOrFail();
+            $this->ensureStockEntryAccess($lockedEntry);
 
-        if ($entry->quantity <= 0) {
+            if ((float) $lockedEntry->quantity <= 0) {
+                return false;
+            }
+
+            $quantity = (float) $lockedEntry->quantity;
+
+            $lockedEntry->quantity = 0;
+            $lockedEntry->save();
+
+            StockMovement::create([
+                'stock_entry_id' => $lockedEntry->id,
+                'type' => 'expired',
+                'quantity' => $quantity * -1,
+                'notes' => 'Written off as expired from inventory view.',
+            ]);
+
+            return true;
+        });
+
+        if (! $result) {
             return back()->with('status', 'Entry already has zero quantity.');
         }
 
-        $quantity = $entry->quantity;
-
-        $entry->quantity = 0;
-        $entry->save();
-
-        StockMovement::create([
-            'stock_entry_id' => $entry->id,
-            'type' => 'expired',
-            'quantity' => $quantity * -1,
-            'notes' => 'Written off as expired from inventory view.',
-        ]);
-
         return back()->with('status', 'Batch written off as expired.');
+    }
+
+    protected function resolveDestinationLocationId(array $data): ?int
+    {
+        $destinationWarehouseId = (int) $data['destination_warehouse_id'];
+        $locationId = isset($data['destination_warehouse_location_id'])
+            ? (int) $data['destination_warehouse_location_id']
+            : null;
+
+        $destinationLocations = WarehouseLocation::where('warehouse_id', $destinationWarehouseId)
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+
+        if (! empty($destinationLocations) && ! $locationId) {
+            throw ValidationException::withMessages([
+                'destination_warehouse_location_id' => 'Select a destination location for the chosen warehouse.',
+            ]);
+        }
+
+        if ($locationId && ! in_array($locationId, $destinationLocations, true)) {
+            throw ValidationException::withMessages([
+                'destination_warehouse_location_id' => 'Selected destination location does not belong to the chosen warehouse.',
+            ]);
+        }
+
+        return $locationId ?: null;
     }
 
     protected function ensureWarehouseAccess(int $warehouseId): void

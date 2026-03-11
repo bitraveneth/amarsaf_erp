@@ -4,11 +4,19 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Campaign;
+use App\Models\LedgerEntry;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 class CampaignController extends Controller
 {
+    private const VALID_STATUSES = [
+        Campaign::STATUS_PLANNED,
+        Campaign::STATUS_RUNNING,
+        Campaign::STATUS_COMPLETED,
+    ];
+
     public function index()
     {
         $campaigns = Campaign::orderByDesc('start_date')->paginate(15);
@@ -31,7 +39,10 @@ class CampaignController extends Controller
             $data['attachment_path'] = $request->file('attachment')->store('marketing/campaigns', 'public');
         }
 
-        Campaign::create($data);
+        DB::transaction(function () use ($data) {
+            $campaign = Campaign::create($data);
+            $this->syncLedgerEntries($campaign);
+        });
 
         return redirect()->route('admin.campaigns.index')->with('status', 'Campaign saved.');
     }
@@ -53,7 +64,10 @@ class CampaignController extends Controller
             $data['attachment_path'] = $request->file('attachment')->store('marketing/campaigns', 'public');
         }
 
-        $campaign->update($data);
+        DB::transaction(function () use ($campaign, $data) {
+            $campaign->update($data);
+            $this->syncLedgerEntries($campaign);
+        });
 
         return redirect()->route('admin.campaigns.index')->with('status', 'Campaign updated.');
     }
@@ -64,7 +78,10 @@ class CampaignController extends Controller
             Storage::disk('public')->delete($campaign->attachment_path);
         }
 
-        $campaign->delete();
+        DB::transaction(function () use ($campaign) {
+            $this->deleteLedgerEntries($campaign);
+            $campaign->delete();
+        });
 
         return redirect()->route('admin.campaigns.index')->with('status', 'Campaign deleted.');
     }
@@ -79,10 +96,45 @@ class CampaignController extends Controller
             'reach' => 'nullable|integer|min:0',
             'impressions' => 'nullable|integer|min:0',
             'cost' => 'nullable|numeric|min:0',
-            'status' => 'required|string|max:50',
+            'status' => 'required|in:' . implode(',', self::VALID_STATUSES),
             'campaign_code' => 'nullable|string|max:100',
             'notes' => 'nullable|string',
             'attachment' => 'nullable|file|max:10240',
         ]);
+    }
+
+    protected function syncLedgerEntries(Campaign $campaign): void
+    {
+        $this->deleteLedgerEntries($campaign);
+
+        if ((float) $campaign->cost <= 0 || ! in_array($campaign->status, Campaign::ACTUAL_COST_STATUSES, true)) {
+            return;
+        }
+
+        $description = $this->ledgerDescription($campaign);
+
+        LedgerEntry::create([
+            'account' => 'Marketing Expense',
+            'description' => $description,
+            'debit' => $campaign->cost,
+            'credit' => 0,
+        ]);
+
+        LedgerEntry::create([
+            'account' => 'Bank',
+            'description' => $description,
+            'debit' => 0,
+            'credit' => $campaign->cost,
+        ]);
+    }
+
+    protected function deleteLedgerEntries(Campaign $campaign): void
+    {
+        LedgerEntry::where('description', $this->ledgerDescription($campaign))->delete();
+    }
+
+    protected function ledgerDescription(Campaign $campaign): string
+    {
+        return 'Campaign expense #' . $campaign->id;
     }
 }

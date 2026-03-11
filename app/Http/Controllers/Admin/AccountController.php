@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Account;
 use App\Models\LedgerEntry;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class AccountController extends Controller
 {
@@ -36,6 +37,13 @@ class AccountController extends Controller
     public function update(Request $request, Account $account)
     {
         $data = $this->validated($request);
+
+        if ($data['name'] !== $account->name && LedgerEntry::where('account', $account->name)->exists()) {
+            return redirect()
+                ->route('admin.accounts.edit', $account)
+                ->withErrors(['name' => 'Accounts referenced by ledger entries cannot be renamed.']);
+        }
+
         $account->update($data);
 
         return redirect()->route('admin.accounts.index')->with('status', 'Account updated.');
@@ -57,8 +65,18 @@ class AccountController extends Controller
     protected function validated(Request $request): array
     {
         return $request->validate([
-            'code' => 'required|string|max:50',
-            'name' => 'required|string|max:255',
+            'code' => [
+                'required',
+                'string',
+                'max:50',
+                Rule::unique('accounts', 'code')->ignore($request->route('account')?->id),
+            ],
+            'name' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('accounts', 'name')->ignore($request->route('account')?->id),
+            ],
             'type' => 'required|in:asset,liability,equity,income,expense',
             'is_active' => 'sometimes|boolean',
         ]) + ['is_active' => $request->boolean('is_active', true)];

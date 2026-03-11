@@ -9,6 +9,12 @@ use Illuminate\Http\Request;
 
 class EmployeeEquipmentController extends Controller
 {
+    private const VALID_STATUSES = [
+        EmployeeEquipment::STATUS_ACTIVE,
+        EmployeeEquipment::STATUS_RETURNED,
+        EmployeeEquipment::STATUS_LOST,
+    ];
+
     public function all()
     {
         $equipment = EmployeeEquipment::with('employee')
@@ -35,7 +41,7 @@ class EmployeeEquipmentController extends Controller
             'effective_date' => 'required|date',
             'product_name' => 'required|string|max:255',
             'device_identifier' => 'nullable|string|max:255',
-            'status' => 'required|string|max:50',
+            'status' => 'required|in:' . implode(',', self::VALID_STATUSES),
             'notes' => 'nullable|string',
         ]);
 
@@ -122,7 +128,7 @@ class EmployeeEquipmentController extends Controller
             'effective_date' => 'required|date',
             'product_name' => 'required|string|max:255',
             'device_identifier' => 'nullable|string|max:255',
-            'status' => 'required|string|max:50',
+            'status' => 'required|in:' . implode(',', self::VALID_STATUSES),
             'notes' => 'nullable|string',
         ]);
     }

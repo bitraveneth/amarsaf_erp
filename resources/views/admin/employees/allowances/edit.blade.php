@@ -68,7 +68,7 @@
     <div class="rounded-xl border-l-4 
         {{ $allowance->status === 'paid' ? 'border-success-500 bg-success-50 dark:border-success-400 dark:bg-success-950/30' : 
            ($allowance->status === 'approved' ? 'border-brand-500 bg-brand-50 dark:border-brand-400 dark:bg-brand-950/30' : 
-           ($allowance->status === 'pending' ? 'border-orange-500 bg-orange-50 dark:border-orange-400 dark:bg-orange-950/30' : 
+           ($allowance->status === 'submitted' ? 'border-orange-500 bg-orange-50 dark:border-orange-400 dark:bg-orange-950/30' : 
            'border-error-500 bg-error-50 dark:border-error-400 dark:bg-error-950/30')) }} p-4">
         <div class="flex items-center gap-3">
             <div class="flex-shrink-0">
@@ -80,7 +80,7 @@
                     <svg class="h-5 w-5 text-brand-600 dark:text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                @elseif($allowance->status === 'pending')
+                @elseif($allowance->status === 'submitted')
                     <svg class="h-5 w-5 text-orange-600 dark:text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6l4 2" />
                     </svg>
@@ -97,7 +97,7 @@
                         <span class="h-1.5 w-1.5 rounded-full 
                             {{ $allowance->status === 'paid' ? 'bg-success-500' : 
                                ($allowance->status === 'approved' ? 'bg-brand-500' : 
-                               ($allowance->status === 'pending' ? 'bg-orange-500' : 'bg-error-500')) }}">
+                               ($allowance->status === 'submitted' ? 'bg-orange-500' : 'bg-error-500')) }}">
                         </span>
                         <span class="capitalize">{{ $allowance->status }}</span>
                     </span>

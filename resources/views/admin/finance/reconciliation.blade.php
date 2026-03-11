@@ -178,6 +178,8 @@
 
             <form action="{{ route('admin.finance.reconciliation.update') }}" method="POST" class="p-6">
                 @csrf
+                <input type="hidden" name="from" value="{{ $from->toDateString() }}">
+                <input type="hidden" name="to" value="{{ $to->toDateString() }}">
                 <div class="overflow-x-auto">
                     <table class="w-full">
                         <thead class="bg-gray-50 dark:bg-gray-800/50">

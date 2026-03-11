@@ -23,10 +23,10 @@
         <div>
             <label for="status">Status</label>
             @php
-                $currentStatus = old('status', $item->status ?? 'assigned');
+                $currentStatus = old('status', $item->status ?? 'active');
             @endphp
             <select id="status" name="status">
-                <option value="assigned"{{ $currentStatus === 'assigned' ? ' selected' : '' }}>Assigned</option>
+                <option value="active"{{ $currentStatus === 'active' ? ' selected' : '' }}>Active</option>
                 <option value="returned"{{ $currentStatus === 'returned' ? ' selected' : '' }}>Returned</option>
                 <option value="lost"{{ $currentStatus === 'lost' ? ' selected' : '' }}>Lost</option>
             </select>

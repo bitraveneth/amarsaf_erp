@@ -76,7 +76,7 @@
         @php
             $totalAllowances = $allowances instanceof \Illuminate\Pagination\LengthAwarePaginator ? $allowances->total() : $allowances->count();
             $totalAmount = $allowances->sum('amount');
-            $pendingAmount = $allowances->where('status', 'pending')->sum('amount');
+            $pendingAmount = $allowances->where('status', 'submitted')->sum('amount');
             $approvedAmount = $allowances->where('status', 'approved')->sum('amount');
             $paidAmount = $allowances->where('status', 'paid')->sum('amount');
             
@@ -138,16 +138,16 @@
                 </div>
                 <div class="relative">
                     <div class="flex items-center justify-between">
-                        <span class="text-sm font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Pending</span>
+                        <span class="text-sm font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Submitted</span>
                         <div class="rounded-lg bg-orange-100 p-2 dark:bg-orange-900/30">
                             <svg class="h-4 w-4 text-orange-700 dark:text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6l4 2" />
                             </svg>
                         </div>
                     </div>
-                    <p class="mt-3 text-3xl font-bold text-orange-600 dark:text-orange-400">{{ $allowances->where('status', 'pending')->count() }}</p>
+                    <p class="mt-3 text-3xl font-bold text-orange-600 dark:text-orange-400">{{ $allowances->where('status', 'submitted')->count() }}</p>
                     <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                        BDT {{ number_format($pendingAmount, 0) }} pending
+                        BDT {{ number_format($pendingAmount, 0) }} submitted
                     </p>
                 </div>
             </div>
@@ -215,7 +215,7 @@
                         @php
                             $percentage = $totalAllowances > 0 ? round(($count / $totalAllowances) * 100) : 0;
                             $statusColors = [
-                                'pending' => 'bg-orange-500',
+                                'submitted' => 'bg-orange-500',
                                 'approved' => 'bg-success-500',
                                 'paid' => 'bg-brand-500',
                                 'rejected' => 'bg-error-500',
@@ -280,7 +280,7 @@
                         @foreach($allowances as $allowance)
                             @php
                                 $statusColors = [
-                                    'pending' => 'bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-400',
+                                    'submitted' => 'bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-400',
                                     'approved' => 'bg-success-100 text-success-700 dark:bg-success-500/20 dark:text-success-400',
                                     'paid' => 'bg-brand-100 text-brand-700 dark:bg-brand-500/20 dark:text-brand-400',
                                     'rejected' => 'bg-error-100 text-error-700 dark:bg-error-500/20 dark:text-error-400',
@@ -332,7 +332,7 @@
                                         <span class="h-1.5 w-1.5 rounded-full 
                                             {{ $allowance->status === 'approved' ? 'bg-success-500' : 
                                                ($allowance->status === 'paid' ? 'bg-brand-500' : 
-                                               ($allowance->status === 'pending' ? 'bg-orange-500' : 
+                                               ($allowance->status === 'submitted' ? 'bg-orange-500' : 
                                                ($allowance->status === 'rejected' ? 'bg-error-500' : 'bg-gray-500'))) }}">
                                         </span>
                                         {{ ucfirst($allowance->status) }}
