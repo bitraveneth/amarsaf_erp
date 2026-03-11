@@ -367,6 +367,15 @@ class ProductionController extends Controller
     public function destroy(ProductionRun $production)
     {
         $this->ensureWarehouseAccess($production->warehouse_id);
+
+        if ($production->stock_confirmed_at || $production->materialIssues()->exists()) {
+            return redirect()
+                ->route('admin.production.index')
+                ->withErrors([
+                    'production' => 'This production run has already posted inventory activity and cannot be deleted.',
+                ]);
+        }
+
         $production->delete();
 
         return redirect()->route('admin.production.index')->with('status', 'Production run deleted.');

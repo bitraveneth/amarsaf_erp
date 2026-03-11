@@ -178,6 +178,16 @@ class EmployeeController extends Controller
 
     public function destroy(Employee $employee)
     {
+        $blockingHistory = $this->deletionBlockingHistory($employee->id);
+
+        if ($blockingHistory !== []) {
+            return redirect()
+                ->route('admin.employees.index')
+                ->withErrors([
+                    'employee' => 'This employee has historical records (' . implode(', ', $blockingHistory) . ') and cannot be deleted.',
+                ]);
+        }
+
         // Unlink any user accounts pointing at this employee so the record can be removed safely.
         User::where('employee_id', $employee->id)->update(['employee_id' => null]);
 
@@ -192,6 +202,35 @@ class EmployeeController extends Controller
         $employee->delete();
 
         return redirect()->route('admin.employees.index')->with('status', 'Employee deleted and any linked user accounts were unassigned.');
+    }
+
+    protected function deletionBlockingHistory(int $employeeId): array
+    {
+        $checks = [
+            'employee_contracts' => 'contracts',
+            'employee_allowances' => 'allowances',
+            'employee_equipment' => 'equipment',
+            'employee_leaves' => 'leave records',
+            'employee_location_logs' => 'location logs',
+            'employee_badges' => 'badge history',
+            'salary_distributions' => 'salary distributions',
+            'employee_leave_balances' => 'leave balances',
+            'visit_plans' => 'visit plans',
+        ];
+
+        $found = [];
+
+        foreach ($checks as $table => $label) {
+            if (! Schema::hasTable($table)) {
+                continue;
+            }
+
+            if (DB::table($table)->where('employee_id', $employeeId)->exists()) {
+                $found[] = $label;
+            }
+        }
+
+        return $found;
     }
 
     protected function validated(Request $request, ?int $employeeId = null): array

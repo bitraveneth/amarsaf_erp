@@ -7,7 +7,9 @@ use App\Models\Employee;
 use App\Models\SalaryDistribution;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class SalaryDistributionController extends Controller
 {
@@ -54,8 +56,11 @@ class SalaryDistributionController extends Controller
     public function store(Request $request)
     {
         $data = $this->validated($request);
+        $distribution = null;
 
-        $distribution = SalaryDistribution::create($data);
+        DB::transaction(function () use ($data, &$distribution) {
+            $distribution = $this->persistDistribution($data);
+        });
 
         if ($request->hasFile('document')) {
             $path = $request->file('document')->store('salary-distributions', 'public');
@@ -78,8 +83,9 @@ class SalaryDistributionController extends Controller
     public function update(Request $request, SalaryDistribution $salaryDistribution)
     {
         $data = $this->validated($request);
-
-        $salaryDistribution->update($data);
+        DB::transaction(function () use ($data, $salaryDistribution) {
+            $this->persistDistribution($data, $salaryDistribution);
+        });
 
         if ($request->hasFile('document')) {
             $path = $request->file('document')->store('salary-distributions', 'public');
@@ -123,5 +129,34 @@ class SalaryDistributionController extends Controller
             'remarks' => 'nullable|string|max:255',
             'document' => 'nullable|file|max:10240',
         ]);
+    }
+
+    protected function persistDistribution(array $data, ?SalaryDistribution $salaryDistribution = null): SalaryDistribution
+    {
+        Employee::whereKey($data['employee_id'])->lockForUpdate()->first();
+
+        $duplicateExists = SalaryDistribution::query()
+            ->where('employee_id', $data['employee_id'])
+            ->where('period_start', $data['period_start'])
+            ->where('period_end', $data['period_end'])
+            ->when($salaryDistribution, function ($query) use ($salaryDistribution) {
+                $query->where($salaryDistribution->getKeyName(), '!=', $salaryDistribution->id);
+            })
+            ->lockForUpdate()
+            ->exists();
+
+        if ($duplicateExists) {
+            throw ValidationException::withMessages([
+                'employee_id' => 'A salary distribution already exists for this employee and period.',
+            ]);
+        }
+
+        if ($salaryDistribution) {
+            $salaryDistribution->update($data);
+
+            return $salaryDistribution->fresh();
+        }
+
+        return SalaryDistribution::create($data);
     }
 }

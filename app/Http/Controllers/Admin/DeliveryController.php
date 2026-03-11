@@ -311,6 +311,19 @@ class DeliveryController extends Controller
 
     public function destroy(Delivery $delivery)
     {
+        if (
+            $delivery->status !== 'scheduled'
+            || $delivery->items()->exists()
+            || $delivery->pod()->exists()
+            || ! empty($delivery->pod_photo)
+        ) {
+            return redirect()
+                ->route('admin.deliveries.index')
+                ->withErrors([
+                    'delivery' => 'This delivery has operational activity recorded and cannot be deleted.',
+                ]);
+        }
+
         if ($delivery->pod_photo) {
             Storage::disk('public')->delete($delivery->pod_photo);
         }

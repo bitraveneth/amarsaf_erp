@@ -26,6 +26,7 @@ use App\Models\TaxClass;
 use App\Models\User;
 use App\Services\ErpNotificationService;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -1355,6 +1356,276 @@ class SystemCalculationTest extends TestCase
         ]);
     }
 
+    public function test_employee_deletion_is_blocked_when_history_exists(): void
+    {
+        $admin = User::create([
+            'name' => 'Admin',
+            'email' => 'admin-employee-delete@example.test',
+            'password' => 'secret',
+            'role' => 'admin',
+        ]);
+
+        $employeeId = DB::table('employees')->insertGetId([
+            'name' => 'History Employee',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        DB::table('salary_distributions')->insert([
+            'employee_id' => $employeeId,
+            'period_start' => '2026-03-01',
+            'period_end' => '2026-03-31',
+            'base_salary' => 1000,
+            'bonus' => 0,
+            'ta_allowances' => 0,
+            'da_allowances' => 0,
+            'commission' => 0,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $response = $this->actingAs($admin)
+            ->from(route('admin.employees.index'))
+            ->delete(route('admin.employees.destroy', $employeeId));
+
+        $response->assertSessionHasErrors('employee');
+        $this->assertDatabaseHas('employees', [
+            'id' => $employeeId,
+        ]);
+    }
+
+    public function test_stock_confirmed_production_run_cannot_be_deleted(): void
+    {
+        $admin = User::create([
+            'name' => 'Admin',
+            'email' => 'admin-production-delete@example.test',
+            'password' => 'secret',
+            'role' => 'admin',
+        ]);
+
+        $warehouseId = DB::table('warehouses')->insertGetId([
+            'name' => 'Factory Warehouse',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $product = Product::create([
+            'sku' => 'SKU-PROD-LOCK',
+            'name' => 'Production Locked Product',
+            'product_type' => 'finished',
+            'is_active' => true,
+            'base_price' => 10,
+        ]);
+
+        $runId = DB::table('production_runs')->insertGetId([
+            'product_id' => $product->id,
+            'warehouse_id' => $warehouseId,
+            'quantity' => 25,
+            'status' => 'completed',
+            'qc_status' => 'approved',
+            'stock_confirmed_at' => now(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $response = $this->actingAs($admin)
+            ->from(route('admin.production.index'))
+            ->delete(route('admin.production.destroy', $runId));
+
+        $response->assertSessionHasErrors('production');
+        $this->assertDatabaseHas('production_runs', [
+            'id' => $runId,
+        ]);
+    }
+
+    public function test_purchase_bill_with_goods_receipt_cannot_be_deleted(): void
+    {
+        $admin = User::create([
+            'name' => 'Admin',
+            'email' => 'admin-bill-delete@example.test',
+            'password' => 'secret',
+            'role' => 'admin',
+        ]);
+
+        $supplierId = DB::table('suppliers')->insertGetId([
+            'name' => 'Supplier Delete Guard',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $warehouseId = DB::table('warehouses')->insertGetId([
+            'name' => 'Receiving Warehouse',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $billId = DB::table('purchase_bills')->insertGetId([
+            'supplier_id' => $supplierId,
+            'number' => 'PB-LOCK-001',
+            'bill_date' => now()->toDateString(),
+            'due_date' => now()->addDays(7)->toDateString(),
+            'net_total' => 500,
+            'vat_amount' => 0,
+            'status' => 'open',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        DB::table('goods_receipts')->insert([
+            'purchase_bill_id' => $billId,
+            'supplier_id' => $supplierId,
+            'warehouse_id' => $warehouseId,
+            'grn_number' => 'GRN-LOCK-001',
+            'received_at' => now(),
+            'status' => 'posted',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $response = $this->actingAs($admin)
+            ->from(route('admin.bills.index'))
+            ->delete(route('admin.bills.destroy', $billId));
+
+        $response->assertSessionHasErrors('bill');
+        $this->assertDatabaseHas('purchase_bills', [
+            'id' => $billId,
+        ]);
+    }
+
+    public function test_delivery_with_operational_activity_cannot_be_deleted(): void
+    {
+        $admin = User::create([
+            'name' => 'Admin',
+            'email' => 'admin-delivery-delete@example.test',
+            'password' => 'secret',
+            'role' => 'admin',
+        ]);
+
+        $agent = Agent::create([
+            'name' => 'Delivery Delete Agent',
+            'credit_limit' => 10000,
+            'withholding_rate' => 0,
+            'is_active' => true,
+        ]);
+
+        $order = Order::create([
+            'agent_id' => $agent->id,
+            'order_type' => 'regular',
+            'status' => 'delivered',
+            'total' => 0,
+        ]);
+
+        $delivery = Delivery::create([
+            'order_id' => $order->id,
+            'status' => 'delivered',
+        ]);
+
+        $response = $this->actingAs($admin)
+            ->from(route('admin.deliveries.index'))
+            ->delete(route('admin.deliveries.destroy', $delivery));
+
+        $response->assertSessionHasErrors('delivery');
+        $this->assertDatabaseHas('deliveries', [
+            'id' => $delivery->id,
+        ]);
+    }
+
+    public function test_role_manager_clears_stale_secondary_roles(): void
+    {
+        DB::table('roles')->insert([
+            ['key' => 'admin', 'label' => 'Admin', 'is_system' => true, 'created_at' => now(), 'updated_at' => now()],
+            ['key' => 'sales_officer', 'label' => 'Sales Officer', 'is_system' => true, 'created_at' => now(), 'updated_at' => now()],
+            ['key' => 'warehouse_officer', 'label' => 'Warehouse Officer', 'is_system' => true, 'created_at' => now(), 'updated_at' => now()],
+            ['key' => 'accounts_officer', 'label' => 'Accounts Officer', 'is_system' => true, 'created_at' => now(), 'updated_at' => now()],
+        ]);
+
+        $admin = User::create([
+            'name' => 'Admin',
+            'email' => 'admin-role-manager@example.test',
+            'password' => 'secret',
+            'role' => 'admin',
+        ]);
+
+        $user = User::create([
+            'name' => 'Role Target',
+            'email' => 'role-target@example.test',
+            'password' => 'secret',
+            'role' => 'sales_officer',
+        ]);
+
+        DB::table('user_roles')->insert([
+            [
+                'user_id' => $user->id,
+                'role_key' => 'sales_officer',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'user_id' => $user->id,
+                'role_key' => 'warehouse_officer',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+        ]);
+
+        $response = $this->actingAs($admin)
+            ->patch(route('admin.roles.update', $user), [
+                'role' => 'accounts_officer',
+            ]);
+
+        $response->assertSessionHasNoErrors();
+        $this->assertSame('accounts_officer', $user->fresh()->role);
+        $this->assertDatabaseHas('user_roles', [
+            'user_id' => $user->id,
+            'role_key' => 'accounts_officer',
+        ]);
+        $this->assertDatabaseMissing('user_roles', [
+            'user_id' => $user->id,
+            'role_key' => 'sales_officer',
+        ]);
+        $this->assertDatabaseMissing('user_roles', [
+            'user_id' => $user->id,
+            'role_key' => 'warehouse_officer',
+        ]);
+    }
+
+    public function test_salary_distribution_unique_constraint_blocks_duplicate_employee_period_rows(): void
+    {
+        $employeeId = DB::table('employees')->insertGetId([
+            'name' => 'Payroll Employee',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        DB::table('salary_distributions')->insert([
+            'employee_id' => $employeeId,
+            'period_start' => '2026-03-01',
+            'period_end' => '2026-03-31',
+            'base_salary' => 1000,
+            'bonus' => 0,
+            'ta_allowances' => 0,
+            'da_allowances' => 0,
+            'commission' => 0,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->expectException(QueryException::class);
+
+        DB::table('salary_distributions')->insert([
+            'employee_id' => $employeeId,
+            'period_start' => '2026-03-01',
+            'period_end' => '2026-03-31',
+            'base_salary' => 1200,
+            'bonus' => 0,
+            'ta_allowances' => 0,
+            'da_allowances' => 0,
+            'commission' => 0,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+    }
+
     protected function bootInMemorySqlite(): void
     {
         config()->set('database.default', 'sqlite');
@@ -1408,6 +1679,22 @@ class SystemCalculationTest extends TestCase
             $table->string('role');
             $table->string('permission_name');
             $table->timestamps();
+        });
+
+        Schema::create('roles', function (Blueprint $table) {
+            $table->id();
+            $table->string('key')->unique();
+            $table->string('label');
+            $table->boolean('is_system')->default(true);
+            $table->timestamps();
+        });
+
+        Schema::create('user_roles', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('user_id');
+            $table->string('role_key');
+            $table->timestamps();
+            $table->unique(['user_id', 'role_key']);
         });
 
         Schema::create('menu_groups', function (Blueprint $table) {
@@ -1583,14 +1870,44 @@ class SystemCalculationTest extends TestCase
             $table->decimal('da_allowances', 14, 2)->default(0);
             $table->decimal('commission', 14, 2)->default(0);
             $table->timestamps();
+            $table->unique(['employee_id', 'period_start', 'period_end']);
         });
 
         Schema::create('production_runs', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('product_id')->nullable();
+            $table->unsignedBigInteger('warehouse_id')->nullable();
             $table->decimal('quantity', 14, 2)->default(0);
             $table->decimal('material_unit_cost', 14, 2)->nullable();
+            $table->string('status')->nullable();
             $table->string('qc_status')->nullable();
+            $table->timestamp('stock_confirmed_at')->nullable();
+            $table->timestamps();
+        });
+
+        Schema::create('purchase_bills', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('supplier_id');
+            $table->string('number')->unique();
+            $table->date('bill_date');
+            $table->date('due_date')->nullable();
+            $table->decimal('net_total', 14, 2)->default(0);
+            $table->decimal('vat_amount', 14, 2)->default(0);
+            $table->string('status')->default('open');
+            $table->timestamps();
+        });
+
+        Schema::create('goods_receipts', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('purchase_order_id')->nullable();
+            $table->unsignedBigInteger('purchase_bill_id')->nullable();
+            $table->unsignedBigInteger('supplier_id');
+            $table->unsignedBigInteger('warehouse_id');
+            $table->unsignedBigInteger('created_by')->nullable();
+            $table->string('grn_number')->unique();
+            $table->timestamp('received_at');
+            $table->string('status')->default('posted');
+            $table->text('notes')->nullable();
             $table->timestamps();
         });
 

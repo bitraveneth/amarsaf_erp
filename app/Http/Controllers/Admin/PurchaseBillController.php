@@ -263,12 +263,22 @@ class PurchaseBillController extends Controller
 
     public function destroy(PurchaseBill $bill)
     {
+        if ($bill->goodsReceipts()->exists()) {
+            return redirect()
+                ->route('admin.bills.index')
+                ->withErrors([
+                    'bill' => 'This bill is linked to one or more goods receipts and cannot be deleted.',
+                ]);
+        }
+
         // If this bill has posted stock entries, we block deletion to avoid
         // silently removing financial data while stock remains.
         if (StockEntry::where('purchase_bill_id', $bill->id)->exists()) {
             return redirect()
                 ->route('admin.bills.index')
-                ->with('status', 'This bill has posted material stock. Use inventory adjustments instead of deleting the bill.');
+                ->withErrors([
+                    'bill' => 'This bill has posted material stock. Use inventory adjustments instead of deleting the bill.',
+                ]);
         }
 
         DB::transaction(function () use ($bill) {

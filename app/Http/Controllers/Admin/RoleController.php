@@ -178,12 +178,12 @@ class RoleController extends Controller
             return;
         }
 
-        if (! empty($previousPrimaryRole) && $previousPrimaryRole !== $user->role) {
-            DB::table('user_roles')
-                ->where('user_id', $user->id)
-                ->where('role_key', $previousPrimaryRole)
-                ->delete();
-        }
+        // The simple role manager is a single-role editor, so remove any
+        // previously assigned effective roles before applying the new primary one.
+        DB::table('user_roles')
+            ->where('user_id', $user->id)
+            ->where('role_key', '!=', $user->role)
+            ->delete();
 
         DB::table('user_roles')->updateOrInsert(
             ['user_id' => $user->id, 'role_key' => $user->role],
