@@ -6,6 +6,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', $appBrandName ?? config('app.name'))</title>
+
+    <script>
+        window.erpDefaultThemeMode = @json($defaultThemeMode ?? 'dark');
+        (function () {
+            const savedTheme = localStorage.getItem('theme');
+            const configuredTheme = window.erpDefaultThemeMode || 'dark';
+            const fallbackTheme = configuredTheme === 'system'
+                ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+                : configuredTheme;
+            const theme = savedTheme || fallbackTheme;
+
+            if (theme === 'dark') {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        })();
+    </script>
+
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
     @if(!empty($brandThemeVariables))

@@ -182,6 +182,7 @@
   html {
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
+    background-color: var(--color-gray-50);
   }
 
   *,
@@ -203,7 +204,12 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
+  .dark html {
+    background-color: #030712;
+  }
+
   .dark body {
+    @apply bg-gray-950;
     color: var(--color-app-text-dark);
   }
 }

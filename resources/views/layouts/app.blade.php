@@ -11,6 +11,24 @@
 
     <title>{{ $title ?? (($appBrandName ?? config('app.name')) . ' Admin') }}</title>
 
+    <script>
+        window.erpDefaultThemeMode = @json($defaultThemeMode ?? 'dark');
+        (function () {
+            const savedTheme = localStorage.getItem('theme');
+            const configuredTheme = window.erpDefaultThemeMode || 'dark';
+            const fallbackTheme = configuredTheme === 'system'
+                ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+                : configuredTheme;
+            const theme = savedTheme || fallbackTheme;
+
+            if (theme === 'dark') {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        })();
+    </script>
+
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
     @if(!empty($brandThemeVariables))
@@ -30,8 +48,6 @@
     </script>
 
     <script>
-        window.erpDefaultThemeMode = @json($defaultThemeMode ?? 'dark');
-
         document.addEventListener('alpine:init', () => {
             Alpine.store('theme', {
                 init() {
