@@ -32,6 +32,7 @@
                     {{ $from->format('M d, Y') }} - {{ $to->format('M d, Y') }}
                 </span>
             </div>
+            @include('admin.finance.partials.print_button', ['label' => 'Print Report'])
         </div>
     </div>
 

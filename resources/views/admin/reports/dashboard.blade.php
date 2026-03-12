@@ -6,7 +6,7 @@
     $expenseShare = $grossRevenue > 0 ? ($totalExpenses / $grossRevenue) * 100 : 0;
     $payrollShare = $grossRevenue > 0 ? ($totalPayroll / $grossRevenue) * 100 : 0;
     $profitShare = $grossRevenue > 0 ? ($netProfitEstimate / $grossRevenue) * 100 : 0;
-    $currencySymbol = config('app.currency_symbol', 'BDT');
+    $currencyCode = config('app.currency', 'BDT');
 @endphp
 
 <div class="space-y-8">
@@ -26,22 +26,27 @@
                 </p>
             </div>
 
-            <div class="grid w-full max-w-xl grid-cols-2 gap-3 sm:grid-cols-4 xl:w-auto xl:min-w-[30rem]">
-                <div class="rounded-2xl border border-gray-200 bg-white/80 p-4 backdrop-blur-sm dark:border-gray-800 dark:bg-gray-950/60">
-                    <div class="text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">Period</div>
-                    <div class="mt-2 text-sm font-semibold text-gray-900 dark:text-white">{{ $yearLabel }}</div>
+            <div class="flex w-full max-w-xl flex-col gap-3 xl:w-auto xl:min-w-[30rem]">
+                <div class="flex justify-end">
+                    @include('admin.finance.partials.print_button', ['label' => 'Print Dashboard'])
                 </div>
-                <div class="rounded-2xl border border-gray-200 bg-white/80 p-4 backdrop-blur-sm dark:border-gray-800 dark:bg-gray-950/60">
-                    <div class="text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">Collection rate</div>
-                    <div class="mt-2 text-sm font-semibold text-gray-900 dark:text-white">{{ number_format($collectionRate, 1) }}%</div>
-                </div>
-                <div class="rounded-2xl border border-gray-200 bg-white/80 p-4 backdrop-blur-sm dark:border-gray-800 dark:bg-gray-950/60">
-                    <div class="text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">Active agents</div>
-                    <div class="mt-2 text-sm font-semibold text-gray-900 dark:text-white">{{ number_format($activeAgents) }}</div>
-                </div>
-                <div class="rounded-2xl border border-gray-200 bg-white/80 p-4 backdrop-blur-sm dark:border-gray-800 dark:bg-gray-950/60">
-                    <div class="text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">Approved output</div>
-                    <div class="mt-2 text-sm font-semibold text-gray-900 dark:text-white">{{ number_format($productionQty) }}</div>
+                <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                    <div class="rounded-2xl border border-gray-200 bg-white/80 p-4 backdrop-blur-sm dark:border-gray-800 dark:bg-gray-950/60">
+                        <div class="text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">Period</div>
+                        <div class="mt-2 text-sm font-semibold text-gray-900 dark:text-white">{{ $yearLabel }}</div>
+                    </div>
+                    <div class="rounded-2xl border border-gray-200 bg-white/80 p-4 backdrop-blur-sm dark:border-gray-800 dark:bg-gray-950/60">
+                        <div class="text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">Collection rate</div>
+                        <div class="mt-2 text-sm font-semibold text-gray-900 dark:text-white">{{ number_format($collectionRate, 1) }}%</div>
+                    </div>
+                    <div class="rounded-2xl border border-gray-200 bg-white/80 p-4 backdrop-blur-sm dark:border-gray-800 dark:bg-gray-950/60">
+                        <div class="text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">Active agents</div>
+                        <div class="mt-2 text-sm font-semibold text-gray-900 dark:text-white">{{ number_format($activeAgents) }}</div>
+                    </div>
+                    <div class="rounded-2xl border border-gray-200 bg-white/80 p-4 backdrop-blur-sm dark:border-gray-800 dark:bg-gray-950/60">
+                        <div class="text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">Approved output</div>
+                        <div class="mt-2 text-sm font-semibold text-gray-900 dark:text-white">{{ number_format($productionQty) }}</div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -62,25 +67,25 @@
             <div class="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-4">
                 <article class="rounded-2xl border border-gray-200 bg-gray-50/80 p-5 dark:border-gray-800 dark:bg-gray-950/60">
                     <div class="text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">Revenue</div>
-                    <div class="mt-3 text-3xl font-semibold text-gray-900 dark:text-white">{{ $currencySymbol }} {{ number_format($grossRevenue, 0) }}</div>
+                    <div class="mt-3 text-3xl font-semibold text-gray-900 dark:text-white">{{ $currencyCode }} {{ number_format($grossRevenue, 0) }}</div>
                     <p class="mt-2 text-xs leading-5 text-gray-500 dark:text-gray-400">Net invoiced revenue recorded this year.</p>
                 </article>
 
                 <article class="rounded-2xl border border-gray-200 bg-gray-50/80 p-5 dark:border-gray-800 dark:bg-gray-950/60">
                     <div class="text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">Collections</div>
-                    <div class="mt-3 text-3xl font-semibold text-success-600 dark:text-success-400">{{ $currencySymbol }} {{ number_format($totalCollections, 0) }}</div>
+                    <div class="mt-3 text-3xl font-semibold text-success-600 dark:text-success-400">{{ $currencyCode }} {{ number_format($totalCollections, 0) }}</div>
                     <p class="mt-2 text-xs leading-5 text-gray-500 dark:text-gray-400">Cash already collected against invoices.</p>
                 </article>
 
                 <article class="rounded-2xl border border-gray-200 bg-gray-50/80 p-5 dark:border-gray-800 dark:bg-gray-950/60">
                     <div class="text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">Outstanding</div>
-                    <div class="mt-3 text-3xl font-semibold text-orange-600 dark:text-orange-400">{{ $currencySymbol }} {{ number_format($outstanding, 0) }}</div>
+                    <div class="mt-3 text-3xl font-semibold text-orange-600 dark:text-orange-400">{{ $currencyCode }} {{ number_format($outstanding, 0) }}</div>
                     <p class="mt-2 text-xs leading-5 text-gray-500 dark:text-gray-400">Open receivables after receipts, credit notes, and withholding.</p>
                 </article>
 
                 <article class="rounded-2xl border border-gray-200 bg-gray-50/80 p-5 dark:border-gray-800 dark:bg-gray-950/60">
                     <div class="text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">Withholding</div>
-                    <div class="mt-3 text-3xl font-semibold text-gray-900 dark:text-white">{{ $currencySymbol }} {{ number_format($withholdingTotal, 0) }}</div>
+                    <div class="mt-3 text-3xl font-semibold text-gray-900 dark:text-white">{{ $currencyCode }} {{ number_format($withholdingTotal, 0) }}</div>
                     <p class="mt-2 text-xs leading-5 text-gray-500 dark:text-gray-400">Retention deducted from invoice settlement value.</p>
                 </article>
             </div>
@@ -119,7 +124,7 @@
             <div class="mt-6 rounded-3xl bg-gray-950 px-6 py-7 text-white dark:bg-black">
                 <div class="text-xs font-semibold uppercase tracking-[0.16em] text-white/60">Estimated net result</div>
                 <div class="mt-3 text-4xl font-semibold {{ $netProfitEstimate >= 0 ? 'text-success-400' : 'text-error-400' }}">
-                    {{ $currencySymbol }} {{ number_format($netProfitEstimate, 0) }}
+                    {{ $currencyCode }} {{ number_format($netProfitEstimate, 0) }}
                 </div>
                 <p class="mt-3 text-sm leading-6 text-white/65">
                     Approximate profit after operating expenses and payroll, based on year-to-date revenue.
@@ -134,7 +139,7 @@
                             <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">Expense module spend this year</div>
                         </div>
                         <div class="text-right">
-                            <div class="text-lg font-semibold text-error-600 dark:text-error-400">{{ $currencySymbol }} {{ number_format($totalExpenses, 0) }}</div>
+                            <div class="text-lg font-semibold text-error-600 dark:text-error-400">{{ $currencyCode }} {{ number_format($totalExpenses, 0) }}</div>
                             <div class="text-xs text-gray-500 dark:text-gray-400">{{ number_format($expenseShare, 1) }}% of revenue</div>
                         </div>
                     </div>
@@ -147,7 +152,7 @@
                             <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">Salary distributions and related payouts</div>
                         </div>
                         <div class="text-right">
-                            <div class="text-lg font-semibold text-error-600 dark:text-error-400">{{ $currencySymbol }} {{ number_format($totalPayroll, 0) }}</div>
+                            <div class="text-lg font-semibold text-error-600 dark:text-error-400">{{ $currencyCode }} {{ number_format($totalPayroll, 0) }}</div>
                             <div class="text-xs text-gray-500 dark:text-gray-400">{{ number_format($payrollShare, 1) }}% of revenue</div>
                         </div>
                     </div>

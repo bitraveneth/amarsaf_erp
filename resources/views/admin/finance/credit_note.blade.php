@@ -1,6 +1,7 @@
 @extends('layouts.app')
 
 @section('content')
+@php($currencyCode = config('app.currency', 'BDT'))
 <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
     <!-- Header with breadcrumb -->
     <div class="mb-6">
@@ -63,7 +64,7 @@
                     </div>
                     <div>
                         <p class="text-xs text-gray-500 dark:text-gray-400">Net Total</p>
-                        <p class="text-lg font-bold text-gray-900 dark:text-white">৳ {{ number_format($invoice->net_total, 2) }}</p>
+                        <p class="text-lg font-bold text-gray-900 dark:text-white">{{ $currencyCode }} {{ number_format($invoice->net_total, 2) }}</p>
                     </div>
                 </div>
                 
@@ -75,7 +76,7 @@
                     </div>
                     <div>
                         <p class="text-xs text-gray-500 dark:text-gray-400">VAT Amount</p>
-                        <p class="text-lg font-bold text-amber-600 dark:text-amber-400">৳ {{ number_format($invoice->vat_amount, 2) }}</p>
+                        <p class="text-lg font-bold text-amber-600 dark:text-amber-400">{{ $currencyCode }} {{ number_format($invoice->vat_amount, 2) }}</p>
                     </div>
                 </div>
                 
@@ -87,7 +88,7 @@
                     </div>
                     <div>
                         <p class="text-xs text-gray-500 dark:text-gray-400">Total (incl. VAT)</p>
-                        <p class="text-lg font-bold text-success-600 dark:text-success-400">৳ {{ number_format($invoice->net_total + $invoice->vat_amount, 2) }}</p>
+                        <p class="text-lg font-bold text-success-600 dark:text-success-400">{{ $currencyCode }} {{ number_format($invoice->net_total + $invoice->vat_amount, 2) }}</p>
                     </div>
                 </div>
             </div>
@@ -107,7 +108,7 @@
                     </label>
                     <div class="relative">
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <span class="text-gray-500 dark:text-gray-400 sm:text-sm">৳</span>
+                            <span class="text-gray-500 dark:text-gray-400 sm:text-sm">{{ $currencyCode }}</span>
                         </div>
                         <input 
                             id="amount" 
@@ -133,7 +134,7 @@
                         </p>
                     @enderror
                     <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        Maximum credit amount: ৳ {{ number_format($invoice->net_total + $invoice->vat_amount, 2) }}
+                        Maximum credit amount: {{ $currencyCode }} {{ number_format($invoice->net_total + $invoice->vat_amount, 2) }}
                     </p>
                 </div>
 
@@ -198,7 +199,7 @@
                                     <p class="text-xs text-gray-500 dark:text-gray-400">{{ $note->reason ?: 'No reason provided' }}</p>
                                 </div>
                             </div>
-                            <span class="text-sm font-bold text-error-600 dark:text-error-400">-৳ {{ number_format($note->amount, 2) }}</span>
+                            <span class="text-sm font-bold text-error-600 dark:text-error-400">-{{ $currencyCode }} {{ number_format($note->amount, 2) }}</span>
                         </div>
                         @endforeach
                     </div>

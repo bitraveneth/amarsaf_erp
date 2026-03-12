@@ -31,6 +31,7 @@
                     {{ $asOf->format('M d, Y') }}
                 </span>
             </div>
+            @include('admin.finance.partials.print_button', ['label' => 'Print Statement'])
         </div>
     </div>
 

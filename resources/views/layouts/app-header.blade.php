@@ -80,7 +80,7 @@
 @endphp
 
 <header
-    class="sticky top-0 z-30 flex w-full border-b border-gray-200 bg-white/80 backdrop-blur-sm shadow-sm dark:border-gray-800 dark:bg-gray-900/80 xl:border-b"
+    class="print-hidden sticky top-0 z-30 flex w-full border-b border-gray-200 bg-white/80 backdrop-blur-sm shadow-sm dark:border-gray-800 dark:bg-gray-900/80 xl:border-b"
     x-data="{
         isApplicationMenuOpen: false,
         toggleApplicationMenu() {

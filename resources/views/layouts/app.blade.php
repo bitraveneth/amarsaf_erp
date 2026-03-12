@@ -131,6 +131,46 @@
             display: none !important;
         }
 
+        @media print {
+            @page {
+                margin: 12mm;
+            }
+
+            body {
+                background: #ffffff !important;
+            }
+
+            .print-hidden {
+                display: none !important;
+            }
+
+            [data-tour="page-content"] {
+                max-width: none !important;
+                padding: 0 !important;
+            }
+
+            .min-h-screen > .flex-1 {
+                margin-left: 0 !important;
+            }
+
+            .shadow-sm,
+            .shadow-md,
+            .shadow-lg,
+            .shadow-xl,
+            .shadow-2xl,
+            .shadow-theme-xs,
+            .shadow-theme-sm,
+            .shadow-theme-md,
+            .shadow-theme-lg {
+                box-shadow: none !important;
+            }
+
+            * {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+        }
+
         /* Loader animations */
         @keyframes spin {
             from { transform: rotate(0deg); }

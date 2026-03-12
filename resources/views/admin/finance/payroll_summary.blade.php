@@ -65,6 +65,7 @@
                     </svg>
                     Apply
                 </button>
+                @include('admin.finance.partials.print_button', ['label' => 'Print Report'])
             </form>
         </div>
     </div>
