@@ -87,9 +87,9 @@
             this.isApplicationMenuOpen = !this.isApplicationMenuOpen;
         }
     }">
-    <div class="flex grow flex-col items-center justify-between xl:flex-row xl:px-6">
+    <div class="flex min-w-0 grow flex-col items-center justify-between xl:flex-row xl:px-6">
         <div
-            class="flex w-full items-center justify-between gap-2 border-b border-gray-200 px-3 py-2 dark:border-gray-800 sm:gap-4 xl:justify-normal xl:border-b-0 xl:px-0 lg:py-3">
+            class="flex w-full min-w-0 items-center justify-between gap-2 border-b border-gray-200 px-3 py-2 dark:border-gray-800 sm:gap-3 xl:flex-1 xl:justify-normal xl:border-b-0 xl:px-0 lg:py-2.5">
 
             {{-- Desktop sidebar toggle --}}
             <button
@@ -130,21 +130,15 @@
             </button>
 
             {{-- Logo (mobile) --}}
-            @php
-                $appName = config('app.name', 'ERP');
-                $nameParts = preg_split('/[^A-Za-z0-9]+/', $appName, -1, PREG_SPLIT_NO_EMPTY) ?: [];
-                $initialSeed = collect($nameParts)->map(fn ($part) => mb_substr($part, 0, 1))->implode('');
-                $appInitials = strtoupper(mb_substr($initialSeed !== '' ? $initialSeed : $appName, 0, 2));
-            @endphp
             <a href="{{ route('admin.dashboard') }}" class="flex items-center gap-2 xl:hidden">
                 @if(!empty($appLogoUrl))
-                    <img src="{{ $appLogoUrl }}" alt="{{ $appName }}" class="h-9 w-9 rounded-xl border border-gray-200 object-cover dark:border-gray-700" />
+                    <img src="{{ $appLogoUrl }}" alt="{{ $appBrandName }}" class="h-9 w-9 rounded-xl border border-gray-200 object-cover dark:border-gray-700" />
                 @else
                     <span class="flex h-9 w-9 items-center justify-center rounded-full bg-brand-500 text-sm font-semibold text-white">
-                        {{ $appInitials }}
+                        {{ $appBrandInitials }}
                     </span>
                 @endif
-                <span class="text-sm font-semibold text-gray-900 dark:text-white">{{ $appName }}</span>
+                <span class="text-sm font-semibold text-gray-900 dark:text-white">{{ $appBrandName }}</span>
             </a>
 
             {{-- Application menu toggle (mobile) --}}
@@ -177,8 +171,10 @@
                             data-search-index='@json($__menuSearchItems)'
                             class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-200 bg-transparent py-2.5 pl-12 pr-14 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-white/3 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800 xl:w-[430px]" />
                         <button
+                            type="button"
+                            data-command-shortcut
                             class="absolute right-2.5 top-1/2 inline-flex -translate-y-1/2 items-center gap-0.5 rounded-lg border border-gray-200 bg-gray-50 px-[7px] py-[4.5px] text-xs -tracking-[0.2px] text-gray-500 dark:border-gray-800 dark:bg-white/[0.03] dark:text-gray-400">
-                            <span> ⌘ </span>
+                            <span data-shortcut-mod>⌘</span>
                             <span> K </span>
                         </button>
 
@@ -195,14 +191,16 @@
 
         {{-- Application menu (mobile) + right-side actions (desktop) --}}
         <div :class="isApplicationMenuOpen ? 'flex' : 'hidden'"
-            class="w-full items-center justify-between gap-4 px-5 py-4 shadow-theme-md xl:flex xl:justify-end xl:px-0 xl:shadow-none">
+            class="w-full min-w-0 items-center justify-between gap-3 px-4 py-3 shadow-theme-md xl:w-auto xl:shrink-0 xl:flex xl:justify-end xl:px-0 xl:py-0 xl:shadow-none">
             <div class="flex items-center gap-2 2xsm:gap-3">
                 {{-- Clock --}}
                 <div
-                    class="relative hidden md:block"
+                    class="relative"
                     x-data="{
                         open: false,
+                        openingFromTrigger: false,
                         dragging: false,
+                        dragMoved: false,
                         isMobileView: window.matchMedia('(max-width: 767px)').matches,
                         storageKeyOpen: 'headerAnalogClockOpen',
                         storageKeyPos: 'headerAnalogClockPos',
@@ -277,8 +275,38 @@
                             this.posY = vp.h - height - 16;
                             this.clampToViewport();
                         },
+                        openFromTrigger() {
+                            if (this.open || this.isMobileView || !this.$refs.clockBtn) {
+                                return;
+                            }
+
+                            const btnRect = this.$refs.clockBtn.getBoundingClientRect();
+                            this.openingFromTrigger = true;
+                            this.open = true;
+
+                            this.$nextTick(() => {
+                                if (!this.loadPosition()) {
+                                    this.setInitialPosition(btnRect);
+                                } else {
+                                    this.clampToViewport();
+                                }
+
+                                requestAnimationFrame(() => {
+                                    this.clampToViewport();
+                                    this.settleClamp();
+                                    this.openingFromTrigger = false;
+                                });
+                            });
+                        },
+                        closePopup() {
+                            this.open = false;
+                            this.openingFromTrigger = false;
+                            this.dragging = false;
+                            this.dragMoved = false;
+                        },
                         startDrag(event) {
                             this.dragging = true;
+                            this.dragMoved = false;
                             const point = this.getPoint(event);
                             this.dragOffsetX = point.x - this.posX;
                             this.dragOffsetY = point.y - this.posY;
@@ -288,17 +316,25 @@
                             const point = this.getPoint(event);
                             this.posX = point.x - this.dragOffsetX;
                             this.posY = point.y - this.dragOffsetY;
+                            this.dragMoved = true;
                             this.clampToViewport();
                         },
                         endDrag() {
+                            if (!this.dragging) return;
+                            const moved = this.dragMoved;
                             this.dragging = false;
-                            this.persistPosition();
+                            this.dragMoved = false;
+                            if (moved) {
+                                this.persistPosition();
+                            }
                         },
                         persistPosition() {
-                            localStorage.setItem(this.storageKeyPos, JSON.stringify({
-                                x: this.posX,
-                                y: this.posY,
-                            }));
+                            try {
+                                localStorage.setItem(this.storageKeyPos, JSON.stringify({
+                                    x: this.posX,
+                                    y: this.posY,
+                                }));
+                            } catch (e) {}
                         },
                         persistOpenState() {
                             if (this.isMobileView) return;
@@ -307,11 +343,13 @@
                             } catch (e) {}
                         },
                         loadOpenState() {
+                            if (this.isMobileView) {
+                                return false;
+                            }
+
                             try {
                                 const raw = localStorage.getItem(this.storageKeyOpen);
                                 if (raw === null) {
-                                    // First-time visit: default to visible.
-                                    localStorage.setItem(this.storageKeyOpen, '1');
                                     return true;
                                 }
                                 return raw === '1';
@@ -374,7 +412,6 @@
                                 hour: '2-digit',
                                 minute: '2-digit',
                                 second: '2-digit',
-                                hour12: true,
                             });
                             this.updateClock();
                             setInterval(() => this.updateClock(), 1000);
@@ -384,15 +421,12 @@
                                 this.syncViewportMode();
 
                                 if (!wasMobile && this.isMobileView) {
-                                    this.open = false;
+                                    this.closePopup();
                                     return;
                                 }
 
                                 if (wasMobile && !this.isMobileView) {
                                     this.open = this.loadOpenState();
-                                    if (this.open) {
-                                        this.$nextTick(() => this.placePopupFromStorageOrCenter());
-                                    }
                                 }
 
                                 this.clampToViewport();
@@ -400,7 +434,12 @@
                             this.$watch('open', (value) => {
                                 this.persistOpenState();
                                 if (value) {
-                                    this.placePopupFromStorageOrCenter();
+                                    if (!this.openingFromTrigger) {
+                                        this.placePopupFromStorageOrCenter();
+                                    }
+                                } else {
+                                    this.dragging = false;
+                                    this.dragMoved = false;
                                 }
                             });
                             this.$watch('$store.loader.show', (loading) => {
@@ -410,58 +449,52 @@
                             });
 
                             this.open = this.isMobileView ? false : this.loadOpenState();
-                            if (this.open) {
-                                this.placePopupFromStorageOrCenter();
-                            }
                         }
                     }"
                     @mousemove.window="onDrag($event)"
                     @mouseup.window="endDrag()"
                     @touchmove.window="onDrag($event)"
                     @touchend.window="endDrag()"
+                    @keydown.escape.window="closePopup()"
                 >
                     <button
                         type="button"
                         x-ref="clockBtn"
-                        x-show="!isMobileView && !open && !$store.loader.show"
-                        @click="
-                            if (!open) {
-                                const b = $refs.clockBtn.getBoundingClientRect();
-                                open = true;
-                                $nextTick(() => {
-                                    setInitialPosition(b);
-                                    requestAnimationFrame(() => clampToViewport());
-                                    settleClamp();
-                                });
-                            }
-                        "
+                        x-show="!open && !$store.loader.show"
+                        @click="if (!isMobileView) openFromTrigger()"
+                        :title="isMobileView ? 'Current time' : 'Open clock'"
+                        :class="isMobileView ? 'cursor-default pr-2.5' : ''"
                         class="flex items-center gap-3 rounded-xl border border-gray-200/90 bg-gradient-to-r from-white to-gray-50 px-3 py-2 shadow-theme-xs transition hover:border-brand-300 dark:border-gray-800 dark:from-gray-900 dark:to-gray-800/70 dark:hover:border-brand-700"
-                        title="Open analog clock"
                     >
                         <div class="leading-tight text-left">
-                            <div class="text-[10px] font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400" x-text="nowDate"></div>
-                            <div class="font-semibold text-gray-800 dark:text-gray-100" x-text="nowTime"></div>
+                            <div class="text-[10px] font-medium uppercase tracking-wide text-[var(--color-app-text-light)]/70 dark:text-[var(--color-app-text-dark)]/70" x-text="nowDate"></div>
+                            <div class="font-semibold text-[var(--color-app-text-light)] dark:text-[var(--color-app-text-dark)]" x-text="nowTime"></div>
                         </div>
-                        <span class="h-2 w-2 rounded-full bg-success-500"></span>
+                        <span class="h-2 w-2 rounded-full bg-success-500" x-show="!isMobileView"></span>
                     </button>
 
                     <template x-teleport="body">
                         <div
                             id="analog-clock-popup"
                             x-show="!isMobileView && open && !$store.loader.show"
+                            x-cloak
                             x-transition:enter="transition ease-out duration-120"
                             x-transition:enter-start="opacity-0"
                             x-transition:enter-end="opacity-100"
                             x-transition:leave="transition ease-in duration-90"
                             x-transition:leave-start="opacity-100"
                             x-transition:leave-end="opacity-0"
-                            class="group/clock fixed z-[99999] hidden w-44 max-w-[calc(100vw-1rem)] bg-transparent p-0 shadow-none"
+                            @click.outside="if (!dragging) closePopup()"
+                            class="group/clock fixed z-[99999] w-52 max-w-[calc(100vw-1rem)] bg-transparent p-0 shadow-none"
                             :style="`left:${posX}px; top:${posY}px;`"
+                            role="dialog"
+                            aria-modal="false"
+                            aria-label="Clock popup"
                         >
                             <button
                                 type="button"
-                                @click.stop="open = false"
-                                class="pointer-events-none absolute right-2 top-2 z-10 flex h-6 w-6 items-center justify-center rounded-md border border-error-300 bg-error-50 text-error-600 opacity-0 transition-opacity duration-150 hover:bg-error-100 hover:text-error-700 group-hover/clock:pointer-events-auto group-hover/clock:opacity-100 dark:border-error-700 dark:bg-error-500/10 dark:text-error-400 dark:hover:bg-error-500/20 dark:hover:text-error-300"
+                                @click.stop="closePopup()"
+                                class="absolute right-2 top-2 z-10 flex h-7 w-7 items-center justify-center rounded-md border border-error-300 bg-error-50/95 text-error-600 opacity-90 shadow-theme-xs transition hover:bg-error-100 hover:text-error-700 hover:opacity-100 dark:border-error-700 dark:bg-error-500/15 dark:text-error-400 dark:hover:bg-error-500/20 dark:hover:text-error-300"
                                 aria-label="Close clock popup"
                                 title="Close"
                             >
@@ -486,6 +519,7 @@
                                       :style="`transform: translateX(-50%) rotate(${secDeg}deg); transform-origin: 50% 100%;`"></span>
                                 <span class="absolute left-1/2 top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-gray-800 dark:bg-gray-100"></span>
                             </div>
+
                         </div>
                     </template>
                 </div>
@@ -674,7 +708,7 @@
                     <button type="button"
                         data-tour="header-user"
                         class="header-user-toggle flex items-center gap-2 rounded-full border border-gray-200 bg-white px-2.5 py-1.5 text-sm font-medium text-gray-700 shadow-theme-xs transition hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800">
-                        <span class="flex h-9 w-9 items-center justify-center rounded-full bg-brand-500 text-sm font-semibold text-white overflow-hidden">
+                        <span class="flex h-10 w-10 items-center justify-center rounded-full bg-brand-500 text-sm font-semibold text-white overflow-hidden">
                             @if($avatarUrl)
                                 <img src="{{ $avatarUrl }}" alt="Profile photo" class="h-full w-full object-cover">
                             @else
@@ -697,7 +731,7 @@
                     <div
                         class="header-user-menu absolute right-0 top-full mt-3 w-64 rounded-xl border border-gray-200 bg-white p-4 text-sm shadow-theme-lg dark:border-gray-800 dark:bg-gray-900">
                         <div class="mb-3 flex items-center gap-3 border-b border-gray-100 pb-3 dark:border-gray-800">
-                            <span class="flex h-10 w-10 items-center justify-center rounded-full bg-brand-500 text-sm font-semibold text-white overflow-hidden">
+                            <span class="flex h-9 w-9 items-center justify-center rounded-full bg-brand-500 text-sm font-semibold text-white overflow-hidden">
                                 @if($avatarUrl)
                                     <img src="{{ $avatarUrl }}" alt="Profile photo" class="h-full w-full object-cover">
                                 @else

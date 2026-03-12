@@ -1,13 +1,14 @@
 
 export const initChartTwo = () => {
     const chartElement = document.querySelector('#chartTwo');
+    const uiFontStack = window.erpUiFontStack || 'Outfit, sans-serif';
 
     if (chartElement) {
         const chartTwoOptions = {
             series: [75.55],
             colors: ["#465FFF"],
             chart: {
-                fontFamily: "Outfit, sans-serif",
+                fontFamily: uiFontStack,
                 type: "radialBar",
                 height: 330,
                 sparkline: {

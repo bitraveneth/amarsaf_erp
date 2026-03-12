@@ -15,7 +15,8 @@ class SystemSettingController extends Controller
     {
         return view('admin.settings.index', [
             'settings' => [
-                'app_name' => SystemSettings::get('app_name', config('app.name')),
+                'app_name' => config('app.name'),
+                'brand_name' => SystemSettings::get('brand_name'),
                 'company_name' => SystemSettings::get('company_name'),
                 'company_email' => SystemSettings::get('company_email'),
                 'company_phone' => SystemSettings::get('company_phone'),
@@ -24,6 +25,9 @@ class SystemSettingController extends Controller
                 'currency_symbol' => SystemSettings::get('currency_symbol', '৳'),
                 'brand_primary_color' => SystemSettings::sanitizeHexColor(SystemSettings::get('brand_primary_color')) ?? '#465FFF',
                 'brand_secondary_color' => SystemSettings::sanitizeHexColor(SystemSettings::get('brand_secondary_color')) ?? '#3641F5',
+                'text_color_light' => SystemSettings::sanitizeHexColor(SystemSettings::get('text_color_light')) ?? SystemSettings::defaultTextColorLight(),
+                'text_color_dark' => SystemSettings::sanitizeHexColor(SystemSettings::get('text_color_dark')) ?? SystemSettings::defaultTextColorDark(),
+                'default_theme_mode' => SystemSettings::defaultThemeMode(),
                 'smtp_host' => SystemSettings::get('smtp_host', config('mail.mailers.smtp.host')),
                 'smtp_port' => SystemSettings::get('smtp_port', config('mail.mailers.smtp.port')),
                 'smtp_encryption' => SystemSettings::get('smtp_encryption', config('mail.mailers.smtp.encryption')),
@@ -39,6 +43,12 @@ class SystemSettingController extends Controller
             ],
             'logoUrl' => SystemSettings::logoUrl(),
             'brandThemeVariables' => SystemSettings::brandThemeVariables(),
+            'defaultThemeColors' => [
+                'primary' => SystemSettings::defaultBrandPrimary(),
+                'secondary' => SystemSettings::defaultBrandSecondary(),
+                'textLight' => SystemSettings::defaultTextColorLight(),
+                'textDark' => SystemSettings::defaultTextColorDark(),
+            ],
             'backups' => $backupManager->list(),
         ]);
     }
@@ -46,7 +56,7 @@ class SystemSettingController extends Controller
     public function update(Request $request)
     {
         $data = $request->validate([
-            'app_name' => 'required|string|max:120',
+            'brand_name' => 'nullable|string|max:120',
             'company_name' => 'nullable|string|max:120',
             'company_email' => 'nullable|email|max:120',
             'company_phone' => 'nullable|string|max:40',
@@ -55,6 +65,9 @@ class SystemSettingController extends Controller
             'currency_symbol' => 'nullable|string|max:10',
             'brand_primary_color' => ['required', 'regex:/^#?[0-9a-fA-F]{6}$/'],
             'brand_secondary_color' => ['required', 'regex:/^#?[0-9a-fA-F]{6}$/'],
+            'text_color_light' => ['required', 'regex:/^#?[0-9a-fA-F]{6}$/'],
+            'text_color_dark' => ['required', 'regex:/^#?[0-9a-fA-F]{6}$/'],
+            'default_theme_mode' => 'required|in:dark,light,system',
             'smtp_host' => 'nullable|string|max:255',
             'smtp_port' => 'nullable|integer|min:1|max:65535',
             'smtp_encryption' => 'nullable|in:tls,ssl',
@@ -74,7 +87,7 @@ class SystemSettingController extends Controller
         $settings = [];
 
         foreach ([
-            'app_name',
+            'brand_name',
             'company_name',
             'company_email',
             'company_phone',
@@ -83,6 +96,9 @@ class SystemSettingController extends Controller
             'currency_symbol',
             'brand_primary_color',
             'brand_secondary_color',
+            'text_color_light',
+            'text_color_dark',
+            'default_theme_mode',
             'smtp_host',
             'smtp_port',
             'smtp_encryption',
@@ -100,9 +116,11 @@ class SystemSettingController extends Controller
             $settings[$key] = is_string($value) ? trim($value) : $value;
         }
 
-        foreach (['brand_primary_color', 'brand_secondary_color'] as $colorKey) {
+        foreach (['brand_primary_color', 'brand_secondary_color', 'text_color_light', 'text_color_dark'] as $colorKey) {
             $settings[$colorKey] = SystemSettings::sanitizeHexColor($settings[$colorKey] ?? null);
         }
+
+        SystemSettings::forget(['app_name']);
 
         $existingLogoPath = SystemSettings::get('company_logo_path');
 

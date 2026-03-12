@@ -70,7 +70,7 @@
                             Notifications
                         </h1>
                         <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                            System alerts and updates across {{ config('app.name') }}
+                            System alerts and updates across {{ $appBrandName }}
                         </p>
                     </div>
                 </div>

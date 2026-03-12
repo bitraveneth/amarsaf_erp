@@ -1,6 +1,7 @@
 
 export function initChartEight() {
     const chartEightEl = document.querySelector('#chartEight');
+    const uiFontStack = window.erpUiFontStack || 'Outfit, sans-serif';
     if (chartEightEl) {
         const chartEightOptions = {
             series: [
@@ -20,7 +21,7 @@ export function initChartEight() {
             },
             colors: ["#465FFF", "#9CB9FF"],
             chart: {
-                fontFamily: "Outfit, sans-serif",
+                fontFamily: uiFontStack,
                 height: 310,
                 type: "area",
                 toolbar: {

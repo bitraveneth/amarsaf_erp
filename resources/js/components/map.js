@@ -4,6 +4,7 @@ import 'jsvectormap/dist/jsvectormap.min.css';
 
 export const initMap = () => {
     const mapSelectorOne = document.querySelectorAll('#mapOne');
+    const uiFontStack = window.erpUiFontStack || 'Outfit, sans-serif';
 
     if (mapSelectorOne.length) {
         const mapOne = new jsVectorMap({
@@ -12,7 +13,7 @@ export const initMap = () => {
             zoomButtons: false,
             regionStyle: {
                 initial: {
-                    fontFamily: "Outfit",
+                    fontFamily: uiFontStack,
                     fill: "#D9D9D9",
                 },
                 hover: {

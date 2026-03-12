@@ -101,17 +101,17 @@
     <!-- Clean A4-style header for print only -->
     <div class="hidden print-only mb-6">
         <div class="flex items-start justify-between">
-            <div class="flex items-center gap-3">
-                @php
-                    $appName = config('app.name');
-                    $appInitials = mb_strtoupper(mb_substr($appName, 0, 2));
+                <div class="flex items-center gap-3">
+                    @php
+                    $printCompanyName = $legalCompanyName ?? config('app.name');
+                    $printCompanyInitials = $legalCompanyInitials ?? mb_strtoupper(mb_substr($printCompanyName, 0, 2));
                 @endphp
                 <div class="flex h-12 w-12 items-center justify-center rounded-full bg-brand-500 text-sm font-semibold text-white">
-                    {{ $appInitials }}
+                    {{ $printCompanyInitials }}
                 </div>
                 <div>
                     <h2 class="text-lg font-semibold text-gray-900">
-                        {{ config('app.name') }}
+                        {{ $printCompanyName }}
                     </h2>
                     <p class="mt-1 text-xs text-gray-600">
                         Invoice &amp; Finance

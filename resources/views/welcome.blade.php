@@ -1,6 +1,6 @@
 @extends('layouts.guest')
 
-@section('title', config('app.name'))
+@section('title', $appBrandName ?? config('app.name'))
 
 @push('styles')
 <style>
@@ -319,7 +319,7 @@
     <header class="landing-top">
         <div class="landing-brand">
             <span class="brand-dot" aria-hidden="true"></span>
-            <span>{{ config('app.name') }} Control Hub</span>
+            <span>{{ $appBrandName }} Control Hub</span>
         </div>
 
         <nav class="landing-nav">

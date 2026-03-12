@@ -8,6 +8,32 @@ import flatpickr from 'flatpickr';
 window.Alpine = Alpine;
 window.ApexCharts = ApexCharts;
 window.flatpickr = flatpickr;
+window.erpUiFontStack = 'Outfit, Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Ubuntu, Cantarell, "Helvetica Neue", Arial, sans-serif';
+
+const detectClientPlatform = () => {
+    const rawPlatform = (
+        navigator.userAgentData?.platform ||
+        navigator.platform ||
+        navigator.userAgent ||
+        ''
+    ).toLowerCase();
+
+    if (rawPlatform.includes('mac') || rawPlatform.includes('iphone') || rawPlatform.includes('ipad')) {
+        return 'mac';
+    }
+
+    if (rawPlatform.includes('win')) {
+        return 'windows';
+    }
+
+    if (rawPlatform.includes('linux') || rawPlatform.includes('x11')) {
+        return 'linux';
+    }
+
+    return 'other';
+};
+
+window.erpPlatform = detectClientPlatform();
 
 document.addEventListener('alpine:init', () => {
     registerSystemTour(Alpine, window.erpTourSteps || []);
@@ -16,6 +42,20 @@ document.addEventListener('alpine:init', () => {
 Alpine.start();
 
 document.addEventListener('DOMContentLoaded', () => {
+    document.documentElement.dataset.platform = window.erpPlatform;
+    if (document.body) {
+        document.body.dataset.platform = window.erpPlatform;
+    }
+
+    const commandModifier = window.erpPlatform === 'mac' ? '⌘' : 'Ctrl';
+    document.querySelectorAll('[data-shortcut-mod]').forEach((el) => {
+        el.textContent = commandModifier;
+    });
+    document.querySelectorAll('[data-command-shortcut]').forEach((el) => {
+        el.setAttribute('aria-label', `Open command palette (${commandModifier} K)`);
+        el.setAttribute('title', `Open command palette (${commandModifier} K)`);
+    });
+
 
         // Map imports
     if (document.querySelector('#mapOne')) {
@@ -253,7 +293,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Global shortcut Cmd/Ctrl + K
         document.addEventListener('keydown', (event) => {
-            const isMac = navigator.platform.toUpperCase().includes('MAC');
+            const isMac = window.erpPlatform === 'mac';
             const meta = isMac ? event.metaKey : event.ctrlKey;
             if (meta && event.key.toLowerCase() === 'k') {
                 event.preventDefault();

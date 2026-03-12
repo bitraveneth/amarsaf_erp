@@ -1,6 +1,6 @@
 <header class="admin-header">
     <div class="brand">
-        <span>{{ config('app.name', 'ERP') }}</span>
+        <span>{{ $appBrandName ?? config('app.name', 'ERP') }}</span>
         <small>Admin panel</small>
     </div>
     <nav class="header-links">

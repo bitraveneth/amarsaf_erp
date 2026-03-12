@@ -53,11 +53,6 @@
         ->values()
         ->all();
 
-    $appName = config('app.name', 'ERP');
-    $nameParts = preg_split('/[^A-Za-z0-9]+/', $appName, -1, PREG_SPLIT_NO_EMPTY) ?: [];
-    $initialSeed = collect($nameParts)->map(fn ($part) => mb_substr($part, 0, 1))->implode('');
-    $appInitials = strtoupper(mb_substr($initialSeed !== '' ? $initialSeed : $appName, 0, 2));
-
     $currentPath = '/' . trim(request()->path(), '/');
     $currentPath = rtrim($currentPath, '/') ?: '/';
     $matchesCurrent = fn (?string $path): bool => MenuHelper::matchesCurrentPath($path, $currentPath);
@@ -83,16 +78,15 @@
             : 'justify-start'">
         <a href="{{ route('admin.dashboard') }}" data-tour="sidebar-brand" class="flex items-center gap-3">
             @if(!empty($appLogoUrl))
-                <img src="{{ $appLogoUrl }}" alt="{{ $appName }}" class="h-10 w-10 rounded-xl border border-gray-200 object-cover dark:border-gray-700" />
+                <img src="{{ $appLogoUrl }}" alt="{{ $appBrandName }}" class="h-10 w-10 rounded-xl border border-gray-200 object-cover dark:border-gray-700" />
             @else
                 <div class="flex h-10 w-10 items-center justify-center rounded-full bg-brand-500 text-sm font-semibold text-white">
-                    {{ $appInitials }}
+                    {{ $appBrandInitials }}
                 </div>
             @endif
             <div class="flex flex-col"
                  x-show="isSidebarVisible()">
-                <span class="text-sm font-semibold text-gray-900 dark:text-white">{{ $appName }}</span>
-                <span class="text-xs text-gray-500 dark:text-gray-400">System</span>
+                <span class="text-sm font-semibold text-gray-900 dark:text-white">{{ $appBrandName }}</span>
             </div>
         </a>
     </div>

@@ -1,7 +1,7 @@
 {{-- resources/views/auth/login.blade.php --}}
 @extends('layouts.guest')
 
-@section('title', 'Sign in | ' . config('app.name'))
+@section('title', 'Sign in | ' . ($appBrandName ?? config('app.name')))
 
 @section('content')
 <div class="w-full max-w-md">

@@ -23,11 +23,14 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        $appName = SystemSettings::get('app_name', config('app.name'));
+        $appName = config('app.name');
+        $brandName = SystemSettings::brandName($appName);
+        $legalCompanyName = SystemSettings::legalCompanyName($appName);
         $currencyCode = SystemSettings::get('currency_code', config('app.currency', 'BDT'));
         $currencySymbol = SystemSettings::get('currency_symbol', '৳');
         $logoUrl = SystemSettings::logoUrl();
         $brandThemeVariables = SystemSettings::brandThemeVariables();
+        $defaultThemeMode = SystemSettings::defaultThemeMode();
 
         config([
             'app.name' => $appName,
@@ -49,6 +52,11 @@ class AppServiceProvider extends ServiceProvider
 
         View::share('appLogoUrl', $logoUrl);
         View::share('brandThemeVariables', $brandThemeVariables);
+        View::share('defaultThemeMode', $defaultThemeMode);
+        View::share('appBrandName', $brandName);
+        View::share('appBrandInitials', SystemSettings::initials($brandName));
+        View::share('legalCompanyName', $legalCompanyName);
+        View::share('legalCompanyInitials', SystemSettings::initials($legalCompanyName));
 
         View::composer(['layouts.app-header', 'layouts.partials.admin-header'], function ($view) {
             if (!auth()->check()) {

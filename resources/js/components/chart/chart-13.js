@@ -1,6 +1,7 @@
 
 export function initChartThirteen() {
     const chartThirteenEl = document.querySelector("#chartThirteen");
+    const uiFontStack = window.erpUiFontStack || 'Outfit, sans-serif';
     if (chartThirteenEl) {
         const data = [
             [1746153600000, 30.95],
@@ -249,7 +250,7 @@ export function initChartThirteen() {
             },
             colors: ["#465FFF"],
             chart: {
-                fontFamily: "Outfit, sans-serif",
+                fontFamily: uiFontStack,
                 height: 335,
                 id: "area-datetime",
                 type: "area",

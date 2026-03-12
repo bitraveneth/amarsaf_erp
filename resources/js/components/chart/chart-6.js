@@ -2,6 +2,7 @@
 
 export function initChartSix() {
     const chartSixEl = document.querySelector('#chartSix');
+    const uiFontStack = window.erpUiFontStack || 'Outfit, sans-serif';
     if (chartSixEl) {
         const chartSixOptions = {
             series: [
@@ -24,7 +25,7 @@ export function initChartSix() {
             ],
             colors: ["#2a31d8", "#465fff", "#7592ff", "#c2d6ff"],
             chart: {
-                fontFamily: "Outfit, sans-serif",
+                fontFamily: uiFontStack,
                 type: "bar",
                 stacked: true,
                 height: 315,
@@ -60,7 +61,7 @@ export function initChartSix() {
                 show: true,
                 position: "top",
                 horizontalAlign: "left",
-                fontFamily: "Outfit",
+                fontFamily: uiFontStack,
                 fontSize: "14px",
                 fontWeight: 400,
                 markers: {

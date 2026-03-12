@@ -5,7 +5,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title', config('app.name'))</title>
+    <title>@yield('title', $appBrandName ?? config('app.name'))</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
     @if(!empty($brandThemeVariables))
@@ -52,7 +52,7 @@
         });
     </script>
 </head>
-<body class="font-outfit bg-gray-50 antialiased dark:bg-gray-950" x-data>
+<body class="theme-text-scope font-outfit bg-gray-50 antialiased dark:bg-gray-950" x-data>
     {{-- Simple guest layout with loader --}}
     {{-- Page Loader --}}
     <div x-show="$store.loader.show"
@@ -63,7 +63,7 @@
          style="will-change: opacity;">
         <div class="mb-6 animate-pulse">
             @if(!empty($appLogoUrl))
-                <img src="{{ $appLogoUrl }}" alt="{{ config('app.name') }}" class="h-16 w-16 rounded-2xl border border-gray-200 object-cover shadow-theme-md dark:border-gray-700" />
+                <img src="{{ $appLogoUrl }}" alt="{{ $appBrandName }}" class="h-16 w-16 rounded-2xl border border-gray-200 object-cover shadow-theme-md dark:border-gray-700" />
             @else
                 <div class="flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-50 shadow-theme-md dark:bg-brand-500/10">
                     <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="text-brand-600 dark:text-brand-400">
@@ -75,7 +75,7 @@
             @endif
         </div>
         <h1 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
-            {{ config('app.name') }}
+            {{ $appBrandName }}
         </h1>
         <div class="flex items-center gap-2">
             <span class="h-2.5 w-2.5 rounded-full bg-brand-500 animate-bounce" style="animation-delay:0ms;"></span>
@@ -95,11 +95,11 @@
                 <a href="{{ route('login') }}" class="text-title-sm font-semibold text-gray-900 dark:text-white">
                     @if(!empty($appLogoUrl))
                         <span class="flex items-center gap-2">
-                            <img src="{{ $appLogoUrl }}" alt="{{ config('app.name') }}" class="h-8 w-8 rounded-lg border border-gray-200 object-cover dark:border-gray-700" />
-                            <span>{{ config('app.name') }}</span>
+                            <img src="{{ $appLogoUrl }}" alt="{{ $appBrandName }}" class="h-8 w-8 rounded-lg border border-gray-200 object-cover dark:border-gray-700" />
+                            <span>{{ $appBrandName }}</span>
                         </span>
                     @else
-                        {{ config('app.name') }}
+                        {{ $appBrandName }}
                     @endif
                 </a>
 
@@ -139,7 +139,7 @@
         {{-- Simple footer for guest pages --}}
         <footer class="py-6 text-center">
             <p class="text-theme-xs text-gray-500 dark:text-gray-400">
-                &copy; {{ date('Y') }} {{ config('app.name') }}. All rights reserved.
+                &copy; {{ date('Y') }} {{ $legalCompanyName }}. All rights reserved.
             </p>
         </footer>
     </div>

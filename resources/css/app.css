@@ -13,7 +13,7 @@
 
 @theme {
   --font-*: initial;
-  --font-outfit: Outfit, sans-serif;
+  --font-outfit: Outfit, Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Ubuntu, Cantarell, "Helvetica Neue", Arial, sans-serif;
 
   --breakpoint-*: initial;
   --breakpoint-2xsm: 375px;
@@ -59,6 +59,8 @@
   --color-brand-800: #252dae;
   --color-brand-900: #262e89;
   --color-brand-950: #161950;
+  --color-app-text-light: #101828;
+  --color-app-text-dark: #f9fafb;
 
   --color-blue-light-25: #f5fbff;
   --color-blue-light-50: #f0f9ff;
@@ -177,6 +179,11 @@
   color utility to any element that depends on these defaults.
 */
 @layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
   *,
   ::after,
   ::before,
@@ -190,6 +197,56 @@
   }
   body {
     @apply relative font-normal font-outfit z-1 bg-gray-50;
+    color: var(--color-app-text-light);
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  .dark body {
+    color: var(--color-app-text-dark);
+  }
+}
+
+@layer utilities {
+  .theme-text-scope .text-gray-900,
+  .theme-text-scope .text-gray-800,
+  .theme-text-scope .text-gray-700,
+  .theme-text-scope .text-gray-600 {
+    color: var(--color-app-text-light);
+  }
+
+  .theme-text-scope #sidebar,
+  .theme-text-scope #sidebar .menu-item-inactive,
+  .theme-text-scope #sidebar .menu-dropdown-item-inactive,
+  .theme-text-scope #sidebar .menu-item-icon-inactive,
+  .theme-text-scope #sidebar .menu-item-arrow-inactive,
+  .theme-text-scope #sidebar .text-gray-900,
+  .theme-text-scope #sidebar .text-gray-700,
+  .theme-text-scope #sidebar .text-gray-600,
+  .theme-text-scope #sidebar .text-gray-500,
+  .theme-text-scope #sidebar .text-gray-400 {
+    color: var(--color-app-text-light);
+  }
+
+  .dark .theme-text-scope .dark\:text-white,
+  .dark .theme-text-scope .dark\:text-white\/90,
+  .dark .theme-text-scope .dark\:text-gray-300,
+  .dark .theme-text-scope .dark\:text-gray-400 {
+    color: var(--color-app-text-dark);
+  }
+
+  .dark .theme-text-scope #sidebar,
+  .dark .theme-text-scope #sidebar .menu-item-inactive,
+  .dark .theme-text-scope #sidebar .menu-dropdown-item-inactive,
+  .dark .theme-text-scope #sidebar .menu-item-icon-inactive,
+  .dark .theme-text-scope #sidebar .menu-item-arrow-inactive,
+  .dark .theme-text-scope #sidebar .text-gray-500,
+  .dark .theme-text-scope #sidebar .text-gray-400,
+  .dark .theme-text-scope #sidebar .dark\:text-white,
+  .dark .theme-text-scope #sidebar .dark\:text-gray-400,
+  .dark .theme-text-scope #sidebar .dark\:text-gray-300 {
+    color: var(--color-app-text-dark);
   }
 }
 
@@ -298,6 +355,9 @@
 }
 
 @utility custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-gray-300) transparent;
+
   &::-webkit-scrollbar {
     @apply size-1.5;
   }
@@ -312,6 +372,9 @@
 }
 .dark .custom-scrollbar::-webkit-scrollbar-thumb {
   @apply bg-gray-700;
+}
+.dark .custom-scrollbar {
+  scrollbar-color: var(--color-gray-700) transparent;
 }
 
 /* Sidebar icons now come from SVGs via MenuHelper; no default ::before marker */

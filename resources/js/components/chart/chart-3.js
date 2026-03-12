@@ -1,6 +1,7 @@
 
 export const initChartThree = () => {
     const chartElement = document.querySelector('#chartThree');
+    const uiFontStack = window.erpUiFontStack || 'Outfit, sans-serif';
 
     if (chartElement) {
         const chartThreeOptions = {
@@ -20,7 +21,7 @@ export const initChartThree = () => {
             },
             colors: ["#465FFF", "#9CB9FF"],
             chart: {
-                fontFamily: "Outfit, sans-serif",
+                fontFamily: uiFontStack,
                 height: 310,
                 type: "area",
                 toolbar: {

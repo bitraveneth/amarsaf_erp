@@ -500,17 +500,17 @@
 </div>
 
 <div class="print-only mt-6 text-[12px] leading-relaxed text-gray-900">
-    <div class="flex items-start justify-between mb-6">
+        <div class="flex items-start justify-between mb-6">
         <div class="flex items-center gap-3">
             @if(!empty($appLogoUrl))
-                <img src="{{ $appLogoUrl }}" alt="{{ config('app.name') }}" class="h-12 w-12 rounded-full object-cover" />
+                <img src="{{ $appLogoUrl }}" alt="{{ $legalCompanyName }}" class="h-12 w-12 rounded-full object-cover" />
             @else
                 <div class="flex h-12 w-12 items-center justify-center rounded-full bg-brand-500 text-sm font-semibold text-white">
-                    {{ strtoupper(mb_substr(config('app.name'), 0, 2)) }}
+                    {{ $legalCompanyInitials }}
                 </div>
             @endif
             <div>
-                <h2 class="text-lg font-semibold text-gray-900">{{ config('app.name') }}</h2>
+                <h2 class="text-lg font-semibold text-gray-900">{{ $legalCompanyName }}</h2>
                 <p class="mt-1 text-xs text-gray-600">Order &amp; Delivery</p>
             </div>
         </div>

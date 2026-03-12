@@ -93,9 +93,9 @@
         <div class="header">
             <div class="row">
                 <div>
-                    <span class="logo-circle">{{ $appInitials }}</span>
+                    <span class="logo-circle">{{ $legalCompanyInitials ?? $appInitials }}</span>
                     <div style="margin-top:6px;">
-                        <h2 style="font-size:13px; font-weight:600;">{{ $appName }}</h2>
+                        <h2 style="font-size:13px; font-weight:600;">{{ $legalCompanyName ?? $appName }}</h2>
                         <p class="text-muted" style="font-size:10px;">Invoice &amp; Finance</p>
                     </div>
                 </div>
