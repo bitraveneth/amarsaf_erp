@@ -45,17 +45,16 @@
     <!-- Status Message -->
 
     <!-- Monthly Summary Cards -->
-    @if($settlements->isNotEmpty())
-        @php
-            $totalSales = $settlements->sum('sales_total');
-            $totalCommission = $settlements->sum('commission_total');
-            $avgRate = $totalSales > 0 ? ($totalCommission / $totalSales) * 100 : 0;
-            $paidCount = $settlements->where('status', 'paid')->count();
-            $approvedCount = $settlements->where('status', 'approved')->count();
-            $openCount = $settlements->where('status', 'open')->count();
-        @endphp
+    @php
+        $totalSales = $settlements->sum('sales_total');
+        $totalCommission = $settlements->sum('commission_total');
+        $avgRate = $totalSales > 0 ? ($totalCommission / $totalSales) * 100 : 0;
+        $paidCount = $settlements->where('status', 'paid')->count();
+        $approvedCount = $settlements->where('status', 'approved')->count();
+        $openCount = $settlements->where('status', 'open')->count();
+    @endphp
 
-        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <!-- Total Sales Card -->
             <div class="rounded-xl bg-white p-5 border border-gray-200 shadow-theme-xs dark:border-gray-800 dark:bg-gray-900">
                 <div class="flex items-center justify-between">
@@ -152,8 +151,7 @@
                     </div>
                 </div>
             </div>
-        </div>
-    @endif
+    </div>
 
     <!-- Settlements Table -->
     @if($settlements->isEmpty())
