@@ -132,9 +132,9 @@
             {{-- Logo (mobile) --}}
             <a href="{{ route('admin.dashboard') }}" class="flex items-center gap-2 xl:hidden">
                 @if(!empty($appLogoUrl))
-                    <img src="{{ $appLogoUrl }}" alt="{{ $appBrandName }}" class="h-9 w-9 rounded-xl border border-gray-200 object-cover dark:border-gray-700" />
+                    <img src="{{ $appLogoUrl }}" alt="{{ $appBrandName }}" class="app-brand-logo rounded-xl border border-gray-200 object-cover dark:border-gray-700" />
                 @else
-                    <span class="flex h-9 w-9 items-center justify-center rounded-full bg-brand-500 text-sm font-semibold text-white">
+                    <span class="app-brand-logo flex items-center justify-center rounded-full bg-brand-500 text-sm font-semibold text-white">
                         {{ $appBrandInitials }}
                     </span>
                 @endif

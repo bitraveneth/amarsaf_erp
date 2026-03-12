@@ -72,21 +72,21 @@
         '-translate-x-full xl:translate-x-0': !$store.sidebar.isMobileOpen
     }">
     <!-- Logo Section (circle initials) -->
-    <div class="px-5 pt-6 pb-5 flex"
+    <div class="px-5 pt-5 pb-4 flex"
          :class="!isSidebarVisible()
             ? 'xl:justify-center'
             : 'justify-start'">
-        <a href="{{ route('admin.dashboard') }}" data-tour="sidebar-brand" class="flex items-center gap-3">
+        <a href="{{ route('admin.dashboard') }}" data-tour="sidebar-brand" class="flex items-center gap-4">
             @if(!empty($appLogoUrl))
-                <img src="{{ $appLogoUrl }}" alt="{{ $appBrandName }}" class="h-10 w-10 rounded-xl border border-gray-200 object-cover dark:border-gray-700" />
+                <img src="{{ $appLogoUrl }}" alt="{{ $appBrandName }}" class="h-12 w-12 rounded-xl border border-gray-200 object-cover dark:border-gray-700" />
             @else
-                <div class="flex h-10 w-10 items-center justify-center rounded-full bg-brand-500 text-sm font-semibold text-white">
+                <div class="flex h-12 w-12 items-center justify-center rounded-full bg-brand-500 text-base font-semibold text-white">
                     {{ $appBrandInitials }}
                 </div>
             @endif
             <div class="flex flex-col"
                  x-show="isSidebarVisible()">
-                <span class="text-sm font-semibold text-gray-900 dark:text-white">{{ $appBrandName }}</span>
+                <span class="text-[2rem] font-bold leading-none tracking-tight text-gray-900 dark:text-white">{{ $appBrandName }}</span>
             </div>
         </a>
     </div>

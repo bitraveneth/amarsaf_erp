@@ -209,6 +209,16 @@
 }
 
 @layer utilities {
+  .app-brand-logo {
+    width: 3rem;
+    height: 3rem;
+  }
+
+  .app-brand-logo-lg {
+    width: 5.5rem;
+    height: 5.5rem;
+  }
+
   .theme-text-scope .text-gray-900,
   .theme-text-scope .text-gray-800,
   .theme-text-scope .text-gray-700,
