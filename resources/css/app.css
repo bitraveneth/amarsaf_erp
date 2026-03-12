@@ -204,12 +204,12 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
-  .dark html {
-    background-color: #030712;
+  html.dark {
+    background-color: var(--color-gray-900);
   }
 
   .dark body {
-    @apply bg-gray-950;
+    @apply bg-gray-900;
     color: var(--color-app-text-dark);
   }
 }

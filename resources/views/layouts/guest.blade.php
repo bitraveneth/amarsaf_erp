@@ -9,19 +9,62 @@
 
     <script>
         window.erpDefaultThemeMode = @json($defaultThemeMode ?? 'dark');
-        (function () {
-            const savedTheme = localStorage.getItem('theme');
-            const configuredTheme = window.erpDefaultThemeMode || 'dark';
-            const fallbackTheme = configuredTheme === 'system'
-                ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
-                : configuredTheme;
-            const theme = savedTheme || fallbackTheme;
+        window.erpTheme = {
+            getStoredTheme() {
+                try {
+                    return localStorage.getItem('theme');
+                } catch (error) {
+                    return null;
+                }
+            },
+            setStoredTheme(theme) {
+                try {
+                    localStorage.setItem('theme', theme);
+                } catch (error) {
+                    // Ignore storage failures and keep the in-memory theme.
+                }
+            },
+            resolveTheme() {
+                const savedTheme = this.getStoredTheme();
+                const configuredTheme = window.erpDefaultThemeMode || 'dark';
+                const fallbackTheme = configuredTheme === 'system'
+                    ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+                    : configuredTheme;
 
-            if (theme === 'dark') {
-                document.documentElement.classList.add('dark');
-            } else {
-                document.documentElement.classList.remove('dark');
+                return savedTheme || fallbackTheme;
+            },
+            applyTheme(theme) {
+                const html = document.documentElement;
+                const body = document.body;
+                const lightBg = '#F9FAFB';
+                const darkBg = '#101828';
+
+                if (theme === 'dark') {
+                    html.classList.add('dark');
+                    html.style.backgroundColor = darkBg;
+                    html.style.colorScheme = 'dark';
+                    if (body) {
+                        body.classList.add('dark', 'bg-gray-900');
+                        body.classList.remove('bg-gray-50', 'bg-gray-950');
+                        body.style.backgroundColor = darkBg;
+                        body.style.colorScheme = 'dark';
+                    }
+                } else {
+                    html.classList.remove('dark');
+                    html.style.backgroundColor = lightBg;
+                    html.style.colorScheme = 'light';
+                    if (body) {
+                        body.classList.remove('dark', 'bg-gray-900', 'bg-gray-950');
+                        body.classList.add('bg-gray-50');
+                        body.style.backgroundColor = lightBg;
+                        body.style.colorScheme = 'light';
+                    }
+                }
             }
+        };
+
+        (function () {
+            window.erpTheme.applyTheme(window.erpTheme.resolveTheme());
         })();
     </script>
 
@@ -71,14 +114,14 @@
         });
     </script>
 </head>
-<body class="theme-text-scope font-outfit bg-gray-50 antialiased dark:bg-gray-950" x-data>
+<body class="theme-text-scope font-outfit bg-gray-50 antialiased dark:bg-gray-900" x-data>
     {{-- Simple guest layout with loader --}}
     {{-- Page Loader --}}
     <div x-show="$store.loader.show"
          x-transition:leave="loader-fade-leave"
          x-transition:leave-start="opacity-100"
          x-transition:leave-end="opacity-0"
-        class="fixed inset-0 z-[99999] flex flex-col items-center justify-center bg-white dark:bg-gray-950"
+        class="fixed inset-0 z-[99999] flex flex-col items-center justify-center bg-white dark:bg-gray-900"
          style="will-change: opacity;">
         <div class="mb-6 animate-pulse">
             @if(!empty($appLogoUrl))
@@ -170,28 +213,10 @@
             
             if (themeToggle) {
                 themeToggle.addEventListener('click', function() {
-                    // Check if dark class is present
-                    if (document.documentElement.classList.contains('dark')) {
-                        document.documentElement.classList.remove('dark');
-                        localStorage.setItem('theme', 'light');
-                    } else {
-                        document.documentElement.classList.add('dark');
-                        localStorage.setItem('theme', 'dark');
-                    }
+                    const nextTheme = document.documentElement.classList.contains('dark') ? 'light' : 'dark';
+                    window.erpTheme.applyTheme(nextTheme);
+                    window.erpTheme.setStoredTheme(nextTheme);
                 });
-            }
-
-            // Check for saved theme preference
-            const savedTheme = localStorage.getItem('theme');
-            if (savedTheme === 'dark') {
-                document.documentElement.classList.add('dark');
-            } else if (savedTheme === 'light') {
-                document.documentElement.classList.remove('dark');
-            } else {
-                // Check system preference
-                if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-                    document.documentElement.classList.add('dark');
-                }
             }
         });
     </script>

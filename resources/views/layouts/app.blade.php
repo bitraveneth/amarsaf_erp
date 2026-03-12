@@ -13,19 +13,62 @@
 
     <script>
         window.erpDefaultThemeMode = @json($defaultThemeMode ?? 'dark');
-        (function () {
-            const savedTheme = localStorage.getItem('theme');
-            const configuredTheme = window.erpDefaultThemeMode || 'dark';
-            const fallbackTheme = configuredTheme === 'system'
-                ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
-                : configuredTheme;
-            const theme = savedTheme || fallbackTheme;
+        window.erpTheme = {
+            getStoredTheme() {
+                try {
+                    return localStorage.getItem('theme');
+                } catch (error) {
+                    return null;
+                }
+            },
+            setStoredTheme(theme) {
+                try {
+                    localStorage.setItem('theme', theme);
+                } catch (error) {
+                    // Ignore storage failures and keep the in-memory theme.
+                }
+            },
+            resolveTheme() {
+                const savedTheme = this.getStoredTheme();
+                const configuredTheme = window.erpDefaultThemeMode || 'dark';
+                const fallbackTheme = configuredTheme === 'system'
+                    ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+                    : configuredTheme;
 
-            if (theme === 'dark') {
-                document.documentElement.classList.add('dark');
-            } else {
-                document.documentElement.classList.remove('dark');
+                return savedTheme || fallbackTheme;
+            },
+            applyTheme(theme) {
+                const html = document.documentElement;
+                const body = document.body;
+                const lightBg = '#F9FAFB';
+                const darkBg = '#101828';
+
+                if (theme === 'dark') {
+                    html.classList.add('dark');
+                    html.style.backgroundColor = darkBg;
+                    html.style.colorScheme = 'dark';
+                    if (body) {
+                        body.classList.add('dark', 'bg-gray-900');
+                        body.classList.remove('bg-gray-50');
+                        body.style.backgroundColor = darkBg;
+                        body.style.colorScheme = 'dark';
+                    }
+                } else {
+                    html.classList.remove('dark');
+                    html.style.backgroundColor = lightBg;
+                    html.style.colorScheme = 'light';
+                    if (body) {
+                        body.classList.remove('dark', 'bg-gray-900');
+                        body.classList.add('bg-gray-50');
+                        body.style.backgroundColor = lightBg;
+                        body.style.colorScheme = 'light';
+                    }
+                }
             }
+        };
+
+        (function () {
+            window.erpTheme.applyTheme(window.erpTheme.resolveTheme());
         })();
     </script>
 
@@ -51,35 +94,17 @@
         document.addEventListener('alpine:init', () => {
             Alpine.store('theme', {
                 init() {
-                    const savedTheme = localStorage.getItem('theme');
-                    const configuredTheme = window.erpDefaultThemeMode || 'dark';
-                    const fallbackTheme = configuredTheme === 'system'
-                        ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
-                        : configuredTheme;
-                    this.theme = savedTheme || fallbackTheme;
+                    this.theme = window.erpTheme.resolveTheme();
                     this.updateTheme();
                 },
                 theme: 'dark',
                 toggle() {
                     this.theme = this.theme === 'light' ? 'dark' : 'light';
-                    localStorage.setItem('theme', this.theme);
+                    window.erpTheme.setStoredTheme(this.theme);
                     this.updateTheme();
                 },
                 updateTheme() {
-                    const html = document.documentElement;
-                    const body = document.body;
-
-                    if (this.theme === 'dark') {
-                        html.classList.add('dark');
-                        if (body) {
-                            body.classList.add('dark', 'bg-gray-900');
-                        }
-                    } else {
-                        html.classList.remove('dark');
-                        if (body) {
-                            body.classList.remove('dark', 'bg-gray-900');
-                        }
-                    }
+                    window.erpTheme.applyTheme(this.theme);
                 },
             });
 
@@ -112,41 +137,6 @@
             });
 
         });
-    </script>
-
-    <script>
-        (function() {
-            const savedTheme = localStorage.getItem('theme');
-            const configuredTheme = window.erpDefaultThemeMode || 'dark';
-            const fallbackTheme = configuredTheme === 'system'
-                ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
-                : configuredTheme;
-            const theme = savedTheme || fallbackTheme;
-
-            const applyBodyTheme = () => {
-                if (!document.body) {
-                    return;
-                }
-
-                if (theme === 'dark') {
-                    document.body.classList.add('dark', 'bg-gray-900');
-                } else {
-                    document.body.classList.remove('dark', 'bg-gray-900');
-                }
-            };
-
-            if (theme === 'dark') {
-                document.documentElement.classList.add('dark');
-            } else {
-                document.documentElement.classList.remove('dark');
-            }
-
-            if (document.body) {
-                applyBodyTheme();
-            } else {
-                document.addEventListener('DOMContentLoaded', applyBodyTheme, { once: true });
-            }
-        })();
     </script>
 
     <style>
