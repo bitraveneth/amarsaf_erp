@@ -2,7 +2,9 @@
 
 @section('content')
 <div class="space-y-6">
-    @php($canManageSettlementAccounting = \App\Helpers\Permission::can(auth()->user(), 'accounting.manage'))
+    @php
+        $canManageSettlementAccounting = \App\Helpers\Permission::can(auth()->user(), 'accounting.manage');
+    @endphp
     <!-- Header -->
     <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
