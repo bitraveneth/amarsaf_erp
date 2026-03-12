@@ -105,11 +105,11 @@
                 <p class="text-sm text-gray-500 dark:text-gray-400">No sales data for this period.</p>
             @else
                 <ul class="space-y-3">
-                    @foreach($topAgents as $agentName => $amount)
+                    @foreach($topAgents as $agent)
                         <li class="flex items-center justify-between">
-                            <span class="text-sm text-gray-700 dark:text-gray-300">{{ $agentName }}</span>
+                            <span class="text-sm text-gray-700 dark:text-gray-300">{{ $agent['agent_name'] }}</span>
                             <span class="text-sm font-semibold text-gray-900 dark:text-white">
-                                {{ number_format($amount, 0) }}
+                                {{ number_format($agent['net_sales'], 0) }}
                             </span>
                         </li>
                     @endforeach
@@ -124,16 +124,16 @@
                 <p class="text-sm text-gray-500 dark:text-gray-400">No product sales for this period.</p>
             @else
                 <ul class="space-y-3">
-                    @foreach($topProducts as $productName => $metrics)
+                    @foreach($topProducts as $product)
                         <li class="flex items-center justify-between">
                             <div>
-                                <p class="text-sm font-medium text-gray-900 dark:text-white">{{ $productName }}</p>
+                                <p class="text-sm font-medium text-gray-900 dark:text-white">{{ $product['product_name'] }}</p>
                                 <p class="text-xs text-gray-500 dark:text-gray-400">
-                                    Qty: {{ number_format($metrics['qty'], 0) }}
+                                    Qty: {{ number_format($product['qty'], 0) }}
                                 </p>
                             </div>
                             <span class="text-sm font-semibold text-gray-900 dark:text-white">
-                                {{ number_format($metrics['net'], 0) }}
+                                {{ number_format($product['net'], 0) }}
                             </span>
                         </li>
                     @endforeach
@@ -169,4 +169,3 @@
     </div>
 </div>
 @endsection
-

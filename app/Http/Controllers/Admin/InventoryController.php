@@ -19,6 +19,8 @@ class InventoryController extends Controller
             ->when($warehouseIds !== null, function ($query) use ($warehouseIds) {
                 $query->whereIn('warehouse_id', $warehouseIds);
             })
+            ->where('status', 'available')
+            ->where('quantity', '>', 0)
             ->whereNotNull('batch_id')
             ->whereHas('batch', function ($query) use ($today) {
                 $query->where('expiry_date', '<=', $today->copy()->addDays(30));
@@ -64,6 +66,7 @@ class InventoryController extends Controller
             ->when($warehouseIds !== null, function ($query) use ($warehouseIds) {
                 $query->whereIn('warehouse_id', $warehouseIds);
             })
+            ->where('status', 'available')
             ->whereHas('product', function ($query) {
                 $query->where('product_type', 'raw');
             })

@@ -40,7 +40,7 @@ class VehicleScheduleController extends Controller
             ->orderBy('id')
             ->get();
 
-        $vehicles = Vehicle::orderBy('name')->get();
+        $vehicles = Vehicle::where('is_active', true)->orderBy('name')->get();
         $routes = DeliveryRoute::orderBy('name')->get();
 
         return view('admin.deliveries.schedule', compact('schedules', 'vehicles', 'routes', 'date', 'deliveries'));

@@ -181,7 +181,7 @@
                             </div>
                         </div>
 
-                        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
                             <!-- Description (Full Width) -->
                             <div class="sm:col-span-2 lg:col-span-4">
                                 <label for="items[0][description]" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -203,7 +203,7 @@
                                         class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white">
                                     <option value="">None</option>
                                     @foreach($products as $product)
-                                        <option value="{{ $product->id }}">{{ $product->sku }} — {{ $product->name }}</option>
+                                        <option value="{{ $product->id }}" data-default-vat="{{ $product->taxClass->rate ?? 0 }}">{{ $product->sku }} — {{ $product->name }}</option>
                                     @endforeach
                                 </select>
                             </div>
@@ -238,12 +238,26 @@
                                 </div>
                             </div>
 
+                            <div>
+                                <label for="items[0][vat_rate]" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    VAT Rate %
+                                </label>
+                                <input type="number"
+                                       name="items[0][vat_rate]"
+                                       step="0.01"
+                                       min="0"
+                                       max="100"
+                                       value="0"
+                                       class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 placeholder-gray-500 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-400"
+                                       placeholder="0.00">
+                            </div>
+
                             <!-- Line Total (Display Only) -->
                             <div>
                                 <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
                                     Line Total
                                 </label>
-                                <div class="flex h-10 items-center rounded-lg bg-gray-100 px-4 text-sm font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-300">
+                                <div class="line-total-display flex h-10 items-center rounded-lg bg-gray-100 px-4 text-sm font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-300">
                                     BDT 0.00
                                 </div>
                             </div>
@@ -273,7 +287,9 @@
                     </div>
                     <div class="text-right">
                         <p class="text-xs text-gray-500 dark:text-gray-400">Subtotal</p>
-                        <p class="text-lg font-semibold text-gray-900 dark:text-white">BDT 0.00</p>
+                        <p id="bill-subtotal" class="text-lg font-semibold text-gray-900 dark:text-white">BDT 0.00</p>
+                        <p id="bill-vat" class="text-xs text-gray-500 dark:text-gray-400">VAT: BDT 0.00</p>
+                        <p id="bill-total" class="text-sm font-medium text-gray-900 dark:text-white">Total: BDT 0.00</p>
                     </div>
                 </div>
             </div>
@@ -339,7 +355,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const qty = row.querySelector('input[name*="[quantity]"]')?.value || 0;
         const price = row.querySelector('input[name*="[unit_price]"]')?.value || 0;
         const total = parseFloat(qty) * parseFloat(price);
-        const totalEl = row.querySelector('div:last-child .flex.items-center');
+        const totalEl = row.querySelector('.line-total-display');
         if (totalEl) {
             totalEl.textContent = `BDT ${total.toFixed(2)}`;
         }
@@ -348,14 +364,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function calculateBillTotal() {
         let subtotal = 0;
+        let vatTotal = 0;
         wrapper.querySelectorAll('.bill-item-row').forEach(row => {
             subtotal += calculateLineTotal(row);
+            const qty = parseFloat(row.querySelector('input[name*="[quantity]"]')?.value || 0);
+            const price = parseFloat(row.querySelector('input[name*="[unit_price]"]')?.value || 0);
+            const vatRate = parseFloat(row.querySelector('input[name*="[vat_rate]"]')?.value || 0);
+            vatTotal += (qty * price) * (vatRate / 100);
         });
-        
-        const summaryTotal = document.querySelector('.text-right .text-lg');
-        if (summaryTotal) {
-            summaryTotal.textContent = `BDT ${subtotal.toFixed(2)}`;
-        }
+
+        document.getElementById('bill-subtotal').textContent = `BDT ${subtotal.toFixed(2)}`;
+        document.getElementById('bill-vat').textContent = `VAT: BDT ${vatTotal.toFixed(2)}`;
+        document.getElementById('bill-total').textContent = `Total: BDT ${(subtotal + vatTotal).toFixed(2)}`;
     }
 
     addBtn?.addEventListener('click', () => {
@@ -382,7 +402,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 </button>
             </div>
 
-            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
                 <div class="sm:col-span-2 lg:col-span-4">
                     <label for="items[${index}][description]" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
                         Description <span class="text-error-500">*</span>
@@ -402,7 +422,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white">
                         <option value="">None</option>
                         @foreach($products as $product)
-                            <option value="{{ $product->id }}">{{ $product->sku }} — {{ $product->name }}</option>
+                            <option value="{{ $product->id }}" data-default-vat="{{ $product->taxClass->rate ?? 0 }}">{{ $product->sku }} — {{ $product->name }}</option>
                         @endforeach
                     </select>
                 </div>
@@ -436,10 +456,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
 
                 <div>
+                    <label for="items[${index}][vat_rate]" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        VAT Rate %
+                    </label>
+                    <input type="number" 
+                           name="items[${index}][vat_rate]" 
+                           step="0.01" 
+                           min="0"
+                           max="100"
+                           value="0"
+                           class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 placeholder-gray-500 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-400"
+                           placeholder="0.00">
+                </div>
+
+                <div>
                     <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
                         Line Total
                     </label>
-                    <div class="flex h-10 items-center rounded-lg bg-gray-100 px-4 text-sm font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-300">
+                    <div class="line-total-display flex h-10 items-center rounded-lg bg-gray-100 px-4 text-sm font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-300">
                         BDT 0.00
                     </div>
                 </div>
@@ -452,8 +486,16 @@ document.addEventListener('DOMContentLoaded', () => {
         updateItemCount();
 
         // Add event listeners for quantity and price changes
-        row.querySelectorAll('input[name*="[quantity]"], input[name*="[unit_price]"]').forEach(input => {
+        row.querySelectorAll('input[name*="[quantity]"], input[name*="[unit_price]"], input[name*="[vat_rate]"]').forEach(input => {
             input.addEventListener('input', () => calculateBillTotal());
+        });
+        row.querySelector('select[name*="[product_id]"]')?.addEventListener('change', event => {
+            const selected = event.target.selectedOptions[0];
+            const vatInput = row.querySelector('input[name*="[vat_rate]"]');
+            if (vatInput && selected && parseFloat(vatInput.value || 0) === 0) {
+                vatInput.value = selected.dataset.defaultVat || 0;
+                calculateBillTotal();
+            }
         });
     });
 
@@ -461,9 +503,21 @@ document.addEventListener('DOMContentLoaded', () => {
     updateItemCount();
 
     // Initial calculation listeners
-    document.querySelectorAll('input[name*="[quantity]"], input[name*="[unit_price]"]').forEach(input => {
+    document.querySelectorAll('input[name*="[quantity]"], input[name*="[unit_price]"], input[name*="[vat_rate]"]').forEach(input => {
         input.addEventListener('input', () => calculateBillTotal());
     });
+    document.querySelectorAll('select[name*="[product_id]"]').forEach(select => {
+        select.addEventListener('change', event => {
+            const row = event.target.closest('.bill-item-row');
+            const vatInput = row?.querySelector('input[name*="[vat_rate]"]');
+            const selected = event.target.selectedOptions[0];
+            if (vatInput && selected && parseFloat(vatInput.value || 0) === 0) {
+                vatInput.value = selected.dataset.defaultVat || 0;
+                calculateBillTotal();
+            }
+        });
+    });
+    calculateBillTotal();
 });
 </script>
 @endpush

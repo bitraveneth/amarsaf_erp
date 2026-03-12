@@ -133,11 +133,11 @@ class EmployeeContractController extends Controller
             abort(404);
         }
 
-        $contract->delete();
-
         return redirect()
             ->route('admin.employees.contracts.index', $employee)
-            ->with('status', 'Contract deleted.');
+            ->withErrors([
+                'contract' => 'Employee contract history cannot be deleted. End or correct the contract instead.',
+            ]);
     }
 
     protected function validated(Request $request): array

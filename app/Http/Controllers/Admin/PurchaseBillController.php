@@ -27,7 +27,7 @@ class PurchaseBillController extends Controller
     public function create()
     {
         $suppliers = Supplier::orderBy('name')->get();
-        $products = Product::orderBy('name')->get();
+        $products = Product::with('taxClass')->orderBy('name')->get();
         $warehouses = Warehouse::orderBy('name')->get();
 
         return view('admin.bills.create', compact('suppliers', 'products', 'warehouses'));
@@ -36,7 +36,7 @@ class PurchaseBillController extends Controller
     public function edit(PurchaseBill $bill)
     {
         $suppliers = Supplier::orderBy('name')->get();
-        $products = Product::orderBy('name')->get();
+        $products = Product::with('taxClass')->orderBy('name')->get();
 
         $bill->load('items');
 
@@ -55,23 +55,21 @@ class PurchaseBillController extends Controller
             'items.*.product_id' => 'nullable|exists:products,id',
             'items.*.quantity' => 'required|integer|min:1',
             'items.*.unit_price' => 'required|numeric|min:0',
+            'items.*.vat_rate' => 'nullable|numeric|min:0|max:100',
         ]);
 
-        $netTotal = 0;
-        foreach ($data['items'] as $item) {
-            $netTotal += $item['quantity'] * $item['unit_price'];
-        }
+        [$items, $netTotal, $vatTotal] = $this->normalizeBillItems($data['items']);
 
         $bill = null;
 
-        DB::transaction(function () use ($data, $netTotal, &$bill) {
+        DB::transaction(function () use ($data, $items, $netTotal, $vatTotal, &$bill) {
             $bill = PurchaseBill::create([
                 'supplier_id' => $data['supplier_id'],
                 'number' => 'PB-TMP-' . Str::uuid(),
                 'bill_date' => $data['bill_date'],
                 'due_date' => $data['due_date'] ?? null,
                 'net_total' => $netTotal,
-                'vat_amount' => 0,
+                'vat_amount' => $vatTotal,
                 'status' => 'open',
             ]);
 
@@ -79,35 +77,20 @@ class PurchaseBillController extends Controller
                 'number' => $this->formatPurchaseBillNumber($bill->id),
             ]);
 
-            foreach ($data['items'] as $item) {
+            foreach ($items as $item) {
                 PurchaseBillItem::create([
                     'purchase_bill_id' => $bill->id,
                     'product_id' => $item['product_id'] ?? null,
                     'description' => $item['description'],
                     'quantity' => $item['quantity'],
                     'unit_price' => $item['unit_price'],
-                    'line_total' => $item['quantity'] * $item['unit_price'],
+                    'vat_rate' => $item['vat_rate'],
+                    'line_total' => $item['line_total'],
+                    'vat_amount' => $item['vat_amount'],
                 ]);
             }
 
-            LedgerEntry::create([
-                'account' => 'Purchases',
-                'description' => 'Purchase bill ' . $bill->number,
-                'debit' => $netTotal,
-                'credit' => 0,
-                'order_id' => null,
-                'invoice_id' => null,
-            ]);
-
-            LedgerEntry::create([
-                'account' => 'Accounts Payable',
-                'description' => 'Purchase bill ' . $bill->number,
-                'debit' => 0,
-                'credit' => $netTotal,
-                'order_id' => null,
-                'invoice_id' => null,
-            ]);
-
+            $this->refreshLedgerEntries($bill, $netTotal, $vatTotal);
         });
 
         return redirect()
@@ -141,59 +124,39 @@ class PurchaseBillController extends Controller
             'items.*.product_id' => 'nullable|exists:products,id',
             'items.*.quantity' => 'required|integer|min:1',
             'items.*.unit_price' => 'required|numeric|min:0',
+            'items.*.vat_rate' => 'nullable|numeric|min:0|max:100',
         ]);
 
-        $netTotal = 0;
-        foreach ($data['items'] as $item) {
-            $netTotal += $item['quantity'] * $item['unit_price'];
-        }
+        [$items, $netTotal, $vatTotal] = $this->normalizeBillItems($data['items']);
 
-        DB::transaction(function () use ($data, $bill, $netTotal) {
+        DB::transaction(function () use ($data, $bill, $items, $netTotal, $vatTotal) {
             // Update bill header
             $bill->update([
                 'supplier_id' => $data['supplier_id'],
                 'bill_date' => $data['bill_date'],
                 'due_date' => $data['due_date'] ?? null,
                 'net_total' => $netTotal,
+                'vat_amount' => $vatTotal,
             ]);
 
             // Remove existing items
             $bill->items()->delete();
 
             // Recreate items
-            foreach ($data['items'] as $item) {
+            foreach ($items as $item) {
                 PurchaseBillItem::create([
                     'purchase_bill_id' => $bill->id,
                     'product_id' => $item['product_id'] ?? null,
                     'description' => $item['description'],
                     'quantity' => $item['quantity'],
                     'unit_price' => $item['unit_price'],
-                    'line_total' => $item['quantity'] * $item['unit_price'],
+                    'vat_rate' => $item['vat_rate'],
+                    'line_total' => $item['line_total'],
+                    'vat_amount' => $item['vat_amount'],
                 ]);
             }
 
-            // Refresh related ledger entries for this bill
-            $description = 'Purchase bill ' . $bill->number;
-
-            LedgerEntry::where('description', $description)->delete();
-
-            LedgerEntry::create([
-                'account' => 'Purchases',
-                'description' => $description,
-                'debit' => $netTotal,
-                'credit' => 0,
-                'order_id' => null,
-                'invoice_id' => null,
-            ]);
-
-            LedgerEntry::create([
-                'account' => 'Accounts Payable',
-                'description' => $description,
-                'debit' => 0,
-                'credit' => $netTotal,
-                'order_id' => null,
-                'invoice_id' => null,
-            ]);
+            $this->refreshLedgerEntries($bill, $netTotal, $vatTotal);
         });
 
         return redirect()->route('admin.bills.index')->with('status', 'Purchase bill updated.');
@@ -281,21 +244,105 @@ class PurchaseBillController extends Controller
                 ]);
         }
 
+        if ($bill->payments()->exists() || $this->hasFinancialPostings($bill)) {
+            return redirect()
+                ->route('admin.bills.index')
+                ->withErrors([
+                    'bill' => 'Posted purchase bills cannot be deleted. Preserve the AP audit trail and issue a controlled supplier adjustment instead.',
+                ]);
+        }
+
         DB::transaction(function () use ($bill) {
-            // Delete ledger entries related to this bill (bill + payments)
-            $billDescription = 'Purchase bill ' . $bill->number;
-            $paymentDescription = 'Payment for ' . $bill->number;
-
-            LedgerEntry::whereIn('description', [$billDescription, $paymentDescription])->delete();
-
-            // Delete payments & items then the bill itself
-            $bill->payments()->delete();
             $bill->items()->delete();
             $bill->delete();
         });
 
         return redirect()->route('admin.bills.index')->with('status', 'Purchase bill deleted.');
     }
+
+    protected function hasFinancialPostings(PurchaseBill $bill): bool
+    {
+        return LedgerEntry::whereIn('description', [
+            'Purchase bill ' . $bill->number,
+            'Payment for ' . $bill->number,
+        ])->exists();
+    }
+
+    protected function normalizeBillItems(array $items): array
+    {
+        $productVatRates = Product::with('taxClass')
+            ->whereIn('id', collect($items)->pluck('product_id')->filter()->all())
+            ->get()
+            ->mapWithKeys(function (Product $product) {
+                return [$product->id => (float) (optional($product->taxClass)->rate ?? 0)];
+            });
+
+        $normalized = [];
+        $netTotal = 0.0;
+        $vatTotal = 0.0;
+
+        foreach ($items as $item) {
+            $quantity = (int) $item['quantity'];
+            $unitPrice = round((float) $item['unit_price'], 2);
+            $lineTotal = round($quantity * $unitPrice, 2);
+            $vatRate = isset($item['vat_rate']) && $item['vat_rate'] !== ''
+                ? round((float) $item['vat_rate'], 2)
+                : round((float) ($productVatRates[$item['product_id'] ?? null] ?? 0), 2);
+            $vatAmount = round($lineTotal * ($vatRate / 100), 2);
+
+            $normalized[] = [
+                'product_id' => $item['product_id'] ?? null,
+                'description' => $item['description'],
+                'quantity' => $quantity,
+                'unit_price' => $unitPrice,
+                'vat_rate' => $vatRate,
+                'line_total' => $lineTotal,
+                'vat_amount' => $vatAmount,
+            ];
+
+            $netTotal += $lineTotal;
+            $vatTotal += $vatAmount;
+        }
+
+        return [$normalized, round($netTotal, 2), round($vatTotal, 2)];
+    }
+
+    protected function refreshLedgerEntries(PurchaseBill $bill, float $netTotal, float $vatTotal): void
+    {
+        $description = 'Purchase bill ' . $bill->number;
+
+        LedgerEntry::where('description', $description)->delete();
+
+        LedgerEntry::create([
+            'account' => 'Purchases',
+            'description' => $description,
+            'debit' => $netTotal,
+            'credit' => 0,
+            'order_id' => null,
+            'invoice_id' => null,
+        ]);
+
+        if ($vatTotal > 0) {
+            LedgerEntry::create([
+                'account' => 'Input VAT',
+                'description' => $description,
+                'debit' => $vatTotal,
+                'credit' => 0,
+                'order_id' => null,
+                'invoice_id' => null,
+            ]);
+        }
+
+        LedgerEntry::create([
+            'account' => 'Accounts Payable',
+            'description' => $description,
+            'debit' => 0,
+            'credit' => $netTotal + $vatTotal,
+            'order_id' => null,
+            'invoice_id' => null,
+        ]);
+    }
+
     protected function formatPurchaseBillNumber(int $purchaseBillId): string
     {
         return 'PB-' . str_pad((string) $purchaseBillId, 6, '0', STR_PAD_LEFT);

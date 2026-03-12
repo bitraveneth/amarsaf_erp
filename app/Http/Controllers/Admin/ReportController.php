@@ -16,9 +16,11 @@ use App\Models\EmployeeContract;
 use App\Models\EmployeeAllowance;
 use App\Models\BillOfMaterial;
 use App\Models\SalaryDistribution;
+use App\Models\PurchaseBill;
 use Illuminate\Support\Collection;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Schema;
 
 class ReportController extends Controller
 {
@@ -117,22 +119,27 @@ class ReportController extends Controller
         $from = $month->copy()->startOfMonth();
         $to = $month->copy()->endOfMonth();
 
-        // Summary from ledger (existing behaviour)
-        $entries = LedgerEntry::where('account', 'VAT Payable')
+        $outputEntries = LedgerEntry::where('account', 'VAT Payable')
             ->whereBetween('created_at', [$from, $to])
             ->get();
 
-        $vatCollected = $entries->sum('credit') - $entries->sum('debit');
+        $inputEntries = LedgerEntry::where('account', 'Input VAT')
+            ->whereBetween('created_at', [$from, $to])
+            ->get();
+
+        $outputVat = (float) $outputEntries->sum('credit') - (float) $outputEntries->sum('debit');
+        $inputVat = (float) $inputEntries->sum('debit') - (float) $inputEntries->sum('credit');
+        $vatCollected = round($outputVat - $inputVat, 2);
 
         // Detailed per‑invoice breakdown (output VAT)
-        $invoices = Invoice::with(['order.agent'])
+        $invoices = Invoice::with(['order.agent', 'creditNotes'])
             ->whereBetween('issued_at', [$from->toDateString(), $to->toDateString()])
             ->orderBy('issued_at')
             ->get();
 
         $invoiceRows = $invoices->map(function (Invoice $invoice) {
-            $taxable = (float) $invoice->net_total;
-            $vat = (float) $invoice->vat_amount;
+            $taxable = (float) $invoice->net_sales_after_credits;
+            $vat = max(0.0, (float) $invoice->vat_amount - (float) $invoice->credit_notes_vat_total);
             $rate = $taxable > 0 ? round(($vat / $taxable) * 100, 2) : null;
 
             return [
@@ -150,13 +157,42 @@ class ReportController extends Controller
             'vat'     => $invoiceRows->sum('vat'),
         ];
 
+        $purchaseBills = PurchaseBill::with('supplier')
+            ->whereBetween('bill_date', [$from->toDateString(), $to->toDateString()])
+            ->orderBy('bill_date')
+            ->get();
+
+        $purchaseRows = $purchaseBills->map(function (PurchaseBill $bill) {
+            $rate = (float) $bill->net_total > 0
+                ? round(((float) $bill->vat_amount / (float) $bill->net_total) * 100, 2)
+                : null;
+
+            return [
+                'date' => $bill->bill_date,
+                'number' => $bill->number,
+                'supplier' => $bill->supplier?->name,
+                'taxable' => (float) $bill->net_total,
+                'vat' => (float) $bill->vat_amount,
+                'vat_rate' => $rate,
+            ];
+        });
+
+        $purchaseTotals = [
+            'taxable' => $purchaseRows->sum('taxable'),
+            'vat' => $purchaseRows->sum('vat'),
+        ];
+
         return view('admin.finance.vat', [
             'month'        => $month,
             'vatCollected' => $vatCollected,
+            'outputVat'    => $outputVat,
+            'inputVat'     => $inputVat,
             'from'         => $from,
             'to'           => $to,
             'invoiceRows'  => $invoiceRows,
             'totals'       => $totals,
+            'purchaseRows' => $purchaseRows,
+            'purchaseTotals' => $purchaseTotals,
         ]);
     }
 
@@ -179,8 +215,8 @@ class ReportController extends Controller
             $balances[$account] += $entry->debit - $entry->credit;
         }
 
-        $assetsAccounts = Account::where('type', 'asset')->pluck('name')->all() ?: ['Bank', 'Accounts Receivable'];
-        $liabilityAccounts = Account::where('type', 'liability')->pluck('name')->all() ?: ['Accounts Payable', 'VAT Payable'];
+        $assetsAccounts = Account::where('type', 'asset')->pluck('name')->all() ?: ['Bank', 'Accounts Receivable', 'Input VAT'];
+        $liabilityAccounts = Account::where('type', 'liability')->pluck('name')->all() ?: ['Accounts Payable', 'VAT Payable', 'Agent Advances', 'Commission Payable'];
 
         $assets = [];
         $liabilities = [];
@@ -237,7 +273,7 @@ class ReportController extends Controller
             ? Carbon::parse($request->query('to'))
             : Carbon::now()->endOfMonth();
 
-        $invoices = Invoice::with(['order.agent', 'receipts', 'creditNotes'])
+        $invoices = Invoice::with(['order.agent', 'receipts', 'creditNotes', 'advanceApplications'])
             ->whereBetween('issued_at', [$from, $to])
             ->whereHas('order.agent')
             ->get();
@@ -261,6 +297,7 @@ class ReportController extends Controller
                     'invoiced' => 0,
                     'credits' => 0,
                     'receipts' => 0,
+                    'advances' => 0,
                 ];
             }
 
@@ -275,6 +312,7 @@ class ReportController extends Controller
             }
 
             $bucket['credits'] += $invoice->creditNotes->sum('amount');
+            $bucket['advances'] += $invoice->advanceApplications->sum('amount');
 
             $bucket['receipts'] += $invoice->receipts
                 ->whereBetween('received_at', [$from, $to])
@@ -283,7 +321,7 @@ class ReportController extends Controller
 
         $rows = collect($byAgent)->map(function (array $bucket) {
             $netSales = $bucket['invoiced'] - $bucket['credits'];
-            $outstanding = $netSales - $bucket['receipts'];
+            $outstanding = max(0, $netSales - $bucket['receipts'] - $bucket['advances']);
 
             return [
                 'agent' => $bucket['agent'],
@@ -293,6 +331,7 @@ class ReportController extends Controller
                 'credits' => $bucket['credits'],
                 'net_sales' => $netSales,
                 'receipts' => $bucket['receipts'],
+                'advances' => $bucket['advances'],
                 'outstanding' => $outstanding,
             ];
         })->sortByDesc('net_sales');
@@ -319,12 +358,19 @@ class ReportController extends Controller
         // Preload active BOMs (with component standard_cost) for all products
         $productIds = $production->pluck('product_id')->unique()->filter()->all();
 
-        $boms = BillOfMaterial::whereIn('product_id', $productIds)
-            ->where('is_active', true)
-            ->with(['items.component'])
-            ->orderByDesc('id')
-            ->get()
-            ->keyBy('product_id');
+        $boms = collect();
+        if (
+            Schema::hasTable('bill_of_materials')
+            && Schema::hasTable('bill_of_material_items')
+            && ! empty($productIds)
+        ) {
+            $boms = BillOfMaterial::whereIn('product_id', $productIds)
+                ->where('is_active', true)
+                ->with(['items.component'])
+                ->orderByDesc('id')
+                ->get()
+                ->keyBy('product_id');
+        }
 
         $byProduct = $production->groupBy('product_id')->map(function ($runs, $productId) use ($boms) {
             $product  = $runs->first()->product;
@@ -376,9 +422,11 @@ class ReportController extends Controller
             ];
         });
 
-        $salesInvoices = Invoice::whereBetween('issued_at', [$from, $to])->get();
+        $salesInvoices = Invoice::with('creditNotes')
+            ->whereBetween('issued_at', [$from, $to])
+            ->get();
         $salesTotal = $salesInvoices->sum(function (Invoice $invoice) {
-            return ($invoice->net_total + $invoice->vat_amount) - $invoice->withholding;
+            return $invoice->net_sales_after_credits;
         });
 
         $expensesTotal = $this->operatingExpensesTotal($from, $to);

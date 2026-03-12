@@ -7,6 +7,7 @@ use App\Models\Badge;
 use App\Models\Employee;
 use App\Models\EmployeeBadge;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 class BadgeController extends Controller
 {
@@ -47,6 +48,12 @@ class BadgeController extends Controller
 
     public function destroy(Badge $badge)
     {
+        if (EmployeeBadge::where('badge_id', $badge->id)->exists()) {
+            return redirect()
+                ->route('admin.badges.index')
+                ->withErrors(['badge' => 'Badge has already been granted to employees and cannot be deleted. Deactivate it instead.']);
+        }
+
         $badge->delete();
 
         return redirect()->route('admin.badges.index')->with('status', 'Badge deleted.');
@@ -68,11 +75,13 @@ class BadgeController extends Controller
         ]);
 
         $badge = Badge::findOrFail($data['badge_id']);
+        $grantedAt = $this->resolveGrantDate($data['granted_at'] ?? null);
+        $this->assertGrantable($employee->id, $badge, $grantedAt);
 
         EmployeeBadge::create([
             'employee_id' => $employee->id,
             'badge_id' => $badge->id,
-            'granted_at' => $data['granted_at'] ?? now(),
+            'granted_at' => $grantedAt,
             'granted_by' => auth()->user()->name ?? null,
             'note' => $data['note'] ?? null,
         ]);
@@ -97,10 +106,13 @@ class BadgeController extends Controller
             'note' => 'nullable|string|max:255',
         ]);
 
+        $grantedAt = $this->resolveGrantDate($data['granted_at'] ?? null);
+        $this->assertGrantable((int) $data['employee_id'], $badge, $grantedAt);
+
         EmployeeBadge::create([
             'employee_id' => $data['employee_id'],
             'badge_id' => $badge->id,
-            'granted_at' => $data['granted_at'] ?? now(),
+            'granted_at' => $grantedAt,
             'granted_by' => auth()->user()->name ?? null,
             'note' => $data['note'] ?? null,
         ]);
@@ -123,5 +135,28 @@ class BadgeController extends Controller
         ]) + [
             'is_active' => $request->boolean('is_active', true),
         ];
+    }
+
+    protected function resolveGrantDate(?string $grantedAt): string
+    {
+        return $grantedAt ?: now()->toDateString();
+    }
+
+    protected function assertGrantable(int $employeeId, Badge $badge, string $grantedAt): void
+    {
+        if (! $badge->is_active) {
+            throw ValidationException::withMessages([
+                'badge_id' => 'Only active badges can be granted.',
+            ]);
+        }
+
+        if (EmployeeBadge::where('employee_id', $employeeId)
+            ->where('badge_id', $badge->id)
+            ->whereDate('granted_at', $grantedAt)
+            ->exists()) {
+            throw ValidationException::withMessages([
+                'granted_at' => 'This badge has already been granted to the employee on the selected date.',
+            ]);
+        }
     }
 }

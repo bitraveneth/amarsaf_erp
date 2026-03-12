@@ -52,10 +52,12 @@ use App\Http\Controllers\Admin\PermissionController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\ProfileController;
 use App\Http\Controllers\Admin\SalesDashboardController;
+use App\Http\Controllers\Admin\SalesTargetController;
 use App\Http\Controllers\Admin\ManufacturingDashboardController;
 use App\Http\Controllers\Admin\AccountingDashboardController;
 use App\Http\Controllers\Admin\ReportsDashboardController;
 use App\Http\Controllers\Admin\SystemSettingController;
+use App\Http\Controllers\Admin\AgentAdvanceController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -140,16 +142,16 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::post('permissions/groups/delete', [PermissionController::class, 'deleteGroup'])->middleware('perm:permissions.manage')->name('permissions.groups.delete');
 
     // Menu manager (sidebar groups & items)
-    Route::get('menu', [MenuController::class, 'index'])->name('menu.index');
-    Route::post('menu/groups', [MenuController::class, 'storeGroup'])->name('menu.groups.store');
-    Route::patch('menu/groups/{group}', [MenuController::class, 'updateGroup'])->name('menu.groups.update');
-    Route::delete('menu/groups/{group}', [MenuController::class, 'deleteGroup'])->name('menu.groups.delete');
-    Route::post('menu/groups/{group}/move', [MenuController::class, 'moveGroup'])->name('menu.groups.move');
-    Route::post('menu/items', [MenuController::class, 'storeItem'])->name('menu.items.store');
-    Route::patch('menu/items/{item}', [MenuController::class, 'updateItem'])->name('menu.items.update');
-    Route::delete('menu/items/{item}', [MenuController::class, 'deleteItem'])->name('menu.items.delete');
-    Route::post('menu/items/{item}/move', [MenuController::class, 'moveItem'])->name('menu.items.move');
-    Route::post('menu/items/{item}/move-group', [MenuController::class, 'moveItemGroup'])->name('menu.items.move-group');
+    Route::get('menu', [MenuController::class, 'index'])->middleware('perm:permissions.manage')->name('menu.index');
+    Route::post('menu/groups', [MenuController::class, 'storeGroup'])->middleware('perm:permissions.manage')->name('menu.groups.store');
+    Route::patch('menu/groups/{group}', [MenuController::class, 'updateGroup'])->middleware('perm:permissions.manage')->name('menu.groups.update');
+    Route::delete('menu/groups/{group}', [MenuController::class, 'deleteGroup'])->middleware('perm:permissions.manage')->name('menu.groups.delete');
+    Route::post('menu/groups/{group}/move', [MenuController::class, 'moveGroup'])->middleware('perm:permissions.manage')->name('menu.groups.move');
+    Route::post('menu/items', [MenuController::class, 'storeItem'])->middleware('perm:permissions.manage')->name('menu.items.store');
+    Route::patch('menu/items/{item}', [MenuController::class, 'updateItem'])->middleware('perm:permissions.manage')->name('menu.items.update');
+    Route::delete('menu/items/{item}', [MenuController::class, 'deleteItem'])->middleware('perm:permissions.manage')->name('menu.items.delete');
+    Route::post('menu/items/{item}/move', [MenuController::class, 'moveItem'])->middleware('perm:permissions.manage')->name('menu.items.move');
+    Route::post('menu/items/{item}/move-group', [MenuController::class, 'moveItemGroup'])->middleware('perm:permissions.manage')->name('menu.items.move-group');
 
     // Finished products catalog
     Route::get('products', [ProductController::class, 'index'])->middleware('perm:control.products')->name('products.index');
@@ -280,13 +282,18 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::get('agents/{agent}/pricing', [AgentPricingController::class, 'edit'])->middleware('perm:control.agents')->name('agents.pricing.edit');
     Route::patch('agents/{agent}/pricing', [AgentPricingController::class, 'update'])->middleware('perm:control.agents')->name('agents.pricing.update');
     Route::get('agents/{agent}/ledger', [AgentLedgerController::class, 'show'])->middleware('perm:control.agents')->name('agents.ledger.show');
+    Route::get('sales-targets', [SalesTargetController::class, 'index'])->middleware('perm:sales.manage')->name('sales-targets.index');
+    Route::get('sales-targets/create', [SalesTargetController::class, 'create'])->middleware('perm:sales.manage')->name('sales-targets.create');
+    Route::post('sales-targets', [SalesTargetController::class, 'store'])->middleware('perm:sales.manage')->name('sales-targets.store');
+    Route::get('sales-targets/{salesTarget}/edit', [SalesTargetController::class, 'edit'])->middleware('perm:sales.manage')->name('sales-targets.edit');
+    Route::patch('sales-targets/{salesTarget}', [SalesTargetController::class, 'update'])->middleware('perm:sales.manage')->name('sales-targets.update');
     Route::get('commissions', [CommissionReportController::class, 'index'])->middleware('perm:control.agents')->name('commissions.index');
     Route::get('commissions/summary', [CommissionReportController::class, 'index'])->middleware('perm:control.agents')->name('commissions.summary');
     Route::get('commissions/export', [CommissionReportController::class, 'export'])->middleware('perm:control.agents')->name('commissions.export');
     Route::get('commission-rules', [CommissionReportController::class, 'rules'])->middleware('perm:control.agents')->name('commissions.rules');
     Route::get('settlements', [CommissionSettlementController::class, 'index'])->middleware('perm:control.agents')->name('settlements.index');
     Route::post('settlements/generate', [CommissionSettlementController::class, 'generate'])->middleware('perm:control.agents')->name('settlements.generate');
-    Route::patch('settlements/{settlement}', [CommissionSettlementController::class, 'updateStatus'])->middleware('perm:control.agents')->name('settlements.update-status');
+    Route::patch('settlements/{settlement}', [CommissionSettlementController::class, 'updateStatus'])->middleware('perm:accounting.manage')->name('settlements.update-status');
 
     Route::get('orders', [OrderController::class, 'index'])->middleware('perm:sales.manage')->name('orders.index');
     Route::get('orders-picking', [OrderController::class, 'pickingOverview'])->middleware('perm:sales.manage')->name('orders.picking-overview');
@@ -400,6 +407,9 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::get('accounts/{account}/edit', [AccountController::class, 'edit'])->middleware('perm:accounting.manage')->name('accounts.edit');
     Route::patch('accounts/{account}', [AccountController::class, 'update'])->middleware('perm:accounting.manage')->name('accounts.update');
     Route::delete('accounts/{account}', [AccountController::class, 'destroy'])->middleware('perm:accounting.manage')->name('accounts.destroy');
+    Route::get('agent-advances', [AgentAdvanceController::class, 'index'])->middleware('perm:accounting.manage')->name('agent-advances.index');
+    Route::get('agent-advances/create', [AgentAdvanceController::class, 'create'])->middleware('perm:accounting.manage')->name('agent-advances.create');
+    Route::post('agent-advances', [AgentAdvanceController::class, 'store'])->middleware('perm:accounting.manage')->name('agent-advances.store');
 
     Route::get('bills', [PurchaseBillController::class, 'index'])->middleware('perm:accounting.manage')->name('bills.index');
     Route::get('bills/create', [PurchaseBillController::class, 'create'])->middleware('perm:accounting.manage')->name('bills.create');

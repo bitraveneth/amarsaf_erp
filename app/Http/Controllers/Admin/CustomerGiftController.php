@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Helpers\Permission as PermissionHelper;
 use App\Http\Controllers\Controller;
 use App\Models\Agent;
 use App\Models\CustomerGift;
@@ -59,6 +60,10 @@ class CustomerGiftController extends Controller
     {
         $data = $this->validated($request);
 
+        if ($this->payloadPostsLedgerEntries($data)) {
+            $this->ensureCanManageLedgerEntries();
+        }
+
         DB::transaction(function () use ($data) {
             $gift = CustomerGift::create($data);
             $this->syncLedgerEntries($gift);
@@ -79,6 +84,10 @@ class CustomerGiftController extends Controller
     {
         $data = $this->validated($request);
 
+        if ($this->hasPostedLedgerEntries($gift) || $this->payloadPostsLedgerEntries($data)) {
+            $this->ensureCanManageLedgerEntries();
+        }
+
         DB::transaction(function () use ($gift, $data) {
             $gift->update($data);
             $this->syncLedgerEntries($gift);
@@ -89,6 +98,10 @@ class CustomerGiftController extends Controller
 
     public function destroy(CustomerGift $gift)
     {
+        if ($this->hasPostedLedgerEntries($gift)) {
+            $this->ensureCanManageLedgerEntries();
+        }
+
         DB::transaction(function () use ($gift) {
             $this->deleteLedgerEntries($gift);
             $gift->delete();
@@ -145,5 +158,23 @@ class CustomerGiftController extends Controller
     protected function ledgerDescription(CustomerGift $gift): string
     {
         return 'Customer gift #' . $gift->id;
+    }
+
+    protected function payloadPostsLedgerEntries(array $data): bool
+    {
+        return (float) ($data['amount'] ?? 0) > 0
+            && CustomerGift::normalizeStatus($data['status'] ?? null) === CustomerGift::STATUS_GIVEN;
+    }
+
+    protected function hasPostedLedgerEntries(CustomerGift $gift): bool
+    {
+        return LedgerEntry::where('description', $this->ledgerDescription($gift))->exists();
+    }
+
+    protected function ensureCanManageLedgerEntries(): void
+    {
+        if (! PermissionHelper::can(auth()->user(), 'accounting.manage')) {
+            abort(403, 'Accounting permission is required to post or remove customer-gift ledger entries.');
+        }
     }
 }

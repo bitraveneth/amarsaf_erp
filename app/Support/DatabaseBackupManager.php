@@ -57,25 +57,48 @@ class DatabaseBackupManager
 
         $relativePath = self::DIRECTORY . '/' . $filename;
         $absolutePath = $disk->path($relativePath);
+        $handle = fopen($absolutePath, 'wb');
+
+        if ($handle === false) {
+            throw new RuntimeException('Unable to create the backup file.');
+        }
 
         $process = new Process($this->dumpCommand($config), base_path(), [
             'MYSQL_PWD' => $config['password'] ?? '',
         ]);
         $process->setTimeout(600);
+        $errorOutput = '';
 
         try {
-            $process->mustRun();
+            $process->mustRun(function (string $type, string $buffer) use ($handle, &$errorOutput) {
+                if ($type === Process::ERR) {
+                    $errorOutput .= $buffer;
+
+                    return;
+                }
+
+                fwrite($handle, $buffer);
+            });
         } catch (ProcessFailedException $exception) {
-            throw new RuntimeException('Database backup failed: ' . trim($exception->getProcess()->getErrorOutput()));
+            fclose($handle);
+            File::delete($absolutePath);
+
+            throw new RuntimeException('Database backup failed: ' . trim($errorOutput ?: $exception->getProcess()->getErrorOutput()));
         }
 
-        File::put($absolutePath, $process->getOutput());
+        fclose($handle);
 
         return $filename;
     }
 
     public function restore(string $filename): void
     {
+        if (! app()->environment(['local', 'testing'])) {
+            throw new RuntimeException(
+                'In-app database restore is disabled outside local/testing because a partial restore can corrupt the live database. Use an offline restore procedure instead.'
+            );
+        }
+
         $config = $this->mysqlConfig();
         $relativePath = self::DIRECTORY . '/' . basename($filename);
         $disk = Storage::disk(self::DISK);

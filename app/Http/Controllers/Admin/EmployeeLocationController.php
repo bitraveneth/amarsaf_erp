@@ -10,6 +10,14 @@ use Illuminate\Support\Carbon;
 
 class EmployeeLocationController extends Controller
 {
+    private const VALID_SOURCES = [
+        'manual',
+        'gps',
+        'api',
+        'import',
+        'other',
+    ];
+
     public function all()
     {
         $logs = EmployeeLocationLog::with('employee')
@@ -119,22 +127,42 @@ class EmployeeLocationController extends Controller
             abort(404);
         }
 
-        $location->delete();
-
         return redirect()
             ->route('admin.employees.locations.index', $employee)
-            ->with('status', 'Location log deleted.');
+            ->withErrors([
+                'location' => 'Location logs are historical records and cannot be deleted.',
+            ]);
     }
 
     protected function validated(Request $request): array
     {
+        $request->merge([
+            'source' => $this->normalizedNullableSource($request->input('source')),
+            'location_label' => $this->normalizedNullableString($request->input('location_label')),
+            'notes' => $this->normalizedNullableString($request->input('notes')),
+        ]);
+
         return $request->validate([
             'logged_at' => 'required|date',
-            'latitude' => 'nullable|numeric',
-            'longitude' => 'nullable|numeric',
+            'latitude' => 'nullable|numeric|between:-90,90',
+            'longitude' => 'nullable|numeric|between:-180,180',
             'location_label' => 'nullable|string|max:255',
-            'source' => 'nullable|string|max:50',
+            'source' => 'nullable|in:' . implode(',', self::VALID_SOURCES),
             'notes' => 'nullable|string|max:255',
         ]);
+    }
+
+    protected function normalizedNullableString($value): ?string
+    {
+        $value = trim((string) $value);
+
+        return $value === '' ? null : $value;
+    }
+
+    protected function normalizedNullableSource($value): ?string
+    {
+        $value = mb_strtolower(trim((string) $value));
+
+        return $value === '' ? null : $value;
     }
 }

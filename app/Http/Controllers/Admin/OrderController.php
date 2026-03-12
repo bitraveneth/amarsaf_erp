@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Agent;
+use App\Models\AgentAdvance;
 use App\Models\AgentPriceList;
 use App\Models\AgentCommissionRule;
 use App\Models\Order;
@@ -18,6 +19,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use App\Http\Controllers\Admin\FinanceController;
+use App\Support\CommissionCalculator;
 
 class OrderController extends Controller
 {
@@ -161,12 +163,17 @@ class OrderController extends Controller
             'items.*.unit_price' => 'required|numeric|min:0',
         ]);
 
+        if (($data['order_type'] ?? null) === 'bulk' && empty($data['payment_mode'])) {
+            $data['payment_mode'] = 'credit';
+        }
+
         $order = DB::transaction(function () use ($data) {
+            $calculator = app(CommissionCalculator::class);
             $order = Order::create([
                 'agent_id' => $data['agent_id'],
                 'order_type' => $data['order_type'],
                 'agent_reference' => $data['agent_reference'] ?? null,
-                'delivery_date' => $data['delivery_date'],
+                'delivery_date' => $data['delivery_date'] ?? null,
                 'delivery_contact_name' => $data['delivery_contact_name'] ?? null,
                 'delivery_contact_phone' => $data['delivery_contact_phone'] ?? null,
                 'delivery_address' => $data['delivery_address'] ?? null,
@@ -195,37 +202,19 @@ class OrderController extends Controller
             foreach ($data['items'] as $item) {
                 $productId = $item['product_id'];
                 $quantity = $item['quantity'];
-                $unitPrice = $agentPrices[$productId] ?? $item['unit_price'];
+                $unitPrice = $this->resolveUnitPrice(
+                    $data['order_type'],
+                    (float) ($agentPrices[$productId] ?? $item['unit_price'])
+                );
                 $lineTotal = $quantity * $unitPrice;
                 $total += $lineTotal;
 
                 $product = $products[$productId] ?? null;
                 $sku = $product ? $product->sku : null;
 
-                $matchingRules = $commissionRules->filter(function ($rule) use ($sku, $data) {
-                    if ($rule->frequency !== 'per_order') {
-                        return false;
-                    }
-
-                    if ($rule->sku && $sku && $rule->sku !== $sku) {
-                        return false;
-                    }
-
-                    if ($rule->order_type && $rule->order_type !== $data['order_type']) {
-                        return false;
-                    }
-
-                    return true;
-                });
-
-                $lineCommission = 0;
-                foreach ($matchingRules as $rule) {
-                    if ($rule->type === 'percentage') {
-                        $lineCommission += ($lineTotal * ($rule->value / 100));
-                    } elseif ($rule->type === 'fixed') {
-                        $lineCommission += $rule->value;
-                    }
-                }
+                $lineCommission = $this->orderTypeSupportsCommission($data['order_type'])
+                    ? $calculator->calculatePerOrderCommission($commissionRules, $sku, $data['order_type'], $lineTotal)
+                    : 0.0;
 
                 $commissionTotal += $lineCommission;
                 $commissionRate = $lineTotal > 0 ? ($lineCommission / $lineTotal) * 100 : null;
@@ -240,48 +229,53 @@ class OrderController extends Controller
                     'commission_amount' => $lineCommission,
                 ]);
 
-                $entries = StockEntry::where('product_id', $productId)
-                    ->where('status', 'available')
-                    ->orderBy('created_at')
-                    ->lockForUpdate()
-                    ->get();
+                if ($this->orderTypeRequiresReservation($data['order_type'])) {
+                    $entries = StockEntry::where('product_id', $productId)
+                        ->where('status', 'available')
+                        ->orderBy('created_at')
+                        ->lockForUpdate()
+                        ->get();
 
-                $availableQty = (float) $entries->sum('quantity');
-                if ($availableQty < (float) $quantity) {
-                    throw ValidationException::withMessages([
-                        'items' => ['Insufficient available stock for product ' . ($product?->name ?? ('#' . $productId)) . '.'],
-                    ]);
-                }
-
-                $toReserve = $quantity;
-                foreach ($entries as $entry) {
-                    if ($toReserve <= 0) {
-                        break;
+                    $availableQty = (float) $entries->sum('quantity');
+                    if ($availableQty < (float) $quantity) {
+                        throw ValidationException::withMessages([
+                            'items' => ['Insufficient available stock for product ' . ($product?->name ?? ('#' . $productId)) . '.'],
+                        ]);
                     }
 
-                    $reserved = min((float) $entry->quantity, (float) $toReserve);
-                    $entry->quantity = (float) $entry->quantity - $reserved;
-                    if ((float) $entry->quantity <= 0.0) {
-                        $entry->status = 'reserved';
-                    }
-                    $entry->save();
+                    $toReserve = $quantity;
+                    foreach ($entries as $entry) {
+                        if ($toReserve <= 0) {
+                            break;
+                        }
 
-                    StockEntry::create([
-                        'order_id' => $order->id,
-                        'warehouse_id' => $entry->warehouse_id,
-                        'warehouse_location_id' => $entry->warehouse_location_id,
-                        'product_id' => $entry->product_id,
-                        'batch_id' => $entry->batch_id,
-                        'quantity' => $reserved,
-                        'status' => 'reserved',
-                    ]);
-                    $toReserve -= $reserved;
+                        $reserved = min((float) $entry->quantity, (float) $toReserve);
+                        $entry->quantity = (float) $entry->quantity - $reserved;
+                        if ((float) $entry->quantity <= 0.0) {
+                            $entry->status = 'reserved';
+                        }
+                        $entry->save();
+
+                        StockEntry::create([
+                            'order_id' => $order->id,
+                            'warehouse_id' => $entry->warehouse_id,
+                            'warehouse_location_id' => $entry->warehouse_location_id,
+                            'product_id' => $entry->product_id,
+                            'batch_id' => $entry->batch_id,
+                            'quantity' => $reserved,
+                            'status' => 'reserved',
+                        ]);
+                        $toReserve -= $reserved;
+                    }
                 }
             }
+
+            $this->enforceCreditLimit($order, (float) $total, $data['payment_mode'] ?? null);
 
             $order->update([
                 'total' => $total,
                 'commission_total' => $commissionTotal > 0 ? $commissionTotal : null,
+                'is_credit_used' => $this->usesCredit($data['payment_mode'] ?? null, $data['order_type']),
             ]);
 
             return $order;
@@ -326,13 +320,7 @@ class OrderController extends Controller
 
         // Auto-create invoice when an order is marked as delivered and has no invoice yet
         if ($order->status === 'delivered') {
-            $hasInvoice = Invoice::where('order_id', $order->id)->exists();
-            if (! $hasInvoice) {
-                // reuse FinanceController logic without redirecting twice
-                $finance = app(FinanceController::class);
-                // createFromOrder already validates that status is 'delivered'
-                $finance->createFromOrder($order);
-            }
+            app(FinanceController::class)->ensureInvoiceForOrder($order->fresh());
         }
 
         return redirect()->route('admin.orders.show', $order)->with('status', 'Order status updated.');
@@ -438,5 +426,59 @@ class OrderController extends Controller
         });
 
         return redirect()->route('admin.orders.index')->with('status', 'Order deleted.');
+    }
+
+    protected function resolveUnitPrice(string $orderType, float $unitPrice): float
+    {
+        if (in_array($orderType, ['sample', 'return'], true)) {
+            return 0.0;
+        }
+
+        return round($unitPrice, 2);
+    }
+
+    protected function orderTypeRequiresReservation(string $orderType): bool
+    {
+        return $orderType !== 'return';
+    }
+
+    protected function orderTypeSupportsCommission(string $orderType): bool
+    {
+        return in_array($orderType, ['regular', 'bulk'], true);
+    }
+
+    protected function usesCredit(?string $paymentMode, string $orderType): bool
+    {
+        return $paymentMode === 'credit' && in_array($orderType, ['regular', 'bulk'], true);
+    }
+
+    protected function enforceCreditLimit(Order $order, float $proposedTotal, ?string $paymentMode): void
+    {
+        if (! $this->usesCredit($paymentMode, $order->order_type)) {
+            return;
+        }
+
+        $agent = Agent::findOrFail($order->agent_id);
+        $creditLimit = (float) ($agent->credit_limit ?? 0);
+        if ($creditLimit <= 0) {
+            return;
+        }
+
+        $existingOutstanding = Invoice::whereHas('order', function ($query) use ($agent) {
+            $query->where('agent_id', $agent->id);
+        })->get()->sum(fn (Invoice $invoice) => (float) $invoice->outstanding);
+
+        $availableAdvances = AgentAdvance::where('agent_id', $agent->id)
+            ->whereIn('status', ['open', 'partial'])
+            ->get()
+            ->sum(fn (AgentAdvance $advance) => $advance->available_amount);
+
+        $projectedExposure = max($existingOutstanding + $proposedTotal - $availableAdvances, 0);
+
+        if ($projectedExposure > $creditLimit + 0.00001) {
+            throw ValidationException::withMessages([
+                'agent_id' => ['This order exceeds the agent credit limit after considering open advances/prepayments.'],
+            ]);
+        }
     }
 }

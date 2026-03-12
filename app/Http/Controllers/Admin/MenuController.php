@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Helpers\MenuHelper;
+use App\Helpers\Permission as PermissionHelper;
 use App\Http\Controllers\Controller;
 use App\Models\MenuGroup;
 use App\Models\MenuItem;
@@ -14,7 +15,7 @@ class MenuController extends Controller
 {
     public function index()
     {
-        $this->ensureSuperAdmin();
+        $this->ensureCanManageMenu();
 
         $groups = MenuGroup::with(['items.children'])
             ->orderBy('position')
@@ -27,7 +28,7 @@ class MenuController extends Controller
 
     public function storeGroup(Request $request)
     {
-        $this->ensureSuperAdmin();
+        $this->ensureCanManageMenu();
 
         $data = $request->validate([
             'title' => 'required|string|max:100',
@@ -47,7 +48,7 @@ class MenuController extends Controller
 
     public function updateGroup(Request $request, MenuGroup $group)
     {
-        $this->ensureSuperAdmin();
+        $this->ensureCanManageMenu();
 
         $data = $request->validate([
             'title' => 'required|string|max:100',
@@ -61,7 +62,7 @@ class MenuController extends Controller
 
     public function deleteGroup(MenuGroup $group)
     {
-        $this->ensureSuperAdmin();
+        $this->ensureCanManageMenu();
 
         $group->delete();
 
@@ -70,7 +71,7 @@ class MenuController extends Controller
 
     public function moveGroup(Request $request, MenuGroup $group)
     {
-        $this->ensureSuperAdmin();
+        $this->ensureCanManageMenu();
 
         $direction = $request->input('direction') === 'up' ? 'up' : 'down';
 
@@ -99,7 +100,7 @@ class MenuController extends Controller
 
     public function storeItem(Request $request)
     {
-        $this->ensureSuperAdmin();
+        $this->ensureCanManageMenu();
 
         $data = $request->validate([
             'menu_group_id' => 'required|exists:menu_groups,id',
@@ -133,7 +134,7 @@ class MenuController extends Controller
 
     public function updateItem(Request $request, MenuItem $item)
     {
-        $this->ensureSuperAdmin();
+        $this->ensureCanManageMenu();
 
         $data = $request->validate([
             'name'       => 'nullable|string|max:100',
@@ -161,7 +162,7 @@ class MenuController extends Controller
 
     public function deleteItem(MenuItem $item)
     {
-        $this->ensureSuperAdmin();
+        $this->ensureCanManageMenu();
 
         $item->delete();
 
@@ -170,7 +171,7 @@ class MenuController extends Controller
 
     public function moveItem(Request $request, MenuItem $item)
     {
-        $this->ensureSuperAdmin();
+        $this->ensureCanManageMenu();
 
         $direction = $request->input('direction') === 'up' ? 'up' : 'down';
 
@@ -200,7 +201,7 @@ class MenuController extends Controller
 
     public function moveItemGroup(Request $request, MenuItem $item)
     {
-        $this->ensureSuperAdmin();
+        $this->ensureCanManageMenu();
 
         $data = $request->validate([
             'menu_group_id' => 'required|exists:menu_groups,id',
@@ -226,10 +227,10 @@ class MenuController extends Controller
         return redirect()->route('admin.menu.index')->with('status', 'Menu item moved to new group.');
     }
 
-    protected function ensureSuperAdmin(): void
+    protected function ensureCanManageMenu(): void
     {
-        if (! auth()->user()?->hasRole('super_admin')) {
-            abort(403, 'Only super admin can manage menu.');
+        if (! PermissionHelper::can(auth()->user(), 'permissions.manage')) {
+            abort(403, 'You do not have permission to manage menu.');
         }
     }
 

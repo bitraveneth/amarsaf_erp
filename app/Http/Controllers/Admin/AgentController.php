@@ -10,6 +10,8 @@ use App\Models\AgentPriceList;
 use App\Models\Order;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 
 class AgentController extends Controller
@@ -155,6 +157,16 @@ class AgentController extends Controller
 
     public function destroy(Agent $agent)
     {
+        $blockingHistory = $this->deletionBlockingHistory($agent->id);
+
+        if ($blockingHistory !== []) {
+            return redirect()
+                ->route('admin.agents.index')
+                ->withErrors([
+                    'agent' => 'This agent has historical records (' . implode(', ', $blockingHistory) . ') and cannot be deleted. Disable or reassign it instead.',
+                ]);
+        }
+
         if (Order::where('agent_id', $agent->id)->exists()) {
             return redirect()->route('admin.agents.index')
                 ->with('status', 'Agent has orders and cannot be deleted. Consider disabling or reassigning instead.');
@@ -170,5 +182,27 @@ class AgentController extends Controller
         $agent->delete();
 
         return redirect()->route('admin.agents.index')->with('status', 'Agent deleted and any linked user accounts were unassigned.');
+    }
+
+    protected function deletionBlockingHistory(int $agentId): array
+    {
+        $checks = [
+            'customer_gifts' => 'customer gifts',
+            'visit_plans' => 'visit plans',
+        ];
+
+        $found = [];
+
+        foreach ($checks as $table => $label) {
+            if (! Schema::hasTable($table)) {
+                continue;
+            }
+
+            if (DB::table($table)->where('agent_id', $agentId)->exists()) {
+                $found[] = $label;
+            }
+        }
+
+        return $found;
     }
 }

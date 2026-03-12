@@ -60,4 +60,9 @@ class Agent extends Model
     {
         return $this->hasMany(Order::class);
     }
+
+    public function advances()
+    {
+        return $this->hasMany(AgentAdvance::class);
+    }
 }

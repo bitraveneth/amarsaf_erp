@@ -33,14 +33,7 @@ class AccountingDashboardController extends Controller
 
         $collected = Receipt::whereBetween('received_at', [$startOfMonth, $endOfMonth])->sum('amount');
 
-        $outstanding = $invoices->sum(function (Invoice $invoice) {
-            $grossTotal = $invoice->net_total + $invoice->vat_amount;
-            $cashTotal = $grossTotal - $invoice->withholding;
-            $credited = (float) ($invoice->credit_notes_sum_amount ?? 0);
-            $paid = (float) ($invoice->receipts_sum_amount ?? 0);
-
-            return max($cashTotal - $credited - $paid, 0);
-        });
+        $outstanding = $invoices->sum(fn (Invoice $invoice) => (float) $invoice->outstanding);
 
         $expenses = (float) Expense::whereBetween('date', [$startOfMonth, $endOfMonth])
             ->whereIn('status', [Expense::STATUS_RECORDED, Expense::STATUS_REVIEWED, 'paid', 'overdue'])

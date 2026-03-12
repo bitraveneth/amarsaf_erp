@@ -80,11 +80,11 @@ class EmployeeLeaveController extends Controller
             abort(404);
         }
 
-        $leave->delete();
-
         return redirect()
             ->route('admin.employees.leaves.index', $employee)
-            ->with('status', 'Leave request deleted.');
+            ->withErrors([
+                'leave' => 'Leave history cannot be deleted. Update the request status instead.',
+            ]);
     }
 
     protected function validated(Request $request): array

@@ -81,6 +81,14 @@ class ExpenseController extends Controller
 
     public function destroy(Expense $expense)
     {
+        if ($this->hasPostedLedgerEntries($expense)) {
+            return redirect()
+                ->route('admin.expenses.index')
+                ->withErrors([
+                    'expense' => 'Posted expenses cannot be deleted. Preserve the audit trail and record a correcting adjustment instead.',
+                ]);
+        }
+
         DB::transaction(function () use ($expense) {
             $this->deleteLedgerEntries($expense);
             $expense->delete();
@@ -130,6 +138,11 @@ class ExpenseController extends Controller
     protected function deleteLedgerEntries(Expense $expense): void
     {
         LedgerEntry::where('description', $this->ledgerDescription($expense))->delete();
+    }
+
+    protected function hasPostedLedgerEntries(Expense $expense): bool
+    {
+        return LedgerEntry::where('description', $this->ledgerDescription($expense))->exists();
     }
 
     protected function ledgerDescription(Expense $expense): string

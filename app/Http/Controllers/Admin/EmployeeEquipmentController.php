@@ -115,11 +115,11 @@ class EmployeeEquipmentController extends Controller
             abort(404);
         }
 
-        $equipment->delete();
-
         return redirect()
             ->route('admin.employees.equipment.index', $employee)
-            ->with('status', 'Equipment record deleted.');
+            ->withErrors([
+                'equipment' => 'Equipment assignment history cannot be deleted. Update the record to returned or lost instead.',
+            ]);
     }
 
     protected function validated(Request $request): array

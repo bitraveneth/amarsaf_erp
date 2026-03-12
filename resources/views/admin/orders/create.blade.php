@@ -169,6 +169,9 @@
                                     </svg>
                                 </div>
                             </div>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">
+                                "Sample" orders are non-billable free issues. "Return" orders are pickup authorizations and do not reserve stock or generate invoices. "Bulk" orders default to credit if no payment mode is chosen.
+                            </p>
                         </div>
 
                         <!-- Delivery Date -->

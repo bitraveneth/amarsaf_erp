@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Helpers\Permission as PermissionHelper;
 use App\Http\Controllers\Controller;
 use App\Models\Employee;
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -90,7 +91,9 @@ class EmployeeController extends Controller
                 ->with('status', 'This employee already has a login account.');
         }
 
-        return view('admin.employees.create_user', compact('employee'));
+        $roles = $this->availableRoles(auth()->user());
+
+        return view('admin.employees.create_user', compact('employee', 'roles'));
     }
 
     /**
@@ -107,10 +110,12 @@ class EmployeeController extends Controller
                 ->with('status', 'This employee already has a login account.');
         }
 
+        $roles = $this->availableRoles($actor);
+
         $data = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|max:255|unique:users,email',
-            'role' => 'required|string|in:super_admin,admin,purchase_executive,warehouse_officer,production_officer,sales_officer,delivery_coordinator,accounts_officer,qc_officer',
+            'role' => 'required|string|in:' . implode(',', array_keys($roles)),
             'password' => 'nullable|string|min:6',
         ]);
 
@@ -151,6 +156,39 @@ class EmployeeController extends Controller
             ['user_id' => $user->id, 'role_key' => $user->role],
             ['updated_at' => now(), 'created_at' => now()]
         );
+    }
+
+    protected function availableRoles(?User $actor = null): array
+    {
+        $roles = Role::orderBy('label')->get(['key', 'label']);
+
+        if ($roles->isEmpty()) {
+            $legacyRoles = [
+                'super_admin' => 'Super admin',
+                'admin' => 'Admin',
+                'purchase_executive' => 'Purchase executive',
+                'warehouse_officer' => 'Warehouse officer',
+                'production_officer' => 'Production officer',
+                'sales_officer' => 'Sales officer',
+                'delivery_coordinator' => 'Delivery coordinator',
+                'accounts_officer' => 'Accounts officer',
+                'qc_officer' => 'QC officer',
+            ];
+
+            if ($actor && ! $actor->hasRole('super_admin')) {
+                unset($legacyRoles['super_admin']);
+            }
+
+            return $legacyRoles;
+        }
+
+        $roleMap = $roles->pluck('label', 'key')->all();
+
+        if ($actor && ! $actor->hasRole('super_admin')) {
+            unset($roleMap['super_admin']);
+        }
+
+        return $roleMap;
     }
 
     public function update(Request $request, Employee $employee)

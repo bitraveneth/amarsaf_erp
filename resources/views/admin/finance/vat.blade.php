@@ -94,16 +94,29 @@
                         </svg>
                     </div>
                     <div>
-                        <p class="text-sm font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">VAT Payable</p>
+                        <p class="text-sm font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Net VAT Payable</p>
                         <p class="mt-2 text-5xl font-bold text-gray-900 dark:text-white">
                             BDT {{ number_format($vatCollected, 2) }}
                         </p>
                         <p class="mt-3 text-sm text-gray-600 dark:text-gray-400">
-                            For the period of {{ $month->format('F Y') }}
+                            Output VAT less input VAT for {{ $month->format('F Y') }}
                         </p>
                     </div>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-theme-sm dark:border-gray-800 dark:bg-gray-900">
+            <p class="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Output VAT</p>
+            <p class="mt-2 text-3xl font-semibold text-gray-900 dark:text-white">BDT {{ number_format($outputVat, 2) }}</p>
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">From issued sales invoices</p>
+        </div>
+        <div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-theme-sm dark:border-gray-800 dark:bg-gray-900">
+            <p class="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Input VAT</p>
+            <p class="mt-2 text-3xl font-semibold text-gray-900 dark:text-white">BDT {{ number_format($inputVat, 2) }}</p>
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">From recorded purchase bills</p>
         </div>
     </div>
 
@@ -168,6 +181,54 @@
                             <td class="px-3 py-2 text-right">
                                 BDT {{ number_format($totals['vat'], 2) }}
                             </td>
+                            <td class="px-3 py-2"></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        @endif
+    </div>
+
+    <div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-theme-sm dark:border-gray-800 dark:bg-gray-900">
+        <div class="flex items-center justify-between mb-4">
+            <div>
+                <h2 class="text-sm font-semibold text-gray-900 dark:text-white">Input VAT by purchase bill</h2>
+                <p class="text-xs text-gray-500 dark:text-gray-400">Input VAT recorded on supplier bills in this period.</p>
+            </div>
+        </div>
+
+        @if($purchaseRows->isEmpty())
+            <p class="text-sm text-gray-500 dark:text-gray-400">No purchase bills found in this period.</p>
+        @else
+            <div class="overflow-x-auto">
+                <table class="min-w-full text-xs">
+                    <thead class="bg-gray-50 text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:bg-gray-800 dark:text-gray-400">
+                        <tr>
+                            <th class="px-3 py-2 text-left">Date</th>
+                            <th class="px-3 py-2 text-left">Bill</th>
+                            <th class="px-3 py-2 text-left">Supplier</th>
+                            <th class="px-3 py-2 text-right">Taxable amount</th>
+                            <th class="px-3 py-2 text-right">VAT</th>
+                            <th class="px-3 py-2 text-right">VAT rate</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                        @foreach($purchaseRows as $row)
+                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/40">
+                                <td class="px-3 py-2 text-gray-700 dark:text-gray-200">{{ \Illuminate\Support\Carbon::parse($row['date'])->toDateString() }}</td>
+                                <td class="px-3 py-2 font-mono text-[11px] text-gray-600 dark:text-gray-300">{{ $row['number'] }}</td>
+                                <td class="px-3 py-2 text-gray-700 dark:text-gray-200">{{ $row['supplier'] ?? '—' }}</td>
+                                <td class="px-3 py-2 text-right text-gray-800 dark:text-gray-100">BDT {{ number_format($row['taxable'], 2) }}</td>
+                                <td class="px-3 py-2 text-right text-gray-800 dark:text-gray-100">BDT {{ number_format($row['vat'], 2) }}</td>
+                                <td class="px-3 py-2 text-right text-gray-600 dark:text-gray-300">{{ $row['vat_rate'] !== null ? $row['vat_rate'].'%' : '—' }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                    <tfoot class="bg-gray-50 text-[11px] font-semibold uppercase tracking-wide text-gray-600 dark:bg-gray-800 dark:text-gray-300">
+                        <tr>
+                            <td colspan="3" class="px-3 py-2 text-right">Totals</td>
+                            <td class="px-3 py-2 text-right">BDT {{ number_format($purchaseTotals['taxable'], 2) }}</td>
+                            <td class="px-3 py-2 text-right">BDT {{ number_format($purchaseTotals['vat'], 2) }}</td>
                             <td class="px-3 py-2"></td>
                         </tr>
                     </tfoot>

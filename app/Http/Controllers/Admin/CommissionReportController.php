@@ -4,10 +4,10 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Agent;
-use App\Models\OrderItem;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use App\Support\CommissionCalculator;
 
 class CommissionReportController extends Controller
 {
@@ -67,35 +67,36 @@ class CommissionReportController extends Controller
 
         $from = $month->copy()->startOfMonth();
         $to = $month->copy()->endOfMonth();
+        $calculator = app(CommissionCalculator::class);
 
-        $items = OrderItem::with(['order.agent', 'order.delivery.items'])
-            ->whereHas('order', function ($q) use ($from, $to) {
-                $q->where('status', 'delivered')
-                    ->whereHas('invoice', function ($invoiceQuery) use ($from, $to) {
-                        $invoiceQuery->whereBetween('issued_at', [$from, $to]);
-                    });
+        $agents = Agent::query()
+            ->where(function ($query) use ($from, $to) {
+                $query->whereHas('orders', function ($orderQuery) use ($from, $to) {
+                    $orderQuery->where('status', 'delivered')
+                        ->whereHas('invoice', function ($invoiceQuery) use ($from, $to) {
+                            $invoiceQuery->whereBetween('issued_at', [$from->toDateString(), $to->toDateString()]);
+                        });
+                })->orWhereHas('commissions', function ($commissionQuery) {
+                    $commissionQuery->where('frequency', 'monthly');
+                });
             })
+            ->orderBy('name')
             ->get();
 
         $byAgent = [];
 
-        foreach ($items as $item) {
-            if (! $item->order || ! $item->order->agent) {
+        foreach ($agents as $agent) {
+            $summary = $calculator->buildMonthlySummaryForAgent($agent, $from, $to);
+
+            if ($summary['sales'] <= 0 && $summary['commission'] <= 0) {
                 continue;
             }
 
-            $agentId = $item->order->agent->id;
-
-            if (! isset($byAgent[$agentId])) {
-                $byAgent[$agentId] = [
-                    'agent' => $item->order->agent,
-                    'sales' => 0,
-                    'commission' => 0,
-                ];
-            }
-
-            $byAgent[$agentId]['sales'] += $item->realizedSalesTotal();
-            $byAgent[$agentId]['commission'] += $item->realizedCommissionTotal();
+            $byAgent[$agent->id] = [
+                'agent' => $agent,
+                'sales' => $summary['sales'],
+                'commission' => $summary['commission'],
+            ];
         }
 
         uasort($byAgent, function (array $left, array $right) {

@@ -48,15 +48,19 @@ class DeliveryController extends Controller
 
     public function create()
     {
-        // Deliveries are usually scheduled once picking is done. We allow both
-        // "picked" (ready to be packed) and "packed" (fully packed) orders so
-        // that packing can be confirmed from the packing slips screen.
         $orders = Order::with('agent')
-            ->whereIn('status', ['picked', 'packed'])
+            ->where(function ($query) {
+                $query->where(function ($orderQuery) {
+                    $orderQuery->whereIn('status', ['picked', 'packed']);
+                })->orWhere(function ($orderQuery) {
+                    $orderQuery->where('order_type', 'return')
+                        ->where('status', 'confirmed');
+                });
+            })
             ->whereDoesntHave('deliveries')
             ->get();
         $routes = DeliveryRoute::orderBy('name')->get();
-        $vehicles = Vehicle::orderBy('name')->get();
+        $vehicles = Vehicle::where('is_active', true)->orderBy('name')->get();
         return view('admin.deliveries.create', compact('orders', 'routes', 'vehicles'));
     }
 
@@ -66,7 +70,12 @@ class DeliveryController extends Controller
             'order_id' => [
                 'required',
                 Rule::exists('orders', 'id')->where(function ($query) {
-                    $query->whereIn('status', ['picked', 'packed']);
+                    $query->where(function ($orderQuery) {
+                        $orderQuery->whereIn('status', ['picked', 'packed']);
+                    })->orWhere(function ($orderQuery) {
+                        $orderQuery->where('order_type', 'return')
+                            ->where('status', 'confirmed');
+                    });
                 }),
                 Rule::unique('deliveries', 'order_id'),
             ],
@@ -102,7 +111,13 @@ class DeliveryController extends Controller
     {
         $delivery->load('order.agent', 'order.items.product', 'route', 'vehicle', 'pod', 'items');
         $routes = DeliveryRoute::orderBy('name')->get();
-        $vehicles = Vehicle::orderBy('name')->get();
+        $vehicles = Vehicle::query()
+            ->where('is_active', true)
+            ->when($delivery->vehicle_id, function ($query) use ($delivery) {
+                $query->orWhere('id', $delivery->vehicle_id);
+            })
+            ->orderBy('name')
+            ->get();
 
         return view('admin.deliveries.edit', compact('delivery', 'routes', 'vehicles'));
     }
@@ -185,53 +200,56 @@ class DeliveryController extends Controller
 
                 $order = $delivery->order()->with('items')->first();
 
-                foreach ($order->items as $item) {
-                    $line = $deliveryItems->firstWhere('order_item_id', $item->id);
-                    $toShip = $line
-                        ? (float) $line->qty_dispatched
-                        : (float) $item->quantity;
+                if ($order->order_type !== 'return') {
+                    foreach ($order->items as $item) {
+                        $line = $deliveryItems->firstWhere('order_item_id', $item->id);
+                        $toShip = $line
+                            ? (float) $line->qty_dispatched
+                            : (float) $item->quantity;
 
-                    if ($toShip <= 0) {
-                        continue;
-                    }
-
-                    $reservedEntries = StockEntry::where('order_id', $order->id)
-                        ->where('product_id', $item->product_id)
-                        ->where('status', 'reserved')
-                        ->orderBy('created_at')
-                        ->lockForUpdate()
-                        ->get();
-
-                    foreach ($reservedEntries as $entry) {
                         if ($toShip <= 0) {
-                            break;
-                        }
-
-                        $entryQty = (float) $entry->quantity;
-                        if ($entryQty <= 0) {
                             continue;
                         }
 
-                        $shipQty = min($toShip, $entryQty);
-                        $remaining = $entryQty - $shipQty;
+                        $reservedEntries = StockEntry::where('order_id', $order->id)
+                            ->where('product_id', $item->product_id)
+                            ->where('status', 'reserved')
+                            ->orderBy('created_at')
+                            ->lockForUpdate()
+                            ->get();
 
-                        if ($remaining <= 0) {
-                            // Entire reserved entry has been shipped; remove it.
-                            $entry->delete();
-                        } else {
-                            $entry->quantity = $remaining;
-                            $entry->save();
+                        foreach ($reservedEntries as $entry) {
+                            if ($toShip <= 0) {
+                                break;
+                            }
+
+                            $entryQty = (float) $entry->quantity;
+                            if ($entryQty <= 0) {
+                                continue;
+                            }
+
+                            $shipQty = min($toShip, $entryQty);
+                            $remaining = $entryQty - $shipQty;
+
+                            if ($remaining <= 0) {
+                                $entry->delete();
+                            } else {
+                                $entry->quantity = $remaining;
+                                $entry->save();
+                            }
+
+                            $toShip -= $shipQty;
                         }
 
-                        $toShip -= $shipQty;
-                    }
-
-                    if ($toShip > 0.00001) {
-                        throw ValidationException::withMessages([
-                            'items' => ['Reserved stock could not be safely matched to this order for delivery.'],
-                        ]);
+                        if ($toShip > 0.00001) {
+                            throw ValidationException::withMessages([
+                                'items' => ['Reserved stock could not be safely matched to this order for delivery.'],
+                            ]);
+                        }
                     }
                 }
+
+                app(FinanceController::class)->ensureInvoiceForOrder($order->fresh());
             }
         });
 

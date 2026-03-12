@@ -56,12 +56,19 @@ class ManufacturingDashboardController extends Controller
 
         // Top products by produced quantity
         $topProducts = $runs
-            ->groupBy(fn ($run) => $run->product?->name ?? 'Unknown product')
-            ->map(fn ($group) => [
-                'qty' => $group->sum('quantity'),
-                'runs' => $group->count(),
-            ])
+            ->groupBy(fn ($run) => (string) ($run->product_id ?? 'unknown'))
+            ->map(function ($group) {
+                $product = $group->first()->product;
+
+                return [
+                    'product_id' => $product?->id,
+                    'product_name' => $product?->name ?? 'Unknown product',
+                    'qty' => $group->sum('quantity'),
+                    'runs' => $group->count(),
+                ];
+            })
             ->sortByDesc('qty')
+            ->values()
             ->take(5);
 
         // Output by line / shift

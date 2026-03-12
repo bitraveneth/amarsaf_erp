@@ -96,7 +96,13 @@ class BatchController extends Controller
         $batch = Batch::create($data);
 
         // Notify admins and QC officers that a new batch has been recorded
-        $recipients = User::whereIn('role', ['admin', 'qc_officer'])->get();
+        $recipients = User::query()
+            ->with('userRoles')
+            ->get()
+            ->filter(fn (User $user) => $user->hasAnyRole(['admin', 'qc_officer']))
+            ->unique('id')
+            ->values();
+
         foreach ($recipients as $user) {
             $user->notify(new NewBatchCreated($batch));
         }

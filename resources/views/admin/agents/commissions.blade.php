@@ -14,7 +14,7 @@
                 </span>
             </div>
             <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                Per-agent sales and per-order commissions for {{ $month->format('F Y') }}.
+                Per-agent realized sales and earned commissions for {{ $month->format('F Y') }}, including monthly tiers.
             </p>
         </div>
         <div class="flex items-center gap-3">
@@ -55,7 +55,7 @@
             <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">No commissionable sales</h3>
             <p class="text-gray-600 dark:text-gray-400 max-w-md mx-auto">
                 No commissionable sales were recorded for {{ $month->format('F Y') }}.
-                This could be because no orders were placed or no commission rules are configured.
+                This could be because no delivered invoices were issued or no commission rules are configured.
             </p>
             <div class="mt-6 flex items-center justify-center gap-3">
                 <a href="{{ route('admin.agents.index') }}" 

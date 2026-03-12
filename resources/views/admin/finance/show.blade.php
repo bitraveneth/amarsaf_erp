@@ -145,7 +145,8 @@
         $cashTotal = $grossTotal - $invoice->withholding;
         $creditsTotal = $invoice->creditNotes->sum('amount');
         $receiptsTotal = $invoice->receipts->sum('amount');
-        $outstanding   = $cashTotal - $creditsTotal - $receiptsTotal;
+        $advancesTotal = $invoice->advanceApplications->sum('amount');
+        $outstanding   = $cashTotal - $creditsTotal - $receiptsTotal - $advancesTotal;
     @endphp
 
     <!-- Financial Summary Cards (screen only) -->
@@ -439,6 +440,10 @@
                 <tr>
                     <td class="px-3 py-1 text-right">Receipts:</td>
                     <td class="px-3 py-1 text-right">- {{ number_format($receiptsTotal, 2) }}</td>
+                </tr>
+                <tr>
+                    <td class="px-3 py-1 text-right">Advances:</td>
+                    <td class="px-3 py-1 text-right">- {{ number_format($advancesTotal, 2) }}</td>
                 </tr>
                 <tr>
                     <td class="px-3 py-1 text-right font-semibold border-t border-gray-300">Outstanding:</td>

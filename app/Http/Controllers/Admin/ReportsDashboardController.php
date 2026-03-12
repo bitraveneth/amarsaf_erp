@@ -30,14 +30,7 @@ class ReportsDashboardController extends Controller
 
         $totalCollections = $invoices->flatMap->receipts->sum('amount');
 
-        $outstanding = $invoices->sum(function (Invoice $invoice) {
-            $gross = $invoice->net_total + $invoice->vat_amount;
-            $cashTotal = $gross - $invoice->withholding;
-            $credited = $invoice->creditNotes->sum('amount');
-            $paid = $invoice->receipts->sum('amount');
-
-            return max($cashTotal - $credited - $paid, 0);
-        });
+        $outstanding = $invoices->sum(fn (Invoice $invoice) => (float) $invoice->outstanding);
 
         // Cost side
         $expenses = (float) Expense::whereBetween('date', [$startOfYear, $endOfYear])
@@ -66,7 +59,7 @@ class ReportsDashboardController extends Controller
             ->where('qc_status', 'approved')
             ->sum('quantity');
 
-        $activeAgents = Agent::count();
+        $activeAgents = Agent::where('is_active', true)->count();
 
         $netProfitEstimate = $grossRevenue - ($totalExpenses + $totalPayroll);
 

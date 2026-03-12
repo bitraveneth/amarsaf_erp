@@ -132,15 +132,11 @@ class EmployeeAllowanceController extends Controller
             abort(404);
         }
 
-        if ($allowance->attachment_path) {
-            Storage::disk('public')->delete($allowance->attachment_path);
-        }
-
-        $allowance->delete();
-
         return redirect()
             ->route('admin.employees.allowances.index', $employee)
-            ->with('status', 'Allowance/TA slip deleted.');
+            ->withErrors([
+                'allowance' => 'Allowance and TA history cannot be deleted. Update the status or correct the record instead.',
+            ]);
     }
 
     protected function validated(Request $request): array

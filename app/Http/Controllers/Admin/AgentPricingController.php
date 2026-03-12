@@ -33,6 +33,8 @@ class AgentPricingController extends Controller
             'commissions.*.value' => 'nullable|numeric|min:0',
             'commissions.*.order_type' => 'nullable|in:regular,bulk,sample,return',
             'commissions.*.frequency' => 'nullable|in:per_order,monthly',
+            'commissions.*.threshold_min' => 'nullable|numeric|min:0',
+            'commissions.*.threshold_max' => 'nullable|numeric|min:0',
         ]);
 
         $prices = $data['prices'] ?? [];
@@ -52,6 +54,13 @@ class AgentPricingController extends Controller
 
             if ($sku !== '' && ! in_array($sku, $allowedSkus, true)) {
                 $errors["commissions.$index.sku"] = 'The selected SKU does not exist.';
+            }
+
+            $thresholdMin = $row['threshold_min'] ?? null;
+            $thresholdMax = $row['threshold_max'] ?? null;
+
+            if ($thresholdMin !== null && $thresholdMax !== null && (float) $thresholdMax < (float) $thresholdMin) {
+                $errors["commissions.$index.threshold_max"] = 'Tier max must be greater than or equal to tier min.';
             }
         }
 
@@ -91,6 +100,8 @@ class AgentPricingController extends Controller
                     'value' => $value,
                     'order_type' => $row['order_type'] ?? null,
                     'frequency' => $row['frequency'] ?? 'per_order',
+                    'threshold_min' => ($row['threshold_min'] ?? '') !== '' ? $row['threshold_min'] : null,
+                    'threshold_max' => ($row['threshold_max'] ?? '') !== '' ? $row['threshold_max'] : null,
                 ]);
             }
         });

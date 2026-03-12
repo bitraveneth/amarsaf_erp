@@ -74,7 +74,7 @@ class AdminController extends Controller
         $packagingCount = $packagingReady ? PackagingType::count() : 0;
         $taxClassCount = $taxReady ? TaxClass::count() : 0;
         $batchCount = $batchReady ? Batch::count() : 0;
-        $agentCount = $agentReady ? Agent::count() : 0;
+        $agentCount = $agentReady ? Agent::where('is_active', true)->count() : 0;
         // Treat "orders" on the dashboard as sales orders only – exclude return
         // orders so that the high-level metric reflects outbound sales. Returns
         // are surfaced separately in a dedicated card.
@@ -113,16 +113,12 @@ class AdminController extends Controller
         $outstandingReceivables = 0;
         if ($invoiceReady) {
             $openInvoices = Invoice::query()
-                ->select(['id', 'net_total', 'vat_amount', 'withholding'])
-                ->withSum('receipts', 'amount')
+                ->with(['receipts', 'creditNotes', 'advanceApplications'])
                 ->whereIn('status', ['issued', 'adjusted'])
                 ->get();
 
             $outstandingReceivables = $openInvoices->sum(function (Invoice $invoice) {
-                $gross = ($invoice->net_total + $invoice->vat_amount) - $invoice->withholding;
-                $paid = (float) ($invoice->receipts_sum_amount ?? 0);
-
-                return max($gross - $paid, 0);
+                return $invoice->outstanding;
             });
         }
 

@@ -8,6 +8,8 @@ use App\Models\Permission;
 use App\Models\RolePermission;
 use App\Models\Role;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Route;
 
 class PermissionController extends Controller
 {
@@ -112,11 +114,12 @@ class PermissionController extends Controller
         $this->ensureCanManagePermissions();
 
         $data = $request->validate([
-            'name'  => 'required|string|max:100|alpha_dash|unique:permissions,name',
+            'name'  => ['required', 'string', 'max:100', 'regex:/^[a-z0-9]+(?:[._-][a-z0-9]+)*$/', 'unique:permissions,name'],
             'label' => 'required|string|max:255',
             'group' => 'nullable|string|max:100',
         ]);
 
+        $data['name'] = strtolower(trim($data['name']));
         $data['group'] = isset($data['group']) && trim((string) $data['group']) !== ''
             ? $this->canonicalGroupLabel($data['group'])
             : null;
@@ -133,14 +136,26 @@ class PermissionController extends Controller
 
         $data = $request->validate([
             'role_permissions' => 'array',
+            'submitted_roles' => 'nullable|array',
+            'submitted_roles.*' => 'string',
         ]);
 
         $validRoles = array_keys($this->availableRoles());
         $validPermissions = Permission::pluck('name')->all();
         $rolePermissions = collect($data['role_permissions'] ?? []);
+        $submittedRoles = collect($data['submitted_roles'] ?? [])
+            ->map(fn ($value) => (string) $value)
+            ->filter(fn ($value) => in_array($value, $validRoles, true))
+            ->unique()
+            ->values();
+
+        if ($submittedRoles->isEmpty()) {
+            return redirect()->route('admin.permissions.index')
+                ->withErrors(['role_permissions' => 'No roles were submitted for update.']);
+        }
 
         foreach ($rolePermissions as $role => $permissionNames) {
-            if (! in_array($role, $validRoles, true)) {
+            if (! in_array($role, $validRoles, true) || ! in_array($role, $submittedRoles->all(), true)) {
                 return redirect()->route('admin.permissions.index')
                     ->withErrors(['role_permissions' => 'Invalid role submitted.']);
             }
@@ -156,17 +171,19 @@ class PermissionController extends Controller
             }
         }
 
-        // Replace mappings per editable role, including clearing unchecked roles.
-        foreach ($validRoles as $role) {
-            RolePermission::where('role', $role)->delete();
+        DB::transaction(function () use ($submittedRoles, $rolePermissions) {
+            // Replace mappings only for roles that were explicitly submitted.
+            foreach ($submittedRoles as $role) {
+                RolePermission::where('role', $role)->delete();
 
-            foreach (($rolePermissions->get($role, []) ?? []) as $permissionName) {
-                RolePermission::create([
-                    'role'            => $role,
-                    'permission_name' => $permissionName,
-                ]);
+                foreach (($rolePermissions->get($role, []) ?? []) as $permissionName) {
+                    RolePermission::create([
+                        'role'            => $role,
+                        'permission_name' => $permissionName,
+                    ]);
+                }
             }
-        }
+        });
 
         return redirect()->route('admin.permissions.index')
             ->with('status', 'Role permissions updated.');
@@ -227,6 +244,11 @@ class PermissionController extends Controller
     {
         $this->ensureCanManagePermissions();
 
+        if ($this->isProtectedPermission($permission->name)) {
+            return redirect()->route('admin.permissions.index')
+                ->withErrors(['permission' => 'This permission is referenced by the live system and cannot be deleted from the UI.']);
+        }
+
         RolePermission::where('permission_name', $permission->name)->delete();
         $permission->delete();
 
@@ -266,6 +288,17 @@ class PermissionController extends Controller
         if ($permissionNames->isEmpty()) {
             return redirect()->route('admin.permissions.index')
                 ->with('status', 'Group already empty.');
+        }
+
+        $protectedPermissions = $permissionNames
+            ->filter(fn ($permissionName) => $this->isProtectedPermission((string) $permissionName))
+            ->values();
+
+        if ($protectedPermissions->isNotEmpty()) {
+            return redirect()->route('admin.permissions.index')
+                ->withErrors([
+                    'group' => 'This group contains live system permissions and cannot be deleted: ' . $protectedPermissions->implode(', '),
+                ]);
         }
 
         RolePermission::whereIn('permission_name', $permissionNames)->delete();
@@ -329,5 +362,32 @@ class PermissionController extends Controller
         $rank = array_search($label, $this->groupOrder, true);
 
         return $rank === false ? 999 : $rank;
+    }
+
+    protected function isProtectedPermission(string $permissionName): bool
+    {
+        return in_array($permissionName, $this->protectedPermissionNames(), true);
+    }
+
+    protected function protectedPermissionNames(): array
+    {
+        static $protected = null;
+
+        if ($protected !== null) {
+            return $protected;
+        }
+
+        $protected = collect(Route::getRoutes())
+            ->flatMap(function ($route) {
+                return collect($route->gatherMiddleware())
+                    ->filter(fn ($middleware) => is_string($middleware) && str_starts_with($middleware, 'perm:'))
+                    ->map(fn ($middleware) => substr($middleware, strlen('perm:')));
+            })
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        return $protected;
     }
 }

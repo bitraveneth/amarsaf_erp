@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\AgentAdvance;
+use App\Models\AgentAdvanceApplication;
 use App\Models\CreditNote;
 use App\Models\LedgerEntry;
 use App\Models\Invoice;
@@ -20,13 +22,13 @@ class FinanceController extends Controller
 {
     public function index()
     {
-        $invoices = Invoice::with('order.agent')->latest()->paginate(10);
+        $invoices = Invoice::with(['order.agent', 'receipts', 'creditNotes', 'advanceApplications'])->latest()->paginate(10);
         return view('admin.finance.index', compact('invoices'));
     }
 
     public function show(Invoice $invoice)
     {
-        $invoice->load(['order.agent', 'items.product', 'receipts', 'creditNotes']);
+        $invoice->load(['order.agent', 'items.product', 'receipts', 'creditNotes', 'advanceApplications']);
         return view('admin.finance.show', compact('invoice'));
     }
 
@@ -63,6 +65,32 @@ class FinanceController extends Controller
                 ->with('status', 'Invoice already exists for this order.');
         }
 
+        $invoice = $this->ensureInvoiceForOrder($order);
+
+        if (! $invoice) {
+            return redirect()
+                ->route('admin.orders.show', $order)
+                ->with('status', 'This order type does not create a sales invoice automatically.');
+        }
+
+        return redirect()->route('admin.finance.index')->with('status', 'Invoice created from order.');
+    }
+
+    public function ensureInvoiceForOrder(Order $order): ?Invoice
+    {
+        if ($order->status !== 'delivered') {
+            abort(400, 'Only delivered orders can be invoiced.');
+        }
+
+        $existingInvoice = Invoice::where('order_id', $order->id)->first();
+        if ($existingInvoice) {
+            return $existingInvoice;
+        }
+
+        if (! $this->orderRequiresInvoice($order)) {
+            return null;
+        }
+
         $relations = ['items.product.taxClass', 'agent'];
         if (Schema::hasTable('deliveries') && Schema::hasTable('delivery_items')) {
             $relations[] = 'delivery.items';
@@ -73,8 +101,8 @@ class FinanceController extends Controller
             ? $order->delivery->items->keyBy('order_item_id')
             : collect();
 
-        $netTotal = 0;
-        $vatAmount = 0;
+        $netTotal = 0.0;
+        $vatAmount = 0.0;
         $invoiceLines = [];
 
         foreach ($order->items as $item) {
@@ -96,12 +124,12 @@ class FinanceController extends Controller
                 continue;
             }
 
-            $lineTotal = $quantity * $item->unit_price;
+            $lineTotal = round($quantity * (float) $item->unit_price, 2);
             $netTotal += $lineTotal;
 
-            $rate = optional($item->product->taxClass)->rate ?? 0;
+            $rate = (float) (optional($item->product->taxClass)->rate ?? 0);
             if ($rate > 0) {
-                $vatAmount += $lineTotal * ($rate / 100);
+                $vatAmount += round($lineTotal * ($rate / 100), 2);
             }
 
             $invoiceLines[] = [
@@ -113,36 +141,29 @@ class FinanceController extends Controller
             ];
         }
 
-        if ($netTotal == 0 && empty($invoiceLines)) {
-            abort(400, 'No delivered quantity is available to invoice for this order.');
+        if ($netTotal <= 0 || empty($invoiceLines)) {
+            return null;
         }
-
-        if ($netTotal == 0) {
-            $netTotal = $order->total;
-        }
-
-        $vatAmount = round($vatAmount, 2);
 
         $invoiceData = [
             'order_id' => $order->id,
             'issued_at' => Carbon::today(),
             'due_at' => Carbon::today()->addDays(7),
-            'net_total' => $netTotal,
-            'vat_amount' => $vatAmount,
+            'net_total' => round($netTotal, 2),
+            'vat_amount' => round($vatAmount, 2),
             'withholding' => 0,
             'status' => 'issued',
         ];
 
-        // Auto-calc withholding based on agent's configured rate (if any)
         $agent = $order->agent;
         if ($agent && $agent->withholding_rate > 0) {
-            $grossTotal = $netTotal + $vatAmount;
-            $invoiceData['withholding'] = round($grossTotal * ($agent->withholding_rate / 100), 2);
+            $grossTotal = $invoiceData['net_total'] + $invoiceData['vat_amount'];
+            $invoiceData['withholding'] = round($grossTotal * ((float) $agent->withholding_rate / 100), 2);
         }
 
         $invoice = null;
 
-        DB::transaction(function () use ($invoiceData, $order, $netTotal, $vatAmount, $invoiceLines, &$invoice) {
+        DB::transaction(function () use ($invoiceData, $order, $invoiceLines, &$invoice) {
             $invoice = Invoice::create(array_merge($invoiceData, [
                 'number' => 'INV-TMP-' . Str::uuid(),
             ]));
@@ -162,10 +183,12 @@ class FinanceController extends Controller
                 ]);
             }
 
+            $invoiceDescription = 'Invoice ' . $invoice->number;
+
             LedgerEntry::create([
                 'account' => 'Accounts Receivable',
-                'description' => 'Invoice ' . $invoice->number,
-                'debit' => $netTotal + $vatAmount,
+                'description' => $invoiceDescription,
+                'debit' => $invoice->net_total + $invoice->vat_amount,
                 'credit' => 0,
                 'order_id' => $order->id,
                 'invoice_id' => $invoice->id,
@@ -173,26 +196,29 @@ class FinanceController extends Controller
 
             LedgerEntry::create([
                 'account' => 'Sales Revenue',
-                'description' => 'Invoice ' . $invoice->number,
+                'description' => $invoiceDescription,
                 'debit' => 0,
-                'credit' => $netTotal,
+                'credit' => $invoice->net_total,
                 'order_id' => $order->id,
                 'invoice_id' => $invoice->id,
             ]);
 
-            if ($vatAmount > 0) {
+            if ((float) $invoice->vat_amount > 0) {
                 LedgerEntry::create([
                     'account' => 'VAT Payable',
                     'description' => 'VAT on ' . $invoice->number,
                     'debit' => 0,
-                    'credit' => $vatAmount,
+                    'credit' => $invoice->vat_amount,
                     'order_id' => $order->id,
                     'invoice_id' => $invoice->id,
                 ]);
             }
+
+            $this->applyAvailableAgentAdvances($invoice);
+            $invoice->recalculateStatus();
         });
 
-        return redirect()->route('admin.finance.index')->with('status', 'Invoice created from order.');
+        return $invoice?->fresh();
     }
 
     public function storeReceipt(Request $request, Invoice $invoice)
@@ -250,18 +276,13 @@ class FinanceController extends Controller
     public function destroyReceipt(Receipt $receipt)
     {
         $invoice = $receipt->invoice;
+        $message = $receipt->reconciled
+            ? 'Reconciled receipts cannot be deleted. Preserve the audit trail and record an adjusting entry instead.'
+            : 'Posted receipts cannot be deleted. Preserve the audit trail and record an adjusting entry instead.';
 
-        if ($invoice) {
-            DB::transaction(function () use ($invoice, $receipt) {
-                $this->deleteReceiptLedgerEntries($invoice, $receipt);
-                $receipt->delete();
-                $invoice->recalculateStatus();
-            });
-        } else {
-            $receipt->delete();
-        }
-
-        return redirect()->route('admin.finance.show', $invoice)->with('status', 'Receipt deleted.');
+        return $invoice
+            ? redirect()->route('admin.finance.show', $invoice)->withErrors(['receipt' => $message])
+            : back()->withErrors(['receipt' => $message]);
     }
 
     public function showCreditNoteForm(Invoice $invoice)
@@ -276,10 +297,11 @@ class FinanceController extends Controller
             'amount' => 'required|numeric|min:0.01',
             'reason' => 'nullable|string',
         ]);
-        // Maximum credit cannot exceed outstanding cash amount after withholding
+        // Maximum credit cannot exceed the remaining receivable after
+        // withholding, receipts, and applied advances.
         $grossTotal = $invoice->net_total + $invoice->vat_amount;
         $cashTotal  = $grossTotal - $invoice->withholding;
-        $maxCredit = $cashTotal;
+        $maxCredit = max(0, $cashTotal - $invoice->receipts_total - $invoice->advances_applied_total);
         $alreadyCredited = CreditNote::where('invoice_id', $invoice->id)->sum('amount');
 
         if ($data['amount'] > ($maxCredit - $alreadyCredited)) {
@@ -287,8 +309,9 @@ class FinanceController extends Controller
         }
 
         $credit = null;
+        $creditBreakdown = $invoice->creditBreakdown((float) $data['amount']);
 
-        DB::transaction(function () use ($invoice, $data, &$credit) {
+        DB::transaction(function () use ($invoice, $data, $creditBreakdown, &$credit) {
             $credit = CreditNote::create([
                 'invoice_id' => $invoice->id,
                 'order_id' => $invoice->order_id,
@@ -305,11 +328,22 @@ class FinanceController extends Controller
             LedgerEntry::create([
                 'account' => 'Sales Returns',
                 'description' => 'Credit note ' . $credit->number,
-                'debit' => $credit->amount,
+                'debit' => $creditBreakdown['net'],
                 'credit' => 0,
                 'order_id' => $invoice->order_id,
                 'invoice_id' => $invoice->id,
             ]);
+
+            if ($creditBreakdown['vat'] > 0) {
+                LedgerEntry::create([
+                    'account' => 'VAT Payable',
+                    'description' => 'VAT reversal on ' . $credit->number,
+                    'debit' => $creditBreakdown['vat'],
+                    'credit' => 0,
+                    'order_id' => $invoice->order_id,
+                    'invoice_id' => $invoice->id,
+                ]);
+            }
 
             LedgerEntry::create([
                 'account' => 'Accounts Receivable',
@@ -329,31 +363,23 @@ class FinanceController extends Controller
     public function destroyCreditNote(CreditNote $creditNote)
     {
         $invoice = $creditNote->invoice;
+        $message = 'Posted credit notes cannot be deleted. Preserve the audit trail and issue an offsetting adjustment instead.';
 
-        if ($invoice) {
-            LedgerEntry::where('invoice_id', $invoice->id)
-                ->where('description', 'Credit note ' . $creditNote->number)
-                ->delete();
-        }
-
-        $creditNote->delete();
-
-        if ($invoice) {
-            $invoice->recalculateStatus();
-        }
-
-        return redirect()->route('admin.finance.show', $invoice)->with('status', 'Credit note deleted.');
+        return $invoice
+            ? redirect()->route('admin.finance.show', $invoice)->withErrors(['creditNote' => $message])
+            : back()->withErrors(['creditNote' => $message]);
     }
 
     public function downloadPdf(Invoice $invoice)
     {
-        $invoice->load(['order.agent', 'items.product', 'receipts', 'creditNotes']);
+        $invoice->load(['order.agent', 'items.product', 'receipts', 'creditNotes', 'advanceApplications']);
 
         $grossTotal    = $invoice->net_total + $invoice->vat_amount;
         $cashTotal     = $grossTotal - $invoice->withholding;
         $creditsTotal  = $invoice->creditNotes->sum('amount');
         $receiptsTotal = $invoice->receipts->sum('amount');
-        $outstanding   = $cashTotal - $creditsTotal - $receiptsTotal;
+        $advancesTotal = $invoice->advanceApplications->sum('amount');
+        $outstanding   = $cashTotal - $creditsTotal - $receiptsTotal - $advancesTotal;
 
         $pdf = Pdf::loadView('admin.finance.invoice_pdf', [
             'invoice'       => $invoice,
@@ -361,6 +387,7 @@ class FinanceController extends Controller
             'cashTotal'     => $cashTotal,
             'creditsTotal'  => $creditsTotal,
             'receiptsTotal' => $receiptsTotal,
+            'advancesTotal' => $advancesTotal,
             'outstanding'   => $outstanding,
         ]);
 
@@ -369,9 +396,14 @@ class FinanceController extends Controller
 
     public function destroy(Invoice $invoice)
     {
+        if ($invoice->status !== 'draft' || LedgerEntry::where('invoice_id', $invoice->id)->exists()) {
+            return redirect()->route('admin.finance.index')
+                ->withErrors(['invoice' => 'Issued invoices cannot be deleted. Preserve the audit trail and adjust them through controlled finance entries instead.']);
+        }
+
         if ($invoice->receipts()->exists() || $invoice->creditNotes()->exists()) {
             return redirect()->route('admin.finance.index')
-                ->with('status', 'Invoice has receipts or credit notes and cannot be deleted.');
+                ->withErrors(['invoice' => 'Invoice has receipts or credit notes and cannot be deleted.']);
         }
 
         LedgerEntry::where('invoice_id', $invoice->id)->delete();
@@ -424,6 +456,82 @@ class FinanceController extends Controller
 
         if ($isSafeLegacyPair) {
             LedgerEntry::whereKey($legacyEntries->pluck('id'))->delete();
+        }
+    }
+
+    protected function orderRequiresInvoice(Order $order): bool
+    {
+        return in_array($order->order_type, ['regular', 'bulk'], true);
+    }
+
+    protected function applyAvailableAgentAdvances(Invoice $invoice): void
+    {
+        $invoice->loadMissing('order.agent');
+        $agent = $invoice->order?->agent;
+
+        if (! $agent) {
+            return;
+        }
+
+        $remainingOutstanding = (float) $invoice->cash_total;
+        if ($remainingOutstanding <= 0) {
+            return;
+        }
+
+        $advances = AgentAdvance::where('agent_id', $agent->id)
+            ->whereIn('status', ['open', 'partial'])
+            ->whereDate('advanced_at', '<=', $invoice->issued_at->toDateString())
+            ->orderBy('advanced_at')
+            ->orderBy('id')
+            ->lockForUpdate()
+            ->get();
+
+        foreach ($advances as $advance) {
+            if ($remainingOutstanding <= 0) {
+                break;
+            }
+
+            $availableAmount = $advance->available_amount;
+            if ($availableAmount <= 0) {
+                continue;
+            }
+
+            $applyAmount = min($availableAmount, $remainingOutstanding);
+
+            AgentAdvanceApplication::create([
+                'agent_advance_id' => $advance->id,
+                'invoice_id' => $invoice->id,
+                'amount' => $applyAmount,
+                'applied_at' => Carbon::today(),
+            ]);
+
+            $advance->applied_amount = round((float) $advance->applied_amount + $applyAmount, 2);
+            $advance->status = $advance->available_amount <= 0
+                ? 'applied'
+                : 'partial';
+            $advance->save();
+
+            $description = 'Advance applied from ' . $agent->name . ' to ' . $invoice->number;
+
+            LedgerEntry::create([
+                'account' => 'Agent Advances',
+                'description' => $description,
+                'debit' => $applyAmount,
+                'credit' => 0,
+                'order_id' => $invoice->order_id,
+                'invoice_id' => $invoice->id,
+            ]);
+
+            LedgerEntry::create([
+                'account' => 'Accounts Receivable',
+                'description' => $description,
+                'debit' => 0,
+                'credit' => $applyAmount,
+                'order_id' => $invoice->order_id,
+                'invoice_id' => $invoice->id,
+            ]);
+
+            $remainingOutstanding -= $applyAmount;
         }
     }
 }

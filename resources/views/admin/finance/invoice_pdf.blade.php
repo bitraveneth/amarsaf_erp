@@ -176,6 +176,10 @@
                     <td class="text-right">- {{ number_format($receiptsTotal, 2) }}</td>
                 </tr>
                 <tr>
+                    <td class="text-right">Advances (BDT):</td>
+                    <td class="text-right">- {{ number_format($advancesTotal ?? 0, 2) }}</td>
+                </tr>
+                <tr>
                     <td class="text-right" style="padding-top:4px; font-weight:600;">Outstanding (BDT):</td>
                     <td class="text-right" style="padding-top:4px; font-weight:600;">
                         {{ number_format(max(0, $outstanding), 2) }}

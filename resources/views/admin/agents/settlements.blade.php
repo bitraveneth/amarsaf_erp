@@ -2,6 +2,7 @@
 
 @section('content')
 <div class="space-y-6">
+    @php($canManageSettlementAccounting = \App\Helpers\Permission::can(auth()->user(), 'accounting.manage'))
     <!-- Header -->
     <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -255,29 +256,33 @@
                                     </span>
                                 </td>
                                 <td class="px-4 py-3 text-right">
-                                    <form action="{{ route('admin.settlements.update-status', $settlement) }}" 
-                                          method="POST" 
-                                          class="inline-flex items-center gap-2">
-                                        @csrf
-                                        @method('PATCH')
-                                        <div class="relative">
-                                            <select name="status"
-                                                    class="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">
-                                                @foreach(['open','approved','paid'] as $status)
-                                                    <option value="{{ $status }}"{{ $settlement->status === $status ? ' selected' : '' }}>
-                                                        {{ ucfirst($status) }}
-                                                    </option>
-                                                @endforeach
-                                            </select>
-                                        </div>
-                                        <button type="submit" 
-                                                class="inline-flex items-center gap-1 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-white/[0.03]">
-                                            <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-                                            </svg>
-                                            Update
-                                        </button>
-                                    </form>
+                                    @if($canManageSettlementAccounting)
+                                        <form action="{{ route('admin.settlements.update-status', $settlement) }}" 
+                                              method="POST" 
+                                              class="inline-flex items-center gap-2">
+                                            @csrf
+                                            @method('PATCH')
+                                            <div class="relative">
+                                                <select name="status"
+                                                        class="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">
+                                                    @foreach(['open','approved','paid'] as $status)
+                                                        <option value="{{ $status }}"{{ $settlement->status === $status ? ' selected' : '' }}>
+                                                            {{ ucfirst($status) }}
+                                                        </option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
+                                            <button type="submit" 
+                                                    class="inline-flex items-center gap-1 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-white/[0.03]">
+                                                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                                </svg>
+                                                Update
+                                            </button>
+                                        </form>
+                                    @else
+                                        <span class="text-xs text-gray-500 dark:text-gray-400">Accounting approval required</span>
+                                    @endif
                                 </td>
                             </tr>
                         @endforeach

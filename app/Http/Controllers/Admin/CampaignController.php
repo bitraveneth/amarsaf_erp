@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Helpers\Permission as PermissionHelper;
 use App\Http\Controllers\Controller;
 use App\Models\Campaign;
 use App\Models\LedgerEntry;
@@ -39,6 +40,10 @@ class CampaignController extends Controller
             $data['attachment_path'] = $request->file('attachment')->store('marketing/campaigns', 'public');
         }
 
+        if ($this->payloadPostsLedgerEntries($data)) {
+            $this->ensureCanManageLedgerEntries();
+        }
+
         DB::transaction(function () use ($data) {
             $campaign = Campaign::create($data);
             $this->syncLedgerEntries($campaign);
@@ -64,6 +69,10 @@ class CampaignController extends Controller
             $data['attachment_path'] = $request->file('attachment')->store('marketing/campaigns', 'public');
         }
 
+        if ($this->hasPostedLedgerEntries($campaign) || $this->payloadPostsLedgerEntries($data)) {
+            $this->ensureCanManageLedgerEntries();
+        }
+
         DB::transaction(function () use ($campaign, $data) {
             $campaign->update($data);
             $this->syncLedgerEntries($campaign);
@@ -74,6 +83,10 @@ class CampaignController extends Controller
 
     public function destroy(Campaign $campaign)
     {
+        if ($this->hasPostedLedgerEntries($campaign)) {
+            $this->ensureCanManageLedgerEntries();
+        }
+
         if ($campaign->attachment_path) {
             Storage::disk('public')->delete($campaign->attachment_path);
         }
@@ -136,5 +149,23 @@ class CampaignController extends Controller
     protected function ledgerDescription(Campaign $campaign): string
     {
         return 'Campaign expense #' . $campaign->id;
+    }
+
+    protected function payloadPostsLedgerEntries(array $data): bool
+    {
+        return (float) ($data['cost'] ?? 0) > 0
+            && in_array(Campaign::normalizeStatus($data['status'] ?? null), Campaign::ACTUAL_COST_STATUSES, true);
+    }
+
+    protected function hasPostedLedgerEntries(Campaign $campaign): bool
+    {
+        return LedgerEntry::where('description', $this->ledgerDescription($campaign))->exists();
+    }
+
+    protected function ensureCanManageLedgerEntries(): void
+    {
+        if (! PermissionHelper::can(auth()->user(), 'accounting.manage')) {
+            abort(403, 'Accounting permission is required to post or remove campaign ledger entries.');
+        }
     }
 }

@@ -168,7 +168,7 @@
                                 @endif
                             </div>
 
-                            <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                            <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-6">
                                 <!-- SKU Filter -->
                                 <div>
                                     <label for="commissions_{{ $index }}_sku" class="mb-2 block text-xs font-medium text-gray-700 dark:text-gray-300">
@@ -222,6 +222,42 @@
                                     <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">%: enter percent (2 = 2%). Fixed: enter BDT.</p>
                                 </div>
 
+                                <div>
+                                    <label for="commissions_{{ $index }}_threshold_min" class="mb-2 block text-xs font-medium text-gray-700 dark:text-gray-300">
+                                        Tier Min Sales
+                                    </label>
+                                    <div class="relative">
+                                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-gray-500 dark:text-gray-400">BDT</span>
+                                        <input type="number"
+                                               id="commissions_{{ $index }}_threshold_min"
+                                               name="commissions[{{ $index }}][threshold_min]"
+                                               step="0.01"
+                                               min="0"
+                                               value="{{ $row['threshold_min'] ?? '' }}"
+                                               placeholder="No minimum"
+                                               class="w-full rounded-lg border border-gray-300 bg-white pl-10 pr-4 py-2 text-sm text-gray-900 placeholder-gray-400 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500">
+                                    </div>
+                                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Blank = no lower threshold.</p>
+                                </div>
+
+                                <div>
+                                    <label for="commissions_{{ $index }}_threshold_max" class="mb-2 block text-xs font-medium text-gray-700 dark:text-gray-300">
+                                        Tier Max Sales
+                                    </label>
+                                    <div class="relative">
+                                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-gray-500 dark:text-gray-400">BDT</span>
+                                        <input type="number"
+                                               id="commissions_{{ $index }}_threshold_max"
+                                               name="commissions[{{ $index }}][threshold_max]"
+                                               step="0.01"
+                                               min="0"
+                                               value="{{ $row['threshold_max'] ?? '' }}"
+                                               placeholder="No maximum"
+                                               class="w-full rounded-lg border border-gray-300 bg-white pl-10 pr-4 py-2 text-sm text-gray-900 placeholder-gray-400 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500">
+                                    </div>
+                                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Use min/max to define monthly or line-value tiers.</p>
+                                </div>
+
                                 <!-- Order Type Filter -->
                                 <div>
                                     <label for="commissions_{{ $index }}_order_type" class="mb-2 block text-xs font-medium text-gray-700 dark:text-gray-300">
@@ -257,7 +293,7 @@
                                             </label>
                                         @endforeach
                                     </div>
-                                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Use "Per order" now; "Monthly" is for reports.</p>
+                                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Monthly rules now pay from realized monthly invoiced sales. Use non-overlapping min/max tiers.</p>
                                 </div>
                             </div>
                         </div>

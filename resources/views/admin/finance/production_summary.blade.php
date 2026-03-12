@@ -85,7 +85,7 @@
             </div>
             <div class="relative">
                 <div class="flex items-center justify-between">
-                    <span class="text-sm font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Total Sales</span>
+                    <span class="text-sm font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Net Sales</span>
                     <div class="rounded-lg bg-brand-100 p-2 dark:bg-brand-900/30">
                         <svg class="h-4 w-4 text-brand-700 dark:text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v9.25m-1.5-9H5.625m-.75 0H4.5m10.5 6h3.75M4.5 15h9.75" />
@@ -93,7 +93,7 @@
                     </div>
                 </div>
                 <p class="mt-3 text-3xl font-bold text-gray-900 dark:text-white">BDT {{ number_format($salesTotal, 2) }}</p>
-                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Invoiced amount</p>
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Net invoiced sales after credits, excluding VAT</p>
             </div>
         </div>
 
@@ -106,7 +106,7 @@
             </div>
             <div class="relative">
                 <div class="flex items-center justify-between">
-                    <span class="text-sm font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Total Expenses</span>
+                    <span class="text-sm font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Operating Expenses</span>
                     <div class="rounded-lg bg-orange-100 p-2 dark:bg-orange-900/30">
                         <svg class="h-4 w-4 text-orange-700 dark:text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33" />
@@ -114,7 +114,7 @@
                     </div>
                 </div>
                 <p class="mt-3 text-3xl font-bold text-gray-900 dark:text-white">BDT {{ number_format($expensesTotal, 2) }}</p>
-                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Material & production costs</p>
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Campaign, gift, and operating spend</p>
             </div>
         </div>
 

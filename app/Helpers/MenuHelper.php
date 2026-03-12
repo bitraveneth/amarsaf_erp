@@ -143,6 +143,10 @@ class MenuHelper
         }
 
         $knownPaths = collect(Route::getRoutes())
+            ->filter(function ($route) {
+                return in_array('GET', $route->methods(), true)
+                    && ! str_contains($route->uri(), '{');
+            })
             ->map(fn ($route) => '/' . ltrim($route->uri(), '/'))
             ->all();
 

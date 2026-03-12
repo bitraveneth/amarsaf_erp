@@ -16,10 +16,10 @@
                 </div>
                 <div>
                     <h1 class="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
-                        Material Stock
+                        Available Material Stock
                     </h1>
                     <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                        View raw material quantities by warehouse
+                        View available raw material quantities by warehouse
                     </p>
                 </div>
             </div>
@@ -63,7 +63,7 @@
                 </div>
                 <div class="relative">
                     <div class="flex items-center justify-between">
-                        <span class="text-sm font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Total Stock</span>
+                        <span class="text-sm font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Available Stock</span>
                         <div class="rounded-lg bg-brand-100 p-2 dark:bg-brand-900/30">
                             <svg class="h-4 w-4 text-brand-700 dark:text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
@@ -71,7 +71,7 @@
                         </div>
                     </div>
                     <p class="mt-3 text-3xl font-bold text-gray-900 dark:text-white">{{ number_format($totalQuantity, 2) }}</p>
-                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Total units in stock</p>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Total units available for production</p>
                 </div>
             </div>
 
@@ -140,7 +140,7 @@
         <div class="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900 overflow-hidden">
             <div class="border-b border-gray-100 px-6 py-4 dark:border-gray-800">
                 <div class="flex items-center justify-between">
-                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Raw Material Stock by Warehouse</h3>
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Available Raw Material Stock by Warehouse</h3>
                     <span class="rounded-full bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-300">
                         {{ $rows->count() }} stock entries
                     </span>

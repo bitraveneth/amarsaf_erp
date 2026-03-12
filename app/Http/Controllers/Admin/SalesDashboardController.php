@@ -32,21 +32,23 @@ class SalesDashboardController extends Controller
 
         $collected = Receipt::whereBetween('received_at', [$startOfMonth, $endOfMonth])->sum('amount');
 
-        $outstanding = $invoices->sum(function (Invoice $invoice) {
-            $grossTotal = $invoice->net_total + $invoice->vat_amount;
-            $cashTotal = $grossTotal - $invoice->withholding;
-            $credited = (float) ($invoice->credit_notes_sum_amount ?? 0);
-            $paid = (float) ($invoice->receipts_sum_amount ?? 0);
-
-            return max($cashTotal - $credited - $paid, 0);
-        });
+        $outstanding = $invoices->sum(fn (Invoice $invoice) => (float) $invoice->outstanding);
 
         // Simple breakdowns
         $topAgents = $invoices
             ->filter(fn ($invoice) => $invoice->order && $invoice->order->agent)
-            ->groupBy(fn ($invoice) => $invoice->order->agent->name)
-            ->map(fn ($group) => $group->sum('net_total'))
-            ->sortDesc()
+            ->groupBy(fn ($invoice) => (string) $invoice->order->agent->id)
+            ->map(function ($group) {
+                $agent = $group->first()->order->agent;
+
+                return [
+                    'agent_id' => $agent->id,
+                    'agent_name' => $agent->name ?? 'Unknown agent',
+                    'net_sales' => $group->sum('net_total'),
+                ];
+            })
+            ->sortByDesc('net_sales')
+            ->values()
             ->take(5);
 
         $topProducts = collect();
@@ -58,12 +60,19 @@ class SalesDashboardController extends Controller
                 ->get();
 
             $topProducts = $items
-                ->groupBy(fn ($item) => $item->product?->name ?? 'Unknown product')
-                ->map(fn ($group) => [
-                    'qty' => $group->sum('quantity'),
-                    'net' => $group->sum('line_total'),
-                ])
+                ->groupBy(fn ($item) => (string) ($item->product_id ?? 'unknown'))
+                ->map(function ($group) {
+                    $product = $group->first()->product;
+
+                    return [
+                        'product_id' => $product?->id,
+                        'product_name' => $product?->name ?? 'Unknown product',
+                        'qty' => $group->sum('quantity'),
+                        'net' => $group->sum('line_total'),
+                    ];
+                })
                 ->sortByDesc('net')
+                ->values()
                 ->take(5);
         }
 

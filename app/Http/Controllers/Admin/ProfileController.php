@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Helpers\Permission as PermissionHelper;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -35,6 +36,14 @@ class ProfileController extends Controller
             'password' => ['nullable', 'string', 'min:8', 'max:191', 'confirmed'],
             'avatar' => ['nullable', 'image', 'max:2048'],
         ]);
+
+        if ($request->hasFile('avatar') && $user->employee && ! PermissionHelper::can($user, 'control.employees')) {
+            return back()
+                ->withInput($request->except('avatar'))
+                ->withErrors([
+                    'avatar' => 'You do not have permission to update employee profile photos.',
+                ]);
+        }
 
         $user->name = $data['name'];
         $user->email = $data['email'];

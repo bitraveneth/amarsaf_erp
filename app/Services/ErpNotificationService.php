@@ -102,7 +102,16 @@ class ErpNotificationService
             return;
         }
 
-        $recipients = User::query()->whereIn('role', $roles)->get();
+        $recipientQuery = User::query();
+
+        if (Schema::hasTable('user_roles')) {
+            $recipientQuery->with('userRoles');
+        }
+
+        $recipients = $recipientQuery
+            ->get()
+            ->filter(fn (User $user) => $user->hasAnyRole($roles))
+            ->values();
 
         foreach ($recipients as $user) {
             foreach ($alerts as $alert) {

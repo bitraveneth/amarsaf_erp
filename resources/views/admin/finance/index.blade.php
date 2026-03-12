@@ -35,11 +35,8 @@
             $totalNet = $invoices->sum('net_total');
             $totalVAT = $invoices->sum('vat_amount');
             $totalWithholding = $invoices->sum('withholding');
-            $totalReceipts = 0;
-            foreach($invoices as $invoice) {
-                $totalReceipts += $invoice->receipts()->sum('amount');
-            }
-            $outstanding = ($totalNet + $totalVAT - $totalWithholding) - $totalReceipts;
+            $totalReceipts = $invoices->sum(fn($invoice) => $invoice->receipts->sum('amount'));
+            $outstanding = $invoices->sum(fn($invoice) => (float) $invoice->outstanding);
             
             $statusBreakdown = $invoices->groupBy('status')->map->count();
         @endphp
@@ -180,9 +177,9 @@
                                 ];
                                 $statusColor = $statusColors[$invoice->status] ?? 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400';
                                 
-                                $receiptsTotal = $invoice->receipts()->sum('amount');
+                                $receiptsTotal = $invoice->receipts->sum('amount');
                                 $cashTotal = ($invoice->net_total + $invoice->vat_amount) - $invoice->withholding;
-                                $outstandingAmount = $cashTotal - $receiptsTotal;
+                                $outstandingAmount = (float) $invoice->outstanding;
                                 $canMarkPaid = $invoice->status !== 'paid' && $outstandingAmount > 0;
                             @endphp
                             <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">

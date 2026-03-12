@@ -97,9 +97,11 @@ class SalaryDistributionController extends Controller
 
     public function destroy(SalaryDistribution $salaryDistribution)
     {
-        $salaryDistribution->delete();
-
-        return redirect()->route('admin.salary-distributions.index')->with('status', 'Salary distribution deleted.');
+        return redirect()
+            ->route('admin.salary-distributions.index')
+            ->withErrors([
+                'salaryDistribution' => 'Posted salary distributions cannot be deleted. Preserve payroll history and correct them through controlled updates.',
+            ]);
     }
 
     protected function validated(Request $request): array

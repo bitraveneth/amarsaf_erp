@@ -257,6 +257,11 @@
 
                 <form method="POST" action="{{ route('admin.permissions.roles.update') }}" class="flex h-full flex-col">
                     @csrf
+                    @foreach($roles as $roleKey => $roleLabel)
+                        @if($roleKey !== 'super_admin')
+                            <input type="hidden" name="submitted_roles[]" value="{{ $roleKey }}">
+                        @endif
+                    @endforeach
                     <div class="min-h-0 flex-1 overflow-auto rounded-lg border border-gray-200 dark:border-gray-700">
                         <table class="min-w-full text-xs">
                             <thead class="sticky top-0 bg-gray-50 text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:bg-gray-800 dark:text-gray-400">

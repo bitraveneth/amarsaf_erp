@@ -221,6 +221,12 @@ class StockMovementController extends Controller
             $lockedEntry = StockEntry::whereKey($entry->id)->lockForUpdate()->firstOrFail();
             $this->ensureStockEntryAccess($lockedEntry);
 
+            if ($lockedEntry->status !== 'available') {
+                throw ValidationException::withMessages([
+                    'entry' => 'Only available stock can be written off from the inventory dashboard.',
+                ]);
+            }
+
             if ((float) $lockedEntry->quantity <= 0) {
                 return false;
             }

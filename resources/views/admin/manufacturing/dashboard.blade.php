@@ -105,16 +105,16 @@
                 <p class="text-sm text-gray-500 dark:text-gray-400">No production runs for this period.</p>
             @else
                 <ul class="space-y-3">
-                    @foreach($topProducts as $productName => $metrics)
+                    @foreach($topProducts as $product)
                         <li class="flex items-center justify-between">
                             <div>
-                                <p class="text-sm font-medium text-gray-900 dark:text-white">{{ $productName }}</p>
+                                <p class="text-sm font-medium text-gray-900 dark:text-white">{{ $product['product_name'] }}</p>
                                 <p class="text-xs text-gray-500 dark:text-gray-400">
-                                    Runs: {{ number_format($metrics['runs'], 0) }}
+                                    Runs: {{ number_format($product['runs'], 0) }}
                                 </p>
                             </div>
                             <span class="text-sm font-semibold text-gray-900 dark:text-white">
-                                {{ number_format($metrics['qty'], 0) }}
+                                {{ number_format($product['qty'], 0) }}
                             </span>
                         </li>
                     @endforeach
@@ -166,4 +166,3 @@
     </div>
 </div>
 @endsection
-
