@@ -86,35 +86,12 @@
             });
 
             Alpine.store('loader', {
-                show: true,
-                fallbackTimer: null,
+                show: false,
                 init() {
-                    const hideSoon = () => {
-                        window.setTimeout(() => this.hide(), 150);
-                    };
-
-                    if (document.readyState === 'complete') {
-                        hideSoon();
-                    } else {
-                        window.addEventListener('load', hideSoon, { once: true });
-                    }
-
-                    this.fallbackTimer = window.setTimeout(() => {
-                        this.hide();
-                    }, 2000);
+                    window.dispatchEvent(new CustomEvent('app:content-visible'));
                 },
                 hide() {
-                    if (!this.show) {
-                        return;
-                    }
-
-                    if (this.fallbackTimer) {
-                        window.clearTimeout(this.fallbackTimer);
-                        this.fallbackTimer = null;
-                    }
-
                     this.show = false;
-                    window.dispatchEvent(new CustomEvent('app:content-visible'));
                 }
             });
 
@@ -246,58 +223,6 @@
         };
         window.addEventListener('resize', checkMobile);">
 
-    {{-- Page Loader --}}
-    <div x-show="$store.loader.show" 
-         x-transition:leave="loader-fade-leave"
-         x-transition:leave-start="opacity-100"
-         x-transition:leave-end="opacity-0"
-         class="fixed inset-0 z-[99999] flex flex-col items-center justify-center bg-white dark:bg-gray-950"
-         style="will-change: opacity;">
-        
-        {{-- Logo with pulse animation --}}
-        <div class="mb-6 animate-pulse">
-            <div class="flex h-20 w-20 items-center justify-center rounded-2xl bg-brand-50 shadow-theme-md dark:bg-brand-500/10">
-                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="text-brand-600 dark:text-brand-400">
-                    <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                    <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                    <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-            </div>
-        </div>
-
-        {{-- App name with slide animation --}}
-        <h1 class="mb-8 text-title-md font-semibold text-gray-900 dark:text-white animate-[slideUp_0.6s_ease-out]">
-            {{ $appBrandName }}
-        </h1>
-
-        {{-- Bouncing dots loader --}}
-        <div class="flex items-center gap-2">
-            <span class="h-2.5 w-2.5 rounded-full bg-brand-500 animate-bounce" style="animation-delay: 0ms;"></span>
-            <span class="h-2.5 w-2.5 rounded-full bg-brand-500/80 animate-bounce" style="animation-delay: 150ms;"></span>
-            <span class="h-2.5 w-2.5 rounded-full bg-brand-500/60 animate-bounce" style="animation-delay: 300ms;"></span>
-        </div>
-
-        {{-- Loading status messages --}}
-        <p class="mt-8 text-theme-sm text-gray-600 dark:text-gray-400 animate-pulse">
-            <span x-show="$store.loader.show" x-text="[
-                'Preparing your dashboard...',
-                'Loading modules...',
-                'Almost there...',
-                'Welcome back!'
-            ][Math.floor(Math.random() * 4)]" class="inline-block min-w-[200px] text-center">
-                Loading...
-            </span>
-        </p>
-
-        {{-- Quick tip for demo users --}}
-        @if(app()->environment('local'))
-            <div class="absolute bottom-8 left-1/2 -translate-x-1/2 rounded-lg bg-gray-100 px-4 py-2 text-theme-xs text-gray-600 dark:bg-gray-800 dark:text-gray-400">
-                ⚡ Demo environment • Data resets daily
-            </div>
-        @endif
-    </div>
-
-    {{-- Main content renders behind the loader overlay --}}
     <div class="min-h-screen overflow-x-clip xl:flex">
         
         @include('layouts.backdrop')
