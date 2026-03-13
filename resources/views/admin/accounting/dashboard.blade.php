@@ -16,20 +16,22 @@
 
 <div class="space-y-6">
     <div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-        <div>
-            <div class="flex items-start gap-4">
+        <div class="xl:max-w-3xl">
+            <div class="flex items-center gap-3">
                 <div class="relative">
-                    <div class="absolute -inset-1 rounded-2xl bg-gradient-to-r from-brand-500 to-brand-600 opacity-20 blur"></div>
-                    <div class="relative flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-500 to-brand-600 text-white shadow-lg">
-                        <svg class="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8">
+                    <div class="absolute -inset-1 rounded-xl bg-gradient-to-r from-brand-500 to-brand-600 opacity-20 blur"></div>
+                    <div class="relative flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-brand-600 text-white shadow-lg">
+                        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M3 7.5L12 3l9 4.5M4.5 9.75V18h15V9.75M9 13.5h6M7.5 18V12h9v6" />
                         </svg>
                     </div>
                 </div>
                 <div>
                     <p class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">Accounting</p>
-                    <h1 class="mt-1 text-3xl font-semibold text-gray-900 dark:text-white">Dashboard</h1>
-                    <p class="mt-2 max-w-3xl text-sm text-gray-500 dark:text-gray-300">
+                    <h1 class="mt-1 bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-3xl font-bold text-transparent dark:from-white dark:to-gray-300">
+                        Dashboard
+                    </h1>
+                    <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
                         Period-based accounting snapshot showing invoice-basis sales, cash-basis collections, operating costs, payroll, and management profit estimate.
                     </p>
                 </div>

@@ -6,6 +6,9 @@
 @endphp
 
 @section('content')
+@php
+    $currencyCode = config('app.currency', 'BDT');
+@endphp
 <div class="space-y-8 print-invoice">
     <!-- Header with gradient (screen only) -->
     <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6 print-hidden">
@@ -29,6 +32,7 @@
                         @php
                             $statusColors = [
                                 'draft' => 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400',
+                                'issued' => 'bg-blue-light-100 text-blue-light-700 dark:bg-blue-light-500/20 dark:text-blue-light-400',
                                 'sent' => 'bg-blue-light-100 text-blue-light-700 dark:bg-blue-light-500/20 dark:text-blue-light-400',
                                 'paid' => 'bg-success-100 text-success-700 dark:bg-success-500/20 dark:text-success-400',
                                 'overdue' => 'bg-error-100 text-error-700 dark:bg-error-500/20 dark:text-error-400',
@@ -54,9 +58,9 @@
                     </div>
                     <div class="mt-1 flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
                         <span>Issued {{ optional($invoice->issued_at)->format('d M Y') }}</span>
-                        @if($invoice->due_date)
+                        @if($invoice->due_at)
                             <span class="inline-flex h-1 w-1 rounded-full bg-gray-300 dark:bg-gray-700"></span>
-                            <span>Due {{ $invoice->due_date->format('d M Y') }}</span>
+                            <span>Due {{ $invoice->due_at->format('d M Y') }}</span>
                         @endif
                     </div>
                 </div>
@@ -166,7 +170,7 @@
                         </svg>
                     </div>
                 </div>
-                <p class="mt-3 text-3xl font-bold text-gray-900 dark:text-white">BDT {{ number_format($invoice->net_total, 2) }}</p>
+                <p class="mt-3 text-3xl font-bold text-gray-900 dark:text-white">{{ $currencyCode }} {{ number_format($invoice->net_total, 2) }}</p>
             </div>
         </div>
 
@@ -185,7 +189,7 @@
                         </svg>
                     </div>
                 </div>
-                <p class="mt-3 text-3xl font-bold text-gray-900 dark:text-white">BDT {{ number_format($invoice->vat_amount, 2) }}</p>
+                <p class="mt-3 text-3xl font-bold text-gray-900 dark:text-white">{{ $currencyCode }} {{ number_format($invoice->vat_amount, 2) }}</p>
             </div>
         </div>
 
@@ -205,12 +209,12 @@
                     </div>
                 </div>
                 <div class="mt-2 flex items-center gap-2">
-                    <p class="text-2xl font-bold text-gray-900 dark:text-white">BDT {{ number_format($invoice->withholding, 2) }}</p>
+                    <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ $currencyCode }} {{ number_format($invoice->withholding, 2) }}</p>
                     <form action="{{ route('admin.finance.withholding.update', $invoice) }}" method="POST" class="flex items-center gap-1">
                         @csrf
                         @method('PATCH')
                         <div class="relative">
-                            <span class="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-gray-500 dark:text-gray-400">BDT</span>
+                            <span class="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-gray-500 dark:text-gray-400">{{ $currencyCode }}</span>
                             <input id="withholding_amount" 
                                    name="withholding" 
                                    type="number" 
@@ -245,7 +249,7 @@
                         </svg>
                     </div>
                 </div>
-                <p class="mt-3 text-3xl font-bold text-gray-900 dark:text-white">BDT {{ number_format($grossTotal, 2) }}</p>
+                <p class="mt-3 text-3xl font-bold text-gray-900 dark:text-white">{{ $currencyCode }} {{ number_format($grossTotal, 2) }}</p>
             </div>
         </div>
     </div>
@@ -262,7 +266,7 @@
                     </div>
                     <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Credits</h3>
                 </div>
-                <span class="text-2xl font-bold text-orange-600 dark:text-orange-400">BDT {{ number_format($creditsTotal, 2) }}</span>
+                <span class="text-2xl font-bold text-orange-600 dark:text-orange-400">{{ $currencyCode }} {{ number_format($creditsTotal, 2) }}</span>
             </div>
             
             @if($invoice->creditNotes->isNotEmpty())
@@ -279,26 +283,19 @@
                                 @endif
                             </div>
                             <div class="flex items-center gap-3">
-                                <span class="text-sm font-bold text-orange-600 dark:text-orange-400">BDT {{ number_format($credit->amount, 2) }}</span>
-                                <form action="{{ route('admin.finance.credit-notes.destroy', $credit) }}" 
-                                      method="POST" 
-                                      onsubmit="return confirm('Delete this credit note?');"
-                                      class="inline">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" 
-                                            class="text-error-600 hover:text-error-700 dark:text-error-500 dark:hover:text-error-400">
-                                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                                        </svg>
-                                    </button>
-                                </form>
+                                <span class="text-sm font-bold text-orange-600 dark:text-orange-400">{{ $currencyCode }} {{ number_format($credit->amount, 2) }}</span>
                             </div>
                         </div>
                     @endforeach
                 </div>
             @else
                 <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">No credit notes for this invoice.</p>
+            @endif
+
+            @if($invoice->creditNotes->isNotEmpty())
+                <p class="mt-4 text-xs text-gray-500 dark:text-gray-400">
+                    Credit notes are preserved for audit history and cannot be deleted from this screen.
+                </p>
             @endif
         </div>
 
@@ -312,13 +309,13 @@
                     </div>
                     <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Receipts</h3>
                 </div>
-                <span class="text-2xl font-bold text-success-600 dark:text-success-400">BDT {{ number_format($receiptsTotal, 2) }}</span>
+                <span class="text-2xl font-bold text-success-600 dark:text-success-400">{{ $currencyCode }} {{ number_format($receiptsTotal, 2) }}</span>
             </div>
             
             <div class="flex items-center justify-between border-b border-gray-100 pb-3 mb-3 dark:border-gray-800">
                 <span class="text-sm text-gray-600 dark:text-gray-400">Outstanding Balance</span>
                 <span class="text-lg font-bold {{ $outstanding > 0 ? 'text-error-600 dark:text-error-400' : 'text-success-600 dark:text-success-400' }}">
-                    BDT {{ number_format(max(0, $outstanding), 2) }}
+                    {{ $currencyCode }} {{ number_format(max(0, $outstanding), 2) }}
                 </span>
             </div>
             
@@ -336,26 +333,19 @@
                                 @endif
                             </div>
                             <div class="flex items-center gap-3">
-                                <span class="text-sm font-bold text-success-600 dark:text-success-400">BDT {{ number_format($receipt->amount, 2) }}</span>
-                                <form action="{{ route('admin.finance.receipts.destroy', $receipt) }}" 
-                                      method="POST" 
-                                      onsubmit="return confirm('Delete this receipt?');"
-                                      class="inline">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" 
-                                            class="text-error-600 hover:text-error-700 dark:text-error-500 dark:hover:text-error-400">
-                                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                                        </svg>
-                                    </button>
-                                </form>
+                                <span class="text-sm font-bold text-success-600 dark:text-success-400">{{ $currencyCode }} {{ number_format($receipt->amount, 2) }}</span>
                             </div>
                         </div>
                     @endforeach
                 </div>
             @else
                 <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">No receipts recorded yet.</p>
+            @endif
+
+            @if($invoice->receipts->isNotEmpty())
+                <p class="mt-4 text-xs text-gray-500 dark:text-gray-400">
+                    Receipts are preserved for audit history and cannot be deleted from this screen.
+                </p>
             @endif
         </div>
     </div>
@@ -494,10 +484,10 @@
                                 {{ $item->quantity }}
                             </td>
                             <td class="px-6 py-4 text-right text-sm text-gray-700 dark:text-gray-300">
-                                BDT {{ number_format($item->unit_price, 2) }}
+                                {{ $currencyCode }} {{ number_format($item->unit_price, 2) }}
                             </td>
                             <td class="px-6 py-4 text-right text-sm font-bold text-gray-900 dark:text-white">
-                                BDT {{ number_format($item->line_total, 2) }}
+                                {{ $currencyCode }} {{ number_format($item->line_total, 2) }}
                             </td>
                         </tr>
                     @endforeach
@@ -521,7 +511,7 @@
                     <div>
                         <h3 class="text-lg font-medium text-gray-900 dark:text-white">Record Receipt</h3>
                         <p class="text-xs text-gray-500 dark:text-gray-400">
-                            Invoice {{ $invoice->number }} · Outstanding BDT {{ number_format(max(0, $outstanding), 2) }}
+                            Invoice {{ $invoice->number }} · Outstanding {{ $currencyCode }} {{ number_format(max(0, $outstanding), 2) }}
                         </p>
                     </div>
                 </div>
@@ -542,7 +532,7 @@
                             Amount <span class="text-error-500">*</span>
                         </label>
                         <div class="relative">
-                            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-500 dark:text-gray-400">BDT</span>
+                            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-500 dark:text-gray-400">{{ $currencyCode }}</span>
                             @php
                                 $suggestedModal  = max(0, $outstanding);
                             @endphp
@@ -645,7 +635,7 @@
                     <div>
                         <h3 class="text-lg font-medium text-gray-900 dark:text-white">Add Credit Note</h3>
                         <p class="text-xs text-gray-500 dark:text-gray-400">
-                            Invoice {{ $invoice->number }} · Total BDT {{ number_format($grossTotal, 2) }}
+                            Invoice {{ $invoice->number }} · Total {{ $currencyCode }} {{ number_format($grossTotal, 2) }}
                         </p>
                     </div>
                 </div>
@@ -666,7 +656,7 @@
                             Credit Amount <span class="text-error-500">*</span>
                         </label>
                         <div class="relative">
-                            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-500 dark:text-gray-400">BDT</span>
+                            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-500 dark:text-gray-400">{{ $currencyCode }}</span>
                             <input type="number" 
                                    id="credit_amount" 
                                    name="amount" 
