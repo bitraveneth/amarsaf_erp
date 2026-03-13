@@ -13,8 +13,8 @@
     @endphp
 
     <!-- Header with gradient -->
-    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4" data-tour="reconciliation-overview-header">
-        <div>
+    <div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between" data-tour="reconciliation-overview-header">
+        <div class="xl:max-w-xl">
             <div class="flex items-center gap-3">
                 <div class="relative">
                     <div class="absolute -inset-1 bg-gradient-to-r from-brand-500 to-brand-600 rounded-xl blur opacity-20"></div>
@@ -37,58 +37,79 @@
             </div>
         </div>
         
-        <form method="GET" action="{{ route('admin.finance.reconciliation') }}" class="w-full sm:w-auto">
-            <div class="flex flex-col gap-3 rounded-2xl border border-gray-200 bg-white p-3 shadow-theme-xs dark:border-gray-700 dark:bg-gray-800/80 lg:flex-row lg:items-center">
-                <div class="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
-                    @foreach($rangeOptions as $rangeValue => $rangeLabel)
-                        <label class="cursor-pointer">
-                            <input
-                                type="radio"
-                                name="range"
-                                value="{{ $rangeValue }}"
-                                class="peer sr-only"
-                                @checked($range === $rangeValue)
-                            >
-                            <span class="flex items-center justify-center rounded-lg border px-3 py-2 text-xs font-medium transition-all {{ $range === $rangeValue
-                                ? 'border-brand-500 bg-brand-500 text-white shadow-theme-xs'
-                                : 'border-gray-200 bg-white text-gray-600 hover:border-brand-300 hover:text-brand-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:border-brand-500 dark:hover:text-brand-400' }}">
-                                {{ $rangeLabel }}
-                            </span>
-                        </label>
-                    @endforeach
+        <form method="GET" action="{{ route('admin.finance.reconciliation') }}" class="w-full xl:max-w-4xl">
+            <div class="rounded-3xl border border-gray-200 bg-white/95 p-4 shadow-theme-xs backdrop-blur-sm dark:border-gray-700 dark:bg-gray-800/85">
+                <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">Reconciliation period</p>
+                        <p class="mt-1 text-sm font-medium text-gray-900 dark:text-white">
+                            {{ $from->format('d M Y') }} to {{ $to->format('d M Y') }}
+                        </p>
+                    </div>
+                    <span class="inline-flex items-center rounded-full bg-brand-50 px-3 py-1.5 text-xs font-semibold text-brand-700 dark:bg-brand-500/10 dark:text-brand-300">
+                        {{ $rangeOptions[$range] ?? 'Custom range' }}
+                    </span>
                 </div>
 
-                <div class="flex flex-col gap-2 sm:flex-row sm:items-end">
-                    <div class="min-w-[150px]">
-                        <label for="reconciliation-from" class="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                            From
-                        </label>
-                        <input
-                            id="reconciliation-from"
-                            type="date"
-                            name="from"
-                            value="{{ request('from', $from->toDateString()) }}"
-                            class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:border-brand-300 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200"
-                        >
+                <div class="grid gap-4 xl:grid-cols-[0.95fr_1.05fr]">
+                    <div class="rounded-2xl border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-900/60">
+                        <div class="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">Quick ranges</div>
+                        <div class="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+                            <div>
+                                <label for="reconciliation-range" class="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                                    Range
+                                </label>
+                                <select
+                                    id="reconciliation-range"
+                                    name="range"
+                                    class="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-medium text-gray-700 focus:border-brand-300 focus:outline-none dark:border-gray-700 dark:bg-gray-950/60 dark:text-white"
+                                >
+                                    @foreach($rangeOptions as $rangeValue => $rangeLabel)
+                                        <option value="{{ $rangeValue }}" @selected($range === $rangeValue)>{{ $rangeLabel }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="rounded-xl bg-brand-50 px-3 py-2 text-xs font-semibold text-brand-700 dark:bg-brand-500/10 dark:text-brand-300">
+                                {{ $rangeOptions[$range] ?? 'Custom range' }}
+                            </div>
+                        </div>
                     </div>
-                    <div class="min-w-[150px]">
-                        <label for="reconciliation-to" class="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                            To
-                        </label>
-                        <input
-                            id="reconciliation-to"
-                            type="date"
-                            name="to"
-                            value="{{ request('to', $to->toDateString()) }}"
-                            class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:border-brand-300 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200"
-                        >
+
+                    <div class="rounded-2xl border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-900/60">
+                        <div class="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">Custom dates</div>
+                        <div class="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
+                            <div>
+                                <label for="reconciliation-from" class="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                                    From
+                                </label>
+                                <input
+                                    id="reconciliation-from"
+                                    type="date"
+                                    name="from"
+                                    value="{{ request('from', $from->toDateString()) }}"
+                                    class="bank-reconciliation-date-input w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-medium text-gray-700 focus:border-brand-300 focus:outline-none dark:border-gray-700 dark:bg-gray-950/60 dark:text-white"
+                                >
+                            </div>
+                            <div>
+                                <label for="reconciliation-to" class="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                                    To
+                                </label>
+                                <input
+                                    id="reconciliation-to"
+                                    type="date"
+                                    name="to"
+                                    value="{{ request('to', $to->toDateString()) }}"
+                                    class="bank-reconciliation-date-input w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-medium text-gray-700 focus:border-brand-300 focus:outline-none dark:border-gray-700 dark:bg-gray-950/60 dark:text-white"
+                                >
+                            </div>
+                            <button
+                                type="submit"
+                                class="inline-flex items-center justify-center self-end rounded-xl bg-brand-500 px-4 py-2.5 text-sm font-semibold text-white shadow-theme-xs transition hover:bg-brand-600"
+                            >
+                                Apply
+                            </button>
+                        </div>
                     </div>
-                    <button
-                        type="submit"
-                        class="inline-flex items-center justify-center rounded-lg bg-brand-500 px-4 py-2 text-sm font-semibold text-white shadow-theme-xs transition hover:bg-brand-600"
-                    >
-                        Apply
-                    </button>
                 </div>
             </div>
         </form>
@@ -370,6 +391,38 @@
         </div>
     @endif
 </div>
+
+@push('styles')
+<style>
+    .bank-reconciliation-date-input {
+        color-scheme: dark;
+    }
+
+    .bank-reconciliation-date-input::-webkit-calendar-picker-indicator {
+        filter: invert(1);
+        opacity: 0.78;
+        cursor: pointer;
+    }
+
+    .bank-reconciliation-date-input::-webkit-datetime-edit,
+    .bank-reconciliation-date-input::-webkit-datetime-edit-fields-wrapper,
+    .bank-reconciliation-date-input::-webkit-datetime-edit-text,
+    .bank-reconciliation-date-input::-webkit-datetime-edit-month-field,
+    .bank-reconciliation-date-input::-webkit-datetime-edit-day-field,
+    .bank-reconciliation-date-input::-webkit-datetime-edit-year-field {
+        color: inherit;
+    }
+
+    html:not(.dark) .bank-reconciliation-date-input {
+        color-scheme: light;
+    }
+
+    html:not(.dark) .bank-reconciliation-date-input::-webkit-calendar-picker-indicator {
+        filter: none;
+        opacity: 0.72;
+    }
+</style>
+@endpush
 
 @push('scripts')
 <script>

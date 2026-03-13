@@ -30,10 +30,12 @@ class StockMovementController extends Controller
     public function create()
     {
         $warehouseIds = auth()->user()?->accessibleWarehouseIds();
-        $entries = StockEntry::with(['product', 'warehouse'])
+        $entries = StockEntry::with(['product', 'warehouse', 'batch'])
             ->when($warehouseIds !== null, function ($query) use ($warehouseIds) {
                 $query->whereIn('warehouse_id', $warehouseIds);
             })
+            ->whereHas('product')
+            ->whereHas('warehouse')
             ->where('status', 'available')
             ->orderByDesc('updated_at')
             ->get();

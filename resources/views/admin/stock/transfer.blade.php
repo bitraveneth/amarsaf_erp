@@ -75,13 +75,16 @@
                                         @foreach($materialEntries as $entry)
                                             @php
                                                 $availableQty = $entry->quantity;
-                                                $hasBatch = isset($entry->batch) && $entry->batch;
+                                                $productName = $entry->product->name ?? 'Unknown product';
+                                                $productUom = $entry->product->uom ?? 'units';
+                                                $warehouseName = $entry->warehouse->name ?? 'Unknown warehouse';
+                                                $batchCode = $entry->batch->batch_code ?? null;
                                             @endphp
                                             <option value="{{ $entry->id }}" data-quantity="{{ $availableQty }}" {{ old('entry_id') == $entry->id ? 'selected' : '' }}>
-                                                {{ $entry->warehouse->name }} · {{ $entry->product->name }}
-                                                · {{ number_format($availableQty, 0) }} {{ $entry->product->uom ?? 'units' }}
-                                                @if($hasBatch)
-                                                    · Batch: {{ $entry->batch->batch_code }}
+                                                {{ $warehouseName }} · {{ $productName }}
+                                                · {{ number_format($availableQty, 0) }} {{ $productUom }}
+                                                @if($batchCode)
+                                                    · Batch: {{ $batchCode }}
                                                 @endif
                                             </option>
                                         @endforeach
@@ -93,14 +96,17 @@
                                         @foreach($finishedEntries as $entry)
                                             @php
                                                 $availableQty = $entry->quantity;
-                                                $hasBatch = isset($entry->batch) && $entry->batch;
+                                                $productName = $entry->product->name ?? 'Unknown product';
+                                                $productUom = $entry->product->uom ?? 'units';
+                                                $warehouseName = $entry->warehouse->name ?? 'Unknown warehouse';
+                                                $batchCode = $entry->batch->batch_code ?? null;
                                             @endphp
                                             <option value="{{ $entry->id }}" data-quantity="{{ $availableQty }}" {{ old('entry_id') == $entry->id ? 'selected' : '' }}>
-                                                {{ $entry->warehouse->name }} · {{ $entry->product->name }}
-                                                @if($hasBatch)
-                                                    · Batch {{ $entry->batch->batch_code }}
+                                                {{ $warehouseName }} · {{ $productName }}
+                                                @if($batchCode)
+                                                    · Batch {{ $batchCode }}
                                                 @endif
-                                                · {{ number_format($availableQty, 0) }} {{ $entry->product->uom ?? 'units' }}
+                                                · {{ number_format($availableQty, 0) }} {{ $productUom }}
                                             </option>
                                         @endforeach
                                     </optgroup>
@@ -274,6 +280,18 @@
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    @php
+        $locationPayload = ($locations ?? collect())
+            ->map(function ($location) {
+                return [
+                    'id' => $location->id,
+                    'warehouse_id' => $location->warehouse_id,
+                    'code' => $location->code,
+                ];
+            })
+            ->values();
+    @endphp
+
     const entrySelect = document.getElementById('entry_id');
     const destWarehouseSelect = document.getElementById('destination_warehouse_id');
     const destLocationSelect = document.getElementById('destination_warehouse_location_id');
@@ -282,11 +300,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const selectedStockInfo = document.getElementById('selected-stock-info');
     const quantityLimit = document.getElementById('quantity-limit');
     const transferSummary = document.getElementById('transfer-summary');
-    const locations = @json(($locations ?? collect())->map(fn ($location) => [
-        'id' => $location->id,
-        'warehouse_id' => $location->warehouse_id,
-        'code' => $location->code,
-    ])->values());
+    const locations = @json($locationPayload);
     const oldLocationId = @json(old('destination_warehouse_location_id'));
 
     function updateDestinationLocations() {
