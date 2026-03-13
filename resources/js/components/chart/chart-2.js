@@ -4,8 +4,13 @@ export const initChartTwo = () => {
     const uiFontStack = window.erpUiFontStack || 'Outfit, sans-serif';
 
     if (chartElement) {
+        const parsedProgress = Number.parseFloat(chartElement.dataset.progressValue || '0');
+        const progressValue = Number.isFinite(parsedProgress)
+            ? Math.max(0, Math.min(100, parsedProgress))
+            : 0;
+
         const chartTwoOptions = {
-            series: [75.55],
+            series: [progressValue],
             colors: ["#465FFF"],
             chart: {
                 fontFamily: uiFontStack,
@@ -37,7 +42,7 @@ export const initChartTwo = () => {
                             offsetY: 60,
                             color: "#1D2939",
                             formatter: function (val) {
-                                return val + "%";
+                                return `${Math.round(val)}%`;
                             },
                         },
                     },

@@ -1,6 +1,10 @@
 @extends('layouts.app')
 
 @section('content')
+@php
+    $isReturnOrder = ($order->order_type ?? null) === 'return';
+    $currencyCode = config('app.currency', 'BDT');
+@endphp
 <div class="screen-order-view max-w-7xl mx-auto space-y-8">
     <!-- Header with gradient -->
     <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
@@ -18,7 +22,7 @@
                 <div>
                     <div class="flex items-center gap-3 flex-wrap">
                         <h1 class="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
-                            Order #{{ $order->id }}
+                            {{ $isReturnOrder ? 'Return Order' : 'Order' }} #{{ $order->id }}
                         </h1>
                         @php
                             $statusColors = [
@@ -35,6 +39,11 @@
                             <span class="h-1.5 w-1.5 rounded-full {{ $order->status === 'delivered' || $order->status === 'confirmed' ? 'bg-success-500' : ($order->status === 'picked' ? 'bg-brand-500' : ($order->status === 'packed' ? 'bg-blue-light-500' : ($order->status === 'dispatched' ? 'bg-purple-500' : 'bg-gray-500'))) }}"></span>
                             {{ ucfirst($order->status) }}
                         </span>
+                        @if($isReturnOrder)
+                            <span class="inline-flex items-center rounded-full bg-error-100 px-3 py-1.5 text-xs font-medium text-error-700 dark:bg-error-500/20 dark:text-error-400">
+                                Customer return
+                            </span>
+                        @endif
                     </div>
                     <div class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-gray-600 dark:text-gray-400">
                         <div class="flex items-center gap-1.5">
@@ -47,7 +56,7 @@
                             <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 20l4-16 4 4 4-4 4 16H7z" />
                             </svg>
-                            <span class="capitalize">{{ $order->order_type }}</span>
+                            <span class="capitalize">{{ $isReturnOrder ? 'Return' : $order->order_type }}</span>
                         </div>
                         @if($order->agent_reference)
                         <div class="flex items-center gap-1.5">
@@ -70,6 +79,15 @@
                 </svg>
                 Orders
             </a>
+            @if($isReturnOrder)
+                <a href="{{ route('admin.returns.customer.create') }}?order_id={{ $order->id }}"
+                   class="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-error-500 to-error-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md hover:from-error-600 hover:to-error-700 focus:outline-none focus:ring-2 focus:ring-error-500/50 transition-all duration-200">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                    </svg>
+                    Record stock return
+                </a>
+            @endif
             <button type="button" 
                     onclick="window.print()"
                     class="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white/80 backdrop-blur-sm px-4 py-2.5 text-sm font-medium text-gray-700 shadow-xs hover:bg-white hover:shadow-sm dark:border-gray-700 dark:bg-gray-900/80 dark:text-gray-300 dark:hover:bg-gray-900 transition-all duration-200">
@@ -78,15 +96,27 @@
                 </svg>
                 Print
             </button>
-            <a href="{{ route('admin.orders.picking-list', $order) }}" 
-               class="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-brand-500 to-brand-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md hover:from-brand-600 hover:to-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500/50 transition-all duration-200">
-                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75z" />
-                </svg>
-                Picking List
-            </a>
+            @unless($isReturnOrder)
+                <a href="{{ route('admin.orders.picking-list', $order) }}" 
+                   class="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-brand-500 to-brand-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md hover:from-brand-600 hover:to-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500/50 transition-all duration-200">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75z" />
+                    </svg>
+                    Picking List
+                </a>
+            @endunless
         </div>
     </div>
+
+    @if($isReturnOrder)
+        <div class="rounded-2xl border border-error-200 bg-error-50 px-5 py-4 text-sm text-error-800 dark:border-error-900/40 dark:bg-error-950/20 dark:text-error-200">
+            This is a commercial return order. It reduces sales value, but it does not automatically add stock back. Use
+            <a href="{{ route('admin.returns.customer.create') }}?order_id={{ $order->id }}" class="font-semibold underline underline-offset-2 hover:no-underline">
+                Record stock return
+            </a>
+            after the returned goods are physically received into inventory.
+        </div>
+    @endif
 
     <!-- Order Summary Cards -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
@@ -99,7 +129,7 @@
                     </svg>
                 </div>
                 <div>
-                    <p class="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Delivery Date</p>
+                    <p class="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{{ $isReturnOrder ? 'Return Date' : 'Delivery Date' }}</p>
                     <p class="text-lg font-semibold text-gray-900 dark:text-white">
                         {{ optional($order->delivery_date)->format('d M Y') ?? 'TBD' }}
                     </p>
@@ -124,7 +154,7 @@
                         {{ $order->payment_mode ? ucfirst(str_replace('_', ' ', $order->payment_mode)) : '—' }}
                     </p>
                     <p class="text-xs text-gray-500 dark:text-gray-400">
-                        Total: BDT {{ number_format($order->total, 2) }}
+                        Total: {{ $currencyCode }} {{ number_format($order->total, 2) }}
                     </p>
                 </div>
             </div>
@@ -141,7 +171,7 @@
                 <div>
                     <p class="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Commission</p>
                     <p class="text-lg font-semibold text-gray-900 dark:text-white">
-                        BDT {{ number_format($order->commission_total ?? 0, 2) }}
+                        {{ $currencyCode }} {{ number_format($order->commission_total ?? 0, 2) }}
                     </p>
                     <p class="text-xs text-gray-500 dark:text-gray-400">Agent commission</p>
                 </div>
@@ -172,7 +202,7 @@
     </div>
 
     <!-- Delivery Contact & Address Card (if exists) -->
-    @if($order->delivery_contact_name || $order->delivery_contact_phone || $order->delivery_address)
+    @if(!$isReturnOrder && ($order->delivery_contact_name || $order->delivery_contact_phone || $order->delivery_address))
     <div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
         <div class="flex items-start gap-4">
             <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 dark:bg-gray-800">
@@ -357,15 +387,15 @@
                                 <span class="text-sm font-semibold text-gray-900 dark:text-white">{{ $item->quantity }}</span>
                             </td>
                             <td class="px-6 py-4 text-right">
-                                <span class="text-sm text-gray-700 dark:text-gray-300">BDT {{ number_format($item->unit_price, 2) }}</span>
+                                <span class="text-sm text-gray-700 dark:text-gray-300">{{ $currencyCode }} {{ number_format($item->unit_price, 2) }}</span>
                             </td>
                             <td class="px-6 py-4 text-right">
-                                <span class="text-sm font-bold text-gray-900 dark:text-white">BDT {{ number_format($item->quantity * $item->unit_price, 2) }}</span>
+                                <span class="text-sm font-bold {{ $isReturnOrder ? 'text-error-600 dark:text-error-400' : 'text-gray-900 dark:text-white' }}">{{ $currencyCode }} {{ number_format($item->quantity * $item->unit_price, 2) }}</span>
                             </td>
                             <td class="px-6 py-4 text-right">
                                 <div>
                                     <span class="text-sm font-semibold text-success-600 dark:text-success-400">
-                                        BDT {{ number_format($item->commission_amount ?? 0, 2) }}
+                                        {{ $currencyCode }} {{ number_format($item->commission_amount ?? 0, 2) }}
                                     </span>
                                     @if($item->commission_rate)
                                         <span class="ml-1 text-xs text-gray-500 dark:text-gray-400">
@@ -383,7 +413,7 @@
                             Subtotal
                         </td>
                         <td class="px-6 py-4 text-right text-sm font-bold text-gray-900 dark:text-white">
-                            BDT {{ number_format($order->items->sum(function ($item) { return $item->quantity * $item->unit_price; }), 2) }}
+                            {{ $currencyCode }} {{ number_format($order->items->sum(function ($item) { return $item->quantity * $item->unit_price; }), 2) }}
                         </td>
                         <td></td>
                     </tr>
@@ -393,7 +423,7 @@
                             Tax
                         </td>
                         <td class="px-6 py-4 text-right text-sm font-bold text-gray-900 dark:text-white">
-                            BDT {{ number_format($order->tax_total, 2) }}
+                            {{ $currencyCode }} {{ number_format($order->tax_total, 2) }}
                         </td>
                         <td></td>
                     </tr>
@@ -402,8 +432,8 @@
                         <td colspan="5" class="px-6 py-4 text-right text-sm font-bold text-gray-900 dark:text-white">
                             Total
                         </td>
-                        <td class="px-6 py-4 text-right text-lg font-bold text-brand-600 dark:text-brand-400">
-                            BDT {{ number_format($order->total, 2) }}
+                        <td class="px-6 py-4 text-right text-lg font-bold {{ $isReturnOrder ? 'text-error-600 dark:text-error-400' : 'text-brand-600 dark:text-brand-400' }}">
+                            {{ $currencyCode }} {{ number_format($order->total, 2) }}
                         </td>
                         <td></td>
                     </tr>
@@ -491,7 +521,7 @@
                 </svg>
             </div>
             <div>
-                <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Order Notes</h3>
+                <h3 class="text-sm font-semibold text-gray-900 dark:text-white">{{ $isReturnOrder ? 'Return Notes' : 'Order Notes' }}</h3>
                 <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">{{ $order->notes }}</p>
             </div>
         </div>
@@ -511,15 +541,15 @@
             @endif
             <div>
                 <h2 class="text-lg font-semibold text-gray-900">{{ $legalCompanyName }}</h2>
-                <p class="mt-1 text-xs text-gray-600">Order &amp; Delivery</p>
+                <p class="mt-1 text-xs text-gray-600">{{ $isReturnOrder ? 'Return Summary' : 'Order &amp; Delivery' }}</p>
             </div>
         </div>
         <div class="text-right space-y-1">
-            <h1 class="text-xl font-bold text-gray-900">Order #{{ $order->id }}</h1>
+            <h1 class="text-xl font-bold text-gray-900">{{ $isReturnOrder ? 'Return Order' : 'Order' }} #{{ $order->id }}</h1>
             <p class="text-xs text-gray-600">Customer: {{ $order->agent->name }}</p>
             <p class="text-xs text-gray-600">Issued: {{ $order->created_at?->format('d M Y') ?? now()->format('d M Y') }}</p>
             @if($order->delivery_date)
-                <p class="text-xs text-gray-600">Delivery: {{ $order->delivery_date->format('d M Y') }}</p>
+                <p class="text-xs text-gray-600">{{ $isReturnOrder ? 'Return' : 'Delivery' }}: {{ $order->delivery_date->format('d M Y') }}</p>
             @endif
             <p class="text-xs text-gray-600">Status: {{ ucfirst($order->status) }}</p>
         </div>
@@ -540,21 +570,21 @@
 
             @if($order->delivery_address)
                 <div class="mt-6">
-                    <h3 class="font-semibold text-sm uppercase tracking-wide">Delivery address</h3>
+                    <h3 class="font-semibold text-sm uppercase tracking-wide">{{ $isReturnOrder ? 'Return address' : 'Delivery address' }}</h3>
                     <p class="mt-1">{{ $order->delivery_address }}</p>
                 </div>
             @endif
 
             @if($order->notes)
                 <div class="mt-6">
-                    <h3 class="font-semibold text-sm uppercase tracking-wide">Notes</h3>
+                    <h3 class="font-semibold text-sm uppercase tracking-wide">{{ $isReturnOrder ? 'Return notes' : 'Notes' }}</h3>
                     <p class="mt-1">{{ $order->notes }}</p>
                 </div>
             @endif
         </div>
         <div class="text-right">
-            <p>Order No: <strong>#{{ $order->id }}</strong></p>
-            <p>Order type: {{ ucfirst($order->order_type) }}</p>
+            <p>{{ $isReturnOrder ? 'Return' : 'Order' }} No: <strong>#{{ $order->id }}</strong></p>
+            <p>{{ $isReturnOrder ? 'Return type' : 'Order type' }}: {{ $isReturnOrder ? 'Customer return' : ucfirst($order->order_type) }}</p>
             @if($order->payment_mode)
                 <p>Payment: {{ ucfirst(str_replace('_', ' ', $order->payment_mode)) }}</p>
             @endif

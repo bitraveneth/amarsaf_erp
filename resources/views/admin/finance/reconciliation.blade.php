@@ -3,6 +3,7 @@
 @section('content')
 <div class="max-w-7xl mx-auto space-y-8">
     @php
+        $currencyCode = config('app.currency', 'BDT');
         $totalReceipts = $receipts->count();
         $reconciledCount = $receipts->where('reconciled', true)->count();
         $pendingCount = $receipts->where('reconciled', false)->count();
@@ -36,14 +37,61 @@
             </div>
         </div>
         
-        <div class="flex items-center gap-2">
-            <!-- Date Range Navigation (optional) -->
-            <div class="flex items-center gap-1 rounded-lg border border-gray-300 bg-white shadow-theme-xs dark:border-gray-700 dark:bg-gray-800">
-                <span class="px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                    {{ $from->format('M d, Y') }} - {{ $to->format('M d, Y') }}
-                </span>
+        <form method="GET" action="{{ route('admin.finance.reconciliation') }}" class="w-full sm:w-auto">
+            <div class="flex flex-col gap-3 rounded-2xl border border-gray-200 bg-white p-3 shadow-theme-xs dark:border-gray-700 dark:bg-gray-800/80 lg:flex-row lg:items-center">
+                <div class="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
+                    @foreach($rangeOptions as $rangeValue => $rangeLabel)
+                        <label class="cursor-pointer">
+                            <input
+                                type="radio"
+                                name="range"
+                                value="{{ $rangeValue }}"
+                                class="peer sr-only"
+                                @checked($range === $rangeValue)
+                            >
+                            <span class="flex items-center justify-center rounded-lg border px-3 py-2 text-xs font-medium transition-all {{ $range === $rangeValue
+                                ? 'border-brand-500 bg-brand-500 text-white shadow-theme-xs'
+                                : 'border-gray-200 bg-white text-gray-600 hover:border-brand-300 hover:text-brand-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:border-brand-500 dark:hover:text-brand-400' }}">
+                                {{ $rangeLabel }}
+                            </span>
+                        </label>
+                    @endforeach
+                </div>
+
+                <div class="flex flex-col gap-2 sm:flex-row sm:items-end">
+                    <div class="min-w-[150px]">
+                        <label for="reconciliation-from" class="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                            From
+                        </label>
+                        <input
+                            id="reconciliation-from"
+                            type="date"
+                            name="from"
+                            value="{{ request('from', $from->toDateString()) }}"
+                            class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:border-brand-300 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200"
+                        >
+                    </div>
+                    <div class="min-w-[150px]">
+                        <label for="reconciliation-to" class="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                            To
+                        </label>
+                        <input
+                            id="reconciliation-to"
+                            type="date"
+                            name="to"
+                            value="{{ request('to', $to->toDateString()) }}"
+                            class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:border-brand-300 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200"
+                        >
+                    </div>
+                    <button
+                        type="submit"
+                        class="inline-flex items-center justify-center rounded-lg bg-brand-500 px-4 py-2 text-sm font-semibold text-white shadow-theme-xs transition hover:bg-brand-600"
+                    >
+                        Apply
+                    </button>
+                </div>
             </div>
-        </div>
+        </form>
     </div>
 
     <!-- Status Message -->
@@ -108,7 +156,7 @@
                     </div>
                     <p class="mt-3 text-3xl font-bold text-success-600 dark:text-success-400">{{ $reconciledCount }}</p>
                     <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                        BDT {{ number_format($reconciledAmount, 0) }}
+                        {{ $currencyCode }} {{ number_format($reconciledAmount, 0) }}
                     </p>
                 </div>
             </div>
@@ -130,7 +178,7 @@
                     </div>
                     <p class="mt-3 text-3xl font-bold text-orange-600 dark:text-orange-400">{{ $pendingCount }}</p>
                     <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                        BDT {{ number_format($pendingAmount, 0) }}
+                        {{ $currencyCode }} {{ number_format($pendingAmount, 0) }}
                     </p>
                 </div>
             </div>
@@ -150,7 +198,7 @@
                             </svg>
                         </div>
                     </div>
-                    <p class="mt-3 text-3xl font-bold text-gray-900 dark:text-white">BDT {{ number_format($totalAmount, 0) }}</p>
+                    <p class="mt-3 text-3xl font-bold text-gray-900 dark:text-white">{{ $currencyCode }} {{ number_format($totalAmount, 0) }}</p>
                     <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
                         {{ $totalReceipts > 0 ? round(($reconciledAmount / $totalAmount) * 100) : 0 }}% reconciled
                     </p>
@@ -178,6 +226,7 @@
 
             <form action="{{ route('admin.finance.reconciliation.update') }}" method="POST" class="p-6">
                 @csrf
+                <input type="hidden" name="range" value="{{ $range }}">
                 <input type="hidden" name="from" value="{{ $from->toDateString() }}">
                 <input type="hidden" name="to" value="{{ $to->toDateString() }}">
                 <div class="overflow-x-auto">
@@ -248,7 +297,7 @@
                                     </td>
                                     <td class="px-4 py-3 text-right">
                                         <span class="text-sm font-bold text-gray-900 dark:text-white">
-                                            BDT {{ number_format($receipt->amount, 2) }}
+                                            {{ $currencyCode }} {{ number_format($receipt->amount, 2) }}
                                         </span>
                                     </td>
                                     <td class="px-4 py-3">
@@ -328,6 +377,9 @@
         const selectAllCheckbox = document.getElementById('select-all');
         const receiptCheckboxes = document.querySelectorAll('.receipt-checkbox');
         const selectedCountSpan = document.getElementById('selected-count');
+        const fromInput = document.getElementById('reconciliation-from');
+        const toInput = document.getElementById('reconciliation-to');
+        const customRangeInput = document.querySelector('input[name="range"][value="custom"]');
 
         function updateSelectedCount() {
             if (selectedCountSpan) {
@@ -349,6 +401,15 @@
         receiptCheckboxes.forEach(checkbox => {
             checkbox.addEventListener('change', updateSelectedCount);
         });
+
+        if (fromInput && toInput && customRangeInput) {
+            const markCustomRange = function() {
+                customRangeInput.checked = true;
+            };
+
+            fromInput.addEventListener('change', markCustomRange);
+            toInput.addEventListener('change', markCustomRange);
+        }
 
         // Initial count update
         updateSelectedCount();

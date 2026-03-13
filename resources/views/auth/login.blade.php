@@ -9,13 +9,13 @@
         {{-- Brand Header --}}
         <header class="mb-8 text-center">
             <div class="mb-4 inline-flex items-center justify-center">
-                <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-brand-50 dark:bg-brand-500/10">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="text-brand-600 dark:text-brand-400">
-                        <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                </div>
+                @if(!empty($appLogoUrl))
+                    <img src="{{ $appLogoUrl }}" alt="{{ $appBrandName }}" class="app-brand-logo rounded-xl border border-gray-200 object-cover shadow-theme-xs dark:border-gray-700" />
+                @else
+                    <div class="app-brand-logo flex items-center justify-center rounded-xl bg-brand-50 text-sm font-semibold text-brand-600 shadow-theme-xs dark:bg-brand-500/10 dark:text-brand-400">
+                        {{ $appBrandInitials ?? \App\Helpers\SystemSettings::initials($appBrandName ?? config('app.name')) }}
+                    </div>
+                @endif
             </div>
             <h1 class="text-title-md font-semibold text-gray-900 dark:text-white">Welcome back</h1>
             <p class="mt-2 text-theme-sm text-gray-600 dark:text-gray-400">Sign in to continue to your control panel.</p>

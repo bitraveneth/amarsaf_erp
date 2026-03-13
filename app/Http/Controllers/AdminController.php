@@ -4,18 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Helpers\Permission;
 use App\Models\Agent;
-use App\Models\Batch;
-use App\Models\Delivery;
-use App\Models\Order;
-use App\Models\Product;
-use App\Models\PackagingType;
-use App\Models\TaxClass;
 use App\Models\Invoice;
+use App\Models\Order;
 use App\Models\ProductionRun;
-use App\Models\Receipt;
-use App\Models\User;
-use App\Models\Warehouse;
+use App\Models\SalesTarget;
 use Carbon\Carbon;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
 
 class AdminController extends Controller
@@ -23,7 +17,7 @@ class AdminController extends Controller
     /**
      * Display a simple admin dashboard.
      */
-    public function index()
+    public function index(Request $request)
     {
         $user = auth()->user();
 
@@ -52,109 +46,142 @@ class AdminController extends Controller
             ]);
         }
 
-        $usersTableReady = Schema::hasTable('users');
-        $productTableReady = Schema::hasTable('products');
-        $packagingReady = Schema::hasTable('packaging_types');
-        $taxReady = Schema::hasTable('tax_classes');
-        $batchReady = Schema::hasTable('batches');
         $agentReady = Schema::hasTable('agents');
         $orderReady = Schema::hasTable('orders');
-        $deliveryReady = Schema::hasTable('deliveries');
-        $warehouseReady = Schema::hasTable('warehouses');
         $invoiceReady = Schema::hasTable('invoices');
-        $receiptReady = Schema::hasTable('receipts');
         $productionReady = Schema::hasTable('production_runs');
+        $salesTargetReady = Schema::hasTable('sales_targets');
 
-        $userCount = $usersTableReady ? User::count() : 0;
-
-        $productCount = $productTableReady ? Product::count() : 0;
-        $recentProducts = $productTableReady
-            ? Product::with(['packagingType', 'taxClass'])->orderByDesc('created_at')->take(6)->get()
-            : collect();
-        $packagingCount = $packagingReady ? PackagingType::count() : 0;
-        $taxClassCount = $taxReady ? TaxClass::count() : 0;
-        $batchCount = $batchReady ? Batch::count() : 0;
         $agentCount = $agentReady ? Agent::where('is_active', true)->count() : 0;
-        // Treat "orders" on the dashboard as sales orders only – exclude return
-        // orders so that the high-level metric reflects outbound sales. Returns
-        // are surfaced separately in a dedicated card.
         $totalOrderCount = $orderReady
             ? Order::where('order_type', '!=', 'return')->count()
             : 0;
         $returnOrderCount = $orderReady
             ? Order::where('order_type', 'return')->count()
             : 0;
-        $openOrderCount = $orderReady
-            ? Order::whereIn('status', ['draft', 'confirmed', 'picked', 'packed', 'dispatched'])->count()
-            : 0;
-        $todayOrders = $orderReady
-            ? Order::whereDate('delivery_date', Carbon::today())->count()
-            : 0;
-        $inTransitDeliveries = $deliveryReady
-            ? Delivery::whereIn('status', ['scheduled', 'in_transit'])->count()
-            : 0;
-        $exceptionDeliveriesToday = $deliveryReady
-            ? Delivery::where('status', 'exception')->whereDate('updated_at', Carbon::today())->count()
-            : 0;
-        $warehouseCount = $warehouseReady ? Warehouse::count() : 0;
+        $currencyCode = config('app.currency', 'BDT');
+        $today = Carbon::today();
+        $targetMonth = $request->query('target_month');
+        $currentMonthStart = $targetMonth
+            ? Carbon::parse($targetMonth . '-01')->startOfMonth()
+            : $today->copy()->startOfMonth();
+        $currentMonthEnd = $currentMonthStart->copy()->endOfMonth();
+        $currentMonthLabel = $currentMonthStart->format('F Y');
+        $salesRangeMonths = (int) $request->query('sales_range', 12);
+        if (! in_array($salesRangeMonths, [3, 6, 12], true)) {
+            $salesRangeMonths = 12;
+        }
+        $metrics = [
+            [
+                'label' => 'Active agents',
+                'value' => number_format($agentCount),
+                'detail' => 'Selling partners in your network',
+            ],
+        ];
 
-        $expiringSoonCount = $batchReady
-            ? Batch::whereNotNull('expiry_date')
-                ->whereBetween('expiry_date', [Carbon::today(), Carbon::today()->copy()->addDays(30)])
-                ->count()
-            : 0;
+        $monthlySalesTarget = 0.0;
+        $monthlyTargetBasis = 'No monthly sales target configured';
+        if ($salesTargetReady) {
+            $activeTargets = SalesTarget::query()
+                ->whereDate('period_start', '<=', $currentMonthEnd->toDateString())
+                ->whereDate('period_end', '>=', $currentMonthStart->toDateString())
+                ->get(['agent_id', 'employee_id', 'target_value']);
 
-        $todayProductionQty = $productionReady
-            ? ProductionRun::where('qc_status', 'approved')
-                ->whereDate('created_at', Carbon::today())
-                ->sum('quantity')
-            : 0;
+            $agentTargetTotal = (float) $activeTargets
+                ->whereNotNull('agent_id')
+                ->sum('target_value');
+            $employeeTargetTotal = (float) $activeTargets
+                ->whereNull('agent_id')
+                ->whereNotNull('employee_id')
+                ->sum('target_value');
 
-        $outstandingReceivables = 0;
+            if ($agentTargetTotal > 0) {
+                $monthlySalesTarget = round($agentTargetTotal, 2);
+                $monthlyTargetBasis = 'Based on active agent sales targets';
+            } elseif ($employeeTargetTotal > 0) {
+                $monthlySalesTarget = round($employeeTargetTotal, 2);
+                $monthlyTargetBasis = 'Based on active employee sales targets';
+            }
+        }
+
+        $monthlyAchieved = 0.0;
+        $todayAchieved = 0.0;
+        $outstandingReceivables = 0.0;
         if ($invoiceReady) {
+            $monthlyInvoices = Invoice::query()
+                ->with(['creditNotes', 'receipts', 'advanceApplications'])
+                ->whereBetween('issued_at', [$currentMonthStart->toDateString(), $currentMonthEnd->toDateString()])
+                ->get();
+
+            $monthlyAchieved = round((float) $monthlyInvoices->sum(function (Invoice $invoice) {
+                return $invoice->net_sales_after_credits;
+            }), 2);
+
+            $todayAchieved = round((float) Invoice::query()
+                ->with('creditNotes')
+                ->whereDate('issued_at', $today)
+                ->get()
+                ->sum(function (Invoice $invoice) {
+                    return $invoice->net_sales_after_credits;
+                }), 2);
+
             $openInvoices = Invoice::query()
                 ->with(['receipts', 'creditNotes', 'advanceApplications'])
                 ->whereIn('status', ['issued', 'adjusted'])
                 ->get();
 
-            $outstandingReceivables = $openInvoices->sum(function (Invoice $invoice) {
+            $outstandingReceivables = round((float) $openInvoices->sum(function (Invoice $invoice) {
                 return $invoice->outstanding;
-            });
+            }), 2);
         }
 
-        $todayReceipts = $receiptReady
-            ? Receipt::whereDate('received_at', Carbon::today())->sum('amount')
-            : 0;
+        $monthlyTargetProgress = $monthlySalesTarget > 0
+            ? round(min(100, ($monthlyAchieved / $monthlySalesTarget) * 100), 2)
+            : 0.0;
+        $targetMonthOptions = collect(range(0, 11))
+            ->map(function (int $offset) use ($today) {
+                $month = $today->copy()->startOfMonth()->subMonths($offset);
 
-        // Monthly aggregates for the current year
+                return [
+                    'value' => $month->format('Y-m'),
+                    'label' => $month->format('F Y'),
+                ];
+            })
+            ->all();
+
         $monthLabels = [];
         $monthlyOrders = [];
-        $monthlyReceipts = [];
+        $monthlyRevenue = [];
 
-        if ($orderReady || $receiptReady) {
-            for ($m = 1; $m <= 12; $m++) {
-                $monthLabels[] = Carbon::create(null, $m, 1)->format('M');
+        if ($orderReady || $invoiceReady) {
+            for ($offset = $salesRangeMonths - 1; $offset >= 0; $offset--) {
+                $month = $today->copy()->startOfMonth()->subMonths($offset);
+                $monthLabels[] = $month->format('M Y');
 
                 $monthlyOrders[] = $orderReady
                     ? Order::where('order_type', '!=', 'return')
-                        ->whereYear('delivery_date', Carbon::today()->year)
-                        ->whereMonth('delivery_date', $m)
+                        ->whereYear('delivery_date', $month->year)
+                        ->whereMonth('delivery_date', $month->month)
                         ->count()
                     : 0;
 
-                $monthlyReceipts[] = $receiptReady
-                    ? Receipt::whereYear('received_at', Carbon::today()->year)
-                        ->whereMonth('received_at', $m)
-                        ->sum('amount')
+                $monthlyRevenue[] = $invoiceReady
+                    ? (float) Invoice::query()
+                        ->with('creditNotes')
+                        ->whereYear('issued_at', $month->year)
+                        ->whereMonth('issued_at', $month->month)
+                        ->get()
+                        ->sum(function (Invoice $invoice) {
+                            return $invoice->net_sales_after_credits;
+                        })
                     : 0;
             }
         }
 
-        // Simple 7‑day time‑series for dashboard charts
         $chartDays = collect();
-        if ($orderReady || $receiptReady) {
+        if ($orderReady || $invoiceReady || $productionReady) {
             for ($i = 6; $i >= 0; $i--) {
-                $day = Carbon::today()->copy()->subDays($i);
+                $day = $today->copy()->subDays($i);
 
                 $ordersForDay = $orderReady
                     ? Order::where('order_type', '!=', 'return')
@@ -162,140 +189,59 @@ class AdminController extends Controller
                         ->count()
                     : 0;
 
-                $receiptsForDay = $receiptReady
-                    ? Receipt::whereDate('received_at', $day)->sum('amount')
+                $revenueForDay = $invoiceReady
+                    ? (float) Invoice::query()
+                        ->with('creditNotes')
+                        ->whereDate('issued_at', $day)
+                        ->get()
+                        ->sum(function (Invoice $invoice) {
+                            return $invoice->net_sales_after_credits;
+                        })
+                    : 0;
+
+                $productionForDay = $productionReady
+                    ? (float) ProductionRun::where('qc_status', 'approved')
+                        ->whereDate('created_at', $day)
+                        ->sum('quantity')
                     : 0;
 
                 $chartDays->push([
                     'label' => $day->format('d M'),
                     'orders' => $ordersForDay,
-                    'receipts' => $receiptsForDay,
+                    'revenue' => round($revenueForDay, 2),
+                    'production' => round($productionForDay, 2),
                 ]);
             }
         }
 
-        $metrics = [];
-
-        if ($productTableReady) {
-            $metrics[] = [
-                'label' => 'Products',
-                'value' => number_format($productCount),
-                'detail' => 'Active SKUs in the catalog',
-            ];
-        }
-
-        if ($packagingReady) {
-            $metrics[] = [
-                'label' => 'Packaging types',
-                'value' => number_format($packagingCount),
-                'detail' => 'Bottle/crate/carton definitions',
-            ];
-        }
-
-        if ($agentReady) {
-            $metrics[] = [
-                'label' => 'Active agents',
-                'value' => number_format($agentCount),
-                'detail' => 'Selling partners in your network',
-            ];
-        }
-
-        if ($orderReady) {
-            $metrics[] = [
-                'label' => 'Open orders',
-                'value' => number_format($openOrderCount),
-                'detail' => 'Draft / confirmed / in fulfilment',
-            ];
-        }
-
-        if ($deliveryReady) {
-            $metrics[] = [
-                'label' => 'Deliveries in pipeline',
-                'value' => number_format($inTransitDeliveries),
-                'detail' => 'Scheduled or in transit',
-            ];
-        }
-
-        if ($warehouseReady) {
-            $metrics[] = [
-                'label' => 'Warehouses',
-                'value' => number_format($warehouseCount),
-                'detail' => 'Plants, depots & consignment',
-            ];
-        }
-
-        $masterSummary = [
-            'products' => $productCount,
-            'packaging' => $packagingCount,
-            'taxClasses' => $taxClassCount,
-            'batches' => $batchCount,
-        ];
-
-        $alerts = [];
-
-        if ($expiringSoonCount > 0) {
-            $alerts[] = [
-                'key' => 'expiring_batches_' . $expiringSoonCount,
-                'message' => "{$expiringSoonCount} batches expiring within 30 days",
-                'variant' => 'error', // bad / urgent
-                'source' => 'Inventory',
-            ];
-        }
-
-        if ($exceptionDeliveriesToday > 0) {
-            $alerts[] = [
-                'key' => 'delivery_exceptions_' . Carbon::today()->toDateString() . '_' . $exceptionDeliveriesToday,
-                'message' => "{$exceptionDeliveriesToday} deliveries marked as exception today",
-                'variant' => 'error', // bad / exception
-                'source' => 'Delivery',
-            ];
-        }
-
-        if ($todayOrders > 0) {
-            $alerts[] = [
-                'key' => 'orders_due_' . Carbon::today()->toDateString() . '_' . $todayOrders,
-                'message' => "{$todayOrders} orders scheduled for delivery today",
-                'variant' => 'success', // good news
-                'source' => 'Sales',
-            ];
-        }
-
-        if ($outstandingReceivables > 0) {
-            $alerts[] = [
-                'key' => 'receivables_' . number_format($outstandingReceivables, 2, '.', ''),
-                'message' => 'Outstanding receivables of BDT ' . number_format($outstandingReceivables, 2),
-                'variant' => 'error', // bad / attention needed
-                'source' => 'Finance',
-            ];
-        }
-
-        // Recent orders (for dashboard table)
         $recentOrders = $orderReady
-            ? Order::with('agent')->orderByDesc('id')->take(10)->get()
+            ? Order::with('agent')
+                ->where('order_type', '!=', 'return')
+                ->orderByDesc('id')
+                ->take(10)
+                ->get()
             : collect();
 
         return view('admin.dashboard', compact(
             'metrics',
-            'usersTableReady',
-            'masterSummary',
-            'productTableReady',
-            'packagingReady',
-            'taxReady',
-            'batchCount',
-            'todayOrders',
-            'expiringSoonCount',
-            'todayProductionQty',
-            'outstandingReceivables',
-            'todayReceipts',
-            'alerts',
             'chartDays',
             'agentCount',
             'totalOrderCount',
             'returnOrderCount',
             'monthLabels',
             'monthlyOrders',
-            'monthlyReceipts',
-            'recentOrders'
+            'monthlyRevenue',
+            'salesRangeMonths',
+            'recentOrders',
+            'currencyCode',
+            'currentMonthLabel',
+            'monthlySalesTarget',
+            'monthlyTargetBasis',
+            'monthlyAchieved',
+            'todayAchieved',
+            'monthlyTargetProgress',
+            'outstandingReceivables',
+            'targetMonthOptions'
         ));
     }
 

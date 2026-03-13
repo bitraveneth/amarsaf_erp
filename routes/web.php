@@ -59,6 +59,8 @@ use App\Http\Controllers\Admin\ReportsDashboardController;
 use App\Http\Controllers\Admin\SystemSettingController;
 use App\Http\Controllers\Admin\AgentAdvanceController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Auth\ForgotPasswordController;
+use App\Http\Controllers\Auth\ResetPasswordController;
 
 /*
 |--------------------------------------------------------------------------
@@ -78,6 +80,10 @@ Route::get('/', function () {
 Route::middleware('guest')->group(function () {
     Route::get('login', [LoginController::class, 'show'])->name('login');
     Route::post('login', [LoginController::class, 'authenticate'])->middleware('throttle:login');
+    Route::get('forgot-password', [ForgotPasswordController::class, 'showLinkRequestForm'])->name('password.request');
+    Route::post('forgot-password', [ForgotPasswordController::class, 'sendResetLinkEmail'])->middleware('throttle:5,1')->name('password.email');
+    Route::get('reset-password/{token}', [ResetPasswordController::class, 'showResetForm'])->name('password.reset');
+    Route::post('reset-password', [ResetPasswordController::class, 'reset'])->name('password.update');
 });
 
 Route::post('logout', [LoginController::class, 'logout'])->middleware('auth')->name('logout');

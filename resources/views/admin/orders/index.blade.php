@@ -38,6 +38,28 @@
 
     <!-- Status Message -->
 
+    <div class="flex flex-wrap items-center gap-3">
+        @php
+            $typeFilter = $orderTypeFilter ?? 'all';
+            $filterTabs = [
+                ['value' => 'all', 'label' => 'All orders'],
+                ['value' => 'sales', 'label' => 'Sales orders'],
+                ['value' => 'return', 'label' => 'Return orders'],
+            ];
+        @endphp
+
+        @foreach($filterTabs as $tab)
+            <a
+                href="{{ route('admin.orders.index', ['type' => $tab['value']]) }}"
+                class="{{ $typeFilter === $tab['value']
+                    ? 'bg-brand-500 text-white border-brand-500 shadow-md'
+                    : 'border-gray-200 bg-white text-gray-600 hover:border-brand-200 hover:text-brand-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:border-brand-700 dark:hover:text-brand-400' }} inline-flex items-center rounded-xl border px-4 py-2 text-sm font-semibold transition-colors"
+            >
+                {{ $tab['label'] }}
+            </a>
+        @endforeach
+    </div>
+
     @if($orders->isNotEmpty())
         @php
             $totalOrders = $orders instanceof \Illuminate\Pagination\LengthAwarePaginator ? $orders->total() : $orders->count();
@@ -86,7 +108,7 @@
                             </svg>
                         </div>
                     </div>
-                    <p class="mt-3 text-3xl font-bold text-gray-900 dark:text-white">BDT {{ number_format($totalRevenue, 0) }}</p>
+                    <p class="mt-3 text-3xl font-bold text-gray-900 dark:text-white">{{ config('app.currency', 'BDT') }} {{ number_format($totalRevenue, 0) }}</p>
                     <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Total order value</p>
                 </div>
             </div>
@@ -106,7 +128,7 @@
                             </svg>
                         </div>
                     </div>
-                    <p class="mt-3 text-3xl font-bold text-gray-900 dark:text-white">BDT {{ number_format($totalCommission, 0) }}</p>
+                    <p class="mt-3 text-3xl font-bold text-gray-900 dark:text-white">{{ config('app.currency', 'BDT') }} {{ number_format($totalCommission, 0) }}</p>
                     <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Total agent commission</p>
                 </div>
             </div>
@@ -138,7 +160,9 @@
         <div class="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900 overflow-hidden">
             <div class="border-b border-gray-100 px-6 py-4 dark:border-gray-800">
                 <div class="flex items-center justify-between">
-                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white">All Orders</h3>
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+                        {{ $typeFilter === 'sales' ? 'Sales Orders' : ($typeFilter === 'return' ? 'Return Orders' : 'All Orders') }}
+                    </h3>
                     <span class="rounded-full bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-300">
                         {{ $orders->count() }} of {{ $totalOrders }} orders
                     </span>
@@ -164,6 +188,9 @@
                                     'draft' => 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400',
                                     'pending' => 'bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-400',
                                     'confirmed' => 'bg-success-100 text-success-700 dark:bg-success-500/20 dark:text-success-400',
+                                    'picked' => 'bg-brand-100 text-brand-700 dark:bg-brand-500/20 dark:text-brand-400',
+                                    'packed' => 'bg-brand-100 text-brand-700 dark:bg-brand-500/20 dark:text-brand-400',
+                                    'dispatched' => 'bg-blue-light-100 text-blue-light-700 dark:bg-blue-light-500/20 dark:text-blue-light-400',
                                     'processing' => 'bg-brand-100 text-brand-700 dark:bg-brand-500/20 dark:text-brand-400',
                                     'shipped' => 'bg-blue-light-100 text-blue-light-700 dark:bg-blue-light-500/20 dark:text-blue-light-400',
                                     'delivered' => 'bg-success-100 text-success-700 dark:bg-success-500/20 dark:text-success-400',
@@ -190,8 +217,8 @@
                                     </div>
                                 </td>
                                 <td class="px-6 py-4">
-                                    <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium capitalize text-gray-700 dark:bg-gray-800 dark:text-gray-300">
-                                        {{ $order->order_type }}
+                                    <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium capitalize {{ $order->order_type === 'return' ? 'bg-error-100 text-error-700 dark:bg-error-500/20 dark:text-error-400' : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300' }}">
+                                        {{ $order->order_type === 'return' ? 'Customer return' : $order->order_type }}
                                     </span>
                                 </td>
                                 <td class="px-6 py-4">
@@ -211,13 +238,13 @@
                                     </span>
                                 </td>
                                 <td class="px-6 py-4 text-right">
-                                    <span class="text-sm font-bold text-gray-900 dark:text-white">
-                                        BDT {{ number_format($order->total, 2) }}
+                                    <span class="text-sm font-bold {{ $order->order_type === 'return' ? 'text-error-600 dark:text-error-400' : 'text-gray-900 dark:text-white' }}">
+                                        {{ config('app.currency', 'BDT') }} {{ number_format($order->total, 2) }}
                                     </span>
                                 </td>
                                 <td class="px-6 py-4 text-right">
                                     <span class="text-sm font-semibold text-success-600 dark:text-success-400">
-                                        BDT {{ number_format($order->commission_total ?? 0, 2) }}
+                                        {{ config('app.currency', 'BDT') }} {{ number_format($order->commission_total ?? 0, 2) }}
                                     </span>
                                 </td>
                                 <td class="px-6 py-4 text-right">

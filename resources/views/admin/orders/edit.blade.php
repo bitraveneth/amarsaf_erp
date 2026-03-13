@@ -1,6 +1,10 @@
 @extends('layouts.app')
 
 @section('content')
+@php
+    $isReturnOrder = ($order->order_type ?? null) === 'return';
+    $currencyCode = config('app.currency', 'BDT');
+@endphp
 <div class="max-w-6xl mx-auto space-y-8">
     <!-- Header with gradient -->
     <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
@@ -18,14 +22,19 @@
                 <div>
                     <div class="flex items-center gap-3">
                         <h1 class="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
-                            Edit Order
+                            {{ $isReturnOrder ? 'Edit Return Order' : 'Edit Order' }}
                         </h1>
                         <span class="inline-flex items-center rounded-full bg-brand-50 px-3 py-1 text-xs font-medium text-brand-700 dark:bg-brand-500/20 dark:text-brand-400">
                             #{{ $order->id }}
                         </span>
+                        @if($isReturnOrder)
+                            <span class="inline-flex items-center rounded-full bg-error-100 px-3 py-1 text-xs font-medium text-error-700 dark:bg-error-500/20 dark:text-error-400">
+                                Customer return
+                            </span>
+                        @endif
                     </div>
                     <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                        {{ $order->agent->name }} · {{ ucfirst($order->order_type) }} · {{ $order->agent_reference ?? 'No reference' }}
+                        {{ $order->agent->name }} · {{ $isReturnOrder ? 'Return' : ucfirst($order->order_type) }} · {{ $order->agent_reference ?? 'No reference' }}
                     </p>
                 </div>
             </div>
@@ -36,6 +45,16 @@
             </div>
         </div>
         
+        <div class="flex flex-wrap items-center gap-3">
+        @if($isReturnOrder)
+            <a href="{{ route('admin.returns.customer.create') }}?order_id={{ $order->id }}"
+               class="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-error-500 to-error-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md hover:from-error-600 hover:to-error-700 focus:outline-none focus:ring-2 focus:ring-error-500/50 transition-all duration-200">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                </svg>
+                Record stock return
+            </a>
+        @endif
         <a href="{{ route('admin.orders.index') }}" 
            class="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white/80 backdrop-blur-sm px-5 py-2.5 text-sm font-medium text-gray-700 shadow-xs hover:bg-white hover:shadow-sm dark:border-gray-700 dark:bg-gray-900/80 dark:text-gray-300 dark:hover:bg-gray-900 transition-all duration-200">
             <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -43,6 +62,7 @@
             </svg>
             Back to Orders
         </a>
+        </div>
     </div>
 
     <!-- Order Status Banner -->
@@ -87,7 +107,9 @@
                     </span>
                 </div>
                 <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                    Adjust delivery date and internal notes. Line items and agent are managed from the original order.
+                    {{ $isReturnOrder
+                        ? 'This is a commercial return order. It records the negative sales transaction only. Use "Record stock return" after goods are physically received back into inventory.'
+                        : 'Adjust delivery date and internal notes. Line items and agent are managed from the original order.' }}
                 </p>
             </div>
         </div>
@@ -104,8 +126,10 @@
                     </svg>
                 </div>
                 <div>
-                    <h2 class="text-xl font-bold text-gray-900 dark:text-white">Planning Details</h2>
-                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Update delivery schedule and order notes</p>
+                    <h2 class="text-xl font-bold text-gray-900 dark:text-white">{{ $isReturnOrder ? 'Return Details' : 'Planning Details' }}</h2>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                        {{ $isReturnOrder ? 'Update return date and internal notes' : 'Update delivery schedule and order notes' }}
+                    </p>
                 </div>
             </div>
         </div>
@@ -124,7 +148,7 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                             </svg>
                         </div>
-                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Delivery & Notes</h3>
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">{{ $isReturnOrder ? 'Return & Notes' : 'Delivery & Notes' }}</h3>
                     </div>
                     
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pl-11">
@@ -151,7 +175,7 @@
                         <!-- Delivery Date -->
                         <div class="space-y-2">
                             <label for="delivery_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Delivery Date
+                                {{ $isReturnOrder ? 'Return Date' : 'Delivery Date' }}
                             </label>
                             <div class="relative group">
                                 <div class="absolute inset-y-0 left-0 flex items-center pl-3">
@@ -173,7 +197,7 @@
                         <!-- Notes (Full Width) -->
                         <div class="md:col-span-2 space-y-2">
                             <label for="notes" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Order Notes
+                                {{ $isReturnOrder ? 'Return Notes' : 'Order Notes' }}
                             </label>
                             <div class="relative group">
                                 <div class="absolute left-3 top-3 flex items-start pointer-events-none">
@@ -240,15 +264,15 @@
                                                 </div>
                                             </td>
                                             <td class="px-4 py-3 text-right">
-                                                <span class="text-sm font-semibold text-gray-900 dark:text-white">{{ $item->quantity }}</span>
-                                            </td>
-                                            <td class="px-4 py-3 text-right">
-                                                <span class="text-sm text-gray-700 dark:text-gray-300">BDT {{ number_format($item->unit_price, 2) }}</span>
-                                            </td>
-                                            <td class="px-4 py-3 text-right">
-                                                <span class="text-sm font-bold text-brand-600 dark:text-brand-400">BDT {{ number_format($lineTotal, 2) }}</span>
-                                            </td>
-                                        </tr>
+                                        <span class="text-sm font-semibold text-gray-900 dark:text-white">{{ $item->quantity }}</span>
+                                    </td>
+                                    <td class="px-4 py-3 text-right">
+                                        <span class="text-sm text-gray-700 dark:text-gray-300">{{ $currencyCode }} {{ number_format($item->unit_price, 2) }}</span>
+                                    </td>
+                                    <td class="px-4 py-3 text-right">
+                                        <span class="text-sm font-bold {{ $isReturnOrder ? 'text-error-600 dark:text-error-400' : 'text-brand-600 dark:text-brand-400' }}">{{ $currencyCode }} {{ number_format($lineTotal, 2) }}</span>
+                                    </td>
+                                </tr>
                                     @endforeach
                                 </tbody>
                                 <tfoot class="bg-gray-50 dark:bg-gray-800/50">
@@ -262,7 +286,7 @@
                                             Subtotal
                                         </td>
                                         <td class="px-4 py-3 text-right text-sm font-semibold text-gray-900 dark:text-white">
-                                            BDT {{ number_format($subtotal, 2) }}
+                                            {{ $currencyCode }} {{ number_format($subtotal, 2) }}
                                         </td>
                                     </tr>
                                     @if($tax > 0)
@@ -271,7 +295,7 @@
                                             Tax
                                         </td>
                                         <td class="px-4 py-3 text-right text-sm font-semibold text-gray-900 dark:text-white">
-                                            BDT {{ number_format($tax, 2) }}
+                                            {{ $currencyCode }} {{ number_format($tax, 2) }}
                                         </td>
                                     </tr>
                                     @endif
@@ -279,8 +303,8 @@
                                         <td colspan="4" class="px-4 py-3 text-right text-sm font-bold text-gray-900 dark:text-white">
                                             Total
                                         </td>
-                                        <td class="px-4 py-3 text-right text-lg font-bold text-brand-600 dark:text-brand-400">
-                                            BDT {{ number_format($total, 2) }}
+                                        <td class="px-4 py-3 text-right text-lg font-bold {{ $isReturnOrder ? 'text-error-600 dark:text-error-400' : 'text-brand-600 dark:text-brand-400' }}">
+                                            {{ $currencyCode }} {{ number_format($total, 2) }}
                                         </td>
                                     </tr>
                                 </tfoot>

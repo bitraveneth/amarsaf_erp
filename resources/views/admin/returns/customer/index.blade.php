@@ -19,19 +19,37 @@
                         Customer Returns
                     </h1>
                     <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                        List of items returned by customers and added back to stock
+                        Stock return entries recorded after items are received back and added to inventory
                     </p>
                 </div>
             </div>
         </div>
-        
-        <a href="{{ route('admin.returns.customer.create') }}" 
-           class="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-brand-500 to-brand-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md hover:from-brand-600 hover:to-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500/50 transition-all duration-200">
-            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-            </svg>
-            Record Return
-        </a>
+
+        <div class="flex flex-wrap items-center gap-3">
+            <a href="{{ route('admin.orders.index', ['type' => 'return']) }}"
+               class="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 shadow-sm hover:border-brand-200 hover:text-brand-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:border-brand-700 dark:hover:text-brand-400 transition-all duration-200">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m-6 4h6m-6 4h4" />
+                </svg>
+                View return orders
+            </a>
+
+            <a href="{{ route('admin.returns.customer.create') }}"
+               class="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-brand-500 to-brand-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md hover:from-brand-600 hover:to-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500/50 transition-all duration-200">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                </svg>
+                Record return
+            </a>
+        </div>
+    </div>
+
+    <div class="rounded-2xl border border-blue-light-200 bg-blue-light-50 px-5 py-4 text-sm text-blue-light-800 dark:border-blue-light-900/40 dark:bg-blue-light-900/20 dark:text-blue-light-200">
+        This page shows confirmed stock returns that were physically received back into inventory. Return orders created from the sales flow can be reviewed separately under
+        <a href="{{ route('admin.orders.index', ['type' => 'return']) }}" class="font-semibold underline underline-offset-2 hover:no-underline">
+            Return orders
+        </a>.
     </div>
 
     <!-- Status Message -->
@@ -293,17 +311,21 @@
                         </svg>
                     </div>
                 </div>
-                <h2 class="mt-8 text-2xl font-bold text-gray-900 dark:text-white">No Returns Recorded</h2>
+                <h2 class="mt-8 text-2xl font-bold text-gray-900 dark:text-white">No customer returns yet</h2>
                 <p class="mt-3 text-base text-gray-500 dark:text-gray-400 max-w-md mx-auto">
-                    No customer returns have been recorded yet. Returns will appear here when customers send items back.
+                    Once you record a returned item back into stock, it will appear here with the related order, customer, and warehouse details.
                 </p>
                 <div class="mt-8 flex items-center justify-center gap-4">
+                    <a href="{{ route('admin.orders.index', ['type' => 'return']) }}"
+                       class="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 shadow-sm hover:border-brand-200 hover:text-brand-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:border-brand-700 dark:hover:text-brand-400 transition-all">
+                        View return orders
+                    </a>
                     <a href="{{ route('admin.returns.customer.create') }}" 
                        class="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-brand-500 to-brand-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md hover:from-brand-600 hover:to-brand-700 transition-all">
                         <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                         </svg>
-                        Record First Return
+                        Record return
                     </a>
                 </div>
             </div>

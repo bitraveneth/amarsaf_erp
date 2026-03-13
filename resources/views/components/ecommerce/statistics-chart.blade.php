@@ -1,5 +1,4 @@
 @php
-    // Optional range label – defaults to "Last 7 days"
     $rangeLabel = 'Last 7 days';
 @endphp
 
@@ -11,18 +10,18 @@
                 Statistics
             </h3>
             <p class="mt-1 text-theme-sm text-gray-500 dark:text-gray-400">
-                Orders, production, and cash performance.
+                Orders, production, and revenue over the last 7 days.
             </p>
         </div>
 
         <div class="flex w-full items-start gap-3 sm:justify-end">
-            {{-- Simple tab group (visual only for now) --}}
             <div x-data="{ selected: 'overview' }"
                 class="inline-flex w-fit items-center gap-0.5 rounded-lg bg-gray-100 p-0.5 dark:bg-gray-900">
                 @php
                     $options = [
                         ['value' => 'overview', 'label' => 'Overview'],
                         ['value' => 'sales', 'label' => 'Sales'],
+                        ['value' => 'production', 'label' => 'Production'],
                         ['value' => 'revenue', 'label' => 'Revenue'],
                     ];
                 @endphp
@@ -41,7 +40,6 @@
                 @endforeach
             </div>
 
-            {{-- Static range label instead of full-size calendar --}}
             <div
                 class="inline-flex items-center rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-medium text-gray-600 shadow-theme-xs dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">
                 {{ $rangeLabel }}

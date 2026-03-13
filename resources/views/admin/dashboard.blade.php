@@ -12,13 +12,19 @@
       <x-ecommerce.monthly-sale
           :month-labels="$monthLabels ?? []"
           :monthly-orders="$monthlyOrders ?? []"
+          :sales-range-months="$salesRangeMonths ?? 12"
       />
     </div>
-    <div class="col-span-12 xl:col-span-5">
+    <div class="col-span-12 xl:col-span-5 xl:h-full">
         <x-ecommerce.monthly-target
-            :outstanding-receivables="$outstandingReceivables ?? 0"
-            :monthly-receipts="$monthlyReceipts ?? []"
-            :today-receipts="$todayReceipts ?? 0"
+            :currency-code="$currencyCode ?? config('app.currency', 'BDT')"
+            :period-label="$currentMonthLabel ?? now()->format('F Y')"
+            :target-basis="$monthlyTargetBasis ?? 'No monthly sales target configured'"
+            :monthly-sales-target="$monthlySalesTarget ?? 0"
+            :monthly-achieved="$monthlyAchieved ?? 0"
+            :today-achieved="$todayAchieved ?? 0"
+            :progress-percent="$monthlyTargetProgress ?? 0"
+            :target-month-options="$targetMonthOptions ?? []"
         />
     </div>
 
@@ -27,7 +33,10 @@
     </div>
 
     <div class="col-span-12">
-      <x-ecommerce.recent-orders :orders="$recentOrders ?? collect()" />
+      <x-ecommerce.recent-orders
+          :orders="$recentOrders ?? collect()"
+          :currency-code="$currencyCode ?? config('app.currency', 'BDT')"
+      />
     </div>
   </div>
 @endsection
@@ -40,7 +49,9 @@
 
                 const labels = @json($chartDays->pluck('label'));
                 const orders = @json($chartDays->pluck('orders'));
-                const receipts = @json($chartDays->pluck('receipts'));
+                const production = @json($chartDays->pluck('production'));
+                const revenue = @json($chartDays->pluck('revenue'));
+                const currencyCode = @json($currencyCode ?? config('app.currency', 'BDT'));
 
                 const options = {
                     chart: {
@@ -86,8 +97,9 @@
                         theme: document.documentElement.classList.contains('dark') ? 'dark' : 'light',
                         y: {
                             formatter: (val, opts) => {
-                                const seriesName = opts.seriesIndex === 1 ? 'BDT ' : '';
-                                return seriesName + val;
+                                const seriesName = opts.series[opts.seriesIndex]?.name || '';
+                                const currencyPrefix = seriesName.includes('Revenue') ? `${currencyCode} ` : '';
+                                return `${currencyPrefix}${val}`;
                             }
                         }
                     },
@@ -104,10 +116,11 @@
                             style: { fontSize: '11px' }
                         }
                     },
-                    colors: ['#465FFF', '#12B76A'],
+                    colors: ['#465FFF', '#12B76A', '#F79009'],
                     series: [
                         { name: 'Orders', data: orders },
-                        { name: 'Receipts (BDT)', data: receipts }
+                        { name: 'Production Qty', data: production },
+                        { name: `Revenue (${currencyCode})`, data: revenue }
                     ],
                     legend: {
                         position: 'top',
@@ -137,15 +150,20 @@
                             series = [
                                 { name: 'Orders', data: orders },
                             ];
+                        } else if (mode === 'production') {
+                            series = [
+                                { name: 'Production Qty', data: production },
+                            ];
                         } else if (mode === 'revenue') {
                             series = [
-                                { name: 'Receipts (BDT)', data: receipts },
+                                { name: `Revenue (${currencyCode})`, data: revenue },
                             ];
                         } else {
                             // overview
                             series = [
                                 { name: 'Orders', data: orders },
-                                { name: 'Receipts (BDT)', data: receipts },
+                                { name: 'Production Qty', data: production },
+                                { name: `Revenue (${currencyCode})`, data: revenue },
                             ];
                         }
 

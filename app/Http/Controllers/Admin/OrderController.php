@@ -23,10 +23,25 @@ use App\Support\CommissionCalculator;
 
 class OrderController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $orders = Order::with('agent')->latest()->paginate(10);
-        return view('admin.orders.index', compact('orders'));
+        $orderTypeFilter = $request->query('type', 'all');
+        if (! in_array($orderTypeFilter, ['all', 'sales', 'return'], true)) {
+            $orderTypeFilter = 'all';
+        }
+
+        $orders = Order::with('agent')
+            ->when($orderTypeFilter === 'sales', function ($query) {
+                $query->where('order_type', '!=', 'return');
+            })
+            ->when($orderTypeFilter === 'return', function ($query) {
+                $query->where('order_type', 'return');
+            })
+            ->latest()
+            ->paginate(10)
+            ->withQueryString();
+
+        return view('admin.orders.index', compact('orders', 'orderTypeFilter'));
     }
 
     public function pickingOverview()

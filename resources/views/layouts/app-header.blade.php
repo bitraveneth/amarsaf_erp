@@ -484,7 +484,6 @@
                             x-transition:leave="transition ease-in duration-90"
                             x-transition:leave-start="opacity-100"
                             x-transition:leave-end="opacity-0"
-                            @click.outside="if (!dragging) closePopup()"
                             class="group/clock fixed z-[99999] w-52 max-w-[calc(100vw-1rem)] bg-transparent p-0 shadow-none"
                             :style="`left:${posX}px; top:${posY}px;`"
                             role="dialog"

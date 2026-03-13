@@ -10,10 +10,23 @@ use Illuminate\Validation\Rule;
 
 class AccountController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $accounts = Account::orderBy('code')->get();
-        return view('admin.finance.accounts', compact('accounts'));
+        $selectedType = $request->query('type');
+        $validTypes = ['asset', 'liability', 'equity', 'income', 'expense'];
+
+        if (! in_array($selectedType, $validTypes, true)) {
+            $selectedType = null;
+        }
+
+        $allAccounts = Account::orderBy('code')->get();
+
+        $accounts = Account::query()
+            ->when($selectedType, fn ($query) => $query->where('type', $selectedType))
+            ->orderBy('code')
+            ->get();
+
+        return view('admin.finance.accounts', compact('accounts', 'allAccounts', 'selectedType'));
     }
 
     public function create()
