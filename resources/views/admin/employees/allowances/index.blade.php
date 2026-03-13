@@ -175,11 +175,11 @@
             </div>
         </div>
 
-        <!-- Type & Status Distribution (if multiple) -->
+        <!-- Type & Status Distribution -->
         @if($typeBreakdown->count() > 1 || $statusBreakdown->count() > 1)
-        <div class="grid grid-cols-1 lg:grid-cols-4 gap-5">
+        <div class="grid grid-cols-1 gap-5 xl:grid-cols-2">
             @if($typeBreakdown->count() > 1)
-            <div class="lg:col-span-1 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+            <div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
                 <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-4">Allowance Types</h3>
                 <div class="space-y-3">
                     @foreach($typeBreakdown as $type => $count)
@@ -208,7 +208,7 @@
             @endif
 
             @if($statusBreakdown->count() > 1)
-            <div class="{{ $typeBreakdown->count() > 1 ? 'lg:col-span-1' : 'lg:col-span-2' }} rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+            <div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
                 <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-4">Status Distribution</h3>
                 <div class="space-y-3">
                     @foreach($statusBreakdown as $status => $count)
@@ -235,13 +235,11 @@
                 </div>
             </div>
             @endif
+        </div>
         @endif
 
             <!-- Allowances Table -->
-            <div class="{{ 
-                ($typeBreakdown->count() > 1 && $statusBreakdown->count() > 1) ? 'lg:col-span-2' : 
-                (($typeBreakdown->count() > 1 || $statusBreakdown->count() > 1) ? 'lg:col-span-3' : 'lg:col-span-4') 
-            }} rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900 overflow-hidden">
+            <div class="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900 overflow-hidden">
     @else
         <!-- Allowances Table (Full Width) - When no allowances -->
         <div class="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900 overflow-hidden">

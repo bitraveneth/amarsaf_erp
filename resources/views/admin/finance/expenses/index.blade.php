@@ -6,7 +6,7 @@
         <header class="panel-header mb-6 flex items-start justify-between">
             <div>
                 <h1 class="text-title-sm font-semibold text-gray-900 dark:text-white">Expenses</h1>
-                <p class="text-theme-sm text-gray-500 dark:text-gray-400">Daily, weekly, or monthly expenses by category.</p>
+                <p class="text-theme-sm text-gray-500 dark:text-gray-300">Daily, weekly, or monthly expenses by category.</p>
             </div>
             <div class="button-group">
                 <a href="{{ route('admin.expenses.create') }}" 
@@ -21,21 +21,21 @@
 
         <form method="GET" action="{{ route('admin.expenses.index') }}" class="mb-6 flex flex-wrap items-end gap-4">
             <label class="flex flex-col gap-1.5">
-                <span class="text-theme-sm font-medium text-gray-700 dark:text-gray-300">From</span>
+                <span class="text-theme-sm font-medium text-gray-700 dark:text-gray-200">From</span>
                 <input type="date" 
                        name="from" 
                        value="{{ request('from', $from->format('Y-m-d')) }}"
                        class="input-date-icon h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-theme-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-700">
             </label>
             <label class="flex flex-col gap-1.5">
-                <span class="text-theme-sm font-medium text-gray-700 dark:text-gray-300">To</span>
+                <span class="text-theme-sm font-medium text-gray-700 dark:text-gray-200">To</span>
                 <input type="date" 
                        name="to" 
                        value="{{ request('to', $to->format('Y-m-d')) }}"
                        class="input-date-icon h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-theme-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-700">
             </label>
             <label class="flex flex-col gap-1.5">
-                <span class="text-theme-sm font-medium text-gray-700 dark:text-gray-300">Category</span>
+                <span class="text-theme-sm font-medium text-gray-700 dark:text-gray-200">Category</span>
                 <select name="category" 
                         class="h-11 min-w-[160px] rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-theme-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-none focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:focus:border-brand-700">
                     <option value="" class="dark:bg-gray-900">All</option>
@@ -47,7 +47,7 @@
                 </select>
             </label>
             <button type="submit" 
-                    class="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-theme-sm font-medium text-gray-700 shadow-theme-xs transition hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200">
+                    class="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-theme-sm font-medium text-gray-700 shadow-theme-xs transition hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-white/[0.03] dark:hover:text-white">
                 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M17.5 17.5L13.3333 13.3333M15 8.33333C15 12.0152 12.0152 15 8.33333 15C4.65144 15 1.66667 12.0152 1.66667 8.33333C1.66667 4.65144 4.65144 1.66667 8.33333 1.66667C12.0152 1.66667 15 4.65144 15 8.33333Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
@@ -56,7 +56,7 @@
         </form>
 
         <div class="mb-6 rounded-lg bg-gray-50 p-4 dark:bg-gray-800/50">
-            <p class="text-theme-sm text-gray-600 dark:text-gray-400">
+            <p class="text-theme-sm text-gray-600 dark:text-gray-300">
                 Total in period: 
                 <strong class="text-title-sm font-semibold text-brand-500 dark:text-brand-400">
                     {{ number_format($total, 2) }} {{ config('app.currency', 'BDT') }}
@@ -69,19 +69,19 @@
                 <table class="data-table w-full min-w-[900px] border-collapse">
                     <thead>
                         <tr class="border-b border-gray-200 bg-gray-50 dark:border-gray-800 dark:bg-gray-900">
-                            <th class="px-5 py-4 text-left text-theme-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Date</th>
-                            <th class="px-5 py-4 text-left text-theme-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Category</th>
-                            <th class="px-5 py-4 text-left text-theme-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Description</th>
-                            <th class="px-5 py-4 text-left text-theme-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Amount</th>
-                            <th class="px-5 py-4 text-left text-theme-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Reference</th>
-                            <th class="px-5 py-4 text-left text-theme-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Status</th>
-                            <th class="px-5 py-4 text-right text-theme-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Actions</th>
+                            <th class="px-5 py-4 text-left text-theme-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">Date</th>
+                            <th class="px-5 py-4 text-left text-theme-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">Category</th>
+                            <th class="px-5 py-4 text-left text-theme-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">Description</th>
+                            <th class="px-5 py-4 text-left text-theme-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">Amount</th>
+                            <th class="px-5 py-4 text-left text-theme-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">Reference</th>
+                            <th class="px-5 py-4 text-left text-theme-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">Status</th>
+                            <th class="px-5 py-4 text-right text-theme-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">Actions</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
                         @foreach($expenses as $expense)
                             <tr class="transition hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                                <td class="px-5 py-4 text-theme-sm text-gray-700 dark:text-gray-300">
+                                <td class="px-5 py-4 text-theme-sm text-gray-700">
                                     {{ $expense->date?->format('Y-m-d') }}
                                 </td>
                                 <td class="px-5 py-4">
@@ -105,13 +105,13 @@
                                         {{ ucfirst($expense->category) }}
                                     </span>
                                 </td>
-                                <td class="px-5 py-4 text-theme-sm text-gray-700 dark:text-gray-300">
+                                <td class="px-5 py-4 text-theme-sm text-gray-700">
                                     {{ $expense->description ?: '—' }}
                                 </td>
-                                <td class="px-5 py-4 text-theme-sm font-medium text-gray-900 dark:text-white">
+                                <td class="px-5 py-4 text-theme-sm font-semibold text-gray-900 dark:text-white">
                                     {{ number_format($expense->amount, 2) }}
                                 </td>
-                                <td class="px-5 py-4 text-theme-sm text-gray-700 dark:text-gray-300">
+                                <td class="px-5 py-4 text-theme-sm text-gray-700">
                                     {{ $expense->reference ?: '—' }}
                                 </td>
                                 <td class="px-5 py-4">
@@ -130,7 +130,7 @@
                                 <td class="px-5 py-4 text-right">
                                     <div class="flex items-center justify-end gap-2">
                                         <a href="{{ route('admin.expenses.edit', $expense) }}" 
-                                           class="edit-button inline-flex items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-theme-sm font-medium text-gray-700 shadow-theme-xs transition hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200">
+                                           class="edit-button inline-flex items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-theme-sm font-medium text-gray-700 shadow-theme-xs transition hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-white/[0.03] dark:hover:text-white">
                                             <svg width="18" height="18" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
                                                 <path d="M14.1667 2.5L17.5 5.83333M2.5 14.1667L11.6667 5L15 8.33333L5.83333 17.5H2.5V14.1667Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
                                             </svg>
@@ -181,28 +181,3 @@
     </section>
 </div>
 @endsection
-
-@push('styles')
-<style>
-/* Status badge dynamic colors - using CSS variables for better maintainability */
-.bg-success-50 { background-color: #ecfdf3; }
-.bg-warning-50 { background-color: #fffaeb; }
-.bg-error-50 { background-color: #fef3f2; }
-.bg-gray-100 { background-color: #f2f4f7; }
-
-.text-success-700 { color: #067647; }
-.text-warning-700 { color: #b54708; }
-.text-error-700 { color: #b42318; }
-.text-gray-700 { color: #344054; }
-
-.dark .dark\:bg-success-500\/20 { background-color: rgba(18, 183, 106, 0.2); }
-.dark .dark\:bg-warning-500\/20 { background-color: rgba(247, 144, 9, 0.2); }
-.dark .dark\:bg-error-500\/20 { background-color: rgba(240, 68, 56, 0.2); }
-.dark .dark\:bg-gray-500\/20 { background-color: rgba(102, 112, 133, 0.2); }
-
-.dark .dark\:text-success-400 { color: #47cd89; }
-.dark .dark\:text-warning-400 { color: #fdb022; }
-.dark .dark\:text-error-400 { color: #f97066; }
-.dark .dark\:text-gray-400 { color: #98a2b3; }
-</style>
-@endpush

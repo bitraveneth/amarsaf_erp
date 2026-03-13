@@ -232,6 +232,13 @@
     color: var(--color-app-text-light);
   }
 
+  .dark .theme-text-scope .text-gray-900,
+  .dark .theme-text-scope .text-gray-800,
+  .dark .theme-text-scope .text-gray-700,
+  .dark .theme-text-scope .text-gray-600 {
+    color: var(--color-app-text-dark);
+  }
+
   .theme-text-scope #sidebar,
   .theme-text-scope #sidebar .menu-item-inactive,
   .theme-text-scope #sidebar .menu-dropdown-item-inactive,

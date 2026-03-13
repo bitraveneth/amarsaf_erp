@@ -31,15 +31,47 @@ class SalaryDistributionController extends Controller
 
         $rows = $query->orderBy('employee_id')->paginate(20)->withQueryString();
 
-        $total = (clone $query)->sum('base_salary')
-            + (clone $query)->sum('bonus')
-            + (clone $query)->sum('ta_allowances')
-            + (clone $query)->sum('da_allowances')
-            + (clone $query)->sum('commission');
+        $summaryQuery = clone $query;
+        $summaryRows = $summaryQuery->get([
+            'employee_id',
+            'base_salary',
+            'bonus',
+            'ta_allowances',
+            'da_allowances',
+            'commission',
+            'document_path',
+            'payment_method',
+        ]);
+
+        $total = $summaryRows->sum(function ($row) {
+            return (float) $row->base_salary
+                + (float) $row->bonus
+                + (float) $row->ta_allowances
+                + (float) $row->da_allowances
+                + (float) $row->commission;
+        });
+
+        $employeeCount = $summaryRows->pluck('employee_id')->filter()->unique()->count();
+        $averageDistribution = $employeeCount > 0 ? $total / $employeeCount : 0;
+        $withDocuments = $summaryRows->filter(fn ($row) => filled($row->document_path))->count();
+        $bankTransfers = $summaryRows->filter(fn ($row) => ($row->payment_method ?? 'bank') === 'bank')->count();
 
         $employees = Employee::orderBy('name')->get();
+        $selectedEmployeeName = $employeeId
+            ? $employees->firstWhere('id', (int) $employeeId)?->name
+            : null;
 
-        return view('admin.finance.salary_distributions.index', compact('rows', 'month', 'total', 'employees'));
+        return view('admin.finance.salary_distributions.index', compact(
+            'rows',
+            'month',
+            'total',
+            'employees',
+            'employeeCount',
+            'averageDistribution',
+            'withDocuments',
+            'bankTransfers',
+            'selectedEmployeeName'
+        ));
     }
 
     public function create()

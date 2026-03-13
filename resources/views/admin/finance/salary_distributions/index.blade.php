@@ -1,208 +1,303 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="dashboard-shell space-y-6">
-    {{-- Summary Panel --}}
-    <section class="panel rounded-xl border border-gray-200 bg-white p-6 shadow-theme-sm dark:border-gray-800 dark:bg-gray-900">
-        <header class="panel-header mb-6 flex items-start justify-between">
-            <div>
-                <h1 class="text-title-sm font-semibold text-gray-900 dark:text-white">Salary distributions</h1>
-                <p class="text-theme-sm text-gray-500 dark:text-gray-400">Per-employee salary, allowances, and commission for a period.</p>
-            </div>
-            <form method="GET" action="{{ route('admin.salary-distributions.index') }}" class="flex flex-wrap items-end gap-3">
-                <label class="flex flex-col gap-1.5">
-                    <span class="text-theme-xs font-medium text-gray-700 dark:text-gray-300">Month</span>
-                    <input type="month" 
-                           name="month" 
-                           value="{{ request('month', $month->format('Y-m')) }}"
-                           class="h-10 rounded-lg border border-gray-300 bg-transparent px-3 py-2 text-theme-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-none focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:focus:border-brand-700">
-                </label>
-                <label class="flex flex-col gap-1.5">
-                    <span class="text-theme-xs font-medium text-gray-700 dark:text-gray-300">Employee</span>
-                    <select name="employee_id" 
-                            class="h-10 min-w-[160px] rounded-lg border border-gray-300 bg-transparent px-3 py-2 text-theme-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-none focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:focus:border-brand-700">
-                        <option value="" class="dark:bg-gray-900">All employees</option>
-                        @foreach($employees as $employee)
-                            <option value="{{ $employee->id }}" {{ (string)request('employee_id') === (string)$employee->id ? 'selected' : '' }} class="dark:bg-gray-900">
-                                {{ $employee->name }}
-                            </option>
-                        @endforeach
-                    </select>
-                </label>
-                <button type="submit" 
-                        class="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-theme-sm font-medium text-gray-700 shadow-theme-xs transition hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200">
-                    <svg width="18" height="18" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M17.5 17.5L13.3333 13.3333M15 8.33333C15 12.0152 12.0152 15 8.33333 15C4.65144 15 1.66667 12.0152 1.66667 8.33333C1.66667 4.65144 4.65144 1.66667 8.33333 1.66667C12.0152 1.66667 15 4.65144 15 8.33333Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+@php
+    $currencyCode = config('app.currency', 'BDT');
+    $selectedMonth = request('month', $month->format('Y-m'));
+@endphp
+
+<div class="space-y-8">
+    <div class="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+        <div>
+            <div class="flex items-center gap-4">
+                <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-500 to-brand-600 text-white shadow-lg">
+                    <svg class="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 7.5h18M6.75 3v3m10.5-3v3M5.25 21h13.5A2.25 2.25 0 0021 18.75V7.5a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 7.5v11.25A2.25 2.25 0 005.25 21z" />
                     </svg>
-                    Filter
-                </button>
-            </form>
-        </header>
-
-        <div class="master-grid grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            <article class="rounded-xl border border-gray-200 bg-gray-50 p-5 dark:border-gray-800 dark:bg-gray-800/50">
-                <p class="text-theme-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Total distributed</p>
-                <h3 class="mt-2 text-title-md font-semibold text-gray-900 dark:text-white">
-                    {{ number_format($total, 2) }} {{ config('app.currency', 'BDT') }}
-                </h3>
-                <span class="mt-1 inline-block text-theme-xs text-gray-500 dark:text-gray-400">For selected period</span>
-            </article>
-            
-            {{-- Additional metrics you might want to add --}}
-            @if(isset($employeeCount))
-            <article class="rounded-xl border border-gray-200 bg-gray-50 p-5 dark:border-gray-800 dark:bg-gray-800/50">
-                <p class="text-theme-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Employees</p>
-                <h3 class="mt-2 text-title-md font-semibold text-gray-900 dark:text-white">
-                    {{ $employeeCount }}
-                </h3>
-                <span class="mt-1 inline-block text-theme-xs text-gray-500 dark:text-gray-400">Active this period</span>
-            </article>
-            @endif
-            
-            @if(isset($averageDistribution))
-            <article class="rounded-xl border border-gray-200 bg-gray-50 p-5 dark:border-gray-800 dark:bg-gray-800/50">
-                <p class="text-theme-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Average</p>
-                <h3 class="mt-2 text-title-md font-semibold text-gray-900 dark:text-white">
-                    {{ number_format($averageDistribution, 2) }} {{ config('app.currency', 'BDT') }}
-                </h3>
-                <span class="mt-1 inline-block text-theme-xs text-gray-500 dark:text-gray-400">Per employee</span>
-            </article>
-            @endif
-        </div>
-    </section>
-
-    {{-- Distributions Table Panel --}}
-    <section class="panel rounded-xl border border-gray-200 bg-white p-6 shadow-theme-sm dark:border-gray-800 dark:bg-gray-900">
-        <header class="panel-header mb-6 flex items-start justify-between">
-            <div>
-                <h2 class="text-title-sm font-semibold text-gray-900 dark:text-white">Distributions</h2>
-                <p class="text-theme-sm text-gray-500 dark:text-gray-400">One row per employee per period.</p>
+                </div>
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Salary Distributions</h1>
+                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-300">
+                        Payroll breakdown for {{ $month->format('F Y') }}
+                        @if($selectedEmployeeName)
+                            <span class="font-medium text-gray-700 dark:text-gray-200">· {{ $selectedEmployeeName }}</span>
+                        @endif
+                    </p>
+                </div>
             </div>
-            <a href="{{ route('admin.salary-distributions.create') }}" 
-               class="inline-flex items-center justify-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-theme-sm font-medium text-white shadow-theme-xs transition hover:bg-brand-600 focus:outline-none focus:ring-4 focus:ring-brand-500/20 dark:bg-brand-500 dark:hover:bg-brand-600">
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M10 4.16667V15.8333M4.16667 10H15.8333" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-3">
+            <a href="{{ route('admin.salary-distributions.create') }}"
+               class="inline-flex items-center gap-2 rounded-xl bg-brand-500 px-5 py-2.5 text-sm font-semibold text-white shadow-theme-xs transition hover:bg-brand-600">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                 </svg>
                 Add distribution
             </a>
-        </header>
+        </div>
+    </div>
+
+    <section class="rounded-3xl border border-gray-200 bg-white p-6 shadow-theme-sm dark:border-gray-800 dark:bg-gray-900">
+        <div class="grid gap-5 xl:grid-cols-[1.15fr_0.85fr]">
+            <form method="GET" action="{{ route('admin.salary-distributions.index') }}" class="rounded-2xl border border-gray-200 bg-gray-50 p-5 dark:border-gray-700 dark:bg-gray-800/50">
+                <div class="flex items-start justify-between gap-4">
+                    <div>
+                        <div class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">Payroll filters</div>
+                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-300">Choose the payroll month and narrow the register to one employee if needed.</p>
+                    </div>
+                    <span class="rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-theme-xs dark:bg-gray-900 dark:text-gray-200">
+                        {{ $month->format('F Y') }}
+                    </span>
+                </div>
+
+                <div class="mt-5 grid gap-4 md:grid-cols-2">
+                    <label class="flex flex-col gap-1.5">
+                        <span class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">Month</span>
+                        <input type="month"
+                               name="month"
+                               value="{{ $selectedMonth }}"
+                               class="h-12 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-none focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white">
+                    </label>
+                    <label class="flex flex-col gap-1.5">
+                        <span class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">Employee</span>
+                        <select name="employee_id"
+                                class="h-12 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-none focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white">
+                            <option value="">All employees</option>
+                            @foreach($employees as $employee)
+                                <option value="{{ $employee->id }}" @selected((string) request('employee_id') === (string) $employee->id)>
+                                    {{ $employee->name }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </label>
+                </div>
+
+                <div class="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-gray-200 pt-4 dark:border-gray-700">
+                    <div class="text-sm text-gray-500 dark:text-gray-300">
+                        @if($selectedEmployeeName)
+                            Showing payroll rows for <span class="font-semibold text-gray-700 dark:text-gray-200">{{ $selectedEmployeeName }}</span>
+                        @else
+                            Showing payroll rows for <span class="font-semibold text-gray-700 dark:text-gray-200">all employees</span>
+                        @endif
+                    </div>
+                    <div class="flex items-center gap-2">
+                        @if(request()->filled('employee_id') || request()->filled('month'))
+                            <a href="{{ route('admin.salary-distributions.index') }}"
+                               class="inline-flex h-11 items-center justify-center rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-theme-xs transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-white/[0.03]">
+                                Reset
+                            </a>
+                        @endif
+                        <button type="submit"
+                                class="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-brand-500 px-5 py-2.5 text-sm font-semibold text-white shadow-theme-xs transition hover:bg-brand-600">
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35m1.85-5.15a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                            </svg>
+                            Apply filters
+                        </button>
+                    </div>
+                </div>
+            </form>
+
+            <div class="rounded-2xl border border-gray-200 bg-gray-50 p-5 dark:border-gray-700 dark:bg-gray-800/50">
+                <div class="flex items-start justify-between gap-4">
+                    <div>
+                        <div class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">Period summary</div>
+                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-300">Quick payroll totals for the selected month.</p>
+                    </div>
+                    <span class="rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-theme-xs dark:bg-gray-900 dark:text-gray-200">
+                        {{ $rows->total() }} rows
+                    </span>
+                </div>
+                <div class="mt-5 grid gap-3 sm:grid-cols-2">
+                    <div class="rounded-2xl bg-white p-5 shadow-theme-xs dark:bg-gray-900">
+                        <div class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Total payroll</div>
+                        <div class="mt-3 text-3xl font-bold text-gray-900 dark:text-white">{{ $currencyCode }} {{ number_format($total, 2) }}</div>
+                        <div class="mt-2 text-xs text-gray-500 dark:text-gray-400">Gross salary, allowances, and commission combined</div>
+                    </div>
+                    <div class="rounded-2xl bg-white p-5 shadow-theme-xs dark:bg-gray-900">
+                        <div class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Average per employee</div>
+                        <div class="mt-3 text-3xl font-bold text-gray-900 dark:text-white">{{ $currencyCode }} {{ number_format($averageDistribution, 2) }}</div>
+                        <div class="mt-2 text-xs text-gray-500 dark:text-gray-400">Average distribution across the filtered employee set</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+        <article class="rounded-2xl border border-gray-200 bg-white p-5 shadow-theme-xs dark:border-gray-800 dark:bg-gray-900">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">Employees paid</span>
+                <span class="rounded-xl bg-brand-50 p-2 text-brand-600 dark:bg-brand-500/10 dark:text-brand-300">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M17 20h5V4H2v16h5m10 0v-2a4 4 0 00-4-4H9a4 4 0 00-4 4v2m12 0H7m10-10a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                </span>
+            </div>
+            <div class="mt-4 text-3xl font-bold text-gray-900 dark:text-white">{{ $employeeCount }}</div>
+            <div class="mt-1 text-sm text-gray-500 dark:text-gray-300">Unique employees in this payroll run</div>
+        </article>
+
+        <article class="rounded-2xl border border-gray-200 bg-white p-5 shadow-theme-xs dark:border-gray-800 dark:bg-gray-900">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">Attached documents</span>
+                <span class="rounded-xl bg-purple-50 p-2 text-purple-600 dark:bg-purple-500/10 dark:text-purple-300">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M7.5 3h6.879a2.25 2.25 0 011.591.659l3.371 3.371A2.25 2.25 0 0120 8.621V19.5A1.5 1.5 0 0118.5 21h-13A1.5 1.5 0 014 19.5v-15A1.5 1.5 0 015.5 3h2z" />
+                    </svg>
+                </span>
+            </div>
+            <div class="mt-4 text-3xl font-bold text-gray-900 dark:text-white">{{ $withDocuments }}</div>
+            <div class="mt-1 text-sm text-gray-500 dark:text-gray-300">Distributions with uploaded support</div>
+        </article>
+
+        <article class="rounded-2xl border border-gray-200 bg-white p-5 shadow-theme-xs dark:border-gray-800 dark:bg-gray-900">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">Bank transfers</span>
+                <span class="rounded-xl bg-success-50 p-2 text-success-600 dark:bg-success-500/10 dark:text-success-300">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 10.5L12 4l9 6.5M4.5 9.75V18h15V9.75M9 13.5h6" />
+                    </svg>
+                </span>
+            </div>
+            <div class="mt-4 text-3xl font-bold text-gray-900 dark:text-white">{{ $bankTransfers }}</div>
+            <div class="mt-1 text-sm text-gray-500 dark:text-gray-300">Records marked for bank payment</div>
+        </article>
+
+        <article class="rounded-2xl border border-gray-200 bg-white p-5 shadow-theme-xs dark:border-gray-800 dark:bg-gray-900">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">Month</span>
+                <span class="rounded-xl bg-orange-50 p-2 text-orange-600 dark:bg-orange-500/10 dark:text-orange-300">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                </span>
+            </div>
+            <div class="mt-4 text-2xl font-bold text-gray-900 dark:text-white">{{ $month->format('F Y') }}</div>
+            <div class="mt-1 text-sm text-gray-500 dark:text-gray-300">Current salary distribution window</div>
+        </article>
+    </section>
+
+    <section class="overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-theme-sm dark:border-gray-800 dark:bg-gray-900">
+        <div class="flex flex-col gap-4 border-b border-gray-200 px-6 py-5 dark:border-gray-800 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+                <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Distribution Register</h2>
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-300">One payroll row per employee for the selected period.</p>
+            </div>
+            <div class="rounded-full bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-300">
+                {{ $rows->total() }} distribution{{ $rows->total() === 1 ? '' : 's' }}
+            </div>
+        </div>
 
         @if($rows->isNotEmpty())
-            <div class="w-full overflow-x-auto custom-scrollbar">
-                <table class="data-table w-full border-collapse">
-                    <thead>
-                        <tr class="border-b border-gray-200 bg-gray-50 dark:border-gray-800 dark:bg-gray-900">
-                            <th class="whitespace-nowrap px-4 py-3 text-left text-theme-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Employee</th>
-                            <th class="whitespace-nowrap px-4 py-3 text-left text-theme-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Period</th>
-                            <th class="whitespace-nowrap px-4 py-3 text-right text-theme-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Base salary (BDT)</th>
-                            <th class="whitespace-nowrap px-4 py-3 text-right text-theme-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Bonus (BDT)</th>
-                            <th class="whitespace-nowrap px-4 py-3 text-right text-theme-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">TA (BDT)</th>
-                            <th class="whitespace-nowrap px-4 py-3 text-right text-theme-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">DA (BDT)</th>
-                            <th class="whitespace-nowrap px-4 py-3 text-right text-theme-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Commission (BDT)</th>
-                            <th class="whitespace-nowrap px-4 py-3 text-right text-theme-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Total (BDT)</th>
-                            <th class="whitespace-nowrap px-4 py-3 text-left text-theme-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Payment</th>
-                            <th class="whitespace-nowrap px-4 py-3 text-left text-theme-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Document</th>
-                            <th class="whitespace-nowrap px-4 py-3 text-left text-theme-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Remarks</th>
-                            <th class="whitespace-nowrap px-4 py-3 text-right text-theme-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Actions</th>
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-800">
+                    <thead class="bg-gray-50 dark:bg-gray-800/60">
+                        <tr>
+                            <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">Employee</th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">Period</th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">Breakdown</th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">Payment</th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">Support</th>
+                            <th class="px-6 py-4 text-right text-xs font-semibold uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">Total</th>
+                            <th class="px-6 py-4 text-right text-xs font-semibold uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">Actions</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
                         @foreach($rows as $row)
                             @php
-                                $totalRow = ($row->base_salary ?? 0)
-                                    + ($row->bonus ?? 0)
-                                    + ($row->ta_allowances ?? 0)
-                                    + ($row->da_allowances ?? 0)
-                                    + ($row->commission ?? 0);
+                                $totalRow = (float) $row->base_salary
+                                    + (float) $row->bonus
+                                    + (float) $row->ta_allowances
+                                    + (float) $row->da_allowances
+                                    + (float) $row->commission;
+                                $paymentMethod = strtolower((string) ($row->payment_method ?? 'bank'));
+                                $paymentTone = match ($paymentMethod) {
+                                    'cash' => 'bg-warning-50 text-warning-700 dark:bg-warning-500/15 dark:text-warning-400',
+                                    'cheque', 'check' => 'bg-blue-light-50 text-blue-light-700 dark:bg-blue-light-500/15 dark:text-blue-light-400',
+                                    'online' => 'bg-purple-50 text-purple-700 dark:bg-purple-500/15 dark:text-purple-300',
+                                    default => 'bg-success-50 text-success-700 dark:bg-success-500/15 dark:text-success-400',
+                                };
                             @endphp
-                            <tr class="transition hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                                <td class="whitespace-nowrap px-4 py-3">
-                                    <div class="flex items-center gap-2">
-                                        <div class="h-8 w-8 rounded-full bg-brand-100 text-theme-xs font-medium text-brand-700 flex items-center justify-center dark:bg-brand-500/20 dark:text-brand-400">
+                            <tr class="align-top transition hover:bg-gray-50 dark:hover:bg-gray-800/40">
+                                <td class="px-6 py-5">
+                                    <div class="flex items-center gap-3">
+                                        <div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-brand-100 text-xs font-semibold text-brand-700 dark:bg-brand-500/20 dark:text-brand-300">
                                             {{ strtoupper(substr($row->employee?->name ?? '?', 0, 2)) }}
                                         </div>
-                                        <span class="font-medium text-gray-900 dark:text-white">
-                                            {{ $row->employee?->name ?? '—' }}
-                                        </span>
+                                        <div>
+                                            <div class="font-medium text-gray-900 dark:text-white">{{ $row->employee?->name ?? '—' }}</div>
+                                            <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">Employee ID: {{ $row->employee_id }}</div>
+                                        </div>
                                     </div>
                                 </td>
-                                <td class="whitespace-nowrap px-4 py-3 text-theme-sm text-gray-700 dark:text-gray-300">
-                                    <span class="inline-flex items-center gap-1.5">
-                                        <svg width="16" height="16" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" class="text-gray-400 dark:text-white">
-                                            <path d="M2.5 6.66667H17.5M5 3.33333H15M4.16667 16.6667H15.8333C16.7538 16.6667 17.5 15.9205 17.5 15V5C17.5 4.07953 16.7538 3.33333 15.8333 3.33333H4.16667C3.24619 3.33333 2.5 4.07953 2.5 5V15C2.5 15.9205 3.24619 16.6667 4.16667 16.6667Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                                        </svg>
-                                        {{ optional($row->period_start)->format('M d, Y') }} – {{ optional($row->period_end)->format('M d, Y') }}
-                                    </span>
+                                <td class="px-6 py-5 text-sm text-gray-700 dark:text-gray-200">
+                                    <div>{{ optional($row->period_start)->format('d M Y') }}</div>
+                                    <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">to {{ optional($row->period_end)->format('d M Y') }}</div>
                                 </td>
-                                <td class="whitespace-nowrap px-4 py-3 text-right text-theme-sm font-medium text-gray-900 dark:text-white">
-                                    {{ number_format($row->base_salary, 2) }}
-                                </td>
-                                <td class="whitespace-nowrap px-4 py-3 text-right text-theme-sm font-medium text-gray-900 dark:text-white">
-                                    {{ number_format($row->bonus, 2) }}
-                                </td>
-                                <td class="whitespace-nowrap px-4 py-3 text-right text-theme-sm font-medium text-gray-900 dark:text-white">
-                                    {{ number_format($row->ta_allowances, 2) }}
-                                </td>
-                                <td class="whitespace-nowrap px-4 py-3 text-right text-theme-sm font-medium text-gray-900 dark:text-white">
-                                    {{ number_format($row->da_allowances, 2) }}
-                                </td>
-                                <td class="whitespace-nowrap px-4 py-3 text-right text-theme-sm font-medium text-gray-900 dark:text-white">
-                                    {{ number_format($row->commission, 2) }}
-                                </td>
-                                <td class="whitespace-nowrap px-4 py-3 text-right font-semibold text-brand-700 dark:text-brand-400">
-                                    {{ number_format($totalRow, 2) }}
-                                </td>
-                                <td class="whitespace-nowrap px-4 py-3">
-                                    @php
-                                        $methodColors = [
-                                            'bank' => ['bg' => 'success-50', 'text' => 'success-700', 'dark' => ['bg' => 'success-500/20', 'text' => 'success-400']],
-                                            'cash' => ['bg' => 'warning-50', 'text' => 'warning-700', 'dark' => ['bg' => 'warning-500/20', 'text' => 'warning-400']],
-                                            'check' => ['bg' => 'blue-light-50', 'text' => 'blue-light-700', 'dark' => ['bg' => 'blue-light-500/20', 'text' => 'blue-light-400']],
-                                        ];
-                                        $method = $row->payment_method ?? 'bank';
-                                        $colors = $methodColors[$method] ?? $methodColors['bank'];
-                                    @endphp
-                                    <span class="inline-flex rounded-full bg-{{ $colors['bg'] }} px-2.5 py-1 text-theme-xs font-medium text-{{ $colors['text'] }} dark:bg-{{ $colors['dark']['bg'] }} dark:text-{{ $colors['dark']['text'] }}">
-                                        {{ ucfirst($method) }}
-                                    </span>
-                                </td>
-                                <td class="whitespace-nowrap px-4 py-3">
-                                    @if($row->document_path)
-                                        <a href="{{ asset('storage/'.$row->document_path) }}" 
-                                           target="_blank"
-                                           class="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 text-theme-xs font-medium text-gray-700 shadow-theme-xs transition hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200">
-                                            <svg width="14" height="14" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                <path d="M10 13.3333V4.16667M10 13.3333L7.5 10.8333M10 13.3333L12.5 10.8333M17.5 13.3333V15.8333C17.5 16.7538 16.7538 17.5 15.8333 17.5H4.16667C3.24619 17.5 2.5 16.7538 2.5 15.8333V13.3333" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                                            </svg>
-                                            View
-                                        </a>
-                                    @else
-                                        <span class="text-gray-400 dark:text-gray-600">—</span>
+                                <td class="px-6 py-5">
+                                    <div class="grid gap-2 sm:grid-cols-2">
+                                        <div class="rounded-xl bg-gray-50 px-3 py-2 text-xs dark:bg-gray-800/60">
+                                            <div class="text-gray-500 dark:text-gray-400">Base salary</div>
+                                            <div class="mt-1 font-semibold text-gray-900 dark:text-white">{{ $currencyCode }} {{ number_format($row->base_salary, 2) }}</div>
+                                        </div>
+                                        <div class="rounded-xl bg-gray-50 px-3 py-2 text-xs dark:bg-gray-800/60">
+                                            <div class="text-gray-500 dark:text-gray-400">Bonus</div>
+                                            <div class="mt-1 font-semibold text-gray-900 dark:text-white">{{ $currencyCode }} {{ number_format($row->bonus, 2) }}</div>
+                                        </div>
+                                        <div class="rounded-xl bg-gray-50 px-3 py-2 text-xs dark:bg-gray-800/60">
+                                            <div class="text-gray-500 dark:text-gray-400">TA / DA</div>
+                                            <div class="mt-1 font-semibold text-gray-900 dark:text-white">{{ $currencyCode }} {{ number_format((float) $row->ta_allowances + (float) $row->da_allowances, 2) }}</div>
+                                        </div>
+                                        <div class="rounded-xl bg-gray-50 px-3 py-2 text-xs dark:bg-gray-800/60">
+                                            <div class="text-gray-500 dark:text-gray-400">Commission</div>
+                                            <div class="mt-1 font-semibold text-gray-900 dark:text-white">{{ $currencyCode }} {{ number_format($row->commission, 2) }}</div>
+                                        </div>
+                                    </div>
+                                    @if($row->remarks)
+                                        <div class="mt-3 text-xs text-gray-500 dark:text-gray-400">
+                                            <span class="font-semibold text-gray-700 dark:text-gray-300">Remarks:</span> {{ $row->remarks }}
+                                        </div>
                                     @endif
                                 </td>
-                                <td class="max-w-[200px] px-4 py-3 text-theme-sm text-gray-700 dark:text-gray-300">
-                                    <span class="line-clamp-2" title="{{ $row->remarks }}">
-                                        {{ $row->remarks ?: '—' }}
+                                <td class="px-6 py-5">
+                                    <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold {{ $paymentTone }}">
+                                        {{ ucfirst($row->payment_method ?? 'bank') }}
                                     </span>
                                 </td>
-                                <td class="whitespace-nowrap px-4 py-3 text-right">
+                                <td class="px-6 py-5">
+                                    @if($row->document_path)
+                                        <a href="{{ asset('storage/'.$row->document_path) }}"
+                                           target="_blank"
+                                           class="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-white/[0.03]">
+                                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 16V4m0 12l-4-4m4 4l4-4M4 20h16" />
+                                            </svg>
+                                            View file
+                                        </a>
+                                    @else
+                                        <span class="text-sm text-gray-400 dark:text-gray-500">No document</span>
+                                    @endif
+                                </td>
+                                <td class="px-6 py-5 text-right">
+                                    <div class="text-lg font-bold text-brand-700 dark:text-brand-400">{{ $currencyCode }} {{ number_format($totalRow, 2) }}</div>
+                                </td>
+                                <td class="px-6 py-5">
                                     <div class="flex items-center justify-end gap-2">
-                                        <a href="{{ route('admin.salary-distributions.edit', $row) }}" 
-                                           class="inline-flex items-center justify-center rounded-lg border border-gray-300 bg-white p-2 text-gray-700 shadow-theme-xs transition hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200">
-                                            <svg width="18" height="18" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                <path d="M14.1667 2.5L17.5 5.83333M2.5 14.1667L11.6667 5L15 8.33333L5.83333 17.5H2.5V14.1667Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                        <a href="{{ route('admin.salary-distributions.edit', $row) }}"
+                                           class="inline-flex items-center justify-center rounded-xl border border-gray-200 bg-white p-2.5 text-gray-700 shadow-theme-xs hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-white/[0.03]">
+                                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M14.7 6.3l3 3M5 16.5V19h2.5l9.8-9.8-2.5-2.5L5 16.5z" />
                                             </svg>
                                         </a>
-                                        <form action="{{ route('admin.salary-distributions.destroy', $row) }}" 
-                                              method="POST" 
-                                              class="inline-flex"
-                                              onsubmit="return confirm('Delete this salary distribution record? This action cannot be undone.');">
+                                        <form action="{{ route('admin.salary-distributions.destroy', $row) }}" method="POST" class="inline-flex" onsubmit="return confirm('Delete this salary distribution record? This action cannot be undone.');">
                                             @csrf
                                             @method('DELETE')
-                                            <button type="submit" 
-                                                    class="inline-flex items-center justify-center rounded-lg border border-gray-300 bg-white p-2 text-error-700 shadow-theme-xs transition hover:bg-error-50 hover:text-error-800 dark:border-gray-700 dark:bg-gray-800 dark:text-error-400 dark:hover:bg-error-500/20">
-                                                <svg width="18" height="18" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                    <path d="M2.5 5H4.16667H17.5M15.8333 5V16.6667C15.8333 17.5 15 18.3333 14.1667 18.3333H5.83333C5 18.3333 4.16667 17.5 4.16667 16.6667V5M6.66667 5V3.33333C6.66667 2.5 7.5 1.66667 8.33333 1.66667H11.6667C12.5 1.66667 13.3333 2.5 13.3333 3.33333V5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                                            <button type="submit"
+                                                    class="inline-flex items-center justify-center rounded-xl border border-gray-200 bg-white p-2.5 text-error-700 shadow-theme-xs hover:bg-error-50 dark:border-gray-700 dark:bg-gray-800 dark:text-error-400 dark:hover:bg-error-500/20">
+                                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M6 7h12M9 7V5.5A1.5 1.5 0 0110.5 4h3A1.5 1.5 0 0115 5.5V7m-7.5 0l.6 10.2A1.5 1.5 0 009.6 18.6h4.8a1.5 1.5 0 001.5-1.4L16.5 7" />
                                                 </svg>
                                             </button>
                                         </form>
@@ -213,57 +308,30 @@
                     </tbody>
                 </table>
             </div>
-            
-            <div class="mt-6">
+
+            <div class="border-t border-gray-200 px-6 py-4 dark:border-gray-800">
                 {{ $rows->links() }}
             </div>
         @else
-            <div class="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-200 py-12 dark:border-gray-800">
-                <div class="mb-4 rounded-full bg-gray-100 p-4 dark:bg-gray-800">
-                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M12 8V12L15 15M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="#98A2B3" stroke-width="1.5" stroke-linecap="round"/>
+            <div class="px-6 py-16 text-center">
+                <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-gray-100 dark:bg-gray-800">
+                    <svg class="h-8 w-8 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
                 </div>
-                <p class="text-theme-lg font-medium text-gray-700 dark:text-gray-300">No salary distributions found</p>
-                <p class="text-theme-sm text-gray-500 dark:text-gray-400">Try adjusting your filters or add a new distribution.</p>
-                <a href="{{ route('admin.salary-distributions.create') }}" 
-                   class="mt-4 inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-theme-sm font-medium text-white hover:bg-brand-600">
-                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M10 4.16667V15.8333M4.16667 10H15.8333" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                    </svg>
-                    Add your first distribution
-                </a>
+                <h3 class="mt-5 text-xl font-semibold text-gray-900 dark:text-white">No salary distributions found</h3>
+                <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">Try another month or create the first payroll distribution for this period.</p>
+                <div class="mt-6">
+                    <a href="{{ route('admin.salary-distributions.create') }}"
+                       class="inline-flex items-center gap-2 rounded-xl bg-brand-500 px-5 py-2.5 text-sm font-semibold text-white shadow-theme-xs hover:bg-brand-600">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                        </svg>
+                        Add first distribution
+                    </a>
+                </div>
             </div>
         @endif
     </section>
 </div>
 @endsection
-
-@push('styles')
-<style>
-/* Line clamp utility */
-.line-clamp-2 {
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-}
-
-/* Payment method badge colors - using your theme colors */
-.bg-success-50 { background-color: #ecfdf3; }
-.bg-warning-50 { background-color: #fffaeb; }
-.bg-blue-light-50 { background-color: #f0f9ff; }
-
-.text-success-700 { color: #067647; }
-.text-warning-700 { color: #b54708; }
-.text-blue-light-700 { color: #026aa2; }
-
-.dark .dark\:bg-success-500\/20 { background-color: rgba(18, 183, 106, 0.2); }
-.dark .dark\:bg-warning-500\/20 { background-color: rgba(247, 144, 9, 0.2); }
-.dark .dark\:bg-blue-light-500\/20 { background-color: rgba(11, 165, 236, 0.2); }
-
-.dark .dark\:text-success-400 { color: #47cd89; }
-.dark .dark\:text-warning-400 { color: #fdb022; }
-.dark .dark\:text-blue-light-400 { color: #36bffa; }
-</style>
-@endpush
