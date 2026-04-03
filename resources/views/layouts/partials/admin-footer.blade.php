@@ -1,4 +1,3 @@
 <footer class="admin-footer">
-    <small>&copy; {{ date('Y') }} SAFERP admin.</small>
+    <small>&copy; {{ date('Y') }} {{ $legalCompanyName ?? config('app.name', 'ERP') }} admin.</small>
 </footer>
-

@@ -16,6 +16,10 @@ class AgentCommissionSettlement extends Model
         'sales_total',
         'commission_total',
         'status',
+        'accrued_at',
+        'paid_at',
+        'payment_method',
+        'payment_reference',
     ];
 
     protected $casts = [
@@ -23,6 +27,8 @@ class AgentCommissionSettlement extends Model
         'period_end' => 'date',
         'sales_total' => 'decimal:2',
         'commission_total' => 'decimal:2',
+        'accrued_at' => 'datetime',
+        'paid_at' => 'date',
     ];
 
     public function agent()
@@ -30,4 +36,3 @@ class AgentCommissionSettlement extends Model
         return $this->belongsTo(Agent::class);
     }
 }
-

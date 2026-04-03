@@ -20,6 +20,7 @@ class Agent extends Model
         'latitude',
         'longitude',
         'credit_limit',
+        'withholding_rate',
         'kyc_documents',
         'is_active',
         'parent_id',
@@ -32,6 +33,7 @@ class Agent extends Model
         'kyc_documents' => 'array',
         'latitude' => 'float',
         'longitude' => 'float',
+        'withholding_rate' => 'decimal:2',
     ];
 
     public function parent()
@@ -57,5 +59,10 @@ class Agent extends Model
     public function orders()
     {
         return $this->hasMany(Order::class);
+    }
+
+    public function advances()
+    {
+        return $this->hasMany(AgentAdvance::class);
     }
 }

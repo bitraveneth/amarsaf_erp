@@ -2,11 +2,16 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Helpers\Permission as PermissionHelper;
 use App\Http\Controllers\Controller;
 use App\Models\Employee;
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class EmployeeController extends Controller
 {
@@ -60,6 +65,7 @@ class EmployeeController extends Controller
             'leaves',
             'locationLogs',
             'badges',
+            'user',
         ]);
 
         $currentContract = $employee->contracts->first();
@@ -68,6 +74,121 @@ class EmployeeController extends Controller
             : collect();
 
         return view('admin.employees.show', compact('employee', 'currentContract', 'recentAllowances'));
+    }
+
+    /**
+     * Show a small form that lets an admin create a login account
+     * for a given employee.
+     */
+    public function createUser(Employee $employee)
+    {
+        $this->ensureCanManageEmployeeUsers();
+
+        // Prevent creating multiple accounts for the same employee.
+        if ($employee->user) {
+            return redirect()
+                ->route('admin.employees.show', $employee)
+                ->with('status', 'This employee already has a login account.');
+        }
+
+        $roles = $this->availableRoles(auth()->user());
+
+        return view('admin.employees.create_user', compact('employee', 'roles'));
+    }
+
+    /**
+     * Store a user record linked to the given employee.
+     */
+    public function storeUser(Request $request, Employee $employee)
+    {
+        $actor = auth()->user();
+        $this->ensureCanManageEmployeeUsers();
+
+        if ($employee->user) {
+            return redirect()
+                ->route('admin.employees.show', $employee)
+                ->with('status', 'This employee already has a login account.');
+        }
+
+        $roles = $this->availableRoles($actor);
+
+        $data = $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|max:255|unique:users,email',
+            'role' => 'required|string|in:' . implode(',', array_keys($roles)),
+            'password' => 'nullable|string|min:6',
+        ]);
+
+        if (($data['role'] ?? null) === 'super_admin' && ! $actor?->hasRole('super_admin')) {
+            abort(403, 'Only super admin can create another super admin account.');
+        }
+
+        $plainPassword = $data['password'] ?: Str::random(10);
+
+        $user = User::create([
+            'name' => $data['name'],
+            'email' => $data['email'],
+            'password' => $plainPassword,
+            'role' => $data['role'],
+            'employee_id' => $employee->id,
+        ]);
+        $this->syncPrimaryRole($user);
+
+        return redirect()
+            ->route('admin.employees.show', $employee)
+            ->with('status', 'Login account created for this employee. Temporary password: ' . $plainPassword);
+    }
+
+    protected function ensureCanManageEmployeeUsers(): void
+    {
+        if (! PermissionHelper::can(auth()->user(), 'system.settings')) {
+            abort(403, 'You do not have permission to create employee login accounts.');
+        }
+    }
+
+    protected function syncPrimaryRole(User $user): void
+    {
+        if (! Schema::hasTable('user_roles') || empty($user->role)) {
+            return;
+        }
+
+        DB::table('user_roles')->updateOrInsert(
+            ['user_id' => $user->id, 'role_key' => $user->role],
+            ['updated_at' => now(), 'created_at' => now()]
+        );
+    }
+
+    protected function availableRoles(?User $actor = null): array
+    {
+        $roles = Role::orderBy('label')->get(['key', 'label']);
+
+        if ($roles->isEmpty()) {
+            $legacyRoles = [
+                'super_admin' => 'Super admin',
+                'admin' => 'Admin',
+                'purchase_executive' => 'Purchase executive',
+                'warehouse_officer' => 'Warehouse officer',
+                'production_officer' => 'Production officer',
+                'sales_officer' => 'Sales officer',
+                'delivery_coordinator' => 'Delivery coordinator',
+                'accounts_officer' => 'Accounts officer',
+                'qc_officer' => 'QC officer',
+            ];
+
+            if ($actor && ! $actor->hasRole('super_admin')) {
+                unset($legacyRoles['super_admin']);
+            }
+
+            return $legacyRoles;
+        }
+
+        $roleMap = $roles->pluck('label', 'key')->all();
+
+        if ($actor && ! $actor->hasRole('super_admin')) {
+            unset($roleMap['super_admin']);
+        }
+
+        return $roleMap;
     }
 
     public function update(Request $request, Employee $employee)
@@ -95,6 +216,16 @@ class EmployeeController extends Controller
 
     public function destroy(Employee $employee)
     {
+        $blockingHistory = $this->deletionBlockingHistory($employee->id);
+
+        if ($blockingHistory !== []) {
+            return redirect()
+                ->route('admin.employees.index')
+                ->withErrors([
+                    'employee' => 'This employee has historical records (' . implode(', ', $blockingHistory) . ') and cannot be deleted.',
+                ]);
+        }
+
         // Unlink any user accounts pointing at this employee so the record can be removed safely.
         User::where('employee_id', $employee->id)->update(['employee_id' => null]);
 
@@ -109,6 +240,35 @@ class EmployeeController extends Controller
         $employee->delete();
 
         return redirect()->route('admin.employees.index')->with('status', 'Employee deleted and any linked user accounts were unassigned.');
+    }
+
+    protected function deletionBlockingHistory(int $employeeId): array
+    {
+        $checks = [
+            'employee_contracts' => 'contracts',
+            'employee_allowances' => 'allowances',
+            'employee_equipment' => 'equipment',
+            'employee_leaves' => 'leave records',
+            'employee_location_logs' => 'location logs',
+            'employee_badges' => 'badge history',
+            'salary_distributions' => 'salary distributions',
+            'employee_leave_balances' => 'leave balances',
+            'visit_plans' => 'visit plans',
+        ];
+
+        $found = [];
+
+        foreach ($checks as $table => $label) {
+            if (! Schema::hasTable($table)) {
+                continue;
+            }
+
+            if (DB::table($table)->where('employee_id', $employeeId)->exists()) {
+                $found[] = $label;
+            }
+        }
+
+        return $found;
     }
 
     protected function validated(Request $request, ?int $employeeId = null): array

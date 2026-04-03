@@ -4,27 +4,33 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Account;
+use App\Models\Campaign;
+use App\Models\CustomerGift;
 use App\Models\Invoice;
 use App\Models\LedgerEntry;
 use App\Models\ProductionRun;
+use App\Models\InvoiceItem;
 use App\Models\Expense;
 use App\Models\Employee;
 use App\Models\EmployeeContract;
 use App\Models\EmployeeAllowance;
+use App\Models\BillOfMaterial;
+use App\Models\SalaryDistribution;
+use App\Models\PurchaseBill;
 use Illuminate\Support\Collection;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Schema;
 
 class ReportController extends Controller
 {
     public function profitAndLoss(Request $request)
     {
-        $from = $request->query('from')
-            ? Carbon::parse($request->query('from'))
-            : Carbon::now()->startOfMonth();
-        $to = $request->query('to')
-            ? Carbon::parse($request->query('to'))
-            : Carbon::now()->endOfMonth();
+        [$from, $to] = $this->resolveDateRange(
+            $request,
+            Carbon::now()->startOfMonth(),
+            Carbon::now()->endOfMonth()
+        );
 
         $entries = LedgerEntry::whereBetween('created_at', [$from, $to])->get();
 
@@ -33,11 +39,60 @@ class ReportController extends Controller
         $commissions = $entries->where('account', 'Commission Expense')->sum('debit');
 
         // Include simple period expenses recorded in the expenses module.
-        $otherExpenses = Expense::whereBetween('date', [$from->toDateString(), $to->toDateString()])
-            ->sum('amount');
+        $otherExpenses = $this->operatingExpensesTotal($from, $to);
+        $payroll = SalaryDistribution::whereBetween('period_start', [$from, $to])
+            ->get()
+            ->sum(function (SalaryDistribution $distribution) {
+                return (float) $distribution->base_salary
+                    + (float) $distribution->bonus
+                    + (float) $distribution->ta_allowances
+                    + (float) $distribution->da_allowances
+                    + (float) $distribution->commission;
+            });
 
         $netSales = $sales - $returns;
-        $profit = $netSales - $commissions - $otherExpenses;
+
+        // --- Approximate COGS using production material cost snapshot ---
+        $invoiceItems = InvoiceItem::with(['invoice', 'product'])
+            ->whereHas('invoice', function ($q) use ($from, $to) {
+                $q->whereBetween('issued_at', [$from->toDateString(), $to->toDateString()]);
+            })
+            ->get();
+
+        // Average material_unit_cost per product from all runs where it is set
+        $runsWithCost = ProductionRun::whereNotNull('material_unit_cost')->get();
+        $costByProduct = $runsWithCost->groupBy('product_id')->map(
+            fn ($group) => (float) $group->avg('material_unit_cost')
+        );
+
+        $cogs = 0.0;
+        foreach ($invoiceItems as $item) {
+            if (! $item->product_id) {
+                continue;
+            }
+            $unitCost = $costByProduct->get($item->product_id);
+            if ($unitCost === null) {
+                continue;
+            }
+            $cogs += $unitCost * (float) $item->quantity;
+        }
+
+        $grossProfit = $netSales - $cogs;
+        $profit = $grossProfit - $commissions - $otherExpenses - $payroll;
+
+        // Detailed ledger breakdown by account for the period
+        $accountRows = $entries->groupBy('account')->map(function (Collection $rows, string $account) {
+            $debit  = (float) $rows->sum('debit');
+            $credit = (float) $rows->sum('credit');
+            $net    = $credit - $debit; // income-style: positive = income, negative = expense
+
+            return [
+                'account' => $account,
+                'debit'   => $debit,
+                'credit'  => $credit,
+                'net'     => $net,
+            ];
+        })->sortBy('account')->values();
 
         return view('admin.finance.pl', compact(
             'from',
@@ -46,27 +101,99 @@ class ReportController extends Controller
             'returns',
             'commissions',
             'otherExpenses',
+            'payroll',
             'netSales',
-            'profit'
+            'cogs',
+            'grossProfit',
+            'profit',
+            'accountRows'
         ));
     }
 
     public function vat(Request $request)
     {
         $month = $request->query('month')
-            ? Carbon::parse($request->query('month') . '-01')
+            ? Carbon::parse($request->query('month') . '-01')->startOfMonth()
             : Carbon::now()->startOfMonth();
 
         $from = $month->copy()->startOfMonth();
         $to = $month->copy()->endOfMonth();
 
-        $entries = LedgerEntry::where('account', 'VAT Payable')
+        $outputEntries = LedgerEntry::where('account', 'VAT Payable')
             ->whereBetween('created_at', [$from, $to])
             ->get();
 
-        $vatCollected = $entries->sum('credit') - $entries->sum('debit');
+        $inputEntries = LedgerEntry::where('account', 'Input VAT')
+            ->whereBetween('created_at', [$from, $to])
+            ->get();
 
-        return view('admin.finance.vat', compact('month', 'vatCollected'));
+        $outputVat = (float) $outputEntries->sum('credit') - (float) $outputEntries->sum('debit');
+        $inputVat = (float) $inputEntries->sum('debit') - (float) $inputEntries->sum('credit');
+        $vatCollected = round($outputVat - $inputVat, 2);
+
+        // Detailed per‑invoice breakdown (output VAT)
+        $invoices = Invoice::with(['order.agent', 'creditNotes'])
+            ->whereBetween('issued_at', [$from->toDateString(), $to->toDateString()])
+            ->orderBy('issued_at')
+            ->get();
+
+        $invoiceRows = $invoices->map(function (Invoice $invoice) {
+            $taxable = (float) $invoice->net_sales_after_credits;
+            $vat = max(0.0, (float) $invoice->vat_amount - (float) $invoice->credit_notes_vat_total);
+            $rate = $taxable > 0 ? round(($vat / $taxable) * 100, 2) : null;
+
+            return [
+                'date'        => $invoice->issued_at,
+                'number'      => $invoice->number ?? $invoice->id,
+                'customer'    => $invoice->order?->agent?->name,
+                'taxable'     => $taxable,
+                'vat'         => $vat,
+                'vat_rate'    => $rate,
+            ];
+        });
+
+        $totals = [
+            'taxable' => $invoiceRows->sum('taxable'),
+            'vat'     => $invoiceRows->sum('vat'),
+        ];
+
+        $purchaseBills = PurchaseBill::with('supplier')
+            ->whereBetween('bill_date', [$from->toDateString(), $to->toDateString()])
+            ->orderBy('bill_date')
+            ->get();
+
+        $purchaseRows = $purchaseBills->map(function (PurchaseBill $bill) {
+            $rate = (float) $bill->net_total > 0
+                ? round(((float) $bill->vat_amount / (float) $bill->net_total) * 100, 2)
+                : null;
+
+            return [
+                'date' => $bill->bill_date,
+                'number' => $bill->number,
+                'supplier' => $bill->supplier?->name,
+                'taxable' => (float) $bill->net_total,
+                'vat' => (float) $bill->vat_amount,
+                'vat_rate' => $rate,
+            ];
+        });
+
+        $purchaseTotals = [
+            'taxable' => $purchaseRows->sum('taxable'),
+            'vat' => $purchaseRows->sum('vat'),
+        ];
+
+        return view('admin.finance.vat', [
+            'month'        => $month,
+            'vatCollected' => $vatCollected,
+            'outputVat'    => $outputVat,
+            'inputVat'     => $inputVat,
+            'from'         => $from,
+            'to'           => $to,
+            'invoiceRows'  => $invoiceRows,
+            'totals'       => $totals,
+            'purchaseRows' => $purchaseRows,
+            'purchaseTotals' => $purchaseTotals,
+        ]);
     }
 
     public function balanceSheet(Request $request)
@@ -88,8 +215,8 @@ class ReportController extends Controller
             $balances[$account] += $entry->debit - $entry->credit;
         }
 
-        $assetsAccounts = Account::where('type', 'asset')->pluck('name')->all() ?: ['Bank', 'Accounts Receivable'];
-        $liabilityAccounts = Account::where('type', 'liability')->pluck('name')->all() ?: ['Accounts Payable', 'VAT Payable'];
+        $assetsAccounts = Account::where('type', 'asset')->pluck('name')->all() ?: ['Bank', 'Accounts Receivable', 'Input VAT'];
+        $liabilityAccounts = Account::where('type', 'liability')->pluck('name')->all() ?: ['Accounts Payable', 'VAT Payable', 'Agent Advances', 'Commission Payable'];
 
         $assets = [];
         $liabilities = [];
@@ -111,14 +238,20 @@ class ReportController extends Controller
 
     public function cashflow(Request $request)
     {
-        $from = $request->query('from')
-            ? Carbon::parse($request->query('from'))
-            : Carbon::now()->startOfMonth();
-        $to = $request->query('to')
-            ? Carbon::parse($request->query('to'))
-            : Carbon::now()->endOfMonth();
+        [$from, $to] = $this->resolveDateRange(
+            $request,
+            Carbon::now()->startOfMonth(),
+            Carbon::now()->endOfMonth()
+        );
 
-        $bankAccounts = Account::where('type', 'asset')->where('code', 'like', '1%')->pluck('name')->all();
+        $bankAccounts = Account::where('type', 'asset')
+            ->where(function ($query) {
+                $query->where('name', 'like', '%Bank%')
+                    ->orWhere('name', 'like', '%Cash%')
+                    ->orWhere('code', 'like', '10%');
+            })
+            ->pluck('name')
+            ->all();
 
         $entries = LedgerEntry::whereIn('account', $bankAccounts ?: ['Bank'])
             ->whereBetween('created_at', [$from, $to])
@@ -140,7 +273,7 @@ class ReportController extends Controller
             ? Carbon::parse($request->query('to'))
             : Carbon::now()->endOfMonth();
 
-        $invoices = Invoice::with(['order.agent', 'receipts', 'creditNotes'])
+        $invoices = Invoice::with(['order.agent', 'receipts', 'creditNotes', 'advanceApplications'])
             ->whereBetween('issued_at', [$from, $to])
             ->whereHas('order.agent')
             ->get();
@@ -164,6 +297,7 @@ class ReportController extends Controller
                     'invoiced' => 0,
                     'credits' => 0,
                     'receipts' => 0,
+                    'advances' => 0,
                 ];
             }
 
@@ -178,6 +312,7 @@ class ReportController extends Controller
             }
 
             $bucket['credits'] += $invoice->creditNotes->sum('amount');
+            $bucket['advances'] += $invoice->advanceApplications->sum('amount');
 
             $bucket['receipts'] += $invoice->receipts
                 ->whereBetween('received_at', [$from, $to])
@@ -186,7 +321,7 @@ class ReportController extends Controller
 
         $rows = collect($byAgent)->map(function (array $bucket) {
             $netSales = $bucket['invoiced'] - $bucket['credits'];
-            $outstanding = $netSales - $bucket['receipts'];
+            $outstanding = max(0, $netSales - $bucket['receipts'] - $bucket['advances']);
 
             return [
                 'agent' => $bucket['agent'],
@@ -196,6 +331,7 @@ class ReportController extends Controller
                 'credits' => $bucket['credits'],
                 'net_sales' => $netSales,
                 'receipts' => $bucket['receipts'],
+                'advances' => $bucket['advances'],
                 'outstanding' => $outstanding,
             ];
         })->sortByDesc('net_sales');
@@ -209,33 +345,93 @@ class ReportController extends Controller
 
     public function productionSummary(Request $request)
     {
-        $from = $request->query('from')
-            ? Carbon::parse($request->query('from'))
-            : Carbon::now()->startOfMonth();
-        $to = $request->query('to')
-            ? Carbon::parse($request->query('to'))
-            : Carbon::now()->endOfMonth();
+        [$from, $to] = $this->resolveDateRange(
+            $request,
+            Carbon::now()->startOfMonth(),
+            Carbon::now()->endOfMonth()
+        );
 
         $production = ProductionRun::with('product')
             ->whereBetween('created_at', [$from, $to])
             ->get();
 
-        $byProduct = $production->groupBy('product_id')->map(function ($runs) {
-            $product = $runs->first()->product;
+        // Preload active BOMs (with component standard_cost) for all products
+        $productIds = $production->pluck('product_id')->unique()->filter()->all();
+
+        $boms = collect();
+        if (
+            Schema::hasTable('bill_of_materials')
+            && Schema::hasTable('bill_of_material_items')
+            && ! empty($productIds)
+        ) {
+            $boms = BillOfMaterial::whereIn('product_id', $productIds)
+                ->where('is_active', true)
+                ->with(['items.component'])
+                ->orderByDesc('id')
+                ->get()
+                ->keyBy('product_id');
+        }
+
+        $byProduct = $production->groupBy('product_id')->map(function ($runs, $productId) use ($boms) {
+            $product  = $runs->first()->product;
+            $quantity = $runs->sum('quantity');
+
+            $unitCost  = null;
+            $totalCost = null;
+
+            // Prefer persisted costing data if available
+            $totalCostFromRuns = $runs->sum('material_total_cost');
+            if ($quantity > 0 && $totalCostFromRuns > 0) {
+                $totalCost = $totalCostFromRuns;
+                $unitCost  = $totalCostFromRuns / (float) $quantity;
+            } else {
+                // Fallback: estimate from BOM + component standard_cost / BOM unit_cost
+                $bom = $boms->get($productId);
+                if ($bom && $bom->items->isNotEmpty()) {
+                    if ($bom->material_unit_cost !== null && $bom->material_unit_cost > 0) {
+                        $unitCost  = (float) $bom->material_unit_cost;
+                        $totalCost = $unitCost * (float) $quantity;
+                    } else {
+                        $accumulator = 0.0;
+                        foreach ($bom->items as $item) {
+                            $component = $item->component;
+                            $baseCost = null;
+                            if ($item->unit_cost !== null) {
+                                $baseCost = (float) $item->unit_cost;
+                            } elseif ($component && $component->standard_cost !== null) {
+                                $baseCost = (float) $component->standard_cost;
+                            }
+                            if ($baseCost !== null) {
+                                $accumulator += $baseCost * (float) $item->quantity;
+                            }
+                        }
+                        if ($accumulator > 0) {
+                            $unitCost  = $accumulator;
+                            $totalCost = $unitCost * (float) $quantity;
+                        }
+                    }
+                }
+            }
 
             return [
-                'product' => $product,
-                'runs' => $runs->count(),
-                'quantity' => $runs->sum('quantity'),
+                'product'    => $product,
+                'runs'       => $runs->count(),
+                'quantity'   => $quantity,
+                'unit_cost'  => $unitCost,
+                'total_cost' => $totalCost,
             ];
         });
 
-        $salesInvoices = Invoice::whereBetween('issued_at', [$from, $to])->get();
+        $salesInvoices = Invoice::with('creditNotes')
+            ->whereBetween('issued_at', [$from, $to])
+            ->get();
         $salesTotal = $salesInvoices->sum(function (Invoice $invoice) {
-            return ($invoice->net_total + $invoice->vat_amount) - $invoice->withholding;
+            return $invoice->net_sales_after_credits;
         });
 
-        $expensesTotal = Expense::whereBetween('date', [$from, $to])->sum('amount');
+        $expensesTotal = $this->operatingExpensesTotal($from, $to);
+
+        $materialCostTotal = $byProduct->sum(fn (array $row) => (float) ($row['total_cost'] ?? 0));
 
         return view('admin.finance.production_summary', [
             'from' => $from,
@@ -243,7 +439,8 @@ class ReportController extends Controller
             'byProduct' => $byProduct,
             'salesTotal' => $salesTotal,
             'expensesTotal' => $expensesTotal,
-            'approxProfit' => $salesTotal - $expensesTotal,
+            'materialCostTotal' => $materialCostTotal,
+            'approxProfit' => $salesTotal - $materialCostTotal - $expensesTotal,
         ]);
     }
 
@@ -256,60 +453,43 @@ class ReportController extends Controller
             ? Carbon::parse($request->query('to'))
             : Carbon::now()->endOfMonth();
 
-        $employees = Employee::with(['contracts', 'allowances' => function ($query) use ($from, $to) {
-            $query->whereBetween('date', [$from, $to]);
-        }])->orderBy('name')->get();
+        $distributions = SalaryDistribution::with('employee')
+            ->whereBetween('period_start', [$from, $to])
+            ->orderBy('employee_id')
+            ->orderBy('period_start')
+            ->get()
+            ->groupBy('employee_id');
 
-        $rows = $employees->map(function (Employee $employee) use ($from, $to) {
-            $contracts = $employee->contracts->filter(function (EmployeeContract $contract) use ($from, $to) {
-                if ($contract->status === 'ended') {
-                    return false;
-                }
-
-                $startsBeforeEnd = $contract->start_date ? $contract->start_date <= $to : true;
-                $endsAfterStart = $contract->end_date ? $contract->end_date >= $from : true;
-
-                return $startsBeforeEnd && $endsAfterStart;
-            });
-
-            $baseSalary = $contracts->sum('salary_amount');
-
-            $baseTa = $contracts->sum('travel_allowance');
-            $baseDa = $contracts->sum('dearness_allowance');
-            $baseBonus = $contracts->sum('bonus');
-
-            $allowances = $employee->allowances ?? collect();
-
-            $taAllowances = $allowances->where('type', 'TA')->sum('amount');
-            $daAllowances = $allowances->where('type', 'DA')->sum('amount');
-            $bonusAllowances = $allowances->where('type', 'BONUS')->sum('amount');
-
-            $totalSalary = $baseSalary;
-            $totalTa = $baseTa + $taAllowances;
-            $totalDa = $baseDa + $daAllowances;
-            $totalBonus = $baseBonus + $bonusAllowances;
-
-            $grandTotal = $totalSalary + $totalTa + $totalDa + $totalBonus;
+        $rows = $distributions->map(function ($employeeDistributions) {
+            $employee = $employeeDistributions->first()->employee;
+            $baseSalary = $employeeDistributions->sum('base_salary');
+            $totalTa = $employeeDistributions->sum('ta_allowances');
+            $totalDa = $employeeDistributions->sum('da_allowances');
+            $totalBonus = $employeeDistributions->sum('bonus');
+            $commission = $employeeDistributions->sum('commission');
+            $grandTotal = $baseSalary + $totalTa + $totalDa + $totalBonus + $commission;
 
             return [
                 'employee' => $employee,
-                'contracts' => $contracts,
+                'contracts' => collect(),
+                'distributions' => $employeeDistributions,
                 'base_salary' => $baseSalary,
-                'base_ta' => $baseTa,
-                'base_da' => $baseDa,
-                'base_bonus' => $baseBonus,
-                'ta_allowances' => $taAllowances,
-                'da_allowances' => $daAllowances,
-                'bonus_allowances' => $bonusAllowances,
-                'total_salary' => $totalSalary,
+                'base_ta' => 0,
+                'base_da' => 0,
+                'base_bonus' => 0,
+                'ta_allowances' => $totalTa,
+                'da_allowances' => $totalDa,
+                'bonus_allowances' => $totalBonus,
+                'commission' => $commission,
+                'total_salary' => $baseSalary,
                 'total_ta' => $totalTa,
                 'total_da' => $totalDa,
-                'total_bonus' => $totalBonus,
+                'total_bonus' => $totalBonus + $commission,
                 'grand_total' => $grandTotal,
             ];
         })->filter(function (array $row) {
             return $row['grand_total'] > 0;
-        });
+        })->values();
 
         $totals = [
             'salary' => $rows->sum('total_salary'),
@@ -320,5 +500,43 @@ class ReportController extends Controller
         ];
 
         return view('admin.finance.payroll_summary', compact('from', 'to', 'rows', 'totals'));
+    }
+
+    protected function resolveDateRange(Request $request, Carbon $defaultFrom, Carbon $defaultTo): array
+    {
+        $from = $request->query('from')
+            ? Carbon::parse($request->query('from'))->startOfDay()
+            : $defaultFrom->copy()->startOfDay();
+
+        $to = $request->query('to')
+            ? Carbon::parse($request->query('to'))->endOfDay()
+            : $defaultTo->copy()->endOfDay();
+
+        return [$from, $to];
+    }
+
+    protected function operatingExpensesTotal(Carbon $from, Carbon $to): float
+    {
+        $expenses = (float) Expense::whereBetween('date', [$from->toDateString(), $to->toDateString()])
+            ->whereIn('status', [Expense::STATUS_RECORDED, Expense::STATUS_REVIEWED, 'paid', 'overdue'])
+            ->sum('amount');
+
+        $giftExpenses = (float) CustomerGift::whereBetween('date', [$from->toDateString(), $to->toDateString()])
+            ->whereIn('status', [CustomerGift::STATUS_GIVEN, 'delivered'])
+            ->sum('amount');
+
+        $campaignExpenses = (float) Campaign::where(function ($query) use ($from, $to) {
+            $query->whereBetween('created_at', [$from, $to])
+                ->orWhere(function ($campaignQuery) use ($from, $to) {
+                    $campaignQuery->whereBetween('start_date', [$from->toDateString(), $to->toDateString()]);
+                });
+        })->whereIn('status', [
+            Campaign::STATUS_RUNNING,
+            Campaign::STATUS_COMPLETED,
+            'active',
+            'paused',
+        ])->sum('cost');
+
+        return $expenses + $giftExpenses + $campaignExpenses;
     }
 }

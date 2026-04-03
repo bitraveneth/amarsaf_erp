@@ -21,10 +21,10 @@ class Invoice extends Model
     ];
 
     protected $casts = [
-        'issued_at' => 'date',
-        'due_at' => 'date',
-        'net_total' => 'decimal:2',
-        'vat_amount' => 'decimal:2',
+        'issued_at'   => 'date',
+        'due_at'      => 'date',
+        'net_total'   => 'decimal:2',
+        'vat_amount'  => 'decimal:2',
         'withholding' => 'decimal:2',
     ];
 
@@ -43,8 +43,131 @@ class Invoice extends Model
         return $this->belongsTo(Order::class);
     }
 
+    public function advanceApplications()
+    {
+        return $this->hasMany(AgentAdvanceApplication::class);
+    }
+
     public function creditNotes()
     {
         return $this->hasMany(CreditNote::class);
+    }
+
+    public function getGrossTotalAttribute(): float
+    {
+        return (float) ($this->net_total + $this->vat_amount);
+    }
+
+    public function getCashTotalAttribute(): float
+    {
+        return (float) ($this->gross_total - $this->withholding);
+    }
+
+    public function getCreditsTotalAttribute(): float
+    {
+        if ($this->relationLoaded('creditNotes')) {
+            return (float) $this->creditNotes->sum('amount');
+        }
+
+        return (float) $this->creditNotes()->sum('amount');
+    }
+
+    public function getReceiptsTotalAttribute(): float
+    {
+        if ($this->relationLoaded('receipts')) {
+            return (float) $this->receipts->sum('amount');
+        }
+
+        return (float) $this->receipts()->sum('amount');
+    }
+
+    public function getAdvancesAppliedTotalAttribute(): float
+    {
+        if ($this->relationLoaded('advanceApplications')) {
+            return (float) $this->advanceApplications->sum('amount');
+        }
+
+        return (float) $this->advanceApplications()->sum('amount');
+    }
+
+    public function creditBreakdown(float $grossAmount): array
+    {
+        $grossAmount = round(max($grossAmount, 0.0), 2);
+        $netTotal = (float) $this->net_total;
+        $vatAmount = (float) $this->vat_amount;
+
+        if ($grossAmount <= 0.0 || $netTotal <= 0.0 || $vatAmount <= 0.0) {
+            return [
+                'net' => $grossAmount,
+                'vat' => 0.0,
+            ];
+        }
+
+        $rate = $vatAmount / $netTotal;
+        $net = round($grossAmount / (1 + $rate), 2);
+        $vat = round($grossAmount - $net, 2);
+
+        return [
+            'net' => max($net, 0.0),
+            'vat' => max($vat, 0.0),
+        ];
+    }
+
+    public function getCreditNotesNetTotalAttribute(): float
+    {
+        $creditNotes = $this->relationLoaded('creditNotes')
+            ? $this->creditNotes
+            : $this->creditNotes()->get();
+
+        return (float) $creditNotes->sum(function (CreditNote $creditNote) {
+            return $this->creditBreakdown((float) $creditNote->amount)['net'];
+        });
+    }
+
+    public function getCreditNotesVatTotalAttribute(): float
+    {
+        $creditNotes = $this->relationLoaded('creditNotes')
+            ? $this->creditNotes
+            : $this->creditNotes()->get();
+
+        return (float) $creditNotes->sum(function (CreditNote $creditNote) {
+            return $this->creditBreakdown((float) $creditNote->amount)['vat'];
+        });
+    }
+
+    public function getNetSalesAfterCreditsAttribute(): float
+    {
+        return max(0.0, (float) $this->net_total - $this->credit_notes_net_total);
+    }
+
+    public function getOutstandingAttribute(): float
+    {
+        return max(0.0, (float) ($this->cash_total - $this->credits_total - $this->receipts_total - $this->advances_applied_total));
+    }
+
+    /**
+     * Recalculate the invoice status based on payments / credits applied.
+     *
+     * Status rules:
+     * - paid      : outstanding <= 0 and some movement
+     * - adjusted  : some payments or credits applied but still outstanding
+     * - issued    : no payments or credits applied yet
+     */
+    public function recalculateStatus(): void
+    {
+        $outstanding = $this->outstanding;
+        $hasMovement = ($this->credits_total > 0.0)
+            || ($this->receipts_total > 0.0)
+            || ($this->advances_applied_total > 0.0);
+
+        if ($outstanding <= 0.00001 && $hasMovement) {
+            $this->status = 'paid';
+        } elseif ($hasMovement) {
+            $this->status = 'adjusted';
+        } else {
+            $this->status = 'issued';
+        }
+
+        $this->save();
     }
 }

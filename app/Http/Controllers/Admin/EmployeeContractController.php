@@ -9,6 +9,12 @@ use Illuminate\Http\Request;
 
 class EmployeeContractController extends Controller
 {
+    private const VALID_STATUSES = [
+        EmployeeContract::STATUS_ACTIVE,
+        EmployeeContract::STATUS_ON_HOLD,
+        EmployeeContract::STATUS_ENDED,
+    ];
+
     public function all()
     {
         $contracts = EmployeeContract::with('employee')
@@ -47,7 +53,7 @@ class EmployeeContractController extends Controller
             'travel_allowance' => 'nullable|numeric|min:0',
             'dearness_allowance' => 'nullable|numeric|min:0',
             'bonus' => 'nullable|numeric|min:0',
-            'status' => 'required|string|max:50',
+            'status' => 'required|in:' . implode(',', self::VALID_STATUSES),
         ]);
 
         $employee = Employee::findOrFail($data['employee_id']);
@@ -127,11 +133,11 @@ class EmployeeContractController extends Controller
             abort(404);
         }
 
-        $contract->delete();
-
         return redirect()
             ->route('admin.employees.contracts.index', $employee)
-            ->with('status', 'Contract deleted.');
+            ->withErrors([
+                'contract' => 'Employee contract history cannot be deleted. End or correct the contract instead.',
+            ]);
     }
 
     protected function validated(Request $request): array
@@ -145,7 +151,7 @@ class EmployeeContractController extends Controller
             'travel_allowance' => 'nullable|numeric|min:0',
             'dearness_allowance' => 'nullable|numeric|min:0',
             'bonus' => 'nullable|numeric|min:0',
-            'status' => 'required|string|max:50',
+            'status' => 'required|in:' . implode(',', self::VALID_STATUSES),
         ]);
 
         return $data;

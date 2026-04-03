@@ -2,89 +2,106 @@
 
 namespace Database\Seeders;
 
-use App\Models\Agent;
-use App\Models\Employee;
-use App\Models\User;
+use Database\Seeders\Accounting\BalanceSheetModuleSeeder;
+use Database\Seeders\Accounting\BankReconciliationModuleSeeder;
+use Database\Seeders\Accounting\CashflowModuleSeeder;
+use Database\Seeders\Accounting\ChartOfAccountsModuleSeeder;
+use Database\Seeders\Accounting\CustomerInvoicesModuleSeeder;
+use Database\Seeders\Accounting\ExpensesModuleSeeder;
+use Database\Seeders\Accounting\PayrollModuleSeeder;
+use Database\Seeders\Accounting\ProfitAndLossModuleSeeder;
+use Database\Seeders\Accounting\SalaryDistributionsModuleSeeder;
+use Database\Seeders\Accounting\TaxReportModuleSeeder;
+use Database\Seeders\Control\Agents\AgentsModuleSeeder;
+use Database\Seeders\Control\Suppliers\SuppliersModuleSeeder;
+use Database\Seeders\Control\Employees\EmployeesModuleSeeder;
+use Database\Seeders\Control\Products\ProductsModuleSeeder;
+use Database\Seeders\Control\SystemSettings\SystemSettingsModuleSeeder;
+use Database\Seeders\Control\Warehouses\WarehousesModuleSeeder;
+use Database\Seeders\Inventory\InventoryModuleSeeder;
+use Database\Seeders\Manufacturing\BatchesLotsModuleSeeder;
+use Database\Seeders\Manufacturing\BomsModuleSeeder;
+use Database\Seeders\Manufacturing\PendingReceiptsModuleSeeder;
+use Database\Seeders\Manufacturing\ProductionAnalysisModuleSeeder;
+use Database\Seeders\Manufacturing\ProductionOrdersModuleSeeder;
+use Database\Seeders\Sales\CommissionReportModuleSeeder;
+use Database\Seeders\Sales\CommissionSettlementsModuleSeeder;
+use Database\Seeders\Sales\CustomerGiftsModuleSeeder;
+use Database\Seeders\Sales\DeliveriesModuleSeeder;
+use Database\Seeders\Sales\MarketingCampaignsModuleSeeder;
+use Database\Seeders\Sales\PickingListsModuleSeeder;
+use Database\Seeders\Sales\ReturnsModuleSeeder;
+use Database\Seeders\Sales\SalesOrdersModuleSeeder;
+use Database\Seeders\Users\UsersModuleSeeder;
+use Database\Seeders\MenuStructureSeeder;
+use Database\Seeders\RolesSeeder;
+use Database\Seeders\Users\PermissionsSeeder;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\Hash;
 
+/**
+ * Master database seeder.
+ *
+ * Mirrors the sidebar structure:
+ * 1. Control (masters & settings)
+ * 2. Manufacturing
+ * 3. Inventory (core operations)
+ * 4. Sales
+ * 5. Accounting
+ * 6. Users / roles
+ */
 class DatabaseSeeder extends Seeder
 {
-    /**
-     * Seed the application's database.
-     */
     public function run(): void
     {
-        // Core master / demo data
-        $this->call(DemoErpDataSeeder::class);
+        $this->call([
+            // 1. Control (masters & settings)
+            ProductsModuleSeeder::class,
+            EmployeesModuleSeeder::class,
+            WarehousesModuleSeeder::class,
+            AgentsModuleSeeder::class,
+            SuppliersModuleSeeder::class,
+            SystemSettingsModuleSeeder::class,
 
-        // Admin user
-        User::firstOrCreate(
-            ['email' => 'admin@saferpv.local'],
-            [
-                'name' => 'Admin User',
-                'password' => Hash::make('password'),
-                'role' => 'admin',
-            ]
-        );
+            // 2. Manufacturing
+            BomsModuleSeeder::class,
+            BatchesLotsModuleSeeder::class,
+            PendingReceiptsModuleSeeder::class,
+            ProductionOrdersModuleSeeder::class,
+            ProductionAnalysisModuleSeeder::class,
 
-        // Demo agent + agent user (agent record itself created in DemoErpDataSeeder)
-        $agent = Agent::where('name', 'Dhaka North Dealer 01')->first();
+            // 3. Inventory (core operations)
+            InventoryModuleSeeder::class,
 
-        if ($agent) {
-            User::firstOrCreate(
-                ['email' => 'agent@saferpv.local'],
-                [
-                    'name' => 'Demo Agent User',
-                    'password' => Hash::make('password'),
-                    'role' => 'agent',
-                    'agent_id' => $agent->id,
-                ]
-            );
-        }
+            // 4. Sales
+            SalesOrdersModuleSeeder::class,
+            PickingListsModuleSeeder::class,
+            DeliveriesModuleSeeder::class,
+            ReturnsModuleSeeder::class,
+            CustomerGiftsModuleSeeder::class,
+            MarketingCampaignsModuleSeeder::class,
+            CommissionReportModuleSeeder::class,
+            CommissionSettlementsModuleSeeder::class,
 
-        // Demo employee + employee user
-        $employee = Employee::firstOrCreate(
-            ['name' => 'Field Sales Rep 01'],
-            [
-                'work_email' => 'employee@demo.local',
-                'work_mobile' => '01712-000001',
-                'department' => 'Sales & Marketing',
-                'job_position' => 'Sales Representative',
-                'work_zone' => 'Dhaka North',
-            ]
-        );
+            // 5. Accounting
+            ChartOfAccountsModuleSeeder::class,
+            CustomerInvoicesModuleSeeder::class,
+            ExpensesModuleSeeder::class,
+            SalaryDistributionsModuleSeeder::class,
+            PayrollModuleSeeder::class,
+            BankReconciliationModuleSeeder::class,
+            TaxReportModuleSeeder::class,
+            ProfitAndLossModuleSeeder::class,
+            BalanceSheetModuleSeeder::class,
+            CashflowModuleSeeder::class,
 
-        User::firstOrCreate(
-            ['email' => 'employee@saferpv.local'],
-            [
-                'name' => 'Demo Employee User',
-                'password' => Hash::make('password'),
-                'role' => 'employee',
-                'employee_id' => $employee->id,
-            ]
-        );
+            // Extra analytics / demo data so charts look alive.
+            //DemoAnalyticsSeeder::class,
 
-        // Warehouse / inventory manager + user
-        $warehouseManager = Employee::firstOrCreate(
-            ['name' => 'Warehouse Manager'],
-            [
-                'work_email' => 'warehouse@demo.local',
-                'work_mobile' => '01712-000002',
-                'department' => 'Inventory & Logistics',
-                'job_position' => 'Warehouse Manager',
-                'work_zone' => 'Factory / Central Depot',
-            ]
-        );
-
-        User::firstOrCreate(
-            ['email' => 'warehouse@saferpv.local'],
-            [
-                'name' => 'Demo Warehouse Manager',
-                'password' => Hash::make('password'),
-                'role' => 'warehouse_manager',
-                'employee_id' => $warehouseManager->id,
-            ]
-        );
+            // 6. Users / roles / permissions / menu
+            RolesSeeder::class,
+            PermissionsSeeder::class,
+            UsersModuleSeeder::class,
+            MenuStructureSeeder::class,
+        ]);
     }
 }

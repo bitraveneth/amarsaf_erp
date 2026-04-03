@@ -14,6 +14,7 @@ class BillOfMaterial extends Model
         'name',
         'is_active',
         'notes',
+        'material_unit_cost',
     ];
 
     public function product()

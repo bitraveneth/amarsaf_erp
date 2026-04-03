@@ -80,11 +80,11 @@ class EmployeeLeaveController extends Controller
             abort(404);
         }
 
-        $leave->delete();
-
         return redirect()
             ->route('admin.employees.leaves.index', $employee)
-            ->with('status', 'Leave request deleted.');
+            ->withErrors([
+                'leave' => 'Leave history cannot be deleted. Update the request status instead.',
+            ]);
     }
 
     protected function validated(Request $request): array
@@ -94,7 +94,7 @@ class EmployeeLeaveController extends Controller
             'end_date' => 'required|date|after_or_equal:start_date',
             'type' => 'required|string|max:50',
             'reason' => 'nullable|string|max:255',
-            'status' => 'required|string|max:50',
+            'status' => 'required|in:pending,approved,rejected',
         ]);
 
         return $data;
@@ -118,7 +118,7 @@ class EmployeeLeaveController extends Controller
             'end_date' => 'required|date|after_or_equal:start_date',
             'type' => 'required|string|max:50',
             'reason' => 'nullable|string|max:255',
-            'status' => 'required|string|max:50',
+            'status' => 'required|in:pending,approved,rejected',
         ]);
 
         $employee = Employee::findOrFail($data['employee_id']);

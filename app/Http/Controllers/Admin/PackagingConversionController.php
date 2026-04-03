@@ -12,7 +12,7 @@ class PackagingConversionController extends Controller
     {
         $data = $request->validate([
             'from_packaging_type_id' => 'required|exists:packaging_types,id',
-            'to_packaging_type_id' => 'required|exists:packaging_types,id',
+            'to_packaging_type_id' => 'required|exists:packaging_types,id|different:from_packaging_type_id',
             'factor' => 'required|numeric|min:0.0001',
             'notes' => 'nullable|string',
         ]);

@@ -12,12 +12,17 @@ class Order extends Model
     protected $fillable = [
         'agent_id',
         'order_type',
+        'agent_reference',
         'delivery_date',
+        'delivery_contact_name',
+        'delivery_contact_phone',
+        'delivery_address',
         'status',
         'total',
         'commission_total',
         'notes',
         'is_credit_used',
+        'payment_mode',
     ];
 
     protected $casts = [
@@ -41,8 +46,19 @@ class Order extends Model
     {
         return $this->hasMany(OrderStatusHistory::class);
     }
+
+    public function deliveries()
+    {
+        return $this->hasMany(Delivery::class);
+    }
+
     public function delivery()
     {
-        return $this->hasOne(Delivery::class);
+        return $this->hasOne(Delivery::class)->latestOfMany();
+    }
+
+    public function invoice()
+    {
+        return $this->hasOne(Invoice::class);
     }
 }

@@ -26,6 +26,11 @@ class Employee extends Model
         'tags' => 'array',
     ];
 
+    public function user()
+    {
+        return $this->hasOne(User::class);
+    }
+
     public function contracts()
     {
         return $this->hasMany(EmployeeContract::class);

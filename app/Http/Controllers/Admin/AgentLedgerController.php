@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Agent;
+use App\Models\AgentAdvance;
 use App\Models\Invoice;
 use App\Models\Receipt;
 use App\Models\CreditNote;
@@ -38,6 +39,10 @@ class AgentLedgerController extends Controller
             ->whereBetween('issued_at', [$from, $to])
             ->get();
 
+        $advances = AgentAdvance::where('agent_id', $agent->id)
+            ->whereBetween('advanced_at', [$from->toDateString(), $to->toDateString()])
+            ->get();
+
         $rows = [];
 
         foreach ($invoices as $invoice) {
@@ -45,7 +50,7 @@ class AgentLedgerController extends Controller
                 'date' => $invoice->issued_at,
                 'type' => 'invoice',
                 'ref' => $invoice->number,
-                'debit' => $invoice->net_total + $invoice->vat_amount,
+                'debit' => ($invoice->net_total + $invoice->vat_amount) - $invoice->withholding,
                 'credit' => 0,
             ];
         }
@@ -67,6 +72,16 @@ class AgentLedgerController extends Controller
                 'ref' => $credit->number,
                 'debit' => 0,
                 'credit' => $credit->amount,
+            ];
+        }
+
+        foreach ($advances as $advance) {
+            $rows[] = [
+                'date' => $advance->advanced_at,
+                'type' => 'advance',
+                'ref' => $advance->reference ?: ('ADV-' . $advance->id),
+                'debit' => 0,
+                'credit' => $advance->amount,
             ];
         }
 

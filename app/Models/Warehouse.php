@@ -20,4 +20,14 @@ class Warehouse extends Model
     {
         return $this->hasMany(WarehouseLocation::class);
     }
+
+    public function goodsReceipts()
+    {
+        return $this->hasMany(GoodsReceipt::class);
+    }
+
+    public function productionMaterialIssues()
+    {
+        return $this->hasMany(ProductionMaterialIssue::class);
+    }
 }

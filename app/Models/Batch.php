@@ -37,4 +37,29 @@ class Batch extends Model
     {
         return $this->hasMany(StockEntry::class);
     }
+
+    public function deliveryItems()
+    {
+        return $this->hasMany(DeliveryItem::class);
+    }
+
+    public function productionMaterialIssueItems()
+    {
+        return $this->hasMany(ProductionMaterialIssueItem::class);
+    }
+
+    /**
+     * All stock movements related to this batch via its stock entries.
+     */
+    public function stockMovements()
+    {
+        return $this->hasManyThrough(
+            StockMovement::class,
+            StockEntry::class,
+            'batch_id',        // Foreign key on stock_entries...
+            'stock_entry_id',  // Foreign key on stock_movements...
+            'id',              // Local key on batches...
+            'id'               // Local key on stock_entries...
+        );
+    }
 }

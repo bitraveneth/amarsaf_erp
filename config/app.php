@@ -61,6 +61,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Application Currency
+    |--------------------------------------------------------------------------
+    |
+    | Default ISO currency code used across the UI for summaries and reports.
+    | Amounts that do not explicitly specify a currency will fall back to
+    | this value. The system currently assumes Bangladeshi Taka (BDT).
+    |
+    */
+
+    'currency' => env('APP_CURRENCY', 'BDT'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Timezone
     |--------------------------------------------------------------------------
     |

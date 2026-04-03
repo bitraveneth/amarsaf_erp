@@ -9,6 +9,12 @@ use Illuminate\Http\Request;
 
 class EmployeeEquipmentController extends Controller
 {
+    private const VALID_STATUSES = [
+        EmployeeEquipment::STATUS_ACTIVE,
+        EmployeeEquipment::STATUS_RETURNED,
+        EmployeeEquipment::STATUS_LOST,
+    ];
+
     public function all()
     {
         $equipment = EmployeeEquipment::with('employee')
@@ -35,7 +41,7 @@ class EmployeeEquipmentController extends Controller
             'effective_date' => 'required|date',
             'product_name' => 'required|string|max:255',
             'device_identifier' => 'nullable|string|max:255',
-            'status' => 'required|string|max:50',
+            'status' => 'required|in:' . implode(',', self::VALID_STATUSES),
             'notes' => 'nullable|string',
         ]);
 
@@ -109,11 +115,11 @@ class EmployeeEquipmentController extends Controller
             abort(404);
         }
 
-        $equipment->delete();
-
         return redirect()
             ->route('admin.employees.equipment.index', $employee)
-            ->with('status', 'Equipment record deleted.');
+            ->withErrors([
+                'equipment' => 'Equipment assignment history cannot be deleted. Update the record to returned or lost instead.',
+            ]);
     }
 
     protected function validated(Request $request): array
@@ -122,7 +128,7 @@ class EmployeeEquipmentController extends Controller
             'effective_date' => 'required|date',
             'product_name' => 'required|string|max:255',
             'device_identifier' => 'nullable|string|max:255',
-            'status' => 'required|string|max:50',
+            'status' => 'required|in:' . implode(',', self::VALID_STATUSES),
             'notes' => 'nullable|string',
         ]);
     }

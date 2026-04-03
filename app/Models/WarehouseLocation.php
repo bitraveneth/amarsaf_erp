@@ -24,5 +24,9 @@ class WarehouseLocation extends Model
     {
         return $this->hasMany(StockEntry::class, 'warehouse_location_id');
     }
-}
 
+    public function goodsReceiptItems()
+    {
+        return $this->hasMany(GoodsReceiptItem::class, 'warehouse_location_id');
+    }
+}

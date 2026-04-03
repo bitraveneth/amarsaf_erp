@@ -9,6 +9,10 @@ class EmployeeEquipment extends Model
 {
     use HasFactory;
 
+    public const STATUS_ACTIVE = 'active';
+    public const STATUS_RETURNED = 'returned';
+    public const STATUS_LOST = 'lost';
+
     protected $fillable = [
         'employee_id',
         'effective_date',
@@ -25,5 +29,27 @@ class EmployeeEquipment extends Model
     public function employee()
     {
         return $this->belongsTo(Employee::class);
+    }
+
+    public static function normalizeStatus(?string $status): string
+    {
+        return match (strtolower((string) $status)) {
+            'assigned' => self::STATUS_ACTIVE,
+            'maintenance' => self::STATUS_ACTIVE,
+            'retired' => self::STATUS_RETURNED,
+            self::STATUS_RETURNED => self::STATUS_RETURNED,
+            self::STATUS_LOST => self::STATUS_LOST,
+            default => self::STATUS_ACTIVE,
+        };
+    }
+
+    public function getStatusAttribute($value): string
+    {
+        return self::normalizeStatus($value);
+    }
+
+    public function setStatusAttribute($value): void
+    {
+        $this->attributes['status'] = self::normalizeStatus($value);
     }
 }
