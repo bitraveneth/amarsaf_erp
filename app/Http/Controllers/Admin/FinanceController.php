@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AgentAdvance;
 use App\Models\AgentAdvanceApplication;
 use App\Models\CreditNote;
+use App\Models\DeliveryItem;
 use App\Models\LedgerEntry;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
@@ -45,9 +46,19 @@ class FinanceController extends Controller
             ]);
         }
 
-        $invoice->withholding = $data['withholding'];
-        $invoice->save();
-        $invoice->recalculateStatus();
+        DB::transaction(function () use ($invoice, $data) {
+            $previousWithholding = (float) $invoice->withholding;
+            $invoice->withholding = round((float) $data['withholding'], 2);
+            $invoice->save();
+
+            $this->recordWithholdingLedgerAdjustment(
+                $invoice,
+                $invoice->withholding - $previousWithholding,
+                'Withholding adjustment on ' . $invoice->number
+            );
+
+            $invoice->recalculateStatus();
+        });
 
         return redirect()->route('admin.finance.show', $invoice)->with('status', 'Withholding updated.');
     }
@@ -98,7 +109,7 @@ class FinanceController extends Controller
         $order->loadMissing($relations);
 
         $deliveryItems = (Schema::hasTable('deliveries') && Schema::hasTable('delivery_items') && $order->delivery)
-            ? $order->delivery->items->keyBy('order_item_id')
+            ? DeliveryItem::summarizeForOrderItems($order->delivery->items)
             : collect();
 
         $netTotal = 0.0;
@@ -110,14 +121,7 @@ class FinanceController extends Controller
             $deliveryItem = $deliveryItems->get($item->id);
 
             if ($deliveryItem) {
-                $quantity = (float) $deliveryItem->qty_delivered;
-
-                if ($quantity <= 0 && ((float) $deliveryItem->qty_dispatched > 0 || (float) $deliveryItem->qty_short > 0 || (float) $deliveryItem->qty_damaged > 0)) {
-                    $quantity = max(
-                        (float) $deliveryItem->qty_dispatched - (float) $deliveryItem->qty_short - (float) $deliveryItem->qty_damaged,
-                        0
-                    );
-                }
+                $quantity = (float) $deliveryItem['realized_quantity'];
             }
 
             if ($quantity <= 0) {
@@ -213,6 +217,12 @@ class FinanceController extends Controller
                     'invoice_id' => $invoice->id,
                 ]);
             }
+
+            $this->recordWithholdingLedgerAdjustment(
+                $invoice,
+                (float) $invoice->withholding,
+                'Withholding on ' . $invoice->number
+            );
 
             $this->applyAvailableAgentAdvances($invoice);
             $invoice->recalculateStatus();
@@ -533,5 +543,56 @@ class FinanceController extends Controller
 
             $remainingOutstanding -= $applyAmount;
         }
+    }
+
+    protected function recordWithholdingLedgerAdjustment(Invoice $invoice, float $delta, string $description): void
+    {
+        $delta = round($delta, 2);
+
+        if (abs($delta) <= 0.00001) {
+            return;
+        }
+
+        if ($delta > 0) {
+            LedgerEntry::create([
+                'account' => 'Withholding Tax Receivable',
+                'description' => $description,
+                'debit' => $delta,
+                'credit' => 0,
+                'order_id' => $invoice->order_id,
+                'invoice_id' => $invoice->id,
+            ]);
+
+            LedgerEntry::create([
+                'account' => 'Accounts Receivable',
+                'description' => $description,
+                'debit' => 0,
+                'credit' => $delta,
+                'order_id' => $invoice->order_id,
+                'invoice_id' => $invoice->id,
+            ]);
+
+            return;
+        }
+
+        $amount = abs($delta);
+
+        LedgerEntry::create([
+            'account' => 'Accounts Receivable',
+            'description' => $description,
+            'debit' => $amount,
+            'credit' => 0,
+            'order_id' => $invoice->order_id,
+            'invoice_id' => $invoice->id,
+        ]);
+
+        LedgerEntry::create([
+            'account' => 'Withholding Tax Receivable',
+            'description' => $description,
+            'debit' => 0,
+            'credit' => $amount,
+            'order_id' => $invoice->order_id,
+            'invoice_id' => $invoice->id,
+        ]);
     }
 }

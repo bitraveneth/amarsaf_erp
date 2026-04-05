@@ -18,30 +18,36 @@ class ReportsDashboardController extends Controller
     {
         $today = Carbon::today();
         $startOfYear = $today->copy()->startOfYear();
-        $endOfYear = $today->copy()->endOfYear();
+        $endOfPeriod = $today->copy()->endOfDay();
 
         // Revenue side
-        $invoices = Invoice::with(['receipts', 'creditNotes'])
-            ->whereBetween('issued_at', [$startOfYear, $endOfYear])
+        $invoices = Invoice::with(['receipts', 'creditNotes', 'advanceApplications'])
+            ->whereBetween('issued_at', [$startOfYear, $endOfPeriod])
             ->get();
 
-        $grossRevenue = $invoices->sum('net_total');
+        $grossRevenue = round((float) $invoices->sum(function (Invoice $invoice) use ($startOfYear, $endOfPeriod) {
+            return $invoice->netSalesAfterCreditsInRange($startOfYear, $endOfPeriod);
+        }), 2);
         $withholdingTotal = $invoices->sum('withholding');
 
-        $totalCollections = $invoices->flatMap->receipts->sum('amount');
+        $totalCollections = round((float) $invoices->sum(function (Invoice $invoice) use ($startOfYear, $endOfPeriod) {
+            return $invoice->receiptsTotalInRange($startOfYear, $endOfPeriod);
+        }), 2);
 
-        $outstanding = $invoices->sum(fn (Invoice $invoice) => (float) $invoice->outstanding);
+        $outstanding = round((float) $invoices->sum(function (Invoice $invoice) use ($endOfPeriod) {
+            return $invoice->outstandingAsOf($endOfPeriod);
+        }), 2);
 
         // Cost side
-        $expenses = (float) Expense::whereBetween('date', [$startOfYear, $endOfYear])
+        $expenses = (float) Expense::whereBetween('date', [$startOfYear, $endOfPeriod])
             ->whereIn('status', [Expense::STATUS_RECORDED, Expense::STATUS_REVIEWED, 'paid', 'overdue'])
             ->sum('amount');
-        $giftExpenses = (float) CustomerGift::whereBetween('date', [$startOfYear, $endOfYear])
+        $giftExpenses = (float) CustomerGift::whereBetween('date', [$startOfYear, $endOfPeriod])
             ->whereIn('status', [CustomerGift::STATUS_GIVEN, 'delivered'])
             ->sum('amount');
-        $campaignExpenses = Campaign::where(function ($query) use ($startOfYear, $endOfYear) {
-            $query->whereBetween('created_at', [$startOfYear, $endOfYear])
-                ->orWhereBetween('start_date', [$startOfYear->toDateString(), $endOfYear->toDateString()]);
+        $campaignExpenses = Campaign::where(function ($query) use ($startOfYear, $endOfPeriod) {
+            $query->whereBetween('created_at', [$startOfYear, $endOfPeriod])
+                ->orWhereBetween('start_date', [$startOfYear->toDateString(), $endOfPeriod->toDateString()]);
         })->whereIn('status', [
             Campaign::STATUS_RUNNING,
             Campaign::STATUS_COMPLETED,
@@ -50,12 +56,12 @@ class ReportsDashboardController extends Controller
         ])->sum('cost');
         $totalExpenses = $expenses + $giftExpenses + $campaignExpenses;
 
-        $salaryDistributions = SalaryDistribution::whereBetween('period_start', [$startOfYear, $endOfYear])->get();
+        $salaryDistributions = SalaryDistribution::whereBetween('period_start', [$startOfYear, $endOfPeriod])->get();
         $totalPayroll = $salaryDistributions->sum(function ($d) {
             return $d->base_salary + $d->bonus + $d->ta_allowances + $d->da_allowances + $d->commission;
         });
 
-        $productionQty = ProductionRun::whereBetween('created_at', [$startOfYear, $endOfYear])
+        $productionQty = ProductionRun::whereBetween('created_at', [$startOfYear, $endOfPeriod])
             ->where('qc_status', 'approved')
             ->sum('quantity');
 

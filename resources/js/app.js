@@ -66,7 +66,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // chartOne (monthly sale) is rendered with dynamic ERP data via
     // an inline script on the dashboard, so we skip the TailAdmin
     // demo initialiser here.
-    if (document.querySelector('#chartTwo')) {
+    if (document.querySelector('#chartTwo') && !document.querySelector('[data-dashboard-ajax]')) {
         import('./components/chart/chart-2').then(module => module.initChartTwo());
     }
     // Dashboard statistics chart (#chartThree) is now rendered

@@ -69,15 +69,12 @@ class ErpNotificationService
         }
 
         if (Schema::hasTable('invoices') && Schema::hasTable('receipts')) {
-            $openInvoices = Invoice::with('receipts')
+            $openInvoices = Invoice::with(['receipts', 'creditNotes', 'advanceApplications'])
                 ->whereIn('status', ['issued', 'adjusted'])
                 ->get();
 
             $outstandingReceivables = $openInvoices->sum(function (Invoice $invoice) {
-                $gross = ($invoice->net_total + $invoice->vat_amount) - $invoice->withholding;
-                $paid = $invoice->receipts->sum('amount');
-
-                return max($gross - $paid, 0);
+                return (float) $invoice->outstanding;
             });
 
             if ($outstandingReceivables > 0) {

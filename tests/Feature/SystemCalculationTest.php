@@ -43,6 +43,7 @@ use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Schema;
 use RuntimeException;
 use Tests\TestCase;
@@ -218,6 +219,91 @@ class SystemCalculationTest extends TestCase
             'account' => 'VAT Payable',
             'debit' => 0,
             'credit' => 30,
+        ]);
+        $this->assertDatabaseHas('ledger_entries', [
+            'invoice_id' => $invoice->id,
+            'account' => 'Withholding Tax Receivable',
+            'debit' => 11.5,
+            'credit' => 0,
+        ]);
+        $this->assertDatabaseHas('ledger_entries', [
+            'invoice_id' => $invoice->id,
+            'account' => 'Accounts Receivable',
+            'debit' => 0,
+            'credit' => 11.5,
+        ]);
+    }
+
+    public function test_withholding_update_posts_balancing_ledger_adjustment(): void
+    {
+        $admin = User::create([
+            'name' => 'Admin',
+            'email' => 'admin-withholding-update@example.test',
+            'password' => 'secret',
+            'role' => 'admin',
+        ]);
+
+        $agent = Agent::create([
+            'name' => 'Agent Withholding Update',
+            'credit_limit' => 100000,
+            'withholding_rate' => 0,
+            'is_active' => true,
+        ]);
+
+        $tax = TaxClass::create([
+            'name' => 'Withholding Update VAT',
+            'rate' => 15,
+        ]);
+
+        $product = Product::create([
+            'sku' => 'SKU-WHT-UPD-1',
+            'name' => 'Withholding Update Product',
+            'tax_class_id' => $tax->id,
+            'base_price' => 100,
+        ]);
+
+        $order = Order::create([
+            'agent_id' => $agent->id,
+            'order_type' => 'regular',
+            'status' => 'delivered',
+            'total' => 0,
+        ]);
+
+        OrderItem::create([
+            'order_id' => $order->id,
+            'product_id' => $product->id,
+            'quantity' => 1,
+            'unit_price' => 100,
+            'order_type' => 'regular',
+            'commission_amount' => 0,
+        ]);
+
+        $invoice = app(FinanceController::class)->ensureInvoiceForOrder($order->fresh());
+        $this->assertNotNull($invoice);
+        $this->assertEquals(115.0, (float) $invoice->gross_total);
+        $this->assertEquals(115.0, (float) $invoice->outstanding);
+
+        $this->actingAs($admin);
+        app(FinanceController::class)->updateWithholding(new Request([
+            'withholding' => 20,
+        ]), $invoice->fresh());
+
+        $invoice = $invoice->fresh();
+
+        $this->assertEquals(20.0, (float) $invoice->withholding);
+        $this->assertEquals(95.0, (float) $invoice->cash_total);
+        $this->assertEquals(95.0, (float) $invoice->outstanding);
+        $this->assertDatabaseHas('ledger_entries', [
+            'invoice_id' => $invoice->id,
+            'account' => 'Withholding Tax Receivable',
+            'debit' => 20,
+            'credit' => 0,
+        ]);
+        $this->assertDatabaseHas('ledger_entries', [
+            'invoice_id' => $invoice->id,
+            'account' => 'Accounts Receivable',
+            'debit' => 0,
+            'credit' => 20,
         ]);
     }
 
@@ -479,6 +565,202 @@ class SystemCalculationTest extends TestCase
         $this->assertEquals(21.0, (float) $invoice->vat_amount);
         $this->assertEquals(7, (int) $invoiceItem->quantity);
         $this->assertEquals(140.0, (float) $invoiceItem->line_total);
+    }
+
+    public function test_split_delivery_items_for_one_order_line_are_aggregated_everywhere(): void
+    {
+        $admin = User::create([
+            'name' => 'Admin',
+            'email' => 'admin-split-delivery@example.test',
+            'password' => 'secret',
+            'role' => 'admin',
+        ]);
+
+        $agent = Agent::create([
+            'name' => 'Agent Split Delivery',
+            'credit_limit' => 100000,
+            'withholding_rate' => 0,
+            'is_active' => true,
+        ]);
+
+        $warehouseId = DB::table('warehouses')->insertGetId([
+            'name' => 'Returns Warehouse',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $tax = TaxClass::create([
+            'name' => 'Split Delivery VAT',
+            'rate' => 15,
+        ]);
+
+        $product = Product::create([
+            'sku' => 'SKU-DLV-SPLIT-1',
+            'name' => 'Split Delivery Product',
+            'tax_class_id' => $tax->id,
+            'product_type' => 'finished',
+            'is_active' => true,
+            'base_price' => 20,
+        ]);
+
+        $order = Order::create([
+            'agent_id' => $agent->id,
+            'order_type' => 'regular',
+            'status' => 'delivered',
+            'total' => 0,
+        ]);
+
+        $orderItem = OrderItem::create([
+            'order_id' => $order->id,
+            'product_id' => $product->id,
+            'quantity' => 10,
+            'unit_price' => 20,
+            'order_type' => 'regular',
+            'commission_rate' => 10,
+            'commission_amount' => 20,
+        ]);
+
+        $delivery = Delivery::create([
+            'order_id' => $order->id,
+            'status' => 'delivered',
+        ]);
+
+        DeliveryItem::create([
+            'delivery_id' => $delivery->id,
+            'order_item_id' => $orderItem->id,
+            'product_id' => $product->id,
+            'qty_dispatched' => 6,
+            'qty_delivered' => 4,
+            'qty_short' => 2,
+            'qty_damaged' => 0,
+        ]);
+
+        DeliveryItem::create([
+            'delivery_id' => $delivery->id,
+            'order_item_id' => $orderItem->id,
+            'product_id' => $product->id,
+            'qty_dispatched' => 4,
+            'qty_delivered' => 3,
+            'qty_short' => 1,
+            'qty_damaged' => 0,
+        ]);
+
+        app(FinanceController::class)->createFromOrder($order->fresh());
+
+        $invoice = Invoice::where('order_id', $order->id)->firstOrFail();
+        $invoiceItem = $invoice->items()->firstOrFail();
+
+        $this->assertEquals(140.0, (float) $invoice->net_total);
+        $this->assertEquals(21.0, (float) $invoice->vat_amount);
+        $this->assertEquals(7, (int) $invoiceItem->quantity);
+        $this->assertEquals(140.0, (float) $invoiceItem->line_total);
+
+        app(CommissionSettlementController::class)->generate(
+            new Request(['month' => now()->format('Y-m')])
+        );
+
+        $settlement = AgentCommissionSettlement::where('agent_id', $agent->id)->firstOrFail();
+
+        $this->assertEquals(140.0, (float) $settlement->sales_total);
+        $this->assertEquals(14.0, (float) $settlement->commission_total);
+
+        $this->actingAs($admin);
+        app(\App\Http\Controllers\Admin\CustomerReturnController::class)->store(new Request([
+            'order_id' => $order->id,
+            'product_id' => $product->id,
+            'warehouse_id' => $warehouseId,
+            'quantity' => 7,
+            'notes' => null,
+        ]));
+
+        $this->assertDatabaseHas('stock_movements', [
+            'order_id' => $order->id,
+            'type' => 'customer-return',
+            'quantity' => 7,
+        ]);
+
+        app(\App\Http\Controllers\Admin\CustomerReturnController::class)->store(new Request([
+            'order_id' => $order->id,
+            'product_id' => $product->id,
+            'warehouse_id' => $warehouseId,
+            'quantity' => 1,
+            'notes' => null,
+        ]));
+
+        $this->assertDatabaseCount('stock_movements', 1);
+    }
+
+    public function test_delivery_update_rejects_split_items_that_exceed_order_quantity_in_total(): void
+    {
+        $admin = User::create([
+            'name' => 'Admin',
+            'email' => 'admin-delivery-overage@example.test',
+            'password' => 'secret',
+            'role' => 'admin',
+        ]);
+
+        $agent = Agent::create([
+            'name' => 'Agent Delivery Overage',
+            'credit_limit' => 100000,
+            'withholding_rate' => 0,
+            'is_active' => true,
+        ]);
+
+        $product = Product::create([
+            'sku' => 'SKU-DLV-OVER-1',
+            'name' => 'Delivery Overage Product',
+            'product_type' => 'finished',
+            'is_active' => true,
+            'base_price' => 20,
+        ]);
+
+        $order = Order::create([
+            'agent_id' => $agent->id,
+            'order_type' => 'regular',
+            'status' => 'picked',
+            'total' => 0,
+        ]);
+
+        $orderItem = OrderItem::create([
+            'order_id' => $order->id,
+            'product_id' => $product->id,
+            'quantity' => 10,
+            'unit_price' => 20,
+            'order_type' => 'regular',
+            'commission_amount' => 0,
+        ]);
+
+        $delivery = Delivery::create([
+            'order_id' => $order->id,
+            'status' => 'scheduled',
+        ]);
+
+        $response = $this->actingAs($admin)
+            ->from(route('admin.deliveries.edit', $delivery))
+            ->patch(route('admin.deliveries.update', $delivery), [
+                'status' => 'scheduled',
+                'items' => [
+                    [
+                        'order_item_id' => $orderItem->id,
+                        'product_id' => $product->id,
+                        'qty_dispatched' => 6,
+                        'qty_delivered' => 6,
+                        'qty_short' => 0,
+                        'qty_damaged' => 0,
+                    ],
+                    [
+                        'order_item_id' => $orderItem->id,
+                        'product_id' => $product->id,
+                        'qty_dispatched' => 6,
+                        'qty_delivered' => 6,
+                        'qty_short' => 0,
+                        'qty_damaged' => 0,
+                    ],
+                ],
+            ]);
+
+        $response->assertSessionHasErrors('items');
+        $this->assertDatabaseCount('delivery_items', 0);
     }
 
     public function test_commission_settlement_only_counts_delivered_and_invoiced_orders(): void
@@ -1122,6 +1404,114 @@ class SystemCalculationTest extends TestCase
         $this->assertEquals(7.5, (float) $view->getData()['outputVat']);
         $this->assertEquals(50.0, (float) $view->getData()['totals']['taxable']);
         $this->assertEquals(7.5, (float) $view->getData()['totals']['vat']);
+    }
+
+    public function test_cross_period_credit_notes_do_not_reduce_earlier_period_reports_targets_or_dashboard(): void
+    {
+        Carbon::setTestNow('2026-04-06 12:00:00');
+
+        try {
+            $admin = User::create([
+                'name' => 'Admin',
+                'email' => 'admin-cross-period-credit@example.test',
+                'password' => 'secret',
+                'role' => 'admin',
+            ]);
+
+            $agent = Agent::create([
+                'name' => 'Agent Cross Period',
+                'credit_limit' => 100000,
+                'withholding_rate' => 0,
+                'is_active' => true,
+            ]);
+
+            $order = Order::create([
+                'agent_id' => $agent->id,
+                'order_type' => 'regular',
+                'status' => 'delivered',
+                'total' => 0,
+            ]);
+
+            $invoice = Invoice::create([
+                'order_id' => $order->id,
+                'number' => 'INV-PERIOD-001',
+                'issued_at' => '2026-03-15',
+                'net_total' => 100,
+                'vat_amount' => 15,
+                'withholding' => 0,
+                'status' => 'issued',
+            ]);
+
+            CreditNote::create([
+                'invoice_id' => $invoice->id,
+                'order_id' => $order->id,
+                'number' => 'CN-PERIOD-APRIL-001',
+                'issued_at' => '2026-04-02',
+                'amount' => 57.5,
+            ]);
+
+            SalesTarget::create([
+                'agent_id' => $agent->id,
+                'employee_id' => null,
+                'period_start' => '2026-03-01',
+                'period_end' => '2026-03-31',
+                'target_value' => 200,
+            ]);
+
+            $vatView = app(ReportController::class)->vat(
+                Request::create('/admin/reports/vat', 'GET', ['month' => '2026-03'])
+            );
+
+            $this->assertEquals(100.0, (float) $vatView->getData()['totals']['taxable']);
+            $this->assertEquals(15.0, (float) $vatView->getData()['totals']['vat']);
+
+            $agentPerformanceView = app(ReportController::class)->agentPerformance(
+                Request::create('/admin/reports/agents', 'GET', [
+                    'from' => '2026-03-01',
+                    'to' => '2026-03-31',
+                ])
+            );
+
+            $agentRow = $agentPerformanceView->getData()['rows']->first();
+
+            $this->assertEquals(115.0, (float) $agentRow['invoiced']);
+            $this->assertEquals(0.0, (float) $agentRow['credits']);
+            $this->assertEquals(115.0, (float) $agentRow['net_sales']);
+            $this->assertEquals(115.0, (float) $agentRow['outstanding']);
+
+            $productionView = app(ReportController::class)->productionSummary(
+                Request::create('/admin/reports/production', 'GET', [
+                    'from' => '2026-03-01',
+                    'to' => '2026-03-31',
+                ])
+            );
+
+            $this->assertEquals(100.0, (float) $productionView->getData()['salesTotal']);
+
+            $targetView = app(SalesTargetController::class)->index(
+                Request::create('/admin/sales-targets', 'GET', ['month' => '2026-03'])
+            );
+
+            $targetRow = $targetView->getData()['targets']->items()[0];
+
+            $this->assertEquals(100.0, (float) $targetRow['achieved']);
+            $this->assertEquals(100.0, (float) $targetRow['remaining']);
+
+            $dashboardResponse = $this->actingAs($admin)->get(route('admin.dashboard', [
+                'target_month' => '2026-03',
+                'sales_range' => 3,
+            ]));
+
+            $dashboardResponse->assertOk();
+            $dashboardResponse->assertViewHas('monthlyAchieved', 100.0);
+            $dashboardResponse->assertViewHas('monthlyRevenue', function (array $monthlyRevenue) {
+                $values = array_map('floatval', $monthlyRevenue);
+
+                return $values === [0.0, 100.0, 0.0];
+            });
+        } finally {
+            Carbon::setTestNow();
+        }
     }
 
     public function test_sales_targets_show_achieved_value_from_invoiced_sales(): void
@@ -2744,6 +3134,151 @@ class SystemCalculationTest extends TestCase
         });
     }
 
+    public function test_sales_and_accounting_dashboards_net_same_period_credit_notes(): void
+    {
+        Carbon::setTestNow('2026-04-06 12:00:00');
+
+        try {
+            $admin = User::create([
+                'name' => 'Admin',
+                'email' => 'admin-dashboard-credits@example.test',
+                'password' => 'secret',
+                'role' => 'admin',
+            ]);
+
+            $agent = Agent::create([
+                'name' => 'Dashboard Agent',
+                'credit_limit' => 10000,
+                'withholding_rate' => 0,
+                'is_active' => true,
+            ]);
+
+            $product = Product::create([
+                'sku' => 'SKU-DASH-CREDIT-1',
+                'name' => 'Dashboard Product',
+                'product_type' => 'finished',
+                'base_price' => 10,
+                'is_active' => true,
+            ]);
+
+            $order = Order::create([
+                'agent_id' => $agent->id,
+                'order_type' => 'regular',
+                'status' => 'delivered',
+                'total' => 100,
+            ]);
+
+            $invoice = Invoice::create([
+                'order_id' => $order->id,
+                'number' => 'INV-DASH-CREDIT-001',
+                'issued_at' => '2026-04-03',
+                'net_total' => 100,
+                'vat_amount' => 15,
+                'withholding' => 0,
+                'status' => 'issued',
+            ]);
+
+            DB::table('invoice_items')->insert([
+                'invoice_id' => $invoice->id,
+                'product_id' => $product->id,
+                'description' => 'Dashboard Product',
+                'quantity' => 10,
+                'unit_price' => 10,
+                'line_total' => 100,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            CreditNote::create([
+                'invoice_id' => $invoice->id,
+                'order_id' => $order->id,
+                'number' => 'CN-DASH-CREDIT-001',
+                'issued_at' => '2026-04-05',
+                'amount' => 57.5,
+            ]);
+
+            Receipt::create([
+                'invoice_id' => $invoice->id,
+                'amount' => 20,
+                'received_at' => '2026-04-04',
+            ]);
+
+            Receipt::create([
+                'invoice_id' => $invoice->id,
+                'amount' => 40,
+                'received_at' => '2026-04-20',
+            ]);
+
+            $advance = AgentAdvance::create([
+                'agent_id' => $agent->id,
+                'amount' => 15,
+                'applied_amount' => 15,
+                'advanced_at' => '2026-04-05',
+                'status' => 'applied',
+            ]);
+
+            DB::table('agent_advance_applications')->insert([
+                [
+                    'agent_advance_id' => $advance->id,
+                    'invoice_id' => $invoice->id,
+                    'amount' => 10,
+                    'applied_at' => '2026-04-05',
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ],
+                [
+                    'agent_advance_id' => $advance->id,
+                    'invoice_id' => $invoice->id,
+                    'amount' => 5,
+                    'applied_at' => '2026-04-22',
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ],
+            ]);
+
+            Invoice::create([
+                'order_id' => null,
+                'number' => 'INV-DASH-CREDIT-FUTURE',
+                'issued_at' => '2026-04-20',
+                'net_total' => 200,
+                'vat_amount' => 30,
+                'withholding' => 0,
+                'status' => 'issued',
+            ]);
+
+            $salesResponse = $this->actingAs($admin)->get(route('admin.sales.dashboard'));
+
+            $salesResponse->assertOk();
+            $salesResponse->assertViewHas('totalInvoices', 1);
+            $salesResponse->assertViewHas('netSales', 50.0);
+            $salesResponse->assertViewHas('vatTotal', 7.5);
+            $salesResponse->assertViewHas('collected', 20.0);
+            $salesResponse->assertViewHas('outstanding', 27.5);
+            $salesResponse->assertViewHas('topAgents', function ($agents) {
+                return $agents->count() === 1
+                    && (float) $agents->first()['net_sales'] === 50.0;
+            });
+            $salesResponse->assertViewHas('topProducts', function ($products) {
+                return $products->count() === 1
+                    && (float) $products->first()['net'] === 50.0;
+            });
+
+            $accountingResponse = $this->actingAs($admin)->get(route('admin.accounting.dashboard', [
+                'range' => 'month',
+            ]));
+
+            $accountingResponse->assertOk();
+            $accountingResponse->assertViewHas('totalInvoices', 1);
+            $accountingResponse->assertViewHas('netSales', 50.0);
+            $accountingResponse->assertViewHas('vatTotal', 7.5);
+            $accountingResponse->assertViewHas('collected', 20.0);
+            $accountingResponse->assertViewHas('outstanding', 27.5);
+            $accountingResponse->assertViewHas('netProfitEstimate', 50.0);
+        } finally {
+            Carbon::setTestNow();
+        }
+    }
+
     public function test_manufacturing_dashboard_keeps_same_named_products_separate(): void
     {
         $admin = User::create([
@@ -2831,6 +3366,141 @@ class SystemCalculationTest extends TestCase
 
         $response->assertOk();
         $response->assertViewHas('activeAgents', 1);
+    }
+
+    public function test_reports_dashboard_is_year_to_date_and_excludes_future_records(): void
+    {
+        Carbon::setTestNow('2026-04-06 12:00:00');
+
+        try {
+            $admin = User::create([
+                'name' => 'Admin',
+                'email' => 'admin-reports-ytd@example.test',
+                'password' => 'secret',
+                'role' => 'admin',
+            ]);
+
+            $agent = Agent::create([
+                'name' => 'Reports Agent',
+                'credit_limit' => 10000,
+                'withholding_rate' => 0,
+                'is_active' => true,
+            ]);
+
+            $order = Order::create([
+                'agent_id' => $agent->id,
+                'order_type' => 'regular',
+                'status' => 'delivered',
+                'total' => 0,
+            ]);
+
+            $invoice = Invoice::create([
+                'order_id' => $order->id,
+                'number' => 'INV-REPORTS-YTD-001',
+                'issued_at' => '2026-03-10',
+                'net_total' => 100,
+                'vat_amount' => 15,
+                'withholding' => 0,
+                'status' => 'issued',
+            ]);
+
+            CreditNote::create([
+                'invoice_id' => $invoice->id,
+                'order_id' => $order->id,
+                'number' => 'CN-REPORTS-YTD-001',
+                'issued_at' => '2026-04-02',
+                'amount' => 57.5,
+            ]);
+
+            Receipt::create([
+                'invoice_id' => $invoice->id,
+                'amount' => 20,
+                'received_at' => '2026-04-04',
+            ]);
+
+            Receipt::create([
+                'invoice_id' => $invoice->id,
+                'amount' => 40,
+                'received_at' => '2026-05-05',
+            ]);
+
+            $advance = AgentAdvance::create([
+                'agent_id' => $agent->id,
+                'amount' => 15,
+                'applied_amount' => 15,
+                'advanced_at' => '2026-04-05',
+                'status' => 'applied',
+            ]);
+
+            DB::table('agent_advance_applications')->insert([
+                [
+                    'agent_advance_id' => $advance->id,
+                    'invoice_id' => $invoice->id,
+                    'amount' => 10,
+                    'applied_at' => '2026-04-05',
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ],
+                [
+                    'agent_advance_id' => $advance->id,
+                    'invoice_id' => $invoice->id,
+                    'amount' => 5,
+                    'applied_at' => '2026-05-06',
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ],
+            ]);
+
+            Invoice::create([
+                'number' => 'INV-REPORTS-YTD-FUTURE',
+                'issued_at' => '2026-05-01',
+                'net_total' => 300,
+                'vat_amount' => 45,
+                'withholding' => 0,
+                'status' => 'issued',
+            ]);
+
+            Expense::create([
+                'date' => '2026-03-15',
+                'category' => 'General',
+                'amount' => 30,
+                'status' => Expense::STATUS_RECORDED,
+            ]);
+
+            Expense::create([
+                'date' => '2026-05-15',
+                'category' => 'General',
+                'amount' => 90,
+                'status' => Expense::STATUS_RECORDED,
+            ]);
+
+            DB::table('production_runs')->insert([
+                [
+                    'quantity' => 12,
+                    'qc_status' => 'approved',
+                    'created_at' => '2026-04-01 10:00:00',
+                    'updated_at' => '2026-04-01 10:00:00',
+                ],
+                [
+                    'quantity' => 30,
+                    'qc_status' => 'approved',
+                    'created_at' => '2026-05-01 10:00:00',
+                    'updated_at' => '2026-05-01 10:00:00',
+                ],
+            ]);
+
+            $response = $this->actingAs($admin)->get(route('admin.reports.dashboard'));
+
+            $response->assertOk();
+            $response->assertViewHas('grossRevenue', 50.0);
+            $response->assertViewHas('totalCollections', 20.0);
+            $response->assertViewHas('outstanding', 27.5);
+            $response->assertViewHas('totalExpenses', 30.0);
+            $response->assertViewHas('netProfitEstimate', 20.0);
+            $response->assertViewHas('productionQty', 12.0);
+        } finally {
+            Carbon::setTestNow();
+        }
     }
 
     public function test_system_alerts_include_users_with_secondary_admin_roles(): void
@@ -3663,6 +4333,106 @@ class SystemCalculationTest extends TestCase
         $response->assertViewHas('outstandingReceivables', 70.0);
     }
 
+    public function test_admin_dashboard_current_month_metrics_exclude_future_records(): void
+    {
+        Carbon::setTestNow('2026-04-06 12:00:00');
+
+        try {
+            $admin = User::create([
+                'name' => 'Admin',
+                'email' => 'admin-dashboard-current-month@example.test',
+                'password' => 'secret',
+                'role' => 'admin',
+            ]);
+
+            $agent = Agent::create([
+                'name' => 'Dashboard Current Month Agent',
+                'credit_limit' => 10000,
+                'withholding_rate' => 0,
+                'is_active' => true,
+            ]);
+
+            $advance = AgentAdvance::create([
+                'agent_id' => $agent->id,
+                'amount' => 15,
+                'applied_amount' => 15,
+                'advanced_at' => '2026-04-05',
+                'status' => 'applied',
+            ]);
+
+            $invoice = Invoice::create([
+                'number' => 'INV-ADMIN-DASH-001',
+                'issued_at' => '2026-04-03',
+                'net_total' => 100,
+                'vat_amount' => 15,
+                'withholding' => 0,
+                'status' => 'issued',
+            ]);
+
+            CreditNote::create([
+                'invoice_id' => $invoice->id,
+                'number' => 'CN-ADMIN-DASH-001',
+                'issued_at' => '2026-04-05',
+                'amount' => 57.5,
+            ]);
+
+            Receipt::create([
+                'invoice_id' => $invoice->id,
+                'amount' => 20,
+                'received_at' => '2026-04-04',
+            ]);
+
+            Receipt::create([
+                'invoice_id' => $invoice->id,
+                'amount' => 40,
+                'received_at' => '2026-04-20',
+            ]);
+
+            DB::table('agent_advance_applications')->insert([
+                [
+                    'agent_advance_id' => $advance->id,
+                    'invoice_id' => $invoice->id,
+                    'amount' => 10,
+                    'applied_at' => '2026-04-05',
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ],
+                [
+                    'agent_advance_id' => $advance->id,
+                    'invoice_id' => $invoice->id,
+                    'amount' => 5,
+                    'applied_at' => '2026-04-22',
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ],
+            ]);
+
+            Invoice::create([
+                'number' => 'INV-ADMIN-DASH-FUTURE',
+                'issued_at' => '2026-04-20',
+                'net_total' => 200,
+                'vat_amount' => 30,
+                'withholding' => 0,
+                'status' => 'issued',
+            ]);
+
+            $response = $this->actingAs($admin)->get(route('admin.dashboard', [
+                'sales_range' => 3,
+            ]));
+
+            $response->assertOk();
+            $response->assertViewHas('monthlyAchieved', 50.0);
+            $response->assertViewHas('outstandingReceivables', 27.5);
+            $response->assertViewHas('monthlyRevenue', function (array $monthlyRevenue) {
+                $values = array_map('floatval', $monthlyRevenue);
+
+                return $values === [0.0, 0.0, 50.0];
+            });
+        } finally {
+            Carbon::setTestNow();
+        }
+    }
+
     public function test_agent_performance_outstanding_subtracts_advances(): void
     {
         $agent = Agent::create([
@@ -3722,6 +4492,107 @@ class SystemCalculationTest extends TestCase
         $row = $view->getData()['rows']->first();
 
         $this->assertEquals(65.0, (float) $row['outstanding']);
+    }
+
+    public function test_agent_performance_defaults_to_month_to_date_and_excludes_future_advances(): void
+    {
+        Carbon::setTestNow('2026-04-06 12:00:00');
+
+        try {
+            $agent = Agent::create([
+                'name' => 'Agent Performance Current Month',
+                'credit_limit' => 10000,
+                'withholding_rate' => 0,
+                'is_active' => true,
+            ]);
+
+            $currentOrder = Order::create([
+                'agent_id' => $agent->id,
+                'order_type' => 'regular',
+                'status' => 'delivered',
+                'total' => 0,
+            ]);
+
+            $currentInvoice = Invoice::create([
+                'order_id' => $currentOrder->id,
+                'number' => 'INV-AGENT-PERF-CURRENT',
+                'issued_at' => '2026-04-03',
+                'net_total' => 100,
+                'vat_amount' => 15,
+                'withholding' => 0,
+                'status' => 'issued',
+            ]);
+
+            $futureOrder = Order::create([
+                'agent_id' => $agent->id,
+                'order_type' => 'regular',
+                'status' => 'delivered',
+                'total' => 0,
+            ]);
+
+            Invoice::create([
+                'order_id' => $futureOrder->id,
+                'number' => 'INV-AGENT-PERF-FUTURE',
+                'issued_at' => '2026-04-20',
+                'net_total' => 200,
+                'vat_amount' => 30,
+                'withholding' => 0,
+                'status' => 'issued',
+            ]);
+
+            Receipt::create([
+                'invoice_id' => $currentInvoice->id,
+                'amount' => 20,
+                'received_at' => '2026-04-04',
+            ]);
+
+            Receipt::create([
+                'invoice_id' => $currentInvoice->id,
+                'amount' => 40,
+                'received_at' => '2026-04-20',
+            ]);
+
+            $advance = AgentAdvance::create([
+                'agent_id' => $agent->id,
+                'amount' => 35,
+                'applied_amount' => 35,
+                'advanced_at' => '2026-04-05',
+                'status' => 'applied',
+            ]);
+
+            DB::table('agent_advance_applications')->insert([
+                [
+                    'agent_advance_id' => $advance->id,
+                    'invoice_id' => $currentInvoice->id,
+                    'amount' => 30,
+                    'applied_at' => '2026-04-05',
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ],
+                [
+                    'agent_advance_id' => $advance->id,
+                    'invoice_id' => $currentInvoice->id,
+                    'amount' => 5,
+                    'applied_at' => '2026-04-22',
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ],
+            ]);
+
+            $view = app(ReportController::class)->agentPerformance(
+                Request::create('/admin/reports/agents', 'GET')
+            );
+
+            $row = $view->getData()['rows']->first();
+
+            $this->assertEquals(1, (int) $row['invoice_count']);
+            $this->assertEquals(115.0, (float) $row['invoiced']);
+            $this->assertEquals(20.0, (float) $row['receipts']);
+            $this->assertEquals(30.0, (float) $row['advances']);
+            $this->assertEquals(65.0, (float) $row['outstanding']);
+        } finally {
+            Carbon::setTestNow();
+        }
     }
 
     public function test_production_summary_sales_exclude_vat_and_credit_notes(): void

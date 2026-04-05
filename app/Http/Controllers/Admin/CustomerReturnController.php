@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\DeliveryItem;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
@@ -74,18 +75,12 @@ class CustomerReturnController extends Controller
 
         $deliveredQuantity = (float) $orderItem->quantity;
         if ($order->relationLoaded('delivery') || $order->delivery) {
-            $deliveryItem = optional($order->delivery)->items()
-                ->where('order_item_id', $orderItem->id)
-                ->first();
+            $order->loadMissing('delivery.items');
+            $deliveryItem = DeliveryItem::summarizeForOrderItems($order->delivery?->items ?? collect())
+                ->get($orderItem->id);
 
             if ($deliveryItem) {
-                $deliveredQuantity = (float) $deliveryItem->qty_delivered;
-                if ($deliveredQuantity <= 0 && ((float) $deliveryItem->qty_dispatched > 0 || (float) $deliveryItem->qty_short > 0 || (float) $deliveryItem->qty_damaged > 0)) {
-                    $deliveredQuantity = max(
-                        (float) $deliveryItem->qty_dispatched - (float) $deliveryItem->qty_short - (float) $deliveryItem->qty_damaged,
-                        0
-                    );
-                }
+                $deliveredQuantity = (float) $deliveryItem['realized_quantity'];
             }
         }
 

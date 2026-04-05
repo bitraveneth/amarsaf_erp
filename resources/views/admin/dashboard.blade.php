@@ -1,14 +1,22 @@
 @extends('layouts.app')
 
 @section('content')
-  <div class="grid grid-cols-12 gap-4 md:gap-6">
-    <div class="col-span-12 space-y-6 xl:col-span-7">
+  <div class="grid grid-cols-12 gap-4 md:gap-6" data-dashboard-ajax data-dashboard-url="{{ route('admin.dashboard') }}" data-currency-code="{{ $currencyCode ?? config('app.currency', 'BDT') }}">
+    <div class="col-span-12">
       <x-ecommerce.ecommerce-metrics
           :agent-count="$agentCount ?? 0"
           :total-order-count="$totalOrderCount ?? 0"
           :return-order-count="$returnOrderCount ?? 0"
+          :currency-code="$currencyCode ?? config('app.currency', 'BDT')"
+          :monthly-revenue="$monthlyAchieved ?? 0"
+          :outstanding-receivables="$outstandingReceivables ?? 0"
+          :pending-delivery-count="$pendingDeliveryCount ?? 0"
+          :today-production-qty="$todayProductionQty ?? 0"
+          :low-stock-alert-count="$lowStockAlertCount ?? 0"
       />
+    </div>
 
+    <div class="col-span-12 space-y-6 xl:col-span-7">
       <x-ecommerce.monthly-sale
           :month-labels="$monthLabels ?? []"
           :monthly-orders="$monthlyOrders ?? []"
@@ -47,130 +55,320 @@
             document.addEventListener('DOMContentLoaded', () => {
                 if (!window.ApexCharts) return;
 
-                const labels = @json($chartDays->pluck('label'));
-                const orders = @json($chartDays->pluck('orders'));
-                const production = @json($chartDays->pluck('production'));
-                const revenue = @json($chartDays->pluck('revenue'));
-                const currencyCode = @json($currencyCode ?? config('app.currency', 'BDT'));
+                const dashboardRoot = document.querySelector('[data-dashboard-ajax]');
+                if (!dashboardRoot) return;
 
-                const options = {
-                    chart: {
-                        type: 'area',
-                        height: 220,
-                        toolbar: { show: false },
-                        foreColor: '#667085',
-                        dropShadow: {
-                            enabled: true,
-                            top: 4,
-                            left: 0,
-                            blur: 3,
-                            opacity: 0.1
-                        }
-                    },
-                    stroke: {
-                        curve: 'smooth',
-                        width: 2.5
-                    },
-                    dataLabels: { enabled: false },
-                    grid: {
-                        borderColor: '#E4E7EC',
-                        strokeDashArray: 4,
-                        row: {
-                            opacity: 0.02
-                        }
-                    },
-                    fill: {
-                        type: 'gradient',
-                        gradient: {
-                            shadeIntensity: 0.7,
-                            opacityFrom: 0.25,
-                            opacityTo: 0,
-                            stops: [0, 90, 100]
-                        }
-                    },
-                    markers: {
-                        size: 3,
-                        strokeWidth: 0
-                    },
-                    tooltip: {
-                        shared: true,
-                        theme: document.documentElement.classList.contains('dark') ? 'dark' : 'light',
-                        y: {
-                            formatter: (val, opts) => {
-                                const seriesName = opts.series[opts.seriesIndex]?.name || '';
-                                const currencyPrefix = seriesName.includes('Revenue') ? `${currencyCode} ` : '';
-                                return `${currencyPrefix}${val}`;
-                            }
-                        }
-                    },
-                    xaxis: {
-                        categories: labels,
-                        labels: {
-                            style: { fontSize: '11px' }
+                const currencyCode = dashboardRoot.dataset.currencyCode || @json($currencyCode ?? config('app.currency', 'BDT'));
+                const initialStats = {
+                    labels: @json($chartDays->pluck('label')),
+                    orders: @json($chartDays->pluck('orders')),
+                    production: @json($chartDays->pluck('production')),
+                    revenue: @json($chartDays->pluck('revenue')),
+                };
+
+                const getStatsSeries = (mode, statsPayload) => {
+                    if (mode === 'sales') {
+                        return [{ name: 'Orders', data: statsPayload.orders }];
+                    }
+
+                    if (mode === 'production') {
+                        return [{ name: 'Production Qty', data: statsPayload.production }];
+                    }
+
+                    if (mode === 'revenue') {
+                        return [{ name: `Revenue (${currencyCode})`, data: statsPayload.revenue }];
+                    }
+
+                    return [
+                        { name: 'Orders', data: statsPayload.orders },
+                        { name: 'Production Qty', data: statsPayload.production },
+                        { name: `Revenue (${currencyCode})`, data: statsPayload.revenue },
+                    ];
+                };
+
+                const renderMonthlySalesChart = (labels, orders) => {
+                    const el = document.querySelector('#chartOne');
+                    if (!el) return;
+
+                    if (window.dashboardMonthlySalesChart) {
+                        window.dashboardMonthlySalesChart.destroy();
+                    }
+
+                    const chart = new window.ApexCharts(el, {
+                        chart: {
+                            type: 'bar',
+                            height: 220,
+                            toolbar: { show: false },
+                            foreColor: '#667085',
                         },
-                        axisBorder: { show: false },
-                        axisTicks: { show: false }
-                    },
-                    yaxis: {
-                        labels: {
-                            style: { fontSize: '11px' }
+                        series: [{
+                            name: 'Sales (orders)',
+                            data: orders,
+                        }],
+                        colors: ['#465FFF'],
+                        plotOptions: {
+                            bar: {
+                                horizontal: false,
+                                columnWidth: '39%',
+                                borderRadius: 5,
+                                borderRadiusApplication: 'end',
+                            }
+                        },
+                        dataLabels: { enabled: false },
+                        stroke: {
+                            show: true,
+                            width: 3,
+                            colors: ['transparent']
+                        },
+                        grid: {
+                            borderColor: '#E4E7EC',
+                            strokeDashArray: 4,
+                            yaxis: { lines: { show: true } }
+                        },
+                        xaxis: {
+                            categories: labels,
+                            axisBorder: { show: false },
+                            axisTicks: { show: false },
+                        },
+                        yaxis: {
+                            labels: { style: { fontSize: '11px' } },
+                            title: { text: undefined },
+                        },
+                        tooltip: {
+                            theme: document.documentElement.classList.contains('dark') ? 'dark' : 'light',
+                            y: {
+                                formatter: (val) => val,
+                            }
+                        },
+                        fill: { opacity: 0.95 },
+                        legend: { show: false },
+                    });
+
+                    chart.render();
+                    window.dashboardMonthlySalesChart = chart;
+                };
+
+                const renderMonthlyTargetChart = (progressValue) => {
+                    const el = document.querySelector('#chartTwo');
+                    if (!el) return;
+
+                    if (window.dashboardTargetChart) {
+                        window.dashboardTargetChart.destroy();
+                    }
+
+                    const chart = new window.ApexCharts(el, {
+                        series: [progressValue],
+                        colors: ['#465FFF'],
+                        chart: {
+                            fontFamily: window.erpUiFontStack || 'Outfit, sans-serif',
+                            type: 'radialBar',
+                            height: 290,
+                            sparkline: { enabled: true },
+                        },
+                        plotOptions: {
+                            radialBar: {
+                                startAngle: -90,
+                                endAngle: 90,
+                                hollow: { size: '80%' },
+                                track: {
+                                    background: '#E4E7EC',
+                                    strokeWidth: '100%',
+                                    margin: 5,
+                                },
+                                dataLabels: {
+                                    name: { show: false },
+                                    value: {
+                                        fontSize: '42px',
+                                        fontWeight: '600',
+                                        offsetY: 72,
+                                        color: '#1D2939',
+                                        formatter: (val) => `${Math.round(val)}%`,
+                                    },
+                                },
+                            },
+                        },
+                        fill: {
+                            type: 'solid',
+                            colors: ['#465FFF'],
+                        },
+                        stroke: { lineCap: 'round' },
+                        labels: ['Progress'],
+                    });
+
+                    chart.render();
+                    window.dashboardTargetChart = chart;
+                };
+
+                const renderStatsChart = (statsPayload) => {
+                    const el = document.querySelector('#chartThree');
+                    if (!el) return;
+
+                    if (window.dashboardStatsChart) {
+                        window.dashboardStatsChart.destroy();
+                    }
+
+                    const selectedTab = document.querySelector('[data-stats-tab].dashboard-stats-active')?.getAttribute('data-stats-tab') || 'overview';
+
+                    const chart = new window.ApexCharts(el, {
+                        chart: {
+                            type: 'area',
+                            height: 220,
+                            toolbar: { show: false },
+                            foreColor: '#667085',
+                            dropShadow: {
+                                enabled: true,
+                                top: 4,
+                                left: 0,
+                                blur: 3,
+                                opacity: 0.1
+                            }
+                        },
+                        stroke: {
+                            curve: 'smooth',
+                            width: 2.5
+                        },
+                        dataLabels: { enabled: false },
+                        grid: {
+                            borderColor: '#E4E7EC',
+                            strokeDashArray: 4,
+                            row: {
+                                opacity: 0.02
+                            }
+                        },
+                        fill: {
+                            type: 'gradient',
+                            gradient: {
+                                shadeIntensity: 0.7,
+                                opacityFrom: 0.25,
+                                opacityTo: 0,
+                                stops: [0, 90, 100]
+                            }
+                        },
+                        markers: {
+                            size: 3,
+                            strokeWidth: 0
+                        },
+                        tooltip: {
+                            shared: true,
+                            theme: document.documentElement.classList.contains('dark') ? 'dark' : 'light',
+                            y: {
+                                formatter: (val, opts) => {
+                                    const seriesName = opts.series[opts.seriesIndex]?.name || '';
+                                    const currencyPrefix = seriesName.includes('Revenue') ? `${currencyCode} ` : '';
+                                    return `${currencyPrefix}${val}`;
+                                }
+                            }
+                        },
+                        xaxis: {
+                            categories: statsPayload.labels,
+                            labels: { style: { fontSize: '11px' } },
+                            axisBorder: { show: false },
+                            axisTicks: { show: false }
+                        },
+                        yaxis: {
+                            labels: { style: { fontSize: '11px' } }
+                        },
+                        colors: ['#465FFF', '#12B76A', '#F79009'],
+                        series: getStatsSeries(selectedTab, statsPayload),
+                        legend: {
+                            show: getStatsSeries(selectedTab, statsPayload).length > 1,
+                            position: 'top',
+                            horizontalAlign: 'left',
+                            fontSize: '11px',
+                            markers: { radius: 12 }
                         }
-                    },
-                    colors: ['#465FFF', '#12B76A', '#F79009'],
-                    series: [
-                        { name: 'Orders', data: orders },
-                        { name: 'Production Qty', data: production },
-                        { name: `Revenue (${currencyCode})`, data: revenue }
-                    ],
-                    legend: {
-                        position: 'top',
-                        horizontalAlign: 'left',
-                        fontSize: '11px',
-                        markers: { radius: 12 }
+                    });
+
+                    chart.render();
+                    window.dashboardStatsChart = chart;
+                };
+
+                const setActiveStatsTab = (mode) => {
+                    const tabs = document.querySelectorAll('[data-stats-tab]');
+                    tabs.forEach((btn) => {
+                        const isActive = (btn.getAttribute('data-stats-tab') || 'overview') === mode;
+                        btn.classList.toggle('dashboard-stats-active', isActive);
+                    });
+                };
+
+                const syncDashboardWidgets = (payload) => {
+                    const monthlyTargetCard = document.querySelector('#dashboard-monthly-target-card');
+                    if (monthlyTargetCard && payload.monthlyTarget) {
+                        monthlyTargetCard.querySelector('[data-target-amount]')?.replaceChildren(document.createTextNode(`${currencyCode} ${Number(payload.monthlyTarget.targetValue).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`));
+                        monthlyTargetCard.querySelector('[data-target-basis]')?.replaceChildren(document.createTextNode(payload.monthlyTarget.targetBasis));
+                        renderMonthlyTargetChart(Number(payload.monthlyTarget.progressValue || 0));
+                    }
+
+                    if (payload.monthlySale) {
+                        renderMonthlySalesChart(payload.monthlySale.labels || [], payload.monthlySale.orders || []);
                     }
                 };
 
-                const el = document.querySelector('#chartThree');
-                if (!el) return;
+                const fetchDashboardData = async (section) => {
+                    const salesRangeSelect = document.querySelector('[data-dashboard-sales-range]');
+                    const targetMonthSelect = document.querySelector('[data-dashboard-target-month]');
+                    if (!salesRangeSelect || !targetMonthSelect) return;
 
-                const chart = new window.ApexCharts(el, options);
-                chart.render();
+                    const params = new URLSearchParams({
+                        ajax: '1',
+                        sales_range: salesRangeSelect.value,
+                        target_month: targetMonthSelect.value,
+                    });
 
-                // Expose for debugging if needed
-                window.dashboardStatsChart = chart;
+                    if (section) {
+                        params.set('section', section);
+                    }
 
-                // Wire up Overview / Sales / Revenue tabs
+                    const url = `${dashboardRoot.dataset.dashboardUrl}?${params.toString()}`;
+                    const response = await fetch(url, {
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Accept': 'application/json',
+                        },
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Dashboard request failed');
+                    }
+
+                    const payload = await response.json();
+                    syncDashboardWidgets(payload);
+
+                    const nextUrl = new URL(window.location.href);
+                    nextUrl.searchParams.set('sales_range', salesRangeSelect.value);
+                    nextUrl.searchParams.set('target_month', targetMonthSelect.value);
+                    window.history.replaceState({}, '', nextUrl.toString());
+                };
+
+                renderMonthlySalesChart(@json($monthLabels), @json($monthlyOrders));
+                renderMonthlyTargetChart(@json($monthlyTargetProgress ?? 0));
+                renderStatsChart(initialStats);
+                setActiveStatsTab('overview');
+
+                const salesRangeSelect = document.querySelector('[data-dashboard-sales-range]');
+                const targetMonthSelect = document.querySelector('[data-dashboard-target-month]');
+
+                salesRangeSelect?.addEventListener('change', () => {
+                    fetchDashboardData('sales').catch(() => {
+                        window.location.href = `${dashboardRoot.dataset.dashboardUrl}?sales_range=${encodeURIComponent(salesRangeSelect.value)}&target_month=${encodeURIComponent(targetMonthSelect?.value || '')}`;
+                    });
+                });
+
+                targetMonthSelect?.addEventListener('change', () => {
+                    fetchDashboardData('target').catch(() => {
+                        window.location.href = `${dashboardRoot.dataset.dashboardUrl}?sales_range=${encodeURIComponent(salesRangeSelect?.value || 12)}&target_month=${encodeURIComponent(targetMonthSelect.value)}`;
+                    });
+                });
+
                 const tabs = document.querySelectorAll('[data-stats-tab]');
                 tabs.forEach((btn) => {
                     btn.addEventListener('click', () => {
                         const mode = btn.getAttribute('data-stats-tab') || 'overview';
-
-                        let series;
-                        if (mode === 'sales') {
-                            series = [
-                                { name: 'Orders', data: orders },
-                            ];
-                        } else if (mode === 'production') {
-                            series = [
-                                { name: 'Production Qty', data: production },
-                            ];
-                        } else if (mode === 'revenue') {
-                            series = [
-                                { name: `Revenue (${currencyCode})`, data: revenue },
-                            ];
-                        } else {
-                            // overview
-                            series = [
-                                { name: 'Orders', data: orders },
-                                { name: 'Production Qty', data: production },
-                                { name: `Revenue (${currencyCode})`, data: revenue },
-                            ];
-                        }
-
-                        chart.updateOptions({
-                            series,
+                        setActiveStatsTab(mode);
+                        window.dashboardStatsChart?.updateOptions({
+                            series: getStatsSeries(mode, initialStats),
                             legend: {
-                                show: series.length > 1,
+                                show: getStatsSeries(mode, initialStats).length > 1,
                                 position: 'top',
                                 horizontalAlign: 'left',
                                 fontSize: '11px',

@@ -301,6 +301,7 @@ class MenuHelper
                         'subItems' => [
                             ['name' => 'Sales dashboard', 'path' => '/admin/sales-dashboard', 'permission' => 'sales.manage'],
                             ['name' => 'Sales orders', 'path' => '/admin/orders', 'permission' => 'sales.manage'],
+                            ['name' => 'Sales targets', 'path' => '/admin/sales-targets', 'permission' => 'sales.manage'],
                             ['name' => 'Returns', 'path' => '/admin/returns/customer', 'permission' => 'sales.manage'],
                             ['name' => 'Customer gifts', 'path' => '/admin/gifts', 'permission' => 'sales.manage'],
                             ['name' => 'Marketing campaigns', 'path' => '/admin/campaigns', 'permission' => 'sales.manage'],

@@ -74,7 +74,9 @@ class CommissionReportController extends Controller
                 $query->whereHas('orders', function ($orderQuery) use ($from, $to) {
                     $orderQuery->where('status', 'delivered')
                         ->whereHas('invoice', function ($invoiceQuery) use ($from, $to) {
-                            $invoiceQuery->whereBetween('issued_at', [$from->toDateString(), $to->toDateString()]);
+                            $invoiceQuery
+                                ->whereDate('issued_at', '>=', $from->toDateString())
+                                ->whereDate('issued_at', '<=', $to->toDateString());
                         });
                 })->orWhereHas('commissions', function ($commissionQuery) {
                     $commissionQuery->where('frequency', 'monthly');

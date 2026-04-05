@@ -5,6 +5,7 @@
 ])
 
 <div
+    id="dashboard-monthly-sales-card"
     class="overflow-hidden rounded-2xl border border-gray-200 bg-white px-5 pt-5 dark:border-gray-800 dark:bg-white/[0.03] sm:px-6 sm:pt-6">
     <div class="flex items-center justify-between">
         <div>
@@ -15,12 +16,12 @@
                 Current month: {{ now()->format('F Y') }}
             </p>
         </div>
-        <form method="GET" action="{{ route('admin.dashboard') }}">
+        <form method="GET" action="{{ route('admin.dashboard') }}" data-dashboard-sales-form>
             <label for="monthly-sales-range" class="sr-only">Filter monthly sales range</label>
             <select
                 id="monthly-sales-range"
                 name="sales_range"
-                onchange="this.form.submit()"
+                data-dashboard-sales-range
                 class="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-600 shadow-theme-xs focus:border-brand-300 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
             >
                 <option value="3" @selected((int) $salesRangeMonths === 3)>Last 3 months</option>

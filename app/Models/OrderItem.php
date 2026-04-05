@@ -44,24 +44,12 @@ class OrderItem extends Model
     public function realizedQuantity(): float
     {
         $quantity = (float) $this->quantity;
-        $deliveryItem = $this->order?->delivery?->items?->firstWhere('order_item_id', $this->id);
+        $deliveryItem = DeliveryItem::summarizeForOrderItems(
+            $this->relationLoaded('deliveryItems') ? $this->deliveryItems : $this->deliveryItems()->get()
+        )->get($this->id);
 
         if ($deliveryItem) {
-            $quantity = (float) $deliveryItem->qty_delivered;
-
-            if (
-                $quantity <= 0
-                && ((float) $deliveryItem->qty_dispatched > 0
-                    || (float) $deliveryItem->qty_short > 0
-                    || (float) $deliveryItem->qty_damaged > 0)
-            ) {
-                $quantity = max(
-                    (float) $deliveryItem->qty_dispatched
-                        - (float) $deliveryItem->qty_short
-                        - (float) $deliveryItem->qty_damaged,
-                    0
-                );
-            }
+            $quantity = (float) $deliveryItem['realized_quantity'];
         }
 
         return max($quantity, 0);
