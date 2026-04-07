@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Batch;
 use App\Models\Product;
+use App\Models\StockMovement;
 use App\Models\User;
 use App\Notifications\NewBatchCreated;
 use Illuminate\Http\Request;
@@ -78,6 +79,44 @@ class BatchController extends Controller
             ->where('type', 'customer-return')
             ->sum('quantity');
 
+        $productBatchIds = Batch::where('product_id', $batch->product_id)
+            ->pluck('id')
+            ->values();
+
+        $legacyCustomerReturnQty = StockMovement::with(['stockEntry', 'order.deliveries.items'])
+            ->where('type', 'customer-return')
+            ->whereHas('stockEntry', function ($query) use ($batch, $warehouseIds) {
+                $query->where('product_id', $batch->product_id)
+                    ->whereNull('batch_id')
+                    ->when($warehouseIds !== null, function ($stockQuery) use ($warehouseIds) {
+                        $stockQuery->whereIn('warehouse_id', $warehouseIds);
+                    });
+            })
+            ->get()
+            ->filter(function (StockMovement $movement) use ($batch, $productBatchIds) {
+                $deliveryBatchIds = collect($movement->order?->deliveries ?? [])
+                    ->flatMap(function ($delivery) use ($batch) {
+                        return $delivery->items->where('product_id', $batch->product_id);
+                    })
+                    ->pluck('batch_id')
+                    ->filter()
+                    ->unique()
+                    ->values();
+
+                if ($deliveryBatchIds->count() === 1) {
+                    return (int) $deliveryBatchIds->first() === (int) $batch->id;
+                }
+
+                if ($deliveryBatchIds->isEmpty() && $productBatchIds->count() === 1) {
+                    return (int) $productBatchIds->first() === (int) $batch->id;
+                }
+
+                return false;
+            })
+            ->sum('quantity');
+
+        $customerReturnQty += $legacyCustomerReturnQty;
+
         return view('admin.batches.show', [
             'batch'             => $batch,
             'producedQty'       => $producedQty,
@@ -132,12 +171,12 @@ class BatchController extends Controller
 
         if ($batch->productionRuns()->exists()) {
             return redirect()->route('admin.batches.index')
-                ->with('status', 'Batch is linked to production runs and cannot be deleted.');
+                ->with('error', 'Batch is linked to production runs and cannot be deleted.');
         }
 
         if ($batch->stockEntries()->exists()) {
             return redirect()->route('admin.batches.index')
-                ->with('status', 'Batch has stock entries and cannot be deleted.');
+                ->with('error', 'Batch has stock entries and cannot be deleted.');
         }
 
         $batch->delete();

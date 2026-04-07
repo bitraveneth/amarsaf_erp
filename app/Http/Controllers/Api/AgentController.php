@@ -10,6 +10,7 @@ use App\Models\OrderItem;
 use App\Models\OrderStatusHistory;
 use App\Models\Product;
 use App\Models\StockEntry;
+use App\Models\StockMovement;
 use App\Models\Delivery;
 use App\Models\Invoice;
 use App\Models\Receipt;
@@ -206,7 +207,15 @@ class AgentController extends Controller
                     }
                     $entry->save();
 
-                    StockEntry::create([
+                    StockMovement::recordFor(
+                        $entry,
+                        'reservation-out',
+                        $reserved * -1,
+                        'Reserved for order #' . $order->id,
+                        $order->id
+                    );
+
+                    $reservedEntry = StockEntry::create([
                         'order_id' => $order->id,
                         'warehouse_id' => $entry->warehouse_id,
                         'warehouse_location_id' => $entry->warehouse_location_id,
@@ -215,13 +224,21 @@ class AgentController extends Controller
                         'quantity' => $reserved,
                         'status' => 'reserved',
                     ]);
+
+                    StockMovement::recordFor(
+                        $reservedEntry,
+                        'reservation-in',
+                        $reserved,
+                        'Reserved for order #' . $order->id,
+                        $order->id
+                    );
                     $toReserve -= $reserved;
                 }
             }
 
             $order->update([
                 'total' => $total,
-                'commission_total' => $commissionTotal > 0 ? $commissionTotal : null,
+                'commission_total' => $commissionTotal,
             ]);
 
             return $order;

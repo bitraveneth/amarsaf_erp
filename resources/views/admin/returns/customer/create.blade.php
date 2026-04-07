@@ -176,6 +176,35 @@
                         @enderror
                     </div>
 
+                    <div class="space-y-2">
+                        <label for="batch_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Batch
+                        </label>
+                        <div class="relative group">
+                            <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                                <svg class="h-5 w-5 text-gray-400 group-focus-within:text-brand-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10" />
+                                </svg>
+                            </div>
+                            <select id="batch_id"
+                                    name="batch_id"
+                                    class="w-full rounded-xl border border-gray-200 bg-white/50 pl-10 pr-10 py-3.5 text-sm text-gray-900 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800/50 dark:text-white appearance-none transition-all">
+                                <option value="">Auto-detect batch</option>
+                            </select>
+                            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
+                                <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                </svg>
+                            </div>
+                        </div>
+                        <div id="batch-hint" class="text-xs text-gray-500 dark:text-gray-400">
+                            If the delivery used a single batch it will be selected automatically.
+                        </div>
+                        @error('batch_id')
+                            <p class="text-sm text-error-600 dark:text-error-500">{{ $message }}</p>
+                        @enderror
+                    </div>
+
                     <!-- Quantity -->
                     <div class="space-y-2">
                         <label for="quantity" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -268,11 +297,52 @@ document.addEventListener('DOMContentLoaded', function() {
     const orderSelect = document.getElementById('order_id');
     const productSelect = document.getElementById('product_id');
     const warehouseSelect = document.getElementById('warehouse_id');
+    const batchSelect = document.getElementById('batch_id');
+    const batchHint = document.getElementById('batch-hint');
     const quantityInput = document.getElementById('quantity');
     const notesInput = document.getElementById('notes');
     const selectedOrderInfo = document.getElementById('selected-order-info');
     const returnSummary = document.getElementById('return-summary');
     const summaryContent = document.getElementById('summary-content');
+    const returnableBatches = @json($returnableBatches ?? []);
+    const oldBatchId = @json(old('batch_id'));
+
+    function updateBatchOptions() {
+        const orderId = orderSelect.value;
+        const productId = productSelect.value;
+        const batchRows = returnableBatches?.[orderId]?.[productId] || [];
+
+        batchSelect.innerHTML = '<option value="">Auto-detect batch</option>';
+
+        batchRows.forEach(function(batch) {
+            const option = document.createElement('option');
+            option.value = batch.batch_id ?? '';
+            option.textContent = batch.batch_id
+                ? `${batch.label} (${Number(batch.quantity).toFixed(2)})`
+                : `${batch.label} (${Number(batch.quantity).toFixed(2)})`;
+            batchSelect.appendChild(option);
+        });
+
+        if (oldBatchId && batchRows.some(batch => String(batch.batch_id) === String(oldBatchId))) {
+            batchSelect.value = String(oldBatchId);
+        } else if (batchRows.length === 1 && batchRows[0].batch_id) {
+            batchSelect.value = String(batchRows[0].batch_id);
+        } else {
+            batchSelect.value = '';
+        }
+
+        if (!orderId || !productId) {
+            batchHint.textContent = 'Choose an order and product to see delivered batches.';
+        } else if (batchRows.length === 0) {
+            batchHint.textContent = 'No delivered batch was recorded for this order line. The return will be stored without a batch.';
+        } else if (batchRows.length === 1 && batchRows[0].batch_id) {
+            batchHint.textContent = 'One delivered batch found. It will be used automatically unless you change it.';
+        } else if (batchRows.length > 1) {
+            batchHint.textContent = 'Multiple delivered batches found. Select the batch being returned.';
+        } else {
+            batchHint.textContent = 'This order line was delivered without a recorded batch.';
+        }
+    }
 
     function updateOrderInfo() {
         const selectedOption = orderSelect.options[orderSelect.selectedIndex];
@@ -294,6 +364,7 @@ document.addEventListener('DOMContentLoaded', function() {
         } else {
             selectedOrderInfo.classList.add('hidden');
         }
+        updateBatchOptions();
         updateSummary();
     }
 
@@ -301,6 +372,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const orderOption = orderSelect.options[orderSelect.selectedIndex];
         const productOption = productSelect.options[productSelect.selectedIndex];
         const warehouseOption = warehouseSelect.options[warehouseSelect.selectedIndex];
+        const batchOption = batchSelect.options[batchSelect.selectedIndex];
         const quantity = parseFloat(quantityInput.value) || 0;
         
         if (orderOption && orderOption.value && 
@@ -330,6 +402,12 @@ document.addEventListener('DOMContentLoaded', function() {
                         <span class="text-gray-500 dark:text-gray-400">Return to Warehouse:</span>
                         <span class="font-medium text-gray-900 dark:text-white">${warehouseName}</span>
                     </div>
+                    ${batchOption && batchOption.value ? `
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-500 dark:text-gray-400">Batch:</span>
+                        <span class="font-medium text-gray-900 dark:text-white">${batchOption.text}</span>
+                    </div>
+                    ` : ''}
                     <div class="flex items-center justify-between">
                         <span class="text-gray-500 dark:text-gray-400">Quantity:</span>
                         <span class="font-bold text-brand-600 dark:text-brand-400">${quantity.toFixed(2)} ${uom}</span>
@@ -349,14 +427,20 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Event listeners
     orderSelect.addEventListener('change', updateOrderInfo);
-    productSelect.addEventListener('change', updateSummary);
+    productSelect.addEventListener('change', function() {
+        updateBatchOptions();
+        updateSummary();
+    });
     warehouseSelect.addEventListener('change', updateSummary);
+    batchSelect.addEventListener('change', updateSummary);
     quantityInput.addEventListener('input', updateSummary);
     notesInput.addEventListener('input', updateSummary);
     
     // Initial update if values are pre-selected
     if (orderSelect.value) {
         updateOrderInfo();
+    } else {
+        updateBatchOptions();
     }
 });
 </script>

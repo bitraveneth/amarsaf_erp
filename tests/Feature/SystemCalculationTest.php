@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\CommissionSettlementController;
 use App\Http\Controllers\Admin\DeliveryController;
 use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\Admin\PurchaseBillController;
+use App\Http\Controllers\Admin\ProductionController;
 use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\SalesTargetController;
 use App\Models\Agent;
@@ -23,12 +24,17 @@ use App\Models\DeliveryItem;
 use App\Models\Employee;
 use App\Models\Expense;
 use App\Models\Invoice;
+use App\Models\InvoiceItem;
+use App\Models\LedgerEntry;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Permission;
 use App\Models\Product;
+use App\Models\ProductionRun;
+use App\Models\PurchaseBill;
 use App\Models\Receipt;
 use App\Models\SalesTarget;
+use App\Models\SalaryDistribution;
 use App\Models\StockEntry;
 use App\Models\Supplier;
 use App\Notifications\SystemAlertNotification;
@@ -1130,7 +1136,7 @@ class SystemCalculationTest extends TestCase
         $sampleOrder = Order::latest('id')->firstOrFail();
         $this->assertEquals('sample', $sampleOrder->order_type);
         $this->assertEquals(0.0, (float) $sampleOrder->total);
-        $this->assertNull($sampleOrder->commission_total);
+        $this->assertEquals(0.0, (float) $sampleOrder->commission_total);
         $this->assertEquals(2.0, (float) StockEntry::where('order_id', $sampleOrder->id)->sum('quantity'));
         $sampleOrder->update(['status' => 'delivered']);
         $this->assertNull(app(FinanceController::class)->ensureInvoiceForOrder($sampleOrder->fresh()));
@@ -1287,6 +1293,70 @@ class SystemCalculationTest extends TestCase
             'account' => 'Accounts Payable',
             'credit' => 1150,
         ]);
+    }
+
+    public function test_purchase_bill_persists_warehouse_reference_on_create_and_update(): void
+    {
+        $admin = User::create([
+            'name' => 'Admin',
+            'email' => 'admin-bill-warehouse@example.test',
+            'password' => 'secret',
+            'role' => 'admin',
+        ]);
+
+        $supplier = Supplier::create([
+            'name' => 'Warehouse Supplier',
+        ]);
+
+        $warehouseOne = DB::table('warehouses')->insertGetId([
+            'name' => 'Bill Warehouse 1',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $warehouseTwo = DB::table('warehouses')->insertGetId([
+            'name' => 'Bill Warehouse 2',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $response = $this->actingAs($admin)
+            ->post(route('admin.bills.store'), [
+                'supplier_id' => $supplier->id,
+                'bill_date' => now()->toDateString(),
+                'warehouse_id' => $warehouseOne,
+                'items' => [
+                    [
+                        'description' => 'Warehouse-bound item',
+                        'quantity' => 2,
+                        'unit_price' => 50,
+                        'vat_rate' => 0,
+                    ],
+                ],
+            ]);
+
+        $response->assertSessionHasNoErrors();
+
+        $bill = PurchaseBill::firstOrFail();
+        $this->assertSame($warehouseOne, (int) $bill->warehouse_id);
+
+        $updateResponse = $this->actingAs($admin)
+            ->put(route('admin.bills.update', $bill), [
+                'supplier_id' => $supplier->id,
+                'bill_date' => now()->toDateString(),
+                'warehouse_id' => $warehouseTwo,
+                'items' => [
+                    [
+                        'description' => 'Warehouse-bound item updated',
+                        'quantity' => 2,
+                        'unit_price' => 60,
+                        'vat_rate' => 0,
+                    ],
+                ],
+            ]);
+
+        $updateResponse->assertSessionHasNoErrors();
+        $this->assertSame($warehouseTwo, (int) $bill->fresh()->warehouse_id);
     }
 
     public function test_commission_payout_accounting_posts_accrual_and_payment_entries(): void
@@ -1509,6 +1579,110 @@ class SystemCalculationTest extends TestCase
 
                 return $values === [0.0, 100.0, 0.0];
             });
+        } finally {
+            Carbon::setTestNow();
+        }
+    }
+
+    public function test_reports_dashboard_profit_estimate_includes_cogs_and_commissions(): void
+    {
+        Carbon::setTestNow('2026-04-06 12:00:00');
+
+        try {
+            $admin = User::create([
+                'name' => 'Admin',
+                'email' => 'admin-reports-dashboard@example.test',
+                'password' => 'secret',
+                'role' => 'admin',
+            ]);
+
+            $agent = Agent::create([
+                'name' => 'Agent Dashboard Profit',
+                'credit_limit' => 100000,
+                'withholding_rate' => 0,
+                'is_active' => true,
+            ]);
+
+            $product = Product::create([
+                'sku' => 'SKU-DASH-PROFIT',
+                'name' => 'Dashboard Profit Product',
+                'base_price' => 10,
+                'product_type' => 'finished',
+                'is_active' => true,
+            ]);
+
+            $order = Order::create([
+                'agent_id' => $agent->id,
+                'order_type' => 'regular',
+                'status' => 'delivered',
+                'total' => 0,
+            ]);
+
+            $invoice = Invoice::create([
+                'order_id' => $order->id,
+                'number' => 'INV-DASH-001',
+                'issued_at' => '2026-04-02',
+                'net_total' => 100,
+                'vat_amount' => 15,
+                'withholding' => 0,
+                'status' => 'issued',
+            ]);
+
+            InvoiceItem::create([
+                'invoice_id' => $invoice->id,
+                'product_id' => $product->id,
+                'description' => 'Dashboard Profit Product',
+                'quantity' => 10,
+                'unit_price' => 10,
+                'line_total' => 100,
+            ]);
+
+            ProductionRun::create([
+                'product_id' => $product->id,
+                'warehouse_id' => 1,
+                'quantity' => 10,
+                'material_unit_cost' => 6,
+                'qc_status' => 'approved',
+                'created_at' => '2026-04-01 08:00:00',
+                'updated_at' => '2026-04-01 08:00:00',
+            ]);
+
+            LedgerEntry::create([
+                'account' => 'Commission Expense',
+                'description' => 'Dashboard commission accrual',
+                'debit' => 8,
+                'credit' => 0,
+                'created_at' => '2026-04-03 09:00:00',
+                'updated_at' => '2026-04-03 09:00:00',
+            ]);
+
+            Expense::create([
+                'date' => '2026-04-04',
+                'category' => 'general',
+                'amount' => 7,
+                'status' => Expense::STATUS_RECORDED,
+            ]);
+
+            SalaryDistribution::create([
+                'employee_id' => null,
+                'period_start' => '2026-04-01',
+                'period_end' => '2026-04-30',
+                'base_salary' => 9,
+                'bonus' => 0,
+                'ta_allowances' => 0,
+                'da_allowances' => 0,
+                'commission' => 0,
+            ]);
+
+            $response = $this->actingAs($admin)->get(route('admin.reports.dashboard'));
+
+            $response->assertOk();
+            $response->assertViewHas('grossRevenue', 100.0);
+            $response->assertViewHas('cogsEstimate', 60.0);
+            $response->assertViewHas('commissionsTotal', 8.0);
+            $response->assertViewHas('totalExpenses', 7.0);
+            $response->assertViewHas('totalPayroll', 9.0);
+            $response->assertViewHas('netProfitEstimate', 16.0);
         } finally {
             Carbon::setTestNow();
         }
@@ -2361,7 +2535,7 @@ class SystemCalculationTest extends TestCase
 
         $response = $this->actingAs($admin)->delete(route('admin.warehouse-locations.destroy', $locationId));
 
-        $response->assertSessionHas('status');
+        $response->assertSessionHas('error');
         $this->assertDatabaseHas('warehouse_locations', [
             'id' => $locationId,
         ]);
@@ -2576,6 +2750,404 @@ class SystemCalculationTest extends TestCase
             'status' => 'available',
         ]);
         $this->assertDatabaseCount('stock_movements', 2);
+        $this->assertDatabaseHas('stock_movements', [
+            'stock_entry_id' => $entry->id,
+            'type' => 'transfer-out',
+            'quantity' => -4,
+        ]);
+        $this->assertDatabaseHas('stock_movements', [
+            'type' => 'transfer-in',
+            'quantity' => 4,
+        ]);
+    }
+
+    public function test_goods_receipt_posts_stock_entry_and_goods_receipt_movement(): void
+    {
+        $admin = User::create([
+            'name' => 'Admin',
+            'email' => 'admin-grn@example.test',
+            'password' => 'secret',
+            'role' => 'admin',
+        ]);
+
+        $supplier = Supplier::create([
+            'name' => 'GRN Supplier',
+        ]);
+
+        $warehouseId = DB::table('warehouses')->insertGetId([
+            'name' => 'GRN Warehouse',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $locationId = DB::table('warehouse_locations')->insertGetId([
+            'warehouse_id' => $warehouseId,
+            'code' => 'GRN-01',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $product = Product::create([
+            'sku' => 'SKU-GRN-1',
+            'name' => 'GRN Product',
+            'product_type' => 'raw',
+            'is_active' => true,
+            'base_price' => 10,
+        ]);
+
+        $this->actingAs($admin);
+
+        app(\App\Http\Controllers\Admin\GoodsReceiptController::class)->store(new Request([
+            'supplier_id' => $supplier->id,
+            'warehouse_id' => $warehouseId,
+            'received_at' => now()->toDateTimeString(),
+            'items' => [[
+                'product_id' => $product->id,
+                'warehouse_location_id' => $locationId,
+                'quantity' => 12,
+                'unit_cost' => 5,
+                'qc_status' => 'approved',
+            ]],
+        ]));
+
+        $entry = StockEntry::firstOrFail();
+
+        $this->assertDatabaseHas('stock_entries', [
+            'id' => $entry->id,
+            'warehouse_id' => $warehouseId,
+            'warehouse_location_id' => $locationId,
+            'product_id' => $product->id,
+            'quantity' => 12,
+            'status' => 'available',
+        ]);
+        $this->assertDatabaseHas('stock_movements', [
+            'stock_entry_id' => $entry->id,
+            'type' => 'goods-receipt',
+            'quantity' => 12,
+        ]);
+    }
+
+    public function test_production_confirm_posts_consumption_and_output_movements(): void
+    {
+        $admin = User::create([
+            'name' => 'Admin',
+            'email' => 'admin-production-movements@example.test',
+            'password' => 'secret',
+            'role' => 'admin',
+        ]);
+
+        $warehouseId = DB::table('warehouses')->insertGetId([
+            'name' => 'Production Warehouse',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $finishedProduct = Product::create([
+            'sku' => 'SKU-FG-1',
+            'name' => 'Finished Product',
+            'product_type' => 'finished',
+            'is_active' => true,
+            'base_price' => 20,
+        ]);
+
+        $rawMaterial = Product::create([
+            'sku' => 'SKU-RM-1',
+            'name' => 'Raw Material',
+            'product_type' => 'raw',
+            'is_active' => true,
+            'base_price' => 5,
+        ]);
+
+        $finishedBatchId = DB::table('batches')->insertGetId([
+            'product_id' => $finishedProduct->id,
+            'batch_code' => 'FG-001',
+            'production_date' => now()->toDateString(),
+            'qc_status' => 'approved',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $rawBatchId = DB::table('batches')->insertGetId([
+            'product_id' => $rawMaterial->id,
+            'batch_code' => 'RM-001',
+            'production_date' => now()->subDay()->toDateString(),
+            'qc_status' => 'approved',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        DB::table('bill_of_materials')->insert([
+            'id' => 1,
+            'product_id' => $finishedProduct->id,
+            'name' => 'FG BOM',
+            'is_active' => true,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        DB::table('bom_items')->insert([
+            'bill_of_materials_id' => 1,
+            'component_product_id' => $rawMaterial->id,
+            'quantity' => 2,
+            'unit_cost' => 1,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $rawEntry = StockEntry::create([
+            'warehouse_id' => $warehouseId,
+            'product_id' => $rawMaterial->id,
+            'batch_id' => $rawBatchId,
+            'quantity' => 20,
+            'status' => 'available',
+        ]);
+
+        $run = \App\Models\ProductionRun::create([
+            'order_number' => 'PO-TEST-001',
+            'product_id' => $finishedProduct->id,
+            'batch_id' => $finishedBatchId,
+            'warehouse_id' => $warehouseId,
+            'quantity' => 10,
+            'status' => 'confirmed',
+            'qc_status' => 'approved',
+        ]);
+
+        $this->actingAs($admin);
+
+        app(ProductionController::class)->confirmStock(new Request(), $run->fresh());
+
+        $finishedEntry = StockEntry::where('product_id', $finishedProduct->id)->firstOrFail();
+
+        $this->assertEquals(0.0, (float) $rawEntry->fresh()->quantity);
+        $this->assertEquals('sold', $rawEntry->fresh()->status);
+        $this->assertEquals(10.0, (float) $finishedEntry->quantity);
+        $this->assertDatabaseHas('stock_movements', [
+            'stock_entry_id' => $rawEntry->id,
+            'type' => 'production-consumption',
+            'quantity' => -20,
+        ]);
+        $this->assertDatabaseHas('stock_movements', [
+            'stock_entry_id' => $finishedEntry->id,
+            'type' => 'production-output',
+            'quantity' => 10,
+        ]);
+    }
+
+    public function test_order_reservation_and_delivery_post_stock_movements(): void
+    {
+        $admin = User::create([
+            'name' => 'Admin',
+            'email' => 'admin-order-movements@example.test',
+            'password' => 'secret',
+            'role' => 'admin',
+        ]);
+
+        $agent = Agent::create([
+            'name' => 'Movement Agent',
+            'credit_limit' => 10000,
+            'withholding_rate' => 0,
+            'is_active' => true,
+        ]);
+
+        $warehouseId = DB::table('warehouses')->insertGetId([
+            'name' => 'Sales Warehouse',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $product = Product::create([
+            'sku' => 'SKU-SALES-1',
+            'name' => 'Sales Product',
+            'product_type' => 'finished',
+            'is_active' => true,
+            'base_price' => 10,
+        ]);
+
+        $batchId = DB::table('batches')->insertGetId([
+            'product_id' => $product->id,
+            'batch_code' => 'SALES-BATCH-1',
+            'production_date' => now()->toDateString(),
+            'qc_status' => 'approved',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $availableEntry = StockEntry::create([
+            'warehouse_id' => $warehouseId,
+            'product_id' => $product->id,
+            'batch_id' => $batchId,
+            'quantity' => 10,
+            'status' => 'available',
+        ]);
+
+        $this->actingAs($admin);
+
+        app(OrderController::class)->store(new Request([
+            'agent_id' => $agent->id,
+            'order_type' => 'regular',
+            'items' => [[
+                'product_id' => $product->id,
+                'quantity' => 10,
+                'unit_price' => 10,
+            ]],
+        ]));
+
+        $order = Order::latest('id')->firstOrFail();
+        $orderItem = OrderItem::where('order_id', $order->id)->firstOrFail();
+        $reservedEntry = StockEntry::where('order_id', $order->id)
+            ->where('status', 'reserved')
+            ->firstOrFail();
+
+        $this->assertDatabaseHas('stock_movements', [
+            'stock_entry_id' => $availableEntry->id,
+            'order_id' => $order->id,
+            'type' => 'reservation-out',
+            'quantity' => -10,
+        ]);
+        $this->assertDatabaseHas('stock_movements', [
+            'stock_entry_id' => $reservedEntry->id,
+            'order_id' => $order->id,
+            'type' => 'reservation-in',
+            'quantity' => 10,
+        ]);
+
+        $delivery = Delivery::create([
+            'order_id' => $order->id,
+            'status' => 'scheduled',
+        ]);
+
+        app(DeliveryController::class)->update(new Request([
+            'status' => 'delivered',
+            'items' => [[
+                'order_item_id' => $orderItem->id,
+                'product_id' => $product->id,
+                'batch_id' => $batchId,
+                'qty_dispatched' => 10,
+                'qty_delivered' => 10,
+                'qty_short' => 0,
+                'qty_damaged' => 0,
+            ]],
+        ]), $delivery->fresh());
+
+        $this->assertDatabaseHas('stock_movements', [
+            'stock_entry_id' => $reservedEntry->id,
+            'order_id' => $order->id,
+            'type' => 'delivery',
+            'quantity' => -10,
+        ]);
+        $this->assertEquals(0.0, (float) $reservedEntry->fresh()->quantity);
+        $this->assertEquals('sold', $reservedEntry->fresh()->status);
+    }
+
+    public function test_customer_return_reuses_batched_available_entry_and_logs_movement(): void
+    {
+        $admin = User::create([
+            'name' => 'Admin',
+            'email' => 'admin-return-batch@example.test',
+            'password' => 'secret',
+            'role' => 'admin',
+        ]);
+
+        $agent = Agent::create([
+            'name' => 'Return Agent',
+            'credit_limit' => 10000,
+            'withholding_rate' => 0,
+            'is_active' => true,
+        ]);
+
+        $warehouseId = DB::table('warehouses')->insertGetId([
+            'name' => 'Return Warehouse',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $product = Product::create([
+            'sku' => 'SKU-RET-1',
+            'name' => 'Return Product',
+            'product_type' => 'finished',
+            'is_active' => true,
+            'base_price' => 10,
+        ]);
+
+        $batchId = DB::table('batches')->insertGetId([
+            'product_id' => $product->id,
+            'batch_code' => 'RET-BATCH-1',
+            'production_date' => now()->toDateString(),
+            'qc_status' => 'approved',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $order = Order::create([
+            'agent_id' => $agent->id,
+            'order_type' => 'regular',
+            'status' => 'delivered',
+            'total' => 0,
+        ]);
+
+        $orderItem = OrderItem::create([
+            'order_id' => $order->id,
+            'product_id' => $product->id,
+            'quantity' => 10,
+            'unit_price' => 10,
+            'order_type' => 'regular',
+            'commission_amount' => 0,
+        ]);
+
+        $delivery = Delivery::create([
+            'order_id' => $order->id,
+            'status' => 'delivered',
+        ]);
+
+        DeliveryItem::create([
+            'delivery_id' => $delivery->id,
+            'order_item_id' => $orderItem->id,
+            'product_id' => $product->id,
+            'batch_id' => $batchId,
+            'qty_dispatched' => 10,
+            'qty_delivered' => 10,
+            'qty_short' => 0,
+            'qty_damaged' => 0,
+        ]);
+
+        $availableEntry = StockEntry::create([
+            'warehouse_id' => $warehouseId,
+            'product_id' => $product->id,
+            'batch_id' => $batchId,
+            'quantity' => 85,
+            'status' => 'available',
+        ]);
+
+        StockEntry::create([
+            'warehouse_id' => $warehouseId,
+            'product_id' => $product->id,
+            'batch_id' => $batchId,
+            'quantity' => 10,
+            'status' => 'reserved',
+        ]);
+
+        $this->actingAs($admin);
+
+        app(\App\Http\Controllers\Admin\CustomerReturnController::class)->store(new Request([
+            'order_id' => $order->id,
+            'product_id' => $product->id,
+            'warehouse_id' => $warehouseId,
+            'quantity' => 5,
+            'notes' => 'Damaged / QA test',
+        ]));
+
+        $this->assertEquals(90.0, (float) $availableEntry->fresh()->quantity);
+        $this->assertSame(0, StockEntry::where('warehouse_id', $warehouseId)
+            ->where('product_id', $product->id)
+            ->whereNull('batch_id')
+            ->where('status', 'available')
+            ->count());
+        $this->assertDatabaseHas('stock_movements', [
+            'stock_entry_id' => $availableEntry->id,
+            'order_id' => $order->id,
+            'type' => 'customer-return',
+            'quantity' => 5,
+        ]);
     }
 
     public function test_order_deletion_rejects_unlinked_legacy_reserved_stock(): void
@@ -5512,7 +6084,36 @@ class SystemCalculationTest extends TestCase
 
         Schema::create('goods_receipt_items', function (Blueprint $table) {
             $table->id();
+            $table->unsignedBigInteger('goods_receipt_id')->nullable();
+            $table->unsignedBigInteger('purchase_order_item_id')->nullable();
+            $table->unsignedBigInteger('product_id')->nullable();
+            $table->unsignedBigInteger('batch_id')->nullable();
             $table->unsignedBigInteger('warehouse_location_id')->nullable();
+            $table->decimal('quantity', 12, 2)->default(0);
+            $table->decimal('unit_cost', 12, 2)->nullable();
+            $table->decimal('line_total', 14, 2)->nullable();
+            $table->string('qc_status')->default('pending');
+            $table->text('remarks')->nullable();
+            $table->timestamps();
+        });
+
+        Schema::create('bill_of_materials', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('product_id');
+            $table->string('name')->nullable();
+            $table->boolean('is_active')->default(true);
+            $table->text('notes')->nullable();
+            $table->decimal('material_unit_cost', 14, 4)->nullable();
+            $table->timestamps();
+        });
+
+        Schema::create('bom_items', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('bill_of_materials_id');
+            $table->unsignedBigInteger('component_product_id');
+            $table->decimal('quantity', 12, 4)->default(0);
+            $table->decimal('unit_cost', 12, 4)->nullable();
+            $table->string('unit')->nullable();
             $table->timestamps();
         });
 
@@ -5595,13 +6196,45 @@ class SystemCalculationTest extends TestCase
 
         Schema::create('production_runs', function (Blueprint $table) {
             $table->id();
+            $table->string('order_number')->nullable();
             $table->unsignedBigInteger('product_id')->nullable();
+            $table->unsignedBigInteger('batch_id')->nullable();
             $table->unsignedBigInteger('warehouse_id')->nullable();
+            $table->string('line')->nullable();
+            $table->string('shift')->nullable();
             $table->decimal('quantity', 14, 2)->default(0);
             $table->decimal('material_unit_cost', 14, 2)->nullable();
+            $table->decimal('material_total_cost', 14, 2)->nullable();
             $table->string('status')->nullable();
             $table->string('qc_status')->nullable();
+            $table->unsignedBigInteger('supervisor_id')->nullable();
+            $table->unsignedBigInteger('approved_by')->nullable();
+            $table->timestamp('approved_at')->nullable();
             $table->timestamp('stock_confirmed_at')->nullable();
+            $table->unsignedBigInteger('stock_confirmed_by')->nullable();
+            $table->text('notes')->nullable();
+            $table->text('materials_reserved')->nullable();
+            $table->timestamps();
+        });
+
+        Schema::create('production_material_issues', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('production_run_id');
+            $table->unsignedBigInteger('warehouse_id')->nullable();
+            $table->unsignedBigInteger('issued_by')->nullable();
+            $table->timestamp('issued_at')->nullable();
+            $table->text('notes')->nullable();
+            $table->timestamps();
+        });
+
+        Schema::create('production_material_issue_items', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('production_material_issue_id');
+            $table->unsignedBigInteger('component_product_id');
+            $table->unsignedBigInteger('batch_id')->nullable();
+            $table->decimal('quantity', 12, 4)->default(0);
+            $table->decimal('unit_cost', 12, 4)->nullable();
+            $table->decimal('line_total', 14, 2)->nullable();
             $table->timestamps();
         });
 
@@ -5611,6 +6244,7 @@ class SystemCalculationTest extends TestCase
             $table->string('number')->unique();
             $table->date('bill_date');
             $table->date('due_date')->nullable();
+            $table->unsignedBigInteger('warehouse_id')->nullable();
             $table->decimal('net_total', 14, 2)->default(0);
             $table->decimal('vat_amount', 14, 2)->default(0);
             $table->string('status')->default('open');

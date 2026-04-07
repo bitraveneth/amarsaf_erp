@@ -7,6 +7,8 @@ use App\Models\Campaign;
 use App\Models\CustomerGift;
 use App\Models\Expense;
 use App\Models\Invoice;
+use App\Models\InvoiceItem;
+use App\Models\LedgerEntry;
 use App\Models\ProductionRun;
 use App\Models\SalaryDistribution;
 use App\Models\Agent;
@@ -60,6 +62,10 @@ class ReportsDashboardController extends Controller
         $totalPayroll = $salaryDistributions->sum(function ($d) {
             return $d->base_salary + $d->bonus + $d->ta_allowances + $d->da_allowances + $d->commission;
         });
+        $commissionsTotal = (float) LedgerEntry::where('account', 'Commission Expense')
+            ->whereBetween('created_at', [$startOfYear, $endOfPeriod])
+            ->sum('debit');
+        $cogsEstimate = $this->estimateCogs($startOfYear, $endOfPeriod);
 
         $productionQty = ProductionRun::whereBetween('created_at', [$startOfYear, $endOfPeriod])
             ->where('qc_status', 'approved')
@@ -67,7 +73,7 @@ class ReportsDashboardController extends Controller
 
         $activeAgents = Agent::where('is_active', true)->count();
 
-        $netProfitEstimate = $grossRevenue - ($totalExpenses + $totalPayroll);
+        $netProfitEstimate = $grossRevenue - ($cogsEstimate + $commissionsTotal + $totalExpenses + $totalPayroll);
 
         return view('admin.reports.dashboard', [
             'yearLabel'          => $startOfYear->format('Y'),
@@ -75,11 +81,45 @@ class ReportsDashboardController extends Controller
             'withholdingTotal'   => $withholdingTotal,
             'totalCollections'   => $totalCollections,
             'outstanding'        => $outstanding,
+            'cogsEstimate'       => $cogsEstimate,
+            'commissionsTotal'   => $commissionsTotal,
             'totalExpenses'      => $totalExpenses,
             'totalPayroll'       => $totalPayroll,
             'netProfitEstimate'  => $netProfitEstimate,
             'productionQty'      => $productionQty,
             'activeAgents'       => $activeAgents,
         ]);
+    }
+
+    protected function estimateCogs(Carbon $from, Carbon $to): float
+    {
+        $invoiceItems = InvoiceItem::whereHas('invoice', function ($query) use ($from, $to) {
+            $query
+                ->whereDate('issued_at', '>=', $from->toDateString())
+                ->whereDate('issued_at', '<=', $to->toDateString());
+        })->get();
+
+        $costByProduct = ProductionRun::whereNotNull('material_unit_cost')
+            ->get()
+            ->groupBy('product_id')
+            ->map(fn ($group) => (float) $group->avg('material_unit_cost'));
+
+        $cogs = 0.0;
+
+        foreach ($invoiceItems as $item) {
+            if (! $item->product_id) {
+                continue;
+            }
+
+            $unitCost = $costByProduct->get($item->product_id);
+
+            if ($unitCost === null) {
+                continue;
+            }
+
+            $cogs += $unitCost * (float) $item->quantity;
+        }
+
+        return round($cogs, 2);
     }
 }

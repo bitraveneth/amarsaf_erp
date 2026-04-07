@@ -54,12 +54,12 @@ class WarehouseLocationController extends Controller
 
         if (StockEntry::where('warehouse_location_id', $location->id)->exists()) {
             return redirect()->route('admin.warehouse-locations.index')
-                ->with('status', 'Location is used in stock entries and cannot be deleted. Move or clear stock first.');
+                ->with('error', 'Location is used in stock entries and cannot be deleted. Move or clear stock first.');
         }
 
         if ($location->goodsReceiptItems()->exists()) {
             return redirect()->route('admin.warehouse-locations.index')
-                ->with('status', 'Location is referenced by goods receipts and cannot be deleted because it would erase historical bin information.');
+                ->with('error', 'Location is referenced by goods receipts and cannot be deleted because it would erase historical bin information.');
         }
 
         $location->delete();

@@ -41,7 +41,7 @@ class TaxClassController extends Controller
     {
         if ($taxClass->products()->exists()) {
             return redirect()->route('admin.tax-classes.index')
-                ->with('status', 'Tax class is linked to products and cannot be deleted.');
+                ->with('error', 'Tax class is linked to products and cannot be deleted.');
         }
 
         $taxClass->delete();

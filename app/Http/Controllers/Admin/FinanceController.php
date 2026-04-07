@@ -297,8 +297,19 @@ class FinanceController extends Controller
 
     public function showCreditNoteForm(Invoice $invoice)
     {
-        $invoice->load('order.agent');
-        return view('admin.finance.credit_note', compact('invoice'));
+        $invoice->load(['order.agent', 'receipts', 'creditNotes', 'advanceApplications']);
+
+        $grossTotal = (float) $invoice->net_total + (float) $invoice->vat_amount;
+        $cashTotal = $grossTotal - (float) $invoice->withholding;
+        $remainingCredit = max(
+            0,
+            $cashTotal
+            - (float) $invoice->receipts_total
+            - (float) $invoice->advances_applied_total
+            - (float) $invoice->credits_total
+        );
+
+        return view('admin.finance.credit_note', compact('invoice', 'remainingCredit'));
     }
 
     public function storeCreditNote(Request $request, Invoice $invoice)
@@ -313,9 +324,13 @@ class FinanceController extends Controller
         $cashTotal  = $grossTotal - $invoice->withholding;
         $maxCredit = max(0, $cashTotal - $invoice->receipts_total - $invoice->advances_applied_total);
         $alreadyCredited = CreditNote::where('invoice_id', $invoice->id)->sum('amount');
+        $remainingCredit = max(0, $maxCredit - $alreadyCredited);
 
-        if ($data['amount'] > ($maxCredit - $alreadyCredited)) {
-            return back()->withErrors(['amount' => 'Credit amount exceeds remaining invoice value.']);
+        if ($data['amount'] > $remainingCredit) {
+            return back()->withErrors([
+                'amount' => 'Credit amount exceeds remaining invoice value. Remaining credit allowed: '
+                    . number_format($remainingCredit, 2) . '.',
+            ])->withInput();
         }
 
         $credit = null;

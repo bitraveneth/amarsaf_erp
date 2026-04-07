@@ -67,7 +67,7 @@ class AccountController extends Controller
         if (LedgerEntry::where('account', $account->name)->exists()) {
             return redirect()
                 ->route('admin.accounts.index')
-                ->with('status', 'Account is referenced by ledger entries and cannot be deleted.');
+                ->with('error', 'Account is referenced by ledger entries and cannot be deleted.');
         }
 
         $account->delete();

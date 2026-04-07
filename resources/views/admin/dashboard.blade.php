@@ -16,13 +16,14 @@
       />
     </div>
 
-    <div class="col-span-12 space-y-6 xl:col-span-7">
+    <div class="col-span-12 xl:col-span-7">
       <x-ecommerce.monthly-sale
           :month-labels="$monthLabels ?? []"
           :monthly-orders="$monthlyOrders ?? []"
           :sales-range-months="$salesRangeMonths ?? 12"
       />
     </div>
+
     <div class="col-span-12 xl:col-span-5 xl:h-full">
         <x-ecommerce.monthly-target
             :currency-code="$currencyCode ?? config('app.currency', 'BDT')"
@@ -59,6 +60,12 @@
                 if (!dashboardRoot) return;
 
                 const currencyCode = dashboardRoot.dataset.currencyCode || @json($currencyCode ?? config('app.currency', 'BDT'));
+                let currentMonthlySaleData = {
+                    labels: @json($monthLabels),
+                    orders: @json($monthlyOrders),
+                };
+                let monthlySalesResizeFrame = null;
+                let monthlySalesCardObserver = null;
                 const initialStats = {
                     labels: @json($chartDays->pluck('label')),
                     orders: @json($chartDays->pluck('orders')),
@@ -90,6 +97,8 @@
                     const el = document.querySelector('#chartOne');
                     if (!el) return;
 
+                    currentMonthlySaleData = { labels, orders };
+
                     if (window.dashboardMonthlySalesChart) {
                         window.dashboardMonthlySalesChart.destroy();
                     }
@@ -100,6 +109,9 @@
                             height: 220,
                             toolbar: { show: false },
                             foreColor: '#667085',
+                            redrawOnParentResize: true,
+                            redrawOnWindowResize: true,
+                            parentHeightOffset: 0,
                         },
                         series: [{
                             name: 'Sales (orders)',
@@ -129,6 +141,12 @@
                             categories: labels,
                             axisBorder: { show: false },
                             axisTicks: { show: false },
+                            labels: {
+                                trim: true,
+                                hideOverlappingLabels: false,
+                                rotate: 0,
+                                style: { fontSize: '11px' },
+                            },
                         },
                         yaxis: {
                             labels: { style: { fontSize: '11px' } },
@@ -142,10 +160,74 @@
                         },
                         fill: { opacity: 0.95 },
                         legend: { show: false },
+                        responsive: [
+                            {
+                                breakpoint: 1024,
+                                options: {
+                                    plotOptions: {
+                                        bar: {
+                                            columnWidth: '48%',
+                                        }
+                                    },
+                                    xaxis: {
+                                        labels: {
+                                            style: { fontSize: '10px' },
+                                        }
+                                    },
+                                },
+                            },
+                            {
+                                breakpoint: 640,
+                                options: {
+                                    plotOptions: {
+                                        bar: {
+                                            columnWidth: '58%',
+                                        }
+                                    },
+                                    xaxis: {
+                                        labels: {
+                                            rotate: -35,
+                                            trim: true,
+                                            style: { fontSize: '10px' },
+                                        }
+                                    },
+                                },
+                            },
+                        ],
                     });
 
                     chart.render();
                     window.dashboardMonthlySalesChart = chart;
+                };
+
+                const scheduleMonthlySalesRerender = () => {
+                    if (monthlySalesResizeFrame !== null) {
+                        window.cancelAnimationFrame(monthlySalesResizeFrame);
+                    }
+
+                    monthlySalesResizeFrame = window.requestAnimationFrame(() => {
+                        monthlySalesResizeFrame = null;
+                        renderMonthlySalesChart(
+                            currentMonthlySaleData.labels || [],
+                            currentMonthlySaleData.orders || []
+                        );
+                    });
+                };
+
+                const bindMonthlySalesResponsiveResize = () => {
+                    const card = document.querySelector('#dashboard-monthly-sales-card');
+                    if (!card) return;
+
+                    monthlySalesCardObserver?.disconnect();
+                    monthlySalesCardObserver = new ResizeObserver(() => {
+                        scheduleMonthlySalesRerender();
+                    });
+                    monthlySalesCardObserver.observe(card);
+
+                    window.addEventListener('resize', scheduleMonthlySalesRerender);
+                    window.addEventListener('app:sidebar-changed', () => {
+                        window.setTimeout(scheduleMonthlySalesRerender, 320);
+                    });
                 };
 
                 const renderMonthlyTargetChart = (progressValue) => {
@@ -344,6 +426,7 @@
                 renderMonthlyTargetChart(@json($monthlyTargetProgress ?? 0));
                 renderStatsChart(initialStats);
                 setActiveStatsTab('overview');
+                bindMonthlySalesResponsiveResize();
 
                 const salesRangeSelect = document.querySelector('[data-dashboard-sales-range]');
                 const targetMonthSelect = document.querySelector('[data-dashboard-target-month]');

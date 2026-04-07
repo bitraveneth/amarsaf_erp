@@ -8,7 +8,7 @@
         <header class="mb-8 text-center">
             <div class="mb-4 inline-flex items-center justify-center">
                 @if(!empty($appLogoUrl))
-                    <img src="{{ $appLogoUrl }}" alt="{{ $appBrandName }}" class="app-brand-logo rounded-xl border border-gray-200 object-cover shadow-theme-xs dark:border-gray-700" />
+                    <img src="{{ $appLogoUrl }}" alt="{{ $appBrandName }}" class="h-14 w-24 rounded-xl bg-white object-contain px-1.5 shadow-theme-xs dark:bg-gray-900" />
                 @else
                     <div class="app-brand-logo flex items-center justify-center rounded-xl bg-brand-50 text-sm font-semibold text-brand-600 shadow-theme-xs dark:bg-brand-500/10 dark:text-brand-400">
                         {{ $appBrandInitials ?? \App\Helpers\SystemSettings::initials($appBrandName ?? config('app.name')) }}

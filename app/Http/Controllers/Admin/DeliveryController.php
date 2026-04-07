@@ -8,6 +8,7 @@ use App\Models\DeliveryItem;
 use App\Models\DeliveryRoute;
 use App\Models\Order;
 use App\Models\StockEntry;
+use App\Models\StockMovement;
 use App\Models\Vehicle;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -234,8 +235,18 @@ class DeliveryController extends Controller
                             $shipQty = min($toShip, $entryQty);
                             $remaining = $entryQty - $shipQty;
 
+                            StockMovement::recordFor(
+                                $entry,
+                                'delivery',
+                                $shipQty * -1,
+                                'Delivered on order #' . $order->id,
+                                $order->id
+                            );
+
                             if ($remaining <= 0) {
-                                $entry->delete();
+                                $entry->quantity = 0;
+                                $entry->status = 'sold';
+                                $entry->save();
                             } else {
                                 $entry->quantity = $remaining;
                                 $entry->save();

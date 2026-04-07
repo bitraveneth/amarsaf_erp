@@ -138,7 +138,9 @@
                         {{ $appBrandInitials }}
                     </span>
                 @endif
-                <span class="text-sm font-semibold text-gray-900 dark:text-white">{{ $appBrandName }}</span>
+                @if(empty($appLogoUrl))
+                    <span class="text-sm font-semibold text-gray-900 dark:text-white">{{ $appBrandName }}</span>
+                @endif
             </a>
 
             {{-- Application menu toggle (mobile) --}}

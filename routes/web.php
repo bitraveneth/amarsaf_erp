@@ -435,6 +435,7 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::get('goods-receipts/create', [GoodsReceiptController::class, 'create'])->middleware('perm:inventory.manage')->name('goods-receipts.create');
     Route::post('goods-receipts', [GoodsReceiptController::class, 'store'])->middleware('perm:inventory.manage')->name('goods-receipts.store');
     Route::get('goods-receipts/{goodsReceipt}', [GoodsReceiptController::class, 'show'])->middleware('perm:inventory.manage')->name('goods-receipts.show');
+    Route::post('goods-receipts/{goodsReceipt}/reverse', [GoodsReceiptController::class, 'reverse'])->middleware('perm:inventory.manage')->name('goods-receipts.reverse');
 
     Route::get('batches', [BatchController::class, 'index'])->middleware('perm:manufacturing.manage')->name('batches.index');
     Route::post('batches', [BatchController::class, 'store'])->middleware('perm:manufacturing.manage')->name('batches.store');

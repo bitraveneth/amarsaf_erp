@@ -10,6 +10,7 @@ use App\Models\ProductionMaterialIssueItem;
 use App\Models\ProductionRun;
 use App\Models\Product;
 use App\Models\StockEntry;
+use App\Models\StockMovement;
 use App\Models\Warehouse;
 use App\Models\Employee;
 use Illuminate\Http\Request;
@@ -186,6 +187,7 @@ class ProductionController extends Controller
 
             // Simple stock snapshot per warehouse+product
             $stockEntries = StockEntry::selectRaw('warehouse_id, product_id, SUM(quantity) as qty')
+                ->where('status', 'available')
                 ->when($warehouseIds !== null, function ($query) use ($warehouseIds) {
                     $query->whereIn('warehouse_id', $warehouseIds);
                 })
@@ -402,7 +404,7 @@ class ProductionController extends Controller
 
         if ($production->stock_confirmed_at) {
             return redirect()->route('admin.production.index')
-                ->with('status', 'Stock already confirmed for this production run.');
+                ->with('error', 'Stock already confirmed for this production run.');
         }
 
         DB::transaction(function () use ($production) {
@@ -456,13 +458,20 @@ class ProductionController extends Controller
             ->first();
 
         if (! $bom || $bom->items->isEmpty()) {
-            StockEntry::create([
+            $entry = StockEntry::create([
                 'warehouse_id' => $run->warehouse_id,
                 'product_id' => $run->product_id,
                 'batch_id' => $run->batch_id,
                 'quantity' => $run->quantity,
                 'status' => 'available',
             ]);
+
+            StockMovement::recordFor(
+                $entry,
+                'production-output',
+                (float) $run->quantity,
+                'Confirmed from production run ' . ($run->order_number ?? ('#' . $run->id))
+            );
 
             return;
         }
@@ -497,8 +506,25 @@ class ProductionController extends Controller
 
             $available = (float) $entries->sum('quantity');
             if ($available < $totalRequired) {
+                $warehouseName = $run->warehouse?->name
+                    ?? Warehouse::query()->whereKey($run->warehouse_id)->value('name')
+                    ?? ('Warehouse #' . $run->warehouse_id);
+                $uom = $component?->uom ? ' ' . $component->uom : '';
+
                 throw ValidationException::withMessages([
-                    'materials' => ['Insufficient available stock for component ' . ($component->name ?? ('#' . $item->component_product_id)) . '.'],
+                    'materials' => [
+                        'Insufficient available stock for component '
+                        . ($component->name ?? ('#' . $item->component_product_id))
+                        . ' in '
+                        . $warehouseName
+                        . '. Required '
+                        . number_format($totalRequired, 2)
+                        . $uom
+                        . ', available '
+                        . number_format($available, 2)
+                        . $uom
+                        . '. Receive or transfer more stock before confirming production.',
+                    ],
                 ]);
             }
 
@@ -547,6 +573,13 @@ class ProductionController extends Controller
                 }
                 $entry->save();
 
+                StockMovement::recordFor(
+                    $entry,
+                    'production-consumption',
+                    $consume * -1,
+                    'Consumed for production run ' . ($run->order_number ?? ('#' . $run->id))
+                );
+
                 $baseCost = null;
                 if ($item->unit_cost !== null) {
                     $baseCost = (float) $item->unit_cost;
@@ -588,13 +621,20 @@ class ProductionController extends Controller
             }
         }
 
-        StockEntry::create([
+        $entry = StockEntry::create([
             'warehouse_id' => $run->warehouse_id,
             'product_id' => $run->product_id,
             'batch_id' => $run->batch_id,
             'quantity' => $run->quantity,
             'status' => 'available',
         ]);
+
+        StockMovement::recordFor(
+            $entry,
+            'production-output',
+            (float) $run->quantity,
+            'Confirmed from production run ' . ($run->order_number ?? ('#' . $run->id))
+        );
 
         // Persist material cost snapshot on the production run so that future
         // reports / COGS calculations can use a stable value.

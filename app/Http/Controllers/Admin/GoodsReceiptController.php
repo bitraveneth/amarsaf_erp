@@ -10,6 +10,7 @@ use App\Models\PurchaseBill;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderItem;
 use App\Models\StockEntry;
+use App\Models\StockMovement;
 use App\Models\Supplier;
 use App\Models\Warehouse;
 use App\Models\WarehouseLocation;
@@ -167,7 +168,7 @@ class GoodsReceiptController extends Controller
                 }
 
                 if ($grnItem->qc_status === 'approved' && $item['stock_tracked']) {
-                    StockEntry::create([
+                    $entry = StockEntry::create([
                         'purchase_bill_id' => $receipt->purchase_bill_id,
                         'goods_receipt_id' => $receipt->id,
                         'warehouse_id' => $receipt->warehouse_id,
@@ -177,6 +178,13 @@ class GoodsReceiptController extends Controller
                         'quantity' => $item['quantity'],
                         'status' => 'available',
                     ]);
+
+                    StockMovement::recordFor(
+                        $entry,
+                        'goods-receipt',
+                        (float) $item['quantity'],
+                        'Posted from GRN ' . $receipt->grn_number
+                    );
                 }
             }
 
@@ -207,7 +215,72 @@ class GoodsReceiptController extends Controller
             'items.purchaseOrderItem',
         ]);
 
-        return view('admin.goods_receipts.show', ['receipt' => $goodsReceipt]);
+        return view('admin.goods_receipts.show', [
+            'receipt' => $goodsReceipt,
+            'reversalBlockers' => $this->reversalBlockers($goodsReceipt),
+        ]);
+    }
+
+    public function reverse(GoodsReceipt $goodsReceipt)
+    {
+        $this->ensureWarehouseAccess((int) $goodsReceipt->warehouse_id);
+
+        if ($goodsReceipt->status !== 'posted') {
+            return redirect()
+                ->route('admin.goods-receipts.show', $goodsReceipt)
+                ->withErrors(['receipt' => 'Only posted goods receipts can be reversed.']);
+        }
+
+        $goodsReceipt->loadMissing(['items.purchaseOrderItem', 'stockEntries.movements', 'warehouse']);
+
+        $blockers = $this->reversalBlockers($goodsReceipt);
+        if ($blockers !== []) {
+            return redirect()
+                ->route('admin.goods-receipts.show', $goodsReceipt)
+                ->withErrors(['receipt' => 'This GRN cannot be reversed: ' . implode(' ', $blockers)]);
+        }
+
+        DB::transaction(function () use ($goodsReceipt) {
+            $goodsReceipt->loadMissing(['items.purchaseOrderItem', 'stockEntries']);
+
+            foreach ($goodsReceipt->items as $item) {
+                if ($item->qc_status === 'approved' && $item->purchaseOrderItem) {
+                    $purchaseOrderItem = $item->purchaseOrderItem;
+                    $purchaseOrderItem->received_quantity = max(
+                        0,
+                        (float) $purchaseOrderItem->received_quantity - (float) $item->quantity
+                    );
+                    $purchaseOrderItem->save();
+                }
+            }
+
+            foreach ($goodsReceipt->stockEntries as $stockEntry) {
+                if ((float) $stockEntry->quantity > 0) {
+                    StockMovement::recordFor(
+                        $stockEntry,
+                        'goods-receipt-reversal',
+                        (float) $stockEntry->quantity * -1,
+                        'Reversed from GRN ' . $goodsReceipt->grn_number
+                    );
+                }
+
+                $stockEntry->quantity = 0;
+                $stockEntry->save();
+            }
+
+            $goodsReceipt->status = 'cancelled';
+            $goodsReceipt->notes = trim((string) ($goodsReceipt->notes ? $goodsReceipt->notes . "\n" : '') . 'Reversed on ' . now()->format('Y-m-d H:i'));
+            $goodsReceipt->save();
+
+            if ($goodsReceipt->purchaseOrder) {
+                $goodsReceipt->purchaseOrder->refresh()->load('items');
+                $this->recalculatePurchaseOrderStatus($goodsReceipt->purchaseOrder);
+            }
+        });
+
+        return redirect()
+            ->route('admin.goods-receipts.index')
+            ->with('status', 'Goods receipt reversed and stock rolled back.');
     }
 
     protected function ensureWarehouseAccess(int $warehouseId): void
@@ -344,5 +417,40 @@ class GoodsReceiptController extends Controller
         }
 
         $purchaseOrder->save();
+    }
+
+    protected function reversalBlockers(GoodsReceipt $goodsReceipt): array
+    {
+        $goodsReceipt->loadMissing(['stockEntries.product', 'stockEntries.movements']);
+
+        if ($goodsReceipt->status !== 'posted') {
+            return ['its status is not posted'];
+        }
+
+        $blockers = [];
+
+        foreach ($goodsReceipt->stockEntries as $entry) {
+            $productName = $entry->product?->name ?? ('product #' . $entry->product_id);
+
+            if ($entry->status !== 'available') {
+                $blockers[] = $productName . ' is no longer in available stock.';
+                continue;
+            }
+
+            if (! is_null($entry->order_id)) {
+                $blockers[] = $productName . ' is linked to an order reservation.';
+                continue;
+            }
+
+            $nonReceiptMovements = $entry->movements
+                ->reject(fn ($movement) => in_array($movement->type, ['goods-receipt', 'goods-receipt-reversal'], true));
+
+            if ($nonReceiptMovements->isNotEmpty()) {
+                $blockers[] = $productName . ' already has stock movements recorded.';
+                continue;
+            }
+        }
+
+        return array_values(array_unique($blockers));
     }
 }

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Batch;
 use App\Models\DeliveryItem;
 use App\Models\Order;
 use App\Models\OrderItem;
@@ -27,7 +28,7 @@ class CustomerReturnController extends Controller
 
     public function create()
     {
-        $orders = Order::with('agent')
+        $orders = Order::with(['agent', 'deliveries.items.batch'])
             ->where('status', 'delivered')
             ->latest()
             ->limit(50)
@@ -41,7 +42,40 @@ class CustomerReturnController extends Controller
             ->orderBy('name')
             ->get();
 
-        return view('admin.returns.customer.create', compact('orders', 'products', 'warehouses'));
+        $returnableBatches = $orders->mapWithKeys(function (Order $order) {
+            $batchMap = collect($order->deliveries)
+                ->flatMap(fn ($delivery) => $delivery->items)
+                ->groupBy(fn (DeliveryItem $item) => (int) $item->product_id)
+                ->map(function ($items) {
+                    return $items
+                        ->groupBy(fn (DeliveryItem $item) => $item->batch_id ?: '__unbatched__')
+                        ->map(function ($batchItems, $batchKey) {
+                            $quantity = (float) $batchItems->sum(function (DeliveryItem $item) {
+                                return DeliveryItem::realizedQuantityFromTotals(
+                                    (float) $item->qty_dispatched,
+                                    (float) $item->qty_delivered,
+                                    (float) $item->qty_short,
+                                    (float) $item->qty_damaged
+                                );
+                            });
+
+                            $batch = $batchItems->first()?->batch;
+
+                            return [
+                                'batch_id' => $batchKey === '__unbatched__' ? null : (int) $batchKey,
+                                'label' => $batch?->batch_code ?? 'No batch recorded',
+                                'quantity' => $quantity,
+                            ];
+                        })
+                        ->values()
+                        ->all();
+                })
+                ->all();
+
+            return [$order->id => $batchMap];
+        });
+
+        return view('admin.returns.customer.create', compact('orders', 'products', 'warehouses', 'returnableBatches'));
     }
 
     public function store(Request $request)
@@ -49,12 +83,13 @@ class CustomerReturnController extends Controller
         $data = $request->validate([
             'order_id' => 'required|exists:orders,id',
             'product_id' => 'required|exists:products,id',
+            'batch_id' => 'nullable|exists:batches,id',
             'warehouse_id' => 'required|exists:warehouses,id',
             'quantity' => 'required|numeric|min:0.01',
             'notes' => 'nullable|string|max:255',
         ]);
 
-        $order = Order::findOrFail($data['order_id']);
+        $order = Order::with(['deliveries.items.batch'])->findOrFail($data['order_id']);
         $this->ensureWarehouseAccess((int) $data['warehouse_id']);
 
         if ($order->status !== 'delivered') {
@@ -73,21 +108,82 @@ class CustomerReturnController extends Controller
                 ->withInput();
         }
 
-        $deliveredQuantity = (float) $orderItem->quantity;
-        if ($order->relationLoaded('delivery') || $order->delivery) {
-            $order->loadMissing('delivery.items');
-            $deliveryItem = DeliveryItem::summarizeForOrderItems($order->delivery?->items ?? collect())
-                ->get($orderItem->id);
+        $deliveredByBatch = collect($order->deliveries)
+            ->flatMap(fn ($delivery) => $delivery->items)
+            ->filter(function (DeliveryItem $item) use ($orderItem, $data) {
+                return (int) $item->order_item_id === (int) $orderItem->id
+                    && (int) $item->product_id === (int) $data['product_id'];
+            })
+            ->groupBy(fn (DeliveryItem $item) => $item->batch_id ?: '__unbatched__')
+            ->map(function ($items, $batchKey) {
+                return [
+                    'batch_id' => $batchKey === '__unbatched__' ? null : (int) $batchKey,
+                    'quantity' => (float) $items->sum(function (DeliveryItem $item) {
+                        return DeliveryItem::realizedQuantityFromTotals(
+                            (float) $item->qty_dispatched,
+                            (float) $item->qty_delivered,
+                            (float) $item->qty_short,
+                            (float) $item->qty_damaged
+                        );
+                    }),
+                ];
+            })
+            ->values();
 
-            if ($deliveryItem) {
-                $deliveredQuantity = (float) $deliveryItem['realized_quantity'];
+        if ($deliveredByBatch->isEmpty()) {
+            $deliveredByBatch = collect([[
+                'batch_id' => null,
+                'quantity' => (float) $orderItem->quantity,
+            ]]);
+        }
+
+        $selectedBatchId = $data['batch_id'] ?? null;
+        $batchedDeliveries = $deliveredByBatch->whereNotNull('batch_id')->values();
+
+        if ($selectedBatchId === null && $batchedDeliveries->count() === 1) {
+            $selectedBatchId = (int) $batchedDeliveries->first()['batch_id'];
+        }
+
+        if ($selectedBatchId === null && $batchedDeliveries->count() > 1) {
+            return back()
+                ->withErrors(['batch_id' => 'Select the batch being returned for this product.'])
+                ->withInput();
+        }
+
+        if ($selectedBatchId !== null) {
+            $belongsToProduct = Batch::whereKey($selectedBatchId)
+                ->where('product_id', $data['product_id'])
+                ->exists();
+
+            if (! $belongsToProduct) {
+                return back()
+                    ->withErrors(['batch_id' => 'Selected batch does not belong to the chosen product.'])
+                    ->withInput();
             }
         }
 
+        $batchDelivery = $deliveredByBatch->first(function (array $batchRow) use ($selectedBatchId) {
+            return (int) ($batchRow['batch_id'] ?? 0) === (int) ($selectedBatchId ?? 0);
+        });
+
+        if ($selectedBatchId !== null && ! $batchDelivery) {
+            return back()
+                ->withErrors(['batch_id' => 'Selected batch was not delivered for this order line.'])
+                ->withInput();
+        }
+
+        $deliveredQuantity = (float) ($batchDelivery['quantity'] ?? $deliveredByBatch->sum('quantity'));
+
         $alreadyReturned = (float) StockMovement::where('order_id', $order->id)
             ->where('type', 'customer-return')
-            ->whereHas('stockEntry', function ($query) use ($data) {
+            ->whereHas('stockEntry', function ($query) use ($data, $selectedBatchId) {
                 $query->where('product_id', $data['product_id']);
+
+                if ($selectedBatchId === null) {
+                    $query->whereNull('batch_id');
+                } else {
+                    $query->where('batch_id', $selectedBatchId);
+                }
             })
             ->sum('quantity');
 
@@ -98,23 +194,42 @@ class CustomerReturnController extends Controller
                 ->withInput();
         }
 
-        DB::transaction(function () use ($data, $order) {
-            $entry = StockEntry::create([
-                'warehouse_id' => $data['warehouse_id'],
-                'warehouse_location_id' => null,
-                'product_id' => $data['product_id'],
-                'batch_id' => null,
-                'quantity' => $data['quantity'],
-                'status' => 'available',
-            ]);
+        DB::transaction(function () use ($data, $order, $selectedBatchId) {
+            $entry = StockEntry::query()
+                ->where('warehouse_id', $data['warehouse_id'])
+                ->where('product_id', $data['product_id'])
+                ->where('status', 'available')
+                ->whereNull('order_id')
+                ->when(
+                    $selectedBatchId === null,
+                    fn ($query) => $query->whereNull('batch_id'),
+                    fn ($query) => $query->where('batch_id', $selectedBatchId)
+                )
+                ->orderByRaw('case when warehouse_location_id is null then 0 else 1 end')
+                ->lockForUpdate()
+                ->first();
 
-            StockMovement::create([
-                'stock_entry_id' => $entry->id,
-                'order_id' => $order->id,
-                'type' => 'customer-return',
-                'quantity' => $data['quantity'],
-                'notes' => $data['notes'],
-            ]);
+            if (! $entry) {
+                $entry = StockEntry::create([
+                    'warehouse_id' => $data['warehouse_id'],
+                    'warehouse_location_id' => null,
+                    'product_id' => $data['product_id'],
+                    'batch_id' => $selectedBatchId,
+                    'quantity' => 0,
+                    'status' => 'available',
+                ]);
+            }
+
+            $entry->quantity = (float) $entry->quantity + (float) $data['quantity'];
+            $entry->save();
+
+            StockMovement::recordFor(
+                $entry,
+                'customer-return',
+                (float) $data['quantity'],
+                $data['notes'],
+                $order->id
+            );
         });
 
         return redirect()->route('admin.returns.customer.index')->with('status', 'Customer return recorded and stock updated.');

@@ -78,16 +78,20 @@
             : 'justify-start'">
         <a href="{{ route('admin.dashboard') }}" data-tour="sidebar-brand" class="flex items-center gap-4">
             @if(!empty($appLogoUrl))
-                <img src="{{ $appLogoUrl }}" alt="{{ $appBrandName }}" class="h-12 w-12 rounded-xl border border-gray-200 object-cover dark:border-gray-700" />
+                <img src="{{ $appLogoUrl }}" alt="{{ $appBrandName }}"
+                    class="h-12 rounded-xl bg-white object-contain dark:bg-gray-900"
+                    :class="isSidebarVisible() ? 'w-20 px-1.5' : 'w-12 px-1'" />
             @else
                 <div class="flex h-12 w-12 items-center justify-center rounded-full bg-brand-500 text-base font-semibold text-white">
                     {{ $appBrandInitials }}
                 </div>
             @endif
-            <div class="flex flex-col"
-                 x-show="isSidebarVisible()">
-                <span class="text-[2rem] font-bold leading-none tracking-tight text-gray-900 dark:text-white">{{ $appBrandName }}</span>
-            </div>
+            @if(empty($appLogoUrl))
+                <div class="flex flex-col"
+                     x-show="isSidebarVisible()">
+                    <span class="text-[2rem] font-bold leading-none tracking-tight text-gray-900 dark:text-white">{{ $appBrandName }}</span>
+                </div>
+            @endif
         </a>
     </div>
 

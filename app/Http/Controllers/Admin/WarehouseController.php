@@ -91,17 +91,17 @@ class WarehouseController extends Controller
 
         if ($warehouse->entries()->exists()) {
             return redirect()->route('admin.warehouses.index')
-                ->with('status', 'Warehouse has stock entries and cannot be deleted.');
+                ->with('error', 'Warehouse has stock entries and cannot be deleted.');
         }
 
         if (ProductionRun::where('warehouse_id', $warehouse->id)->exists()) {
             return redirect()->route('admin.warehouses.index')
-                ->with('status', 'Warehouse is linked to production runs and cannot be deleted.');
+                ->with('error', 'Warehouse is linked to production runs and cannot be deleted.');
         }
 
          if (WarehouseLocation::where('warehouse_id', $warehouse->id)->exists()) {
             return redirect()->route('admin.warehouses.index')
-                ->with('status', 'Warehouse has locations configured and cannot be deleted. Delete those locations first.');
+                ->with('error', 'Warehouse has locations configured and cannot be deleted. Delete those locations first.');
         }
 
         $warehouse->delete();
@@ -122,7 +122,7 @@ class WarehouseController extends Controller
         if ($hasProtectedEntries) {
             return redirect()
                 ->route('admin.warehouses.index')
-                ->with('status', 'Warehouse contains reserved or order-linked stock and cannot be cleared automatically.');
+                ->with('error', 'Warehouse contains reserved or order-linked stock and cannot be cleared automatically.');
         }
 
         DB::transaction(function () use ($warehouse) {
