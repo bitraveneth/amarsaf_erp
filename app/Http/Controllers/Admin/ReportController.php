@@ -55,7 +55,9 @@ class ReportController extends Controller
         // --- Approximate COGS using production material cost snapshot ---
         $invoiceItems = InvoiceItem::with(['invoice', 'product'])
             ->whereHas('invoice', function ($q) use ($from, $to) {
-                $q->whereBetween('issued_at', [$from->toDateString(), $to->toDateString()]);
+                $q
+                    ->whereDate('issued_at', '>=', $from->toDateString())
+                    ->whereDate('issued_at', '<=', $to->toDateString());
             })
             ->get();
 
@@ -133,13 +135,14 @@ class ReportController extends Controller
 
         // Detailed per‑invoice breakdown (output VAT)
         $invoices = Invoice::with(['order.agent', 'creditNotes'])
-            ->whereBetween('issued_at', [$from->toDateString(), $to->toDateString()])
+            ->whereDate('issued_at', '>=', $from->toDateString())
+            ->whereDate('issued_at', '<=', $to->toDateString())
             ->orderBy('issued_at')
             ->get();
 
-        $invoiceRows = $invoices->map(function (Invoice $invoice) {
-            $taxable = (float) $invoice->net_sales_after_credits;
-            $vat = max(0.0, (float) $invoice->vat_amount - (float) $invoice->credit_notes_vat_total);
+        $invoiceRows = $invoices->map(function (Invoice $invoice) use ($from, $to) {
+            $taxable = $invoice->netSalesAfterCreditsInRange($from, $to);
+            $vat = max(0.0, (float) $invoice->vat_amount - $invoice->creditNotesVatTotalInRange($from, $to));
             $rate = $taxable > 0 ? round(($vat / $taxable) * 100, 2) : null;
 
             return [
@@ -158,7 +161,8 @@ class ReportController extends Controller
         ];
 
         $purchaseBills = PurchaseBill::with('supplier')
-            ->whereBetween('bill_date', [$from->toDateString(), $to->toDateString()])
+            ->whereDate('bill_date', '>=', $from->toDateString())
+            ->whereDate('bill_date', '<=', $to->toDateString())
             ->orderBy('bill_date')
             ->get();
 
@@ -267,11 +271,11 @@ class ReportController extends Controller
     public function agentPerformance(Request $request)
     {
         $from = $request->query('from')
-            ? Carbon::parse($request->query('from'))
+            ? Carbon::parse($request->query('from'))->startOfDay()
             : Carbon::now()->startOfMonth();
         $to = $request->query('to')
-            ? Carbon::parse($request->query('to'))
-            : Carbon::now()->endOfMonth();
+            ? Carbon::parse($request->query('to'))->endOfDay()
+            : Carbon::now()->endOfDay();
 
         $invoices = Invoice::with(['order.agent', 'receipts', 'creditNotes', 'advanceApplications'])
             ->whereBetween('issued_at', [$from, $to])
@@ -311,12 +315,9 @@ class ReportController extends Controller
                 $bucket['order_ids'][$invoice->order_id] = true;
             }
 
-            $bucket['credits'] += $invoice->creditNotes->sum('amount');
-            $bucket['advances'] += $invoice->advanceApplications->sum('amount');
-
-            $bucket['receipts'] += $invoice->receipts
-                ->whereBetween('received_at', [$from, $to])
-                ->sum('amount');
+            $bucket['credits'] += $invoice->creditNotesTotalInRange($from, $to);
+            $bucket['advances'] += $invoice->advancesAppliedTotalInRange($from, $to);
+            $bucket['receipts'] += $invoice->receiptsTotalInRange($from, $to);
         }
 
         $rows = collect($byAgent)->map(function (array $bucket) {
@@ -425,8 +426,8 @@ class ReportController extends Controller
         $salesInvoices = Invoice::with('creditNotes')
             ->whereBetween('issued_at', [$from, $to])
             ->get();
-        $salesTotal = $salesInvoices->sum(function (Invoice $invoice) {
-            return $invoice->net_sales_after_credits;
+        $salesTotal = $salesInvoices->sum(function (Invoice $invoice) use ($from, $to) {
+            return $invoice->netSalesAfterCreditsInRange($from, $to);
         });
 
         $expensesTotal = $this->operatingExpensesTotal($from, $to);
@@ -517,18 +518,22 @@ class ReportController extends Controller
 
     protected function operatingExpensesTotal(Carbon $from, Carbon $to): float
     {
-        $expenses = (float) Expense::whereBetween('date', [$from->toDateString(), $to->toDateString()])
+        $expenses = (float) Expense::whereDate('date', '>=', $from->toDateString())
+            ->whereDate('date', '<=', $to->toDateString())
             ->whereIn('status', [Expense::STATUS_RECORDED, Expense::STATUS_REVIEWED, 'paid', 'overdue'])
             ->sum('amount');
 
-        $giftExpenses = (float) CustomerGift::whereBetween('date', [$from->toDateString(), $to->toDateString()])
+        $giftExpenses = (float) CustomerGift::whereDate('date', '>=', $from->toDateString())
+            ->whereDate('date', '<=', $to->toDateString())
             ->whereIn('status', [CustomerGift::STATUS_GIVEN, 'delivered'])
             ->sum('amount');
 
         $campaignExpenses = (float) Campaign::where(function ($query) use ($from, $to) {
             $query->whereBetween('created_at', [$from, $to])
                 ->orWhere(function ($campaignQuery) use ($from, $to) {
-                    $campaignQuery->whereBetween('start_date', [$from->toDateString(), $to->toDateString()]);
+                    $campaignQuery
+                        ->whereDate('start_date', '>=', $from->toDateString())
+                        ->whereDate('start_date', '<=', $to->toDateString());
                 });
         })->whereIn('status', [
             Campaign::STATUS_RUNNING,

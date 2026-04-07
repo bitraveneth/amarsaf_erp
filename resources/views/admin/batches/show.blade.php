@@ -200,7 +200,6 @@
                         $order    = $movement->order;
                         $sign     = $movement->quantity >= 0 ? '+' : '−';
                         $quantity = number_format(abs($movement->quantity), 2);
-                        $type     = str_replace('-', ' ', $movement->type);
                     @endphp
                     <div class="flex items-start gap-3 rounded-2xl border border-gray-200 bg-white/80 p-3 text-sm shadow-xs dark:border-gray-800 dark:bg-gray-900/80">
                         <div class="mt-1 h-2 w-2 flex-shrink-0 rounded-full
@@ -213,8 +212,8 @@
                         <div class="flex-1">
                             <div class="flex flex-wrap items-center justify-between gap-2">
                                 <div class="flex items-center gap-2">
-                                    <span class="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium capitalize text-gray-700 dark:bg-gray-800 dark:text-gray-300">
-                                        {{ $type }}
+                                    <span class="rounded-full px-2 py-0.5 text-[11px] font-medium {{ $movement->type_badge_class }}">
+                                        {{ $movement->type_label }}
                                     </span>
                                     <span class="text-xs font-medium text-gray-500 dark:text-gray-400">
                                         {{ $sign }}{{ $quantity }} {{ $batch->product->uom ?? 'units' }}
@@ -246,4 +245,3 @@
     </div>
 </div>
 @endsection
-

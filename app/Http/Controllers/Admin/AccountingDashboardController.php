@@ -27,29 +27,43 @@ class AccountingDashboardController extends Controller
 
         $invoices = Invoice::query()
             ->select(['id', 'issued_at', 'net_total', 'vat_amount', 'withholding'])
-            ->withSum('receipts', 'amount')
-            ->withSum('creditNotes', 'amount')
+            ->with('creditNotes')
             ->whereBetween('issued_at', [$from, $to])
             ->get();
 
         $totalInvoices = $invoices->count();
-        $netSales = $invoices->sum('net_total');
-        $vatTotal = $invoices->sum('vat_amount');
+        $netSales = round((float) $invoices->sum(function (Invoice $invoice) use ($from, $to) {
+            return $invoice->netSalesAfterCreditsInRange($from, $to);
+        }), 2);
+        $vatTotal = round((float) $invoices->sum(function (Invoice $invoice) use ($from, $to) {
+            return max(0.0, (float) $invoice->vat_amount - $invoice->creditNotesVatTotalInRange($from, $to));
+        }), 2);
         $withholdingTotal = $invoices->sum('withholding');
 
         $collected = Receipt::whereBetween('received_at', [$from, $to])->sum('amount');
 
-        $outstanding = $invoices->sum(fn (Invoice $invoice) => (float) $invoice->outstanding);
+        $outstanding = Invoice::query()
+            ->with(['receipts', 'creditNotes', 'advanceApplications'])
+            ->whereDate('issued_at', '<=', $to->toDateString())
+            ->whereIn('status', ['issued', 'adjusted'])
+            ->get()
+            ->sum(fn (Invoice $invoice) => (float) $invoice->outstandingAsOf($to));
 
-        $expenses = (float) Expense::whereBetween('date', [$from, $to])
+        $expenses = (float) Expense::whereDate('date', '>=', $from->toDateString())
+            ->whereDate('date', '<=', $to->toDateString())
             ->whereIn('status', [Expense::STATUS_RECORDED, Expense::STATUS_REVIEWED, 'paid', 'overdue'])
             ->sum('amount');
-        $giftExpenses = (float) CustomerGift::whereBetween('date', [$from, $to])
+        $giftExpenses = (float) CustomerGift::whereDate('date', '>=', $from->toDateString())
+            ->whereDate('date', '<=', $to->toDateString())
             ->whereIn('status', [CustomerGift::STATUS_GIVEN, 'delivered'])
             ->sum('amount');
         $campaignExpenses = Campaign::where(function ($query) use ($from, $to) {
             $query->whereBetween('created_at', [$from, $to])
-                ->orWhereBetween('start_date', [$from->toDateString(), $to->toDateString()]);
+                ->orWhere(function ($campaignQuery) use ($from, $to) {
+                    $campaignQuery
+                        ->whereDate('start_date', '>=', $from->toDateString())
+                        ->whereDate('start_date', '<=', $to->toDateString());
+                });
         })->whereIn('status', [
             Campaign::STATUS_RUNNING,
             Campaign::STATUS_COMPLETED,
@@ -111,16 +125,16 @@ class AccountingDashboardController extends Controller
                 break;
             case 'quarter':
                 $from = $today->copy()->startOfQuarter();
-                $to = $today->copy()->endOfQuarter();
+                $to = $today->copy()->endOfDay();
                 break;
             case 'year':
                 $from = $today->copy()->startOfYear();
-                $to = $today->copy()->endOfYear();
+                $to = $today->copy()->endOfDay();
                 break;
             case 'month':
             default:
                 $from = $today->copy()->startOfMonth();
-                $to = $today->copy()->endOfMonth();
+                $to = $today->copy()->endOfDay();
                 $range = 'month';
                 break;
         }

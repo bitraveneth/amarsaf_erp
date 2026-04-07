@@ -112,17 +112,29 @@
                 isExpanded: window.innerWidth >= 1280,
                 isMobileOpen: false,
 
+                notifyChange() {
+                    window.dispatchEvent(new CustomEvent('app:sidebar-changed', {
+                        detail: {
+                            expanded: this.isExpanded,
+                            mobileOpen: this.isMobileOpen,
+                        }
+                    }));
+                },
+
                 toggleExpanded() {
                     this.isExpanded = !this.isExpanded;
                     this.isMobileOpen = false;
+                    this.notifyChange();
                 },
 
                 toggleMobileOpen() {
                     this.isMobileOpen = !this.isMobileOpen;
+                    this.notifyChange();
                 },
 
                 setMobileOpen(val) {
                     this.isMobileOpen = val;
+                    this.notifyChange();
                 },
             });
 
@@ -234,7 +246,7 @@
         @include('layouts.backdrop')
         @include('layouts.sidebar')
 
-        <div class="min-w-0 w-full overflow-x-clip flex-1 transition-all duration-300 ease-in-out"
+        <div class="print-main min-w-0 w-full overflow-x-clip flex-1 transition-all duration-300 ease-in-out"
              :class="{
                 'xl:ml-[290px]': $store.sidebar.isExpanded,
                 'xl:ml-[90px]': !$store.sidebar.isExpanded,
@@ -245,7 +257,7 @@
                 : { width: '100%' }">
             @include('layouts.app-header')
 
-            <div class="mx-auto w-full min-w-0 max-w-(--breakpoint-2xl) p-4 md:p-6" data-tour="page-content">
+            <div class="mx-auto w-full min-w-0 max-w-(--breakpoint-2xl) p-4 md:p-6 print:!mx-0 print:!w-full print:!max-w-none print:!p-0" data-tour="page-content">
                 @if(session('status'))
                     <div x-data="{ open: true }"
                          x-init="setTimeout(() => open = false, 2600)"
@@ -279,6 +291,40 @@
                     </div>
                 @endif
 
+                @if(session('error'))
+                    <div x-data="{ open: true }"
+                         x-init="setTimeout(() => open = false, 3200)"
+                         x-show="open"
+                         x-cloak
+                         x-transition:enter="transition ease-out duration-200"
+                         x-transition:enter-start="opacity-0 translate-y-2"
+                         x-transition:enter-end="opacity-100 translate-y-0"
+                         x-transition:leave="transition ease-in duration-150"
+                         x-transition:leave-start="opacity-100 translate-y-0"
+                         x-transition:leave-end="opacity-0 translate-y-2"
+                         class="fixed right-5 top-20 z-[1000] w-full max-w-sm rounded-2xl border border-error-200 bg-white p-4 shadow-2xl dark:border-error-500/30 dark:bg-gray-900">
+                        <div class="flex items-start gap-3">
+                            <div class="mt-0.5 flex h-8 w-8 items-center justify-center rounded-full bg-error-50 text-error-700 dark:bg-error-500/10 dark:text-error-300">
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" />
+                                </svg>
+                            </div>
+                            <div class="min-w-0 flex-1">
+                                <div class="text-sm font-semibold text-error-700 dark:text-error-300">Failed</div>
+                                <div class="mt-1 text-sm text-gray-600 dark:text-gray-300">{{ session('error') }}</div>
+                            </div>
+                            <button type="button"
+                                    @click="open = false"
+                                    class="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300">
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                @endif
+
                 @if(($errors ?? null) && $errors->any())
                     <div class="mb-4">
                         <div class="rounded-lg border border-error-100 bg-error-50 px-4 py-3 text-sm text-error-700">
@@ -297,7 +343,7 @@
         </div>
     </div>
 
-    <div class="fixed bottom-5 right-5 z-[1001]" x-data>
+    <div class="fixed bottom-5 right-5 z-[1001] print-hidden" x-data>
         <div class="flex flex-col items-end gap-3">
             <div x-show="$store.tour.launcherOpen"
                  x-cloak

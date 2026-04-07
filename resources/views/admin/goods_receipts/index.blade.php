@@ -18,6 +18,7 @@
                     <th class="px-4 py-3">Supplier</th>
                     <th class="px-4 py-3">Warehouse</th>
                     <th class="px-4 py-3">Received At</th>
+                    <th class="px-4 py-3">Status</th>
                     <th class="px-4 py-3"></th>
                 </tr>
             </thead>
@@ -28,10 +29,21 @@
                         <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">{{ $receipt->supplier->name ?? '—' }}</td>
                         <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">{{ $receipt->warehouse->name ?? '—' }}</td>
                         <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">{{ optional($receipt->received_at)->format('d M Y H:i') }}</td>
-                        <td class="px-4 py-3 text-right"><a href="{{ route('admin.goods-receipts.show', $receipt) }}" class="text-sm font-medium text-brand-500 hover:text-brand-600">View</a></td>
+                        <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">{{ ucfirst($receipt->status) }}</td>
+                        <td class="px-4 py-3 text-right">
+                            <div class="flex items-center justify-end gap-3">
+                                <a href="{{ route('admin.goods-receipts.show', $receipt) }}" class="text-sm font-medium text-brand-500 hover:text-brand-600">View</a>
+                                @if($receipt->status === 'posted')
+                                    <form action="{{ route('admin.goods-receipts.reverse', $receipt) }}" method="POST" onsubmit="return confirm('Reverse {{ $receipt->grn_number }}? This will remove its stock only if none of it has been used, transferred, reserved, or adjusted.');">
+                                        @csrf
+                                        <button type="submit" class="text-sm font-medium text-error-600 hover:text-error-700">Reverse</button>
+                                    </form>
+                                @endif
+                            </div>
+                        </td>
                     </tr>
                 @empty
-                    <tr><td colspan="5" class="px-4 py-6 text-center text-sm text-gray-500 dark:text-gray-400">No GRN posted yet.</td></tr>
+                    <tr><td colspan="6" class="px-4 py-6 text-center text-sm text-gray-500 dark:text-gray-400">No GRN posted yet.</td></tr>
                 @endforelse
             </tbody>
         </table>

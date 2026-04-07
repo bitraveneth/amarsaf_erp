@@ -66,7 +66,7 @@
                     <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Supplier and date information</p>
                 </div>
                 
-                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                     <!-- Supplier -->
                     <div class="sm:col-span-2 lg:col-span-1">
                         <label for="supplier_id" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -134,6 +134,31 @@
                                    class="w-full rounded-lg border border-gray-300 bg-white pl-10 pr-4 py-2.5 text-sm text-gray-900 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white">
                         </div>
                         @error('due_date')
+                            <p class="mt-1 text-sm text-error-600 dark:text-error-500">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <div class="sm:col-span-2 lg:col-span-1">
+                        <label for="warehouse_id" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Receive into Warehouse
+                        </label>
+                        <div class="relative">
+                            <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                                <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2zM8 7h8M8 11h6M8 15h4"/>
+                                </svg>
+                            </div>
+                            <select id="warehouse_id" name="warehouse_id"
+                                    class="w-full rounded-lg border border-gray-300 bg-white pl-10 pr-4 py-2.5 text-sm text-gray-900 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white">
+                                <option value="">Default Warehouse</option>
+                                @foreach($warehouses as $warehouse)
+                                    <option value="{{ $warehouse->id }}" {{ old('warehouse_id', $bill->warehouse_id) == $warehouse->id ? 'selected' : '' }}>
+                                        {{ $warehouse->name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+                        @error('warehouse_id')
                             <p class="mt-1 text-sm text-error-600 dark:text-error-500">{{ $message }}</p>
                         @enderror
                     </div>

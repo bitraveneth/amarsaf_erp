@@ -125,7 +125,8 @@ class SalesTargetController extends Controller
 
         $query = Invoice::query()
             ->with('creditNotes')
-            ->whereBetween('issued_at', [$from, $to])
+            ->whereDate('issued_at', '>=', $from)
+            ->whereDate('issued_at', '<=', $to)
             ->whereHas('order.agent');
 
         if ($target->agent_id) {
@@ -133,7 +134,7 @@ class SalesTargetController extends Controller
                 ->whereHas('order', function ($orderQuery) use ($target) {
                     $orderQuery->where('agent_id', $target->agent_id);
                 })
-                ->get());
+                ->get(), $from, $to);
         }
 
         $employee = $target->employee;
@@ -144,7 +145,8 @@ class SalesTargetController extends Controller
         if (Schema::hasTable('visit_plans')) {
             $plans = VisitPlan::query()
                 ->where('employee_id', $employee->id)
-                ->whereBetween('date', [$from, $to])
+                ->whereDate('date', '>=', $from)
+                ->whereDate('date', '<=', $to)
                 ->get(['agent_id', 'status']);
 
             if ($plans->isNotEmpty()) {
@@ -160,7 +162,7 @@ class SalesTargetController extends Controller
                         ->whereHas('order', function ($orderQuery) use ($agentIds) {
                             $orderQuery->whereIn('agent_id', $agentIds);
                         })
-                        ->get());
+                        ->get(), $from, $to);
                 }
 
                 return 0.0;
@@ -172,16 +174,16 @@ class SalesTargetController extends Controller
                 ->whereHas('order.agent', function ($agentQuery) use ($employee) {
                     $agentQuery->where('zone', $employee->work_zone);
                 })
-                ->get());
+                ->get(), $from, $to);
         }
 
         return 0.0;
     }
 
-    protected function sumNetSalesAfterCredits($invoices): float
+    protected function sumNetSalesAfterCredits($invoices, string $from, string $to): float
     {
-        return round((float) $invoices->sum(function (Invoice $invoice) {
-            return $invoice->net_sales_after_credits;
+        return round((float) $invoices->sum(function (Invoice $invoice) use ($from, $to) {
+            return $invoice->netSalesAfterCreditsInRange($from, $to);
         }), 2);
     }
 }

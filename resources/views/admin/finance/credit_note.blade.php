@@ -55,7 +55,7 @@
         <!-- Invoice Summary Section -->
         <div class="border-b border-gray-200 dark:border-gray-800 bg-gradient-to-r from-gray-50 to-white dark:from-gray-800/50 dark:to-gray-900 px-6 py-5">
             <h2 class="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3">Invoice Summary</h2>
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
                 <div class="flex items-center gap-3">
                     <div class="w-10 h-10 rounded-lg bg-brand-100 dark:bg-brand-900/30 flex items-center justify-center">
                         <svg class="w-5 h-5 text-brand-600 dark:text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -91,6 +91,18 @@
                         <p class="text-lg font-bold text-success-600 dark:text-success-400">{{ $currencyCode }} {{ number_format($invoice->net_total + $invoice->vat_amount, 2) }}</p>
                     </div>
                 </div>
+
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-lg bg-error-100 dark:bg-error-900/30 flex items-center justify-center">
+                        <svg class="w-5 h-5 text-error-600 dark:text-error-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">Remaining Credit Allowed</p>
+                        <p class="text-lg font-bold text-error-600 dark:text-error-400">{{ $currencyCode }} {{ number_format($remainingCredit ?? 0, 2) }}</p>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -116,10 +128,11 @@
                             type="number" 
                             step="0.01" 
                             min="0.01" 
-                            max="{{ $invoice->net_total + $invoice->vat_amount }}"
+                            max="{{ number_format($remainingCredit ?? 0, 2, '.', '') }}"
                             required
                             class="block w-full pl-8 pr-12 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm focus:border-brand-500 focus:ring-brand-500 dark:focus:border-brand-400 dark:focus:ring-brand-400 sm:text-sm transition-colors @error('amount') border-error-500 dark:border-error-400 @enderror"
                             placeholder="0.00"
+                            value="{{ old('amount') }}"
                         >
                         <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
                             <span class="text-gray-500 dark:text-gray-400 sm:text-sm">BDT</span>
@@ -134,7 +147,8 @@
                         </p>
                     @enderror
                     <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        Maximum credit amount: {{ $currencyCode }} {{ number_format($invoice->net_total + $invoice->vat_amount, 2) }}
+                        Remaining credit allowed after withholding, receipts, advances, and prior credit notes:
+                        {{ $currencyCode }} {{ number_format($remainingCredit ?? 0, 2) }}
                     </p>
                 </div>
 
@@ -149,7 +163,7 @@
                         rows="4"
                         class="block w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm focus:border-brand-500 focus:ring-brand-500 dark:focus:border-brand-400 dark:focus:ring-brand-400 sm:text-sm p-3 transition-colors @error('reason') border-error-500 dark:border-error-400 @enderror"
                         placeholder="e.g., Product return, Damaged goods, Customer discount, etc."
-                    ></textarea>
+                    >{{ old('reason') }}</textarea>
                     @error('reason')
                         <p class="text-sm text-error-600 dark:text-error-400 flex items-center gap-1 mt-1">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

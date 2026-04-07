@@ -14,6 +14,7 @@ class PurchaseBill extends Model
         'number',
         'bill_date',
         'due_date',
+        'warehouse_id',
         'net_total',
         'vat_amount',
         'status',
@@ -29,6 +30,11 @@ class PurchaseBill extends Model
     public function supplier()
     {
         return $this->belongsTo(Supplier::class);
+    }
+
+    public function warehouse()
+    {
+        return $this->belongsTo(Warehouse::class);
     }
 
     public function items()

@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 
 class Invoice extends Model
 {
@@ -140,6 +142,182 @@ class Invoice extends Model
         return max(0.0, (float) $this->net_total - $this->credit_notes_net_total);
     }
 
+    public function creditNotesInRange(Carbon|string $from, Carbon|string $to): Collection
+    {
+        $fromDate = $this->normalizeDateBoundary($from)->startOfDay();
+        $toDate = $this->normalizeDateBoundary($to)->endOfDay();
+
+        if ($this->relationLoaded('creditNotes')) {
+            return $this->creditNotes
+                ->filter(function (CreditNote $creditNote) use ($fromDate, $toDate) {
+                    if (! $creditNote->issued_at) {
+                        return false;
+                    }
+
+                    return $creditNote->issued_at->copy()->startOfDay()->between($fromDate, $toDate, true);
+                })
+                ->values();
+        }
+
+        return $this->creditNotes()
+            ->whereDate('issued_at', '>=', $fromDate->toDateString())
+            ->whereDate('issued_at', '<=', $toDate->toDateString())
+            ->get();
+    }
+
+    public function creditNotesTotalInRange(Carbon|string $from, Carbon|string $to): float
+    {
+        return (float) $this->creditNotesInRange($from, $to)->sum('amount');
+    }
+
+    public function creditNotesTotalThrough(Carbon|string $to): float
+    {
+        $toDate = $this->normalizeDateBoundary($to)->endOfDay();
+
+        if ($this->relationLoaded('creditNotes')) {
+            return (float) $this->creditNotes
+                ->filter(function (CreditNote $creditNote) use ($toDate) {
+                    if (! $creditNote->issued_at) {
+                        return false;
+                    }
+
+                    return $creditNote->issued_at->copy()->startOfDay()->lte($toDate);
+                })
+                ->sum('amount');
+        }
+
+        return (float) $this->creditNotes()
+            ->whereDate('issued_at', '<=', $toDate->toDateString())
+            ->sum('amount');
+    }
+
+    public function creditNotesNetTotalInRange(Carbon|string $from, Carbon|string $to): float
+    {
+        return (float) $this->creditNotesInRange($from, $to)->sum(function (CreditNote $creditNote) {
+            return $this->creditBreakdown((float) $creditNote->amount)['net'];
+        });
+    }
+
+    public function creditNotesVatTotalInRange(Carbon|string $from, Carbon|string $to): float
+    {
+        return (float) $this->creditNotesInRange($from, $to)->sum(function (CreditNote $creditNote) {
+            return $this->creditBreakdown((float) $creditNote->amount)['vat'];
+        });
+    }
+
+    public function netSalesAfterCreditsInRange(Carbon|string $from, Carbon|string $to): float
+    {
+        return max(0.0, (float) $this->net_total - $this->creditNotesNetTotalInRange($from, $to));
+    }
+
+    public function receiptsInRange(Carbon|string $from, Carbon|string $to): Collection
+    {
+        $fromDate = $this->normalizeDateBoundary($from)->startOfDay();
+        $toDate = $this->normalizeDateBoundary($to)->endOfDay();
+
+        if ($this->relationLoaded('receipts')) {
+            return $this->receipts
+                ->filter(function (Receipt $receipt) use ($fromDate, $toDate) {
+                    if (! $receipt->received_at) {
+                        return false;
+                    }
+
+                    return $receipt->received_at->copy()->startOfDay()->between($fromDate, $toDate, true);
+                })
+                ->values();
+        }
+
+        return $this->receipts()
+            ->whereDate('received_at', '>=', $fromDate->toDateString())
+            ->whereDate('received_at', '<=', $toDate->toDateString())
+            ->get();
+    }
+
+    public function receiptsTotalInRange(Carbon|string $from, Carbon|string $to): float
+    {
+        return (float) $this->receiptsInRange($from, $to)->sum('amount');
+    }
+
+    public function receiptsTotalThrough(Carbon|string $to): float
+    {
+        $toDate = $this->normalizeDateBoundary($to)->endOfDay();
+
+        if ($this->relationLoaded('receipts')) {
+            return (float) $this->receipts
+                ->filter(function (Receipt $receipt) use ($toDate) {
+                    if (! $receipt->received_at) {
+                        return false;
+                    }
+
+                    return $receipt->received_at->copy()->startOfDay()->lte($toDate);
+                })
+                ->sum('amount');
+        }
+
+        return (float) $this->receipts()
+            ->whereDate('received_at', '<=', $toDate->toDateString())
+            ->sum('amount');
+    }
+
+    public function advanceApplicationsInRange(Carbon|string $from, Carbon|string $to): Collection
+    {
+        $fromDate = $this->normalizeDateBoundary($from)->startOfDay();
+        $toDate = $this->normalizeDateBoundary($to)->endOfDay();
+
+        if ($this->relationLoaded('advanceApplications')) {
+            return $this->advanceApplications
+                ->filter(function (AgentAdvanceApplication $application) use ($fromDate, $toDate) {
+                    if (! $application->applied_at) {
+                        return false;
+                    }
+
+                    return $application->applied_at->copy()->startOfDay()->between($fromDate, $toDate, true);
+                })
+                ->values();
+        }
+
+        return $this->advanceApplications()
+            ->whereDate('applied_at', '>=', $fromDate->toDateString())
+            ->whereDate('applied_at', '<=', $toDate->toDateString())
+            ->get();
+    }
+
+    public function advancesAppliedTotalInRange(Carbon|string $from, Carbon|string $to): float
+    {
+        return (float) $this->advanceApplicationsInRange($from, $to)->sum('amount');
+    }
+
+    public function advancesAppliedTotalThrough(Carbon|string $to): float
+    {
+        $toDate = $this->normalizeDateBoundary($to)->endOfDay();
+
+        if ($this->relationLoaded('advanceApplications')) {
+            return (float) $this->advanceApplications
+                ->filter(function (AgentAdvanceApplication $application) use ($toDate) {
+                    if (! $application->applied_at) {
+                        return false;
+                    }
+
+                    return $application->applied_at->copy()->startOfDay()->lte($toDate);
+                })
+                ->sum('amount');
+        }
+
+        return (float) $this->advanceApplications()
+            ->whereDate('applied_at', '<=', $toDate->toDateString())
+            ->sum('amount');
+    }
+
+    public function outstandingAsOf(Carbon|string $to): float
+    {
+        return max(0.0, (float) (
+            $this->cash_total
+            - $this->creditNotesTotalThrough($to)
+            - $this->receiptsTotalThrough($to)
+            - $this->advancesAppliedTotalThrough($to)
+        ));
+    }
+
     public function getOutstandingAttribute(): float
     {
         return max(0.0, (float) ($this->cash_total - $this->credits_total - $this->receipts_total - $this->advances_applied_total));
@@ -169,5 +347,12 @@ class Invoice extends Model
         }
 
         $this->save();
+    }
+
+    protected function normalizeDateBoundary(Carbon|string $value): Carbon
+    {
+        return $value instanceof Carbon
+            ? $value->copy()
+            : Carbon::parse($value);
     }
 }

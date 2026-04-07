@@ -121,29 +121,38 @@ class StockMovementController extends Controller
             $newEntry->quantity = (float) $newEntry->quantity + (float) $data['quantity'];
             $newEntry->save();
 
-            $destinationNote = 'Transferred to warehouse ' . $data['destination_warehouse_id'];
-            if ($destinationLocationId) {
-                $destinationNote .= ' location ' . $destinationLocationId;
+            $destinationWarehouse = Warehouse::find($data['destination_warehouse_id']);
+            $destinationLocation = $destinationLocationId
+                ? WarehouseLocation::find($destinationLocationId)
+                : null;
+            $sourceWarehouse = Warehouse::find($entry->warehouse_id);
+            $sourceLocation = $entry->warehouse_location_id
+                ? WarehouseLocation::find($entry->warehouse_location_id)
+                : null;
+
+            $destinationNote = 'Transferred to ' . ($destinationWarehouse?->name ?? ('warehouse #' . $data['destination_warehouse_id']));
+            if ($destinationLocation) {
+                $destinationNote .= ' / ' . $destinationLocation->code;
             }
 
-            StockMovement::create([
-                'stock_entry_id' => $entry->id,
-                'type' => 'transfer-out',
-                'quantity' => (float) $data['quantity'] * -1,
-                'notes' => $destinationNote,
-            ]);
+            StockMovement::recordFor(
+                $entry,
+                'transfer-out',
+                (float) $data['quantity'] * -1,
+                $destinationNote
+            );
 
-            $notes = $data['notes'] ?? 'Transferred from warehouse ' . $entry->warehouse_id;
-            if ($entry->warehouse_location_id) {
-                $notes .= ' location ' . $entry->warehouse_location_id;
+            $notes = $data['notes'] ?? 'Transferred from ' . ($sourceWarehouse?->name ?? ('warehouse #' . $entry->warehouse_id));
+            if ($sourceLocation) {
+                $notes .= ' / ' . $sourceLocation->code;
             }
 
-            StockMovement::create([
-                'stock_entry_id' => $newEntry->id,
-                'type' => 'transfer-in',
-                'quantity' => (float) $data['quantity'],
-                'notes' => $notes,
-            ]);
+            StockMovement::recordFor(
+                $newEntry,
+                'transfer-in',
+                (float) $data['quantity'],
+                $notes
+            );
         });
 
         return redirect()->route('admin.stock.movements')->with('status', 'Stock transferred.');
@@ -206,12 +215,12 @@ class StockMovementController extends Controller
             $entry->quantity = (float) $entry->quantity - (float) $data['quantity'];
             $entry->save();
 
-            StockMovement::create([
-                'stock_entry_id' => $entry->id,
-                'type' => $data['reason'],
-                'quantity' => (float) $data['quantity'] * -1,
-                'notes' => $data['notes'],
-            ]);
+            StockMovement::recordFor(
+                $entry,
+                $data['reason'],
+                (float) $data['quantity'] * -1,
+                $data['notes']
+            );
         });
 
         return redirect()->route('admin.stock.movements')->with('status', 'Stock written off.');
@@ -238,12 +247,12 @@ class StockMovementController extends Controller
             $lockedEntry->quantity = 0;
             $lockedEntry->save();
 
-            StockMovement::create([
-                'stock_entry_id' => $lockedEntry->id,
-                'type' => 'expired',
-                'quantity' => $quantity * -1,
-                'notes' => 'Written off as expired from inventory view.',
-            ]);
+            StockMovement::recordFor(
+                $lockedEntry,
+                'expired',
+                $quantity * -1,
+                'Written off as expired from inventory view.'
+            );
 
             return true;
         });

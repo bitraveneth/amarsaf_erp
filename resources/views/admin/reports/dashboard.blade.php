@@ -3,6 +3,8 @@
 @section('content')
 @php
     $collectionRate = $grossRevenue > 0 ? ($totalCollections / $grossRevenue) * 100 : 0;
+    $cogsShare = $grossRevenue > 0 ? ($cogsEstimate / $grossRevenue) * 100 : 0;
+    $commissionShare = $grossRevenue > 0 ? ($commissionsTotal / $grossRevenue) * 100 : 0;
     $expenseShare = $grossRevenue > 0 ? ($totalExpenses / $grossRevenue) * 100 : 0;
     $payrollShare = $grossRevenue > 0 ? ($totalPayroll / $grossRevenue) * 100 : 0;
     $profitShare = $grossRevenue > 0 ? ($netProfitEstimate / $grossRevenue) * 100 : 0;
@@ -127,11 +129,37 @@
                     {{ $currencyCode }} {{ number_format($netProfitEstimate, 0) }}
                 </div>
                 <p class="mt-3 text-sm leading-6 text-white/65">
-                    Approximate profit after operating expenses and payroll, based on year-to-date revenue.
+                    Approximate profit after COGS, commissions, operating expenses, and payroll, based on year-to-date revenue.
                 </p>
             </div>
 
             <div class="mt-5 space-y-4">
+                <div class="rounded-2xl border border-gray-200 p-4 dark:border-gray-800">
+                    <div class="flex items-center justify-between gap-4">
+                        <div>
+                            <div class="text-sm font-medium text-gray-900 dark:text-white">COGS estimate</div>
+                            <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">Production material cost snapshot applied to invoiced quantities</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-lg font-semibold text-error-600 dark:text-error-400">{{ $currencyCode }} {{ number_format($cogsEstimate, 0) }}</div>
+                            <div class="text-xs text-gray-500 dark:text-gray-400">{{ number_format($cogsShare, 1) }}% of revenue</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="rounded-2xl border border-gray-200 p-4 dark:border-gray-800">
+                    <div class="flex items-center justify-between gap-4">
+                        <div>
+                            <div class="text-sm font-medium text-gray-900 dark:text-white">Commission expense</div>
+                            <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">Ledger-posted commission accruals and settlements</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-lg font-semibold text-error-600 dark:text-error-400">{{ $currencyCode }} {{ number_format($commissionsTotal, 0) }}</div>
+                            <div class="text-xs text-gray-500 dark:text-gray-400">{{ number_format($commissionShare, 1) }}% of revenue</div>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="rounded-2xl border border-gray-200 p-4 dark:border-gray-800">
                     <div class="flex items-center justify-between gap-4">
                         <div>
@@ -162,7 +190,7 @@
                     <div class="flex items-center justify-between gap-4">
                         <div>
                             <div class="text-sm font-medium text-gray-900 dark:text-white">Profit margin indicator</div>
-                            <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">Rough estimate based on current dashboard data</div>
+                            <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">Revenue less COGS, commissions, operating expenses, and payroll</div>
                         </div>
                         <div class="text-right">
                             <div class="text-lg font-semibold {{ $profitShare >= 0 ? 'text-success-600 dark:text-success-400' : 'text-error-600 dark:text-error-400' }}">

@@ -19,7 +19,7 @@
                         Stock Movements
                     </h1>
                     <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                        Review past transfers, receipts, and inventory adjustments
+                        Review receipts, production activity, reservations, transfers, returns, and write-offs
                     </p>
                 </div>
             </div>
@@ -39,11 +39,19 @@
     @if($movements->isNotEmpty())
         @php
             $totalMovements = $movements instanceof \Illuminate\Pagination\LengthAwarePaginator ? $movements->total() : $movements->count();
-            $totalIn = $movements->where('type', 'receipt')->sum('quantity');
-            $totalOut = $movements->whereIn('type', ['sale', 'transfer', 'write-off'])->sum('quantity');
-            $totalTransfer = $movements->where('type', 'transfer')->sum('quantity');
-            
-            $movementTypes = $movements->groupBy('type')->map->count();
+            $totalIn = $movements->sum(fn ($movement) => (float) $movement->quantity > 0 ? (float) $movement->quantity : 0);
+            $totalOut = $movements->sum(fn ($movement) => (float) $movement->quantity < 0 ? abs((float) $movement->quantity) : 0);
+            $totalTransfer = $movements->sum(function ($movement) {
+                if (in_array($movement->type, ['transfer-out', 'transfer'], true)) {
+                    return abs((float) $movement->quantity);
+                }
+
+                return 0;
+            });
+
+            $movementTypes = $movements
+                ->groupBy(fn ($movement) => $movement->type_label)
+                ->map->count();
         @endphp
 
         <!-- Summary Cards -->
@@ -84,7 +92,7 @@
                         </div>
                     </div>
                     <p class="mt-3 text-3xl font-bold text-success-600 dark:text-success-400">+{{ number_format($totalIn, 0) }}</p>
-                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Units received</p>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">All inbound units</p>
                 </div>
             </div>
 
@@ -104,7 +112,7 @@
                         </div>
                     </div>
                     <p class="mt-3 text-3xl font-bold text-error-600 dark:text-error-400">{{ number_format($totalOut, 0) }}</p>
-                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Sales, transfers & write-offs</p>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">All outbound units</p>
                 </div>
             </div>
 
@@ -124,7 +132,7 @@
                         </div>
                     </div>
                     <p class="mt-3 text-3xl font-bold text-blue-light-600 dark:text-blue-light-400">{{ number_format($totalTransfer, 0) }}</p>
-                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Units transferred</p>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Outbound transfer units</p>
                 </div>
             </div>
         </div>
@@ -134,21 +142,15 @@
             <div class="lg:col-span-1 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
                 <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-4">Movement Types</h3>
                 <div class="space-y-3">
-                    @foreach($movementTypes as $type => $count)
+                    @foreach($movementTypes as $typeLabel => $count)
                         @php
                             $percentage = $totalMovements > 0 ? round(($count / $totalMovements) * 100) : 0;
-                            $typeColors = [
-                                'receipt' => 'bg-success-500',
-                                'sale' => 'bg-error-500',
-                                'transfer' => 'bg-blue-light-500',
-                                'write-off' => 'bg-orange-500',
-                                'adjustment' => 'bg-purple-500',
-                            ];
-                            $typeColor = $typeColors[$type] ?? 'bg-gray-500';
+                            $sampleMovement = $movements->first(fn ($movement) => $movement->type_label === $typeLabel);
+                            $typeColor = $sampleMovement?->type_bar_class ?? 'bg-gray-500';
                         @endphp
                         <div>
                             <div class="flex items-center justify-between text-xs mb-1">
-                                <span class="font-medium text-gray-700 dark:text-gray-300 capitalize">{{ $type }}</span>
+                                <span class="font-medium text-gray-700 dark:text-gray-300">{{ $typeLabel }}</span>
                                 <span class="text-gray-600 dark:text-gray-400">{{ $count }} ({{ $percentage }}%)</span>
                             </div>
                             <div class="w-full bg-gray-200 rounded-full h-1.5 dark:bg-gray-700">
@@ -183,21 +185,6 @@
                         </thead>
                         <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
                             @foreach($movements as $movement)
-                                @php
-                                    $typeColors = [
-                                        'receipt' => 'bg-success-100 text-success-700 dark:bg-success-500/20 dark:text-success-400',
-                                        'sale' => 'bg-error-100 text-error-700 dark:bg-error-500/20 dark:text-error-400',
-                                        'transfer' => 'bg-blue-light-100 text-blue-light-700 dark:bg-blue-light-500/20 dark:text-blue-light-400',
-                                        'write-off' => 'bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-400',
-                                        'adjustment' => 'bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-400',
-                                    ];
-                                    $typeColor = $typeColors[$movement->type] ?? 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400';
-                                    
-                                    $quantityClass = $movement->quantity > 0 && in_array($movement->type, ['receipt', 'adjustment']) 
-                                        ? 'text-success-600 dark:text-success-400' 
-                                        : 'text-error-600 dark:text-error-500';
-                                    $quantityPrefix = $movement->quantity > 0 && in_array($movement->type, ['receipt', 'adjustment']) ? '+' : '';
-                                @endphp
                                 <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
                                     <td class="px-6 py-4">
                                         <div>
@@ -224,13 +211,13 @@
                                         </div>
                                     </td>
                                     <td class="px-6 py-4">
-                                        <span class="inline-flex items-center rounded-full px-2.5 py-1.5 text-xs font-medium capitalize {{ $typeColor }}">
-                                            {{ $movement->type }}
+                                        <span class="inline-flex items-center rounded-full px-2.5 py-1.5 text-xs font-medium {{ $movement->type_badge_class }}">
+                                            {{ $movement->type_label }}
                                         </span>
                                     </td>
                                     <td class="px-6 py-4 text-right">
-                                        <span class="text-sm font-bold {{ $quantityClass }}">
-                                            {{ $quantityPrefix }}{{ number_format($movement->quantity, 2) }}
+                                        <span class="text-sm font-bold {{ $movement->quantity_class }}">
+                                            {{ $movement->quantity_prefix }}{{ number_format($movement->quantity, 2) }}
                                         </span>
                                         @if($movement->stockEntry->product->uom)
                                             <span class="ml-1 text-xs text-gray-500 dark:text-gray-400">
@@ -303,7 +290,7 @@
                 </div>
                 <h2 class="mt-8 text-2xl font-bold text-gray-900 dark:text-white">No Movements Recorded</h2>
                 <p class="mt-3 text-base text-gray-500 dark:text-gray-400 max-w-md mx-auto">
-                    No stock movements have been recorded yet. Transfers, receipts, and adjustments will appear here.
+                    No stock movements have been recorded yet. Receipts, production, reservations, transfers, and returns will appear here.
                 </p>
                 <div class="mt-8 flex items-center justify-center gap-4">
                     <a href="{{ route('admin.stock.transfers') }}" 

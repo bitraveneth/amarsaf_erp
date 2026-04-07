@@ -6,8 +6,10 @@ use App\Helpers\Permission;
 use App\Models\Agent;
 use App\Models\Invoice;
 use App\Models\Order;
+use App\Models\Product;
 use App\Models\ProductionRun;
 use App\Models\SalesTarget;
+use App\Models\StockEntry;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
@@ -51,6 +53,8 @@ class AdminController extends Controller
         $invoiceReady = Schema::hasTable('invoices');
         $productionReady = Schema::hasTable('production_runs');
         $salesTargetReady = Schema::hasTable('sales_targets');
+        $stockReady = Schema::hasTable('stock_entries');
+        $productReady = Schema::hasTable('products');
 
         $agentCount = $agentReady ? Agent::where('is_active', true)->count() : 0;
         $totalOrderCount = $orderReady
@@ -59,13 +63,20 @@ class AdminController extends Controller
         $returnOrderCount = $orderReady
             ? Order::where('order_type', 'return')->count()
             : 0;
+        $pendingDeliveryCount = $orderReady
+            ? Order::where('order_type', '!=', 'return')
+                ->whereIn('status', ['confirmed', 'picked', 'packed', 'dispatched'])
+                ->count()
+            : 0;
         $currencyCode = config('app.currency', 'BDT');
         $today = Carbon::today();
         $targetMonth = $request->query('target_month');
         $currentMonthStart = $targetMonth
             ? Carbon::parse($targetMonth . '-01')->startOfMonth()
             : $today->copy()->startOfMonth();
-        $currentMonthEnd = $currentMonthStart->copy()->endOfMonth();
+        $currentMonthEnd = $currentMonthStart->isSameMonth($today) && $currentMonthStart->isSameYear($today)
+            ? $today->copy()->endOfDay()
+            : $currentMonthStart->copy()->endOfMonth();
         $currentMonthLabel = $currentMonthStart->format('F Y');
         $salesRangeMonths = (int) $request->query('sales_range', 12);
         if (! in_array($salesRangeMonths, [3, 6, 12], true)) {
@@ -107,32 +118,61 @@ class AdminController extends Controller
         $monthlyAchieved = 0.0;
         $todayAchieved = 0.0;
         $outstandingReceivables = 0.0;
+        $todayProductionQty = 0.0;
+        $lowStockAlertCount = 0;
         if ($invoiceReady) {
             $monthlyInvoices = Invoice::query()
                 ->with(['creditNotes', 'receipts', 'advanceApplications'])
                 ->whereBetween('issued_at', [$currentMonthStart->toDateString(), $currentMonthEnd->toDateString()])
                 ->get();
 
-            $monthlyAchieved = round((float) $monthlyInvoices->sum(function (Invoice $invoice) {
-                return $invoice->net_sales_after_credits;
+            $monthlyAchieved = round((float) $monthlyInvoices->sum(function (Invoice $invoice) use ($currentMonthStart, $currentMonthEnd) {
+                return $invoice->netSalesAfterCreditsInRange($currentMonthStart, $currentMonthEnd);
             }), 2);
 
             $todayAchieved = round((float) Invoice::query()
                 ->with('creditNotes')
                 ->whereDate('issued_at', $today)
                 ->get()
-                ->sum(function (Invoice $invoice) {
-                    return $invoice->net_sales_after_credits;
+                ->sum(function (Invoice $invoice) use ($today) {
+                    return $invoice->netSalesAfterCreditsInRange($today, $today);
                 }), 2);
 
             $openInvoices = Invoice::query()
                 ->with(['receipts', 'creditNotes', 'advanceApplications'])
+                ->whereDate('issued_at', '<=', $today->toDateString())
                 ->whereIn('status', ['issued', 'adjusted'])
                 ->get();
 
-            $outstandingReceivables = round((float) $openInvoices->sum(function (Invoice $invoice) {
-                return $invoice->outstanding;
+            $outstandingReceivables = round((float) $openInvoices->sum(function (Invoice $invoice) use ($today) {
+                return $invoice->outstandingAsOf($today->copy()->endOfDay());
             }), 2);
+        }
+
+        if ($productionReady) {
+            $todayProductionQty = round((float) ProductionRun::query()
+                ->where('qc_status', 'approved')
+                ->whereDate('created_at', $today)
+                ->sum('quantity'), 2);
+        }
+
+        if ($stockReady && $productReady) {
+            $availableByProduct = StockEntry::query()
+                ->selectRaw('product_id, SUM(quantity) as qty')
+                ->where('status', 'available')
+                ->groupBy('product_id')
+                ->pluck('qty', 'product_id');
+
+            $trackedProducts = Product::query()
+                ->sellable()
+                ->stockTracked()
+                ->pluck('id');
+
+            $lowStockAlertCount = $trackedProducts
+                ->filter(function ($productId) use ($availableByProduct) {
+                    return (float) ($availableByProduct[$productId] ?? 0) <= 10;
+                })
+                ->count();
         }
 
         $monthlyTargetProgress = $monthlySalesTarget > 0
@@ -156,12 +196,16 @@ class AdminController extends Controller
         if ($orderReady || $invoiceReady) {
             for ($offset = $salesRangeMonths - 1; $offset >= 0; $offset--) {
                 $month = $today->copy()->startOfMonth()->subMonths($offset);
+                $periodEnd = $month->isSameMonth($today) && $month->isSameYear($today)
+                    ? $today->copy()->endOfDay()
+                    : $month->copy()->endOfMonth();
                 $monthLabels[] = $month->format('M Y');
 
                 $monthlyOrders[] = $orderReady
                     ? Order::where('order_type', '!=', 'return')
                         ->whereYear('delivery_date', $month->year)
                         ->whereMonth('delivery_date', $month->month)
+                        ->whereDate('delivery_date', '<=', $periodEnd->toDateString())
                         ->count()
                     : 0;
 
@@ -170,9 +214,13 @@ class AdminController extends Controller
                         ->with('creditNotes')
                         ->whereYear('issued_at', $month->year)
                         ->whereMonth('issued_at', $month->month)
+                        ->whereDate('issued_at', '<=', $periodEnd->toDateString())
                         ->get()
-                        ->sum(function (Invoice $invoice) {
-                            return $invoice->net_sales_after_credits;
+                        ->sum(function (Invoice $invoice) use ($month, $periodEnd) {
+                            return $invoice->netSalesAfterCreditsInRange(
+                                $month->copy()->startOfMonth(),
+                                $periodEnd
+                            );
                         })
                     : 0;
             }
@@ -194,8 +242,8 @@ class AdminController extends Controller
                         ->with('creditNotes')
                         ->whereDate('issued_at', $day)
                         ->get()
-                        ->sum(function (Invoice $invoice) {
-                            return $invoice->net_sales_after_credits;
+                        ->sum(function (Invoice $invoice) use ($day) {
+                            return $invoice->netSalesAfterCreditsInRange($day, $day);
                         })
                     : 0;
 
@@ -222,12 +270,40 @@ class AdminController extends Controller
                 ->get()
             : collect();
 
+        if ($request->ajax() || $request->boolean('ajax')) {
+            $section = $request->query('section');
+
+            $payload = [];
+
+            if (! $section || $section === 'sales') {
+                $payload['monthlySale'] = [
+                    'labels' => $monthLabels,
+                    'orders' => $monthlyOrders,
+                    'rangeMonths' => $salesRangeMonths,
+                ];
+            }
+
+            if (! $section || $section === 'target') {
+                $payload['monthlyTarget'] = [
+                    'periodLabel' => $currentMonthLabel,
+                    'targetBasis' => $monthlyTargetBasis,
+                    'targetValue' => round($monthlySalesTarget, 2),
+                    'achievedValue' => round($monthlyAchieved, 2),
+                    'todayValue' => round($todayAchieved, 2),
+                    'progressValue' => round($monthlyTargetProgress, 2),
+                ];
+            }
+
+            return response()->json($payload);
+        }
+
         return view('admin.dashboard', compact(
             'metrics',
             'chartDays',
             'agentCount',
             'totalOrderCount',
             'returnOrderCount',
+            'pendingDeliveryCount',
             'monthLabels',
             'monthlyOrders',
             'monthlyRevenue',
@@ -239,6 +315,8 @@ class AdminController extends Controller
             'monthlyTargetBasis',
             'monthlyAchieved',
             'todayAchieved',
+            'todayProductionQty',
+            'lowStockAlertCount',
             'monthlyTargetProgress',
             'outstandingReceivables',
             'targetMonthOptions'

@@ -28,11 +28,11 @@ class MenuHelper
 
         if ($groups->isEmpty()) {
             return self::normalizeSidebarGroups(
-                self::ensureSystemSettingsLinks(self::getFallbackMenu())
+                self::applyRuntimeMenuLinks(self::getFallbackMenu())
             );
         }
 
-        return self::normalizeSidebarGroups(self::ensureSystemSettingsLinks($groups->map(function (MenuGroup $group) {
+        $menuGroups = $groups->map(function (MenuGroup $group) {
             return [
                 'title' => $group->title,
                 'items' => $group->items
@@ -91,7 +91,11 @@ class MenuHelper
                     ->values()
                     ->all(),
             ];
-        })->all()));
+        })->all();
+
+        return self::normalizeSidebarGroups(
+            self::applyRuntimeMenuLinks($menuGroups)
+        );
     }
 
     public static function isValidMenuPath(?string $path): bool
@@ -214,6 +218,7 @@ class MenuHelper
                         'permission' => 'control.warehouses',
                         'subItems' => [
                             ['name' => 'Warehouses', 'path' => '/admin/warehouses', 'permission' => 'control.warehouses'],
+                            ['name' => 'Warehouse locations', 'path' => '/admin/warehouse-locations', 'permission' => 'control.warehouses'],
                             ['name' => 'Vehicle registry', 'path' => '/admin/vehicles', 'permission' => 'control.warehouses'],
                             // Delivery zones & routes configuration
                             ['name' => 'Delivery zones & routes', 'path' => '/admin/delivery-routes', 'permission' => 'control.warehouses'],
@@ -280,6 +285,7 @@ class MenuHelper
                             ['name' => 'Inventory Dashboard', 'path' => '/admin/inventory', 'permission' => 'inventory.manage'],
                             ['name' => 'Material stock', 'path' => '/admin/inventory/materials', 'permission' => 'inventory.manage'],
                             ['name' => 'Goods receipts (GRN)', 'path' => '/admin/goods-receipts', 'permission' => 'inventory.manage'],
+                            ['name' => 'Stock Movements', 'path' => '/admin/stock/movements', 'permission' => 'inventory.manage'],
                             ['name' => 'Transfers', 'path' => '/admin/stock/transfers', 'permission' => 'inventory.manage'],
                             ['name' => 'Deliveries & POD', 'path' => '/admin/deliveries/pod', 'permission' => 'control.warehouses'],
                             ['name' => 'Vehicle loads', 'path' => '/admin/vehicle-load', 'permission' => 'control.warehouses'],
@@ -301,6 +307,7 @@ class MenuHelper
                         'subItems' => [
                             ['name' => 'Sales dashboard', 'path' => '/admin/sales-dashboard', 'permission' => 'sales.manage'],
                             ['name' => 'Sales orders', 'path' => '/admin/orders', 'permission' => 'sales.manage'],
+                            ['name' => 'Sales targets', 'path' => '/admin/sales-targets', 'permission' => 'sales.manage'],
                             ['name' => 'Returns', 'path' => '/admin/returns/customer', 'permission' => 'sales.manage'],
                             ['name' => 'Customer gifts', 'path' => '/admin/gifts', 'permission' => 'sales.manage'],
                             ['name' => 'Marketing campaigns', 'path' => '/admin/campaigns', 'permission' => 'sales.manage'],
@@ -321,6 +328,7 @@ class MenuHelper
                         'subItems' => [
                             ['name' => 'Accounting dashboard', 'path' => '/admin/accounting-dashboard', 'permission' => 'accounting.manage'],
                             ['name' => 'Customer invoices', 'path' => '/admin/finance', 'permission' => 'accounting.manage'],
+                            ['name' => 'Agent advances', 'path' => '/admin/agent-advances', 'permission' => 'accounting.manage'],
                             ['name' => 'Purchase bills', 'path' => '/admin/bills', 'permission' => 'accounting.manage'],
                             ['name' => 'Expenses', 'path' => '/admin/expenses', 'permission' => 'accounting.manage'],
                             ['name' => 'Salary distributions', 'path' => '/admin/salary-distributions', 'permission' => 'accounting.manage'],
@@ -377,6 +385,92 @@ class MenuHelper
         }
 
         return $groups;
+    }
+
+    protected static function ensureWarehouseLocationLinks(array $groups): array
+    {
+        foreach ($groups as &$group) {
+            foreach ($group['items'] as &$item) {
+                if (mb_strtolower($item['name'] ?? '') !== 'warehouses') {
+                    continue;
+                }
+
+                $subItems = collect($item['subItems'] ?? []);
+                $subItems->push([
+                    'name' => 'Warehouse locations',
+                    'path' => '/admin/warehouse-locations',
+                    'permission' => 'control.warehouses',
+                ]);
+
+                $item['subItems'] = $subItems
+                    ->unique(fn (array $sub) => mb_strtolower(trim(($sub['name'] ?? '') . '|' . ($sub['path'] ?? ''))))
+                    ->values()
+                    ->all();
+            }
+        }
+
+        return $groups;
+    }
+
+    protected static function ensureAgentAdvanceLinks(array $groups): array
+    {
+        foreach ($groups as &$group) {
+            foreach ($group['items'] as &$item) {
+                if (mb_strtolower($item['name'] ?? '') !== 'accounting') {
+                    continue;
+                }
+
+                $subItems = collect($item['subItems'] ?? []);
+                $subItems->push([
+                    'name' => 'Agent advances',
+                    'path' => '/admin/agent-advances',
+                    'permission' => 'accounting.manage',
+                ]);
+
+                $item['subItems'] = $subItems
+                    ->unique(fn (array $sub) => mb_strtolower(trim(($sub['name'] ?? '') . '|' . ($sub['path'] ?? ''))))
+                    ->values()
+                    ->all();
+            }
+        }
+
+        return $groups;
+    }
+
+    protected static function ensureStockMovementLinks(array $groups): array
+    {
+        foreach ($groups as &$group) {
+            foreach ($group['items'] as &$item) {
+                if (mb_strtolower($item['name'] ?? '') !== 'inventory') {
+                    continue;
+                }
+
+                $subItems = collect($item['subItems'] ?? []);
+                $subItems->push([
+                    'name' => 'Stock Movements',
+                    'path' => '/admin/stock/movements',
+                    'permission' => 'inventory.manage',
+                ]);
+
+                $item['subItems'] = $subItems
+                    ->unique(fn (array $sub) => mb_strtolower(trim(($sub['name'] ?? '') . '|' . ($sub['path'] ?? ''))))
+                    ->values()
+                    ->all();
+            }
+        }
+
+        return $groups;
+    }
+
+    protected static function applyRuntimeMenuLinks(array $groups): array
+    {
+        return self::ensureStockMovementLinks(
+            self::ensureAgentAdvanceLinks(
+                self::ensureWarehouseLocationLinks(
+                    self::ensureSystemSettingsLinks($groups)
+                )
+            )
+        );
     }
 
     protected static function normalizeSidebarGroups(array $groups): array

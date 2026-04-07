@@ -271,7 +271,15 @@ class OrderController extends Controller
                         }
                         $entry->save();
 
-                        StockEntry::create([
+                        StockMovement::recordFor(
+                            $entry,
+                            'reservation-out',
+                            $reserved * -1,
+                            'Reserved for order #' . $order->id,
+                            $order->id
+                        );
+
+                        $reservedEntry = StockEntry::create([
                             'order_id' => $order->id,
                             'warehouse_id' => $entry->warehouse_id,
                             'warehouse_location_id' => $entry->warehouse_location_id,
@@ -280,6 +288,14 @@ class OrderController extends Controller
                             'quantity' => $reserved,
                             'status' => 'reserved',
                         ]);
+
+                        StockMovement::recordFor(
+                            $reservedEntry,
+                            'reservation-in',
+                            $reserved,
+                            'Reserved for order #' . $order->id,
+                            $order->id
+                        );
                         $toReserve -= $reserved;
                     }
                 }
@@ -289,7 +305,7 @@ class OrderController extends Controller
 
             $order->update([
                 'total' => $total,
-                'commission_total' => $commissionTotal > 0 ? $commissionTotal : null,
+                'commission_total' => $commissionTotal,
                 'is_credit_used' => $this->usesCredit($data['payment_mode'] ?? null, $data['order_type']),
             ]);
 
@@ -316,13 +332,13 @@ class OrderController extends Controller
         // Do not allow skipping more than one step forward or moving backwards
         if ($targetIndex === false || $currentIndex === false || $targetIndex > $currentIndex + 1 || $targetIndex < $currentIndex) {
             return redirect()->route('admin.orders.show', $order)
-                ->with('status', 'Status change not allowed by workflow.');
+                ->with('error', 'Status change not allowed by workflow.');
         }
 
         // Once delivered, lock status
         if ($oldStatus === 'delivered' && $newStatus !== 'delivered') {
             return redirect()->route('admin.orders.show', $order)
-                ->with('status', 'Delivered orders cannot change status.');
+                ->with('error', 'Delivered orders cannot change status.');
         }
 
         $order->update(['status' => $newStatus]);
@@ -364,7 +380,7 @@ class OrderController extends Controller
 
         if ($hasInvoice) {
             return redirect()->route('admin.orders.index')
-                ->with('status', 'Order has an invoice and cannot be deleted. Use credit notes instead.');
+                ->with('error', 'Order has an invoice and cannot be deleted. Use credit notes instead.');
         }
 
         DB::transaction(function () use ($order) {
@@ -397,12 +413,21 @@ class OrderController extends Controller
                     // Reduce reserved entry quantity
                     $reservedEntry->quantity -= $releaseQty;
 
-                    if ($reservedEntry->quantity <= 0) {
-                        // Remove fully reserved entry
-                        $reservedEntry->delete();
-                    } else {
-                        $reservedEntry->save();
+                    if ($releaseQty > 0) {
+                        StockMovement::recordFor(
+                            $reservedEntry,
+                            'reservation-release-out',
+                            $releaseQty * -1,
+                            'Released from deleted order #' . $order->id,
+                            $order->id
+                        );
                     }
+
+                    if ($reservedEntry->quantity <= 0) {
+                        $reservedEntry->quantity = 0;
+                    }
+
+                    $reservedEntry->save();
 
                     // Add released quantity back to available for same warehouse/batch
                     $availableEntry = StockEntry::firstOrCreate(
@@ -420,6 +445,14 @@ class OrderController extends Controller
 
                     $availableEntry->quantity += $releaseQty;
                     $availableEntry->save();
+
+                    StockMovement::recordFor(
+                        $availableEntry,
+                        'reservation-release-in',
+                        $releaseQty,
+                        'Released from deleted order #' . $order->id,
+                        $order->id
+                    );
 
                     $remaining -= $releaseQty;
                 }

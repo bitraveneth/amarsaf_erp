@@ -169,7 +169,7 @@ class AgentController extends Controller
 
         if (Order::where('agent_id', $agent->id)->exists()) {
             return redirect()->route('admin.agents.index')
-                ->with('status', 'Agent has orders and cannot be deleted. Consider disabling or reassigning instead.');
+                ->with('error', 'Agent has orders and cannot be deleted. Consider disabling or reassigning instead.');
         }
 
         // Unlink any user accounts pointing at this agent so the record can be removed safely.

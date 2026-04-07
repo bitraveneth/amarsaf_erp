@@ -4,9 +4,11 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Delivery;
+use App\Models\DeliveryItem;
 use App\Models\DeliveryRoute;
 use App\Models\Order;
 use App\Models\StockEntry;
+use App\Models\StockMovement;
 use App\Models\Vehicle;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -201,10 +203,12 @@ class DeliveryController extends Controller
                 $order = $delivery->order()->with('items')->first();
 
                 if ($order->order_type !== 'return') {
+                    $deliveryItemSummaries = DeliveryItem::summarizeForOrderItems($deliveryItems);
+
                     foreach ($order->items as $item) {
-                        $line = $deliveryItems->firstWhere('order_item_id', $item->id);
+                        $line = $deliveryItemSummaries->get($item->id);
                         $toShip = $line
-                            ? (float) $line->qty_dispatched
+                            ? (float) $line['qty_dispatched']
                             : (float) $item->quantity;
 
                         if ($toShip <= 0) {
@@ -231,8 +235,18 @@ class DeliveryController extends Controller
                             $shipQty = min($toShip, $entryQty);
                             $remaining = $entryQty - $shipQty;
 
+                            StockMovement::recordFor(
+                                $entry,
+                                'delivery',
+                                $shipQty * -1,
+                                'Delivered on order #' . $order->id,
+                                $order->id
+                            );
+
                             if ($remaining <= 0) {
-                                $entry->delete();
+                                $entry->quantity = 0;
+                                $entry->status = 'sold';
+                                $entry->save();
                             } else {
                                 $entry->quantity = $remaining;
                                 $entry->save();
@@ -386,9 +400,7 @@ class DeliveryController extends Controller
             });
         }
 
-        $delivery->items()->delete();
-
-        foreach ($rows as $row) {
+        $normalizedRows = $rows->map(function ($row) use ($orderItems) {
             $orderItem = $orderItems->get((int) $row['order_item_id']);
             if (! $orderItem) {
                 throw ValidationException::withMessages([
@@ -426,14 +438,41 @@ class DeliveryController extends Controller
                 ]);
             }
 
-            $delivery->items()->create([
-                'order_item_id' => $row['order_item_id'],
-                'product_id' => $row['product_id'],
+            return [
+                'order_item_id' => (int) $row['order_item_id'],
+                'product_id' => (int) $row['product_id'],
                 'batch_id' => $row['batch_id'] ?? null,
                 'qty_dispatched' => $qtyDispatched,
                 'qty_delivered' => $qtyDelivered,
                 'qty_short' => $qtyShort,
                 'qty_damaged' => $qtyDamaged,
+                'notes' => $row['notes'] ?? null,
+                'reported_total' => $reportedTotal,
+            ];
+        })->values();
+
+        foreach ($normalizedRows->groupBy('order_item_id') as $orderItemId => $groupedRows) {
+            $orderItem = $orderItems->get((int) $orderItemId);
+            $reportedTotal = (float) $groupedRows->sum('reported_total');
+
+            if ($reportedTotal > (float) $orderItem->quantity + 0.00001) {
+                throw ValidationException::withMessages([
+                    'items' => ['Combined delivery quantities cannot exceed the original ordered quantity.'],
+                ]);
+            }
+        }
+
+        $delivery->items()->delete();
+
+        foreach ($normalizedRows as $row) {
+            $delivery->items()->create([
+                'order_item_id' => $row['order_item_id'],
+                'product_id' => $row['product_id'],
+                'batch_id' => $row['batch_id'] ?? null,
+                'qty_dispatched' => $row['qty_dispatched'],
+                'qty_delivered' => $row['qty_delivered'],
+                'qty_short' => $row['qty_short'],
+                'qty_damaged' => $row['qty_damaged'],
                 'notes' => $row['notes'] ?? null,
             ]);
         }

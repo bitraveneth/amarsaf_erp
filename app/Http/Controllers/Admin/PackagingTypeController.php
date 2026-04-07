@@ -53,7 +53,7 @@ class PackagingTypeController extends Controller
     {
         if ($packagingType->products()->exists()) {
             return redirect()->route('admin.packaging.index')
-                ->with('status', 'Packaging type is linked to products and cannot be deleted.');
+                ->with('error', 'Packaging type is linked to products and cannot be deleted.');
         }
 
         if (
@@ -61,7 +61,7 @@ class PackagingTypeController extends Controller
             || PackagingConversion::where('to_packaging_type_id', $packagingType->id)->exists()
         ) {
             return redirect()->route('admin.packaging.index')
-                ->with('status', 'Packaging type is used in conversions and cannot be deleted.');
+                ->with('error', 'Packaging type is used in conversions and cannot be deleted.');
         }
 
         $packagingType->delete();

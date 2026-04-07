@@ -37,7 +37,9 @@ class CommissionCalculator
                 $query->where('agent_id', $agent->id)
                     ->where('status', 'delivered')
                     ->whereHas('invoice', function ($invoiceQuery) use ($from, $to) {
-                        $invoiceQuery->whereBetween('issued_at', [$from->toDateString(), $to->toDateString()]);
+                        $invoiceQuery
+                            ->whereDate('issued_at', '>=', $from->toDateString())
+                            ->whereDate('issued_at', '<=', $to->toDateString());
                     });
             })
             ->get();

@@ -32,6 +32,7 @@ use Database\Seeders\Sales\MarketingCampaignsModuleSeeder;
 use Database\Seeders\Sales\PickingListsModuleSeeder;
 use Database\Seeders\Sales\ReturnsModuleSeeder;
 use Database\Seeders\Sales\SalesOrdersModuleSeeder;
+use Database\Seeders\Sales\SalesTargetsModuleSeeder;
 use Database\Seeders\Users\UsersModuleSeeder;
 use Database\Seeders\MenuStructureSeeder;
 use Database\Seeders\RolesSeeder;
@@ -74,6 +75,7 @@ class DatabaseSeeder extends Seeder
 
             // 4. Sales
             SalesOrdersModuleSeeder::class,
+            SalesTargetsModuleSeeder::class,
             PickingListsModuleSeeder::class,
             DeliveriesModuleSeeder::class,
             ReturnsModuleSeeder::class,

@@ -37,10 +37,11 @@ class PurchaseBillController extends Controller
     {
         $suppliers = Supplier::orderBy('name')->get();
         $products = Product::with('taxClass')->orderBy('name')->get();
+        $warehouses = Warehouse::orderBy('name')->get();
 
         $bill->load('items');
 
-        return view('admin.bills.edit', compact('bill', 'suppliers', 'products'));
+        return view('admin.bills.edit', compact('bill', 'suppliers', 'products', 'warehouses'));
     }
 
     public function store(Request $request)
@@ -68,6 +69,7 @@ class PurchaseBillController extends Controller
                 'number' => 'PB-TMP-' . Str::uuid(),
                 'bill_date' => $data['bill_date'],
                 'due_date' => $data['due_date'] ?? null,
+                'warehouse_id' => $data['warehouse_id'] ?? null,
                 'net_total' => $netTotal,
                 'vat_amount' => $vatTotal,
                 'status' => 'open',
@@ -103,7 +105,7 @@ class PurchaseBillController extends Controller
         if ($bill->payments()->exists()) {
             return redirect()
                 ->route('admin.bills.index')
-                ->with('status', 'Bills with payments cannot be edited. Please clear payments first.');
+                ->with('error', 'Bills with payments cannot be edited. Please clear payments first.');
         }
 
         // If this bill has already posted material stock, we block edits to
@@ -112,13 +114,14 @@ class PurchaseBillController extends Controller
         if (StockEntry::where('purchase_bill_id', $bill->id)->exists()) {
             return redirect()
                 ->route('admin.bills.index')
-                ->with('status', 'This bill has already posted material stock. Please use inventory adjustments instead of editing the bill.');
+                ->with('error', 'This bill has already posted material stock. Please use inventory adjustments instead of editing the bill.');
         }
 
         $data = $request->validate([
             'supplier_id' => 'required|exists:suppliers,id',
             'bill_date' => 'required|date',
             'due_date' => 'nullable|date',
+            'warehouse_id' => 'nullable|exists:warehouses,id',
             'items' => 'required|array|min:1',
             'items.*.description' => 'required|string',
             'items.*.product_id' => 'nullable|exists:products,id',
@@ -135,6 +138,7 @@ class PurchaseBillController extends Controller
                 'supplier_id' => $data['supplier_id'],
                 'bill_date' => $data['bill_date'],
                 'due_date' => $data['due_date'] ?? null,
+                'warehouse_id' => $data['warehouse_id'] ?? null,
                 'net_total' => $netTotal,
                 'vat_amount' => $vatTotal,
             ]);
@@ -184,7 +188,7 @@ class PurchaseBillController extends Controller
         if ($data['amount'] <= 0) {
             return redirect()
                 ->route('admin.bills.index')
-                ->with('status', 'This bill is already fully paid.');
+                ->with('error', 'This bill is already fully paid.');
         }
 
         if ($data['amount'] > $totalDue) {

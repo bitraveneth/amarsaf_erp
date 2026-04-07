@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Collection;
 
 class DeliveryItem extends Model
 {
@@ -46,5 +47,48 @@ class DeliveryItem extends Model
     public function batch()
     {
         return $this->belongsTo(Batch::class);
+    }
+
+    public static function summarizeForOrderItems(iterable $items): Collection
+    {
+        return collect($items)
+            ->groupBy(function ($item) {
+                return (int) $item->order_item_id;
+            })
+            ->map(function (Collection $rows) {
+                $qtyDispatched = (float) $rows->sum('qty_dispatched');
+                $qtyDelivered = (float) $rows->sum('qty_delivered');
+                $qtyShort = (float) $rows->sum('qty_short');
+                $qtyDamaged = (float) $rows->sum('qty_damaged');
+
+                return [
+                    'qty_dispatched' => $qtyDispatched,
+                    'qty_delivered' => $qtyDelivered,
+                    'qty_short' => $qtyShort,
+                    'qty_damaged' => $qtyDamaged,
+                    'realized_quantity' => self::realizedQuantityFromTotals(
+                        $qtyDispatched,
+                        $qtyDelivered,
+                        $qtyShort,
+                        $qtyDamaged
+                    ),
+                ];
+            });
+    }
+
+    public static function realizedQuantityFromTotals(
+        float $qtyDispatched,
+        float $qtyDelivered,
+        float $qtyShort,
+        float $qtyDamaged
+    ): float {
+        if (
+            $qtyDelivered <= 0
+            && ($qtyDispatched > 0 || $qtyShort > 0 || $qtyDamaged > 0)
+        ) {
+            return max($qtyDispatched - $qtyShort - $qtyDamaged, 0);
+        }
+
+        return max($qtyDelivered, 0);
     }
 }
