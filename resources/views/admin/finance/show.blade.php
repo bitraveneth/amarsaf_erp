@@ -9,7 +9,7 @@
 @php
     $currencyCode = config('app.currency', 'BDT');
 @endphp
-<div class="space-y-8 print-invoice">
+<div class="space-y-8 print-invoice print:!mx-0 print:!w-full print:!max-w-none">
     <!-- Header with gradient (screen only) -->
     <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6 print-hidden">
         <div>
@@ -103,8 +103,8 @@
     </div>
 
     <!-- Clean A4-style header for print only -->
-    <div class="hidden print-only mb-6">
-        <div class="flex items-start justify-between">
+    <div class="hidden print-only print-header mb-8 print:!mx-0 print:!w-full print:!max-w-none">
+        <div class="flex items-start justify-between gap-8">
                 <div class="flex items-center gap-3">
                     @php
                     $printCompanyName = $legalCompanyName ?? config('app.name');
@@ -122,7 +122,7 @@
                     </p>
                 </div>
             </div>
-            <div class="text-right space-y-1">
+            <div class="print-header-summary text-right space-y-1">
                 <h1 class="text-xl font-bold text-gray-900">
                     Invoice {{ $invoice->number }}
                 </h1>
@@ -351,48 +351,66 @@
     </div>
 
     <!-- Simple A4-style invoice body (print only) -->
-    <div class="print-only mt-6 text-[12px] leading-relaxed text-gray-900">
-        <div class="flex justify-between mb-4">
-            <div>
-                <h3 class="font-semibold text-sm">Bill to</h3>
-                <p class="mt-1">
+    <div class="print-only print-sheet mt-6 text-[12px] leading-relaxed text-gray-900 print:!mx-0 print:!w-full print:!max-w-none">
+        <div class="print-meta-grid mb-6">
+            <div class="print-billto">
+                <h3 class="font-semibold text-[13px] uppercase tracking-[0.08em]">Bill to</h3>
+                <p class="mt-2 text-[13px] leading-6">
                     {{ $invoice->order?->agent->name ?? 'Customer' }}<br>
-                    {{-- ভবিষ্যতে agent address থাকলে এখানে দেখাব --}}
                 </p>
             </div>
-            <div class="text-right">
-                <p>Invoice No: <strong>{{ $invoice->number }}</strong></p>
-                <p>Order No: {{ $invoice->order_id ?? '—' }}</p>
-                <p>Issued: {{ optional($invoice->issued_at)->format('d M Y') }}</p>
+            <div class="print-meta-card">
+                <div class="print-meta-row">
+                    <span>Invoice No</span>
+                    <strong>{{ $invoice->number }}</strong>
+                </div>
+                <div class="print-meta-row">
+                    <span>Order No</span>
+                    <span>{{ $invoice->order_id ?? '—' }}</span>
+                </div>
+                <div class="print-meta-row">
+                    <span>Issued</span>
+                    <span>{{ optional($invoice->issued_at)->format('d M Y') }}</span>
+                </div>
                 @if($invoice->due_at)
-                    <p>Due: {{ $invoice->due_at->format('d M Y') }}</p>
+                    <div class="print-meta-row">
+                        <span>Due</span>
+                        <span>{{ $invoice->due_at->format('d M Y') }}</span>
+                    </div>
                 @endif
             </div>
         </div>
 
         {{-- Items table --}}
-        <table class="w-full border-collapse text-[11px]">
+        <table class="print-items-table w-full border-collapse text-[11px]">
+            <colgroup>
+                <col style="width: 6%">
+                <col style="width: 50%">
+                <col style="width: 12%">
+                <col style="width: 16%">
+                <col style="width: 16%">
+            </colgroup>
             <thead>
                 <tr>
-                    <th class="border border-gray-300 px-2 py-1 text-left">#</th>
-                    <th class="border border-gray-300 px-2 py-1 text-left">Description</th>
-                    <th class="border border-gray-300 px-2 py-1 text-right">Qty</th>
-                    <th class="border border-gray-300 px-2 py-1 text-right">Unit Price</th>
-                    <th class="border border-gray-300 px-2 py-1 text-right">Line Total</th>
+                    <th class="border border-gray-300 px-3 py-2 text-left">#</th>
+                    <th class="border border-gray-300 px-3 py-2 text-left">Description</th>
+                    <th class="border border-gray-300 px-3 py-2 text-right">Qty</th>
+                    <th class="border border-gray-300 px-3 py-2 text-right">Unit Price</th>
+                    <th class="border border-gray-300 px-3 py-2 text-right">Line Total</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach($invoice->items as $idx => $item)
                     <tr>
-                        <td class="border border-gray-200 px-2 py-1 text-left">{{ $idx + 1 }}</td>
-                        <td class="border border-gray-200 px-2 py-1 text-left">
+                        <td class="border border-gray-200 px-3 py-2 align-top text-left">{{ $idx + 1 }}</td>
+                        <td class="border border-gray-200 px-3 py-2 align-top text-left">
                             {{ $item->description }}
                         </td>
-                        <td class="border border-gray-200 px-2 py-1 text-right">{{ $item->quantity }}</td>
-                        <td class="border border-gray-200 px-2 py-1 text-right">
+                        <td class="border border-gray-200 px-3 py-2 align-top text-right">{{ $item->quantity }}</td>
+                        <td class="border border-gray-200 px-3 py-2 align-top text-right">
                             {{ number_format($item->unit_price, 2) }}
                         </td>
-                        <td class="border border-gray-200 px-2 py-1 text-right">
+                        <td class="border border-gray-200 px-3 py-2 align-top text-right">
                             {{ number_format($item->line_total, 2) }}
                         </td>
                     </tr>
@@ -401,49 +419,48 @@
         </table>
 
         {{-- Totals --}}
-        <div class="mt-4 flex justify-end">
-            <table class="text-[11px]">
+        <div class="mt-6 flex justify-end">
+            <table class="print-totals text-[11px]">
                 <tr>
-                    <td class="px-3 py-1 text-right">Net total:</td>
-                    <td class="px-3 py-1 text-right">{{ number_format($invoice->net_total, 2) }}</td>
+                    <td class="px-0 py-1.5 text-left">Net total:</td>
+                    <td class="px-0 py-1.5 text-right">{{ number_format($invoice->net_total, 2) }}</td>
                 </tr>
                 <tr>
-                    <td class="px-3 py-1 text-right">VAT:</td>
-                    <td class="px-3 py-1 text-right">{{ number_format($invoice->vat_amount, 2) }}</td>
+                    <td class="px-0 py-1.5 text-left">VAT:</td>
+                    <td class="px-0 py-1.5 text-right">{{ number_format($invoice->vat_amount, 2) }}</td>
                 </tr>
                 <tr>
-                    <td class="px-3 py-1 text-right">Gross total:</td>
-                    <td class="px-3 py-1 text-right">{{ number_format($grossTotal, 2) }}</td>
+                    <td class="px-0 py-1.5 text-left">Gross total:</td>
+                    <td class="px-0 py-1.5 text-right">{{ number_format($grossTotal, 2) }}</td>
                 </tr>
                 <tr>
-                    <td class="px-3 py-1 text-right">Withholding:</td>
-                    <td class="px-3 py-1 text-right">- {{ number_format($invoice->withholding, 2) }}</td>
+                    <td class="px-0 py-1.5 text-left">Withholding:</td>
+                    <td class="px-0 py-1.5 text-right">- {{ number_format($invoice->withholding, 2) }}</td>
                 </tr>
                 <tr>
-                    <td class="px-3 py-1 text-right">Cash due:</td>
-                    <td class="px-3 py-1 text-right">{{ number_format($cashTotal, 2) }}</td>
+                    <td class="px-0 py-1.5 text-left">Cash due:</td>
+                    <td class="px-0 py-1.5 text-right">{{ number_format($cashTotal, 2) }}</td>
                 </tr>
                 <tr>
-                    <td class="px-3 py-1 text-right">Credits:</td>
-                    <td class="px-3 py-1 text-right">- {{ number_format($creditsTotal, 2) }}</td>
+                    <td class="px-0 py-1.5 text-left">Credits:</td>
+                    <td class="px-0 py-1.5 text-right">- {{ number_format($creditsTotal, 2) }}</td>
                 </tr>
                 <tr>
-                    <td class="px-3 py-1 text-right">Receipts:</td>
-                    <td class="px-3 py-1 text-right">- {{ number_format($receiptsTotal, 2) }}</td>
+                    <td class="px-0 py-1.5 text-left">Receipts:</td>
+                    <td class="px-0 py-1.5 text-right">- {{ number_format($receiptsTotal, 2) }}</td>
                 </tr>
                 <tr>
-                    <td class="px-3 py-1 text-right">Advances:</td>
-                    <td class="px-3 py-1 text-right">- {{ number_format($advancesTotal, 2) }}</td>
+                    <td class="px-0 py-1.5 text-left">Advances:</td>
+                    <td class="px-0 py-1.5 text-right">- {{ number_format($advancesTotal, 2) }}</td>
                 </tr>
                 <tr>
-                    <td class="px-3 py-1 text-right font-semibold border-t border-gray-300">Outstanding:</td>
-                    <td class="px-3 py-1 text-right font-semibold border-t border-gray-300">
+                    <td class="px-0 py-2.5 text-left font-semibold border-t border-gray-300">Outstanding:</td>
+                    <td class="px-0 py-2.5 text-right font-semibold border-t border-gray-300">
                         {{ number_format(max(0, $outstanding), 2) }}
                     </td>
                 </tr>
             </table>
         </div>
-
     </div>
 
     <!-- Invoice Items (screen only) -->
@@ -710,57 +727,7 @@
 </div>
 
 @push('styles')
-<style>
-    @media print {
-        @page {
-            size: A4;
-            margin: 12mm;
-        }
-
-        body {
-            background: #ffffff !important;
-        }
-
-        /* Hide app chrome when printing */
-        #sidebar,
-        header,
-        .print-hidden,
-        #receipt-modal,
-        #credit-modal {
-            display: none !important;
-        }
-
-        /* Expand invoice to full width */
-        .print-invoice {
-            margin: 0 !important;
-            padding: 0 !important;
-            max-width: 100% !important;
-        }
-
-        .print-invoice .rounded-2xl,
-        .print-invoice .rounded-xl {
-            box-shadow: none !important;
-            background-color: #ffffff !important;
-        }
-
-        /* Remove card hover effects, borders lighter for print */
-        .print-invoice .border {
-            border-color: #e5e7eb !important;
-        }
-    }
-
-    @media screen {
-        .print-only {
-            display: none !important;
-        }
-    }
-
-    @media print {
-        .print-only {
-            display: block !important;
-        }
-    }
-</style>
+    <link rel="stylesheet" href="{{ asset('css/invoice-print.css') }}?v={{ filemtime(public_path('css/invoice-print.css')) }}">
 @endpush
 
 @push('scripts')

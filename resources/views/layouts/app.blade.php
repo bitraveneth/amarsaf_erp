@@ -234,7 +234,7 @@
         @include('layouts.backdrop')
         @include('layouts.sidebar')
 
-        <div class="min-w-0 w-full overflow-x-clip flex-1 transition-all duration-300 ease-in-out"
+        <div class="print-main min-w-0 w-full overflow-x-clip flex-1 transition-all duration-300 ease-in-out"
              :class="{
                 'xl:ml-[290px]': $store.sidebar.isExpanded,
                 'xl:ml-[90px]': !$store.sidebar.isExpanded,
@@ -245,7 +245,7 @@
                 : { width: '100%' }">
             @include('layouts.app-header')
 
-            <div class="mx-auto w-full min-w-0 max-w-(--breakpoint-2xl) p-4 md:p-6" data-tour="page-content">
+            <div class="mx-auto w-full min-w-0 max-w-(--breakpoint-2xl) p-4 md:p-6 print:!mx-0 print:!w-full print:!max-w-none print:!p-0" data-tour="page-content">
                 @if(session('status'))
                     <div x-data="{ open: true }"
                          x-init="setTimeout(() => open = false, 2600)"
@@ -297,7 +297,7 @@
         </div>
     </div>
 
-    <div class="fixed bottom-5 right-5 z-[1001]" x-data>
+    <div class="fixed bottom-5 right-5 z-[1001] print-hidden" x-data>
         <div class="flex flex-col items-end gap-3">
             <div x-show="$store.tour.launcherOpen"
                  x-cloak
