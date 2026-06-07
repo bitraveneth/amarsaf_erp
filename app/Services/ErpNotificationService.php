@@ -36,6 +36,34 @@ class ErpNotificationService
             }
         }
 
+        if (Schema::hasTable('products') && Schema::hasColumn('products', 'reorder_level')) {
+            $availableByProduct = \App\Models\StockEntry::query()
+                ->selectRaw('product_id, SUM(quantity) as total')
+                ->where('status', 'available')
+                ->groupBy('product_id')
+                ->pluck('total', 'product_id');
+
+            $lowStockCount = \App\Models\Product::stockTracked()
+                ->where('is_active', true)
+                ->whereNotNull('reorder_level')
+                ->get()
+                ->filter(function ($product) use ($availableByProduct) {
+                    return (float) ($availableByProduct[$product->id] ?? 0) < (float) $product->reorder_level;
+                })
+                ->count();
+
+            if ($lowStockCount > 0) {
+                $alerts[] = [
+                    'key' => 'low_stock_' . Carbon::today()->toDateString() . '_' . $lowStockCount,
+                    'message' => "{$lowStockCount} products are below reorder level",
+                    'variant' => 'warning',
+                    'source' => 'Inventory',
+                    'title' => 'Low stock alert',
+                    'context' => ['low_stock_products' => $lowStockCount],
+                ];
+            }
+        }
+
         if (Schema::hasTable('deliveries')) {
             $exceptionDeliveriesToday = Delivery::where('status', 'exception')
                 ->whereDate('updated_at', Carbon::today())

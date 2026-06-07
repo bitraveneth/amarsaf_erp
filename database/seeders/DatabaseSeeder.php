@@ -91,6 +91,12 @@ class DatabaseSeeder extends Seeder
             SalaryDistributionsModuleSeeder::class,
             PayrollModuleSeeder::class,
             BankReconciliationModuleSeeder::class,
+
+            RichOperationalDemoSeeder::class,
+
+            // Rich demo dataset: 12 months of sales, invoices, receipts, P&L ledger, targets.
+            ComprehensiveDummyDataSeeder::class,
+
             TaxReportModuleSeeder::class,
             ProfitAndLossModuleSeeder::class,
             BalanceSheetModuleSeeder::class,

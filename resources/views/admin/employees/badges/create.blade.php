@@ -151,7 +151,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function updateLivePreview() {
         const name = nameInput?.value || 'Badge';
         const code = codeInput?.value || 'CODE';
-        const color = colorInput?.value || '#465fff';
+        const color = colorInput?.value || '#5f4bff';
         const isActive = isActiveCheckbox?.checked || true;
         
         const initial = name.charAt(0);

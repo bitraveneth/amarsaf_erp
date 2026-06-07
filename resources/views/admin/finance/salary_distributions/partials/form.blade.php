@@ -265,7 +265,7 @@
                     <span class="text-theme-xs text-gray-600 dark:text-gray-400">Current document:</span>
                     <a href="{{ asset('storage/'.$distribution->document_path) }}" 
                        target="_blank"
-                       class="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-2.5 py-1 text-theme-xs font-medium text-gray-700 shadow-theme-xs transition hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200">
+                       class="erp-btn-action erp-btn-action-compact">
                         <svg width="14" height="14" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <path d="M10 13.3333V4.16667M10 13.3333L7.5 10.8333M10 13.3333L12.5 10.8333M17.5 13.3333V15.8333C17.5 16.7538 16.7538 17.5 15.8333 17.5H4.16667C3.24619 17.5 2.5 16.7538 2.5 15.8333V13.3333" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
                         </svg>

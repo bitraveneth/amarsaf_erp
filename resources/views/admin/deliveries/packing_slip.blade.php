@@ -7,7 +7,7 @@
         <div>
             <div class="flex items-center gap-3">
                 <h1 class="text-2xl font-semibold text-gray-900 dark:text-white">
-                    Packing Slip
+                    Packing slip
                 </h1>
                 <span class="inline-flex items-center rounded-full bg-brand-50 px-3 py-1 text-xs font-medium text-brand-700 dark:bg-brand-500/20 dark:text-brand-400">
                     Delivery #{{ $delivery->id }}
@@ -52,9 +52,22 @@
             </div>
         </div>
         <div class="flex items-center gap-3">
+            <x-admin.document-actions type="packing-slip" :id="$delivery->id" compact />
+            <a href="{{ route('admin.documents.preview', ['type' => 'delivery-challan', 'id' => $delivery->id]) }}"
+               target="_blank"
+               rel="noopener"
+               class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">
+                Challan
+            </a>
+            <a href="{{ route('admin.documents.preview', ['type' => 'pod', 'id' => $delivery->id]) }}"
+               target="_blank"
+               rel="noopener"
+               class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">
+                POD
+            </a>
             <button type="button" 
                     onclick="window.print()"
-                    class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-white/[0.03]">
+                    class="print-hidden inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-white/[0.03]">
                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
                 </svg>
@@ -65,7 +78,7 @@
                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
                 </svg>
-                Back to Deliveries
+                Back to deliveries
             </a>
             @if(Route::has('admin.deliveries.destroy'))
             <form action="{{ route('admin.deliveries.destroy', $delivery) }}" 

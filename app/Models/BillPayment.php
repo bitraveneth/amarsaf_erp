@@ -14,11 +14,14 @@ class BillPayment extends Model
         'amount',
         'paid_at',
         'method',
+        'batch_reference',
+        'reconciled',
     ];
 
     protected $casts = [
         'amount' => 'decimal:2',
         'paid_at' => 'date',
+        'reconciled' => 'boolean',
     ];
 
     public function bill()

@@ -56,7 +56,7 @@
                                 </div>
                             </td>
                             <td class="px-4 py-3 text-right">
-                                <a href="{{ route('admin.sales-targets.edit', $target) }}" class="inline-flex rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">Edit</a>
+                                <x-admin.action-edit :href="route('admin.sales-targets.edit', $target)" />
                             </td>
                         </tr>
                     @empty

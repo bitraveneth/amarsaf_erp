@@ -7,7 +7,7 @@
         <div>
             <div class="flex items-center gap-3">
                 <h1 class="text-2xl font-semibold text-gray-900 dark:text-white">
-                    Production Order {{ $run->order_number ?? '' }}
+                    Production order {{ $run->order_number ?? '' }}
                 </h1>
                 @php
                     $statusColors = [
@@ -22,6 +22,7 @@
                     $qcColors = [
                         'pending' => 'bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-400',
                         'approved' => 'bg-success-100 text-success-700 dark:bg-success-500/20 dark:text-success-400',
+                        'partial' => 'bg-blue-light-100 text-blue-light-700 dark:bg-blue-light-500/20 dark:text-blue-light-400',
                         'rejected' => 'bg-error-100 text-error-700 dark:bg-error-500/20 dark:text-error-400',
                     ];
                     $qcColor = $qcColors[$run->qc_status] ?? 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400';
@@ -51,20 +52,21 @@
             </div>
         </div>
         <div class="flex items-center gap-3">
+            <x-admin.document-actions type="production-order" :id="$run->id" compact />
             <a href="{{ route('admin.production.index') }}" 
                class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-white/[0.03]">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
                 </svg>
-                Back to Runs
+                Back to runs
             </a>
             <button type="button" 
                     onclick="window.print()"
-                    class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-white/[0.03]">
+                    class="print-hidden inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-white/[0.03]">
                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
                 </svg>
-                Print
+                Quick print
             </button>
             @if($run->stock_confirmed_at && isset($stockEntry) && $stockEntry)
                 <a href="{{ route('admin.stock.writeoff', [
@@ -78,7 +80,7 @@
                     <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                     </svg>
-                    Quick Write-off
+                    Quick write-off
                 </a>
             @endif
         </div>
@@ -101,7 +103,7 @@
         <div class="p-6">
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 <div>
-                    <p class="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Production Order No.</p>
+                    <p class="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Production order No.</p>
                     <p class="mt-1 text-sm font-semibold text-gray-900 dark:text-white">{{ $run->order_number ?? '—' }}</p>
                 </div>
                 <div>
@@ -189,6 +191,81 @@
             </div>
         </div>
     </div>
+
+    @php
+        $canReviewQc = auth()->user()?->hasAnyRole(['admin', 'super_admin', 'qc_officer']) && ! $run->stock_confirmed_at;
+    @endphp
+
+    @if($canReviewQc)
+        <div class="rounded-2xl border border-orange-200 bg-orange-50/60 shadow-theme-sm dark:border-orange-500/30 dark:bg-orange-500/10">
+            <div class="border-b border-orange-200/80 px-6 py-4 dark:border-orange-500/20">
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white">QC batch review</h3>
+                <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
+                    Record how many units passed inspection and what to do with rejected stock before warehouse confirmation.
+                </p>
+            </div>
+            <form action="{{ route('admin.production.qc-review', $run) }}" method="POST" class="space-y-4 p-6" x-data="{ decision: '{{ old('qc_decision', 'approve_all') }}' }">
+                @csrf
+                <div class="grid gap-4 md:grid-cols-2">
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Planned output</p>
+                        <p class="mt-1 text-2xl font-semibold text-gray-900 dark:text-white">{{ number_format($run->quantity, 0) }}</p>
+                    </div>
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Current QC result</p>
+                        <p class="mt-1 text-sm text-gray-800 dark:text-gray-200">
+                            Passed: {{ number_format($run->qc_passed_quantity ?? ($run->qc_status === 'approved' ? $run->quantity : 0), 0) }}
+                            · Rejected: {{ number_format($run->qc_rejected_quantity ?? 0, 0) }}
+                        </p>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">QC decision</label>
+                    <select name="qc_decision" x-model="decision" class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white">
+                        <option value="approve_all">Approve all — fit for sale</option>
+                        <option value="partial">Partial approval — some units rejected</option>
+                        <option value="reject_all">Reject all — not fit for sale</option>
+                    </select>
+                </div>
+
+                <div class="grid gap-4 md:grid-cols-2" x-show="decision === 'partial'" x-cloak>
+                    <div>
+                        <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Passed quantity</label>
+                        <input type="number" name="qc_passed_quantity" min="0" max="{{ (int) $run->quantity }}" value="{{ old('qc_passed_quantity') }}" class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white">
+                    </div>
+                    <div>
+                        <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Rejected quantity</label>
+                        <input type="number" name="qc_rejected_quantity" min="0" max="{{ (int) $run->quantity }}" value="{{ old('qc_rejected_quantity') }}" class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Rejected disposition</label>
+                        <select name="rejected_disposition" class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white">
+                            <option value="scrap">Scrap / destroy</option>
+                            <option value="rework">Send to rework</option>
+                            <option value="hold">Hold for investigation</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">QC notes</label>
+                    <textarea name="qc_notes" rows="3" class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white" placeholder="Example: 150 cartons failed label alignment check.">{{ old('qc_notes', $run->qc_notes) }}</textarea>
+                </div>
+
+                <div class="flex flex-wrap gap-3">
+                    <button type="submit" class="inline-flex items-center rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-600">
+                        Save QC review
+                    </button>
+                    @if($run->isQcReadyForStock() && ! $run->stock_confirmed_at)
+                        <span class="inline-flex items-center rounded-full bg-success-100 px-3 py-1 text-xs font-medium text-success-700 dark:bg-success-500/20 dark:text-success-400">
+                            {{ number_format($run->sellableQuantity(), 0) }} units ready for stock confirmation
+                        </span>
+                    @endif
+                </div>
+            </form>
+        </div>
+    @endif
 
     <!-- Line, Shift & Notes Section -->
     <div class="rounded-2xl border border-gray-200 bg-white shadow-theme-sm dark:border-gray-800 dark:bg-gray-900">

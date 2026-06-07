@@ -59,7 +59,7 @@
 @endphp
 
 <aside id="sidebar"
-    class="print-hidden fixed flex flex-col mt-0 top-0 left-0 bg-white dark:bg-gray-900 dark:border-gray-800 text-gray-900 h-screen transition-all duration-300 ease-in-out z-[99999] border-r border-gray-200"
+    class="print-hidden fixed flex flex-col mt-0 top-0 left-0 bg-canvas dark:bg-gray-900 dark:border-gray-800 text-gray-900 h-screen transition-all duration-300 ease-in-out z-[99999] border-r border-gray-200/80"
     x-data="{
         isSidebarVisible() {
             return $store.sidebar.isExpanded || $store.sidebar.isMobileOpen;
@@ -71,27 +71,10 @@
         'translate-x-0': $store.sidebar.isMobileOpen,
         '-translate-x-full xl:translate-x-0': !$store.sidebar.isMobileOpen
     }">
-    <!-- Logo Section (circle initials) -->
-    <div class="px-5 pt-5 pb-4 flex"
-         :class="!isSidebarVisible()
-            ? 'xl:justify-center'
-            : 'justify-start'">
-        <a href="{{ route('admin.dashboard') }}" data-tour="sidebar-brand" class="flex items-center gap-4">
-            @if(!empty($appLogoUrl))
-                <img src="{{ $appLogoUrl }}" alt="{{ $appBrandName }}"
-                    class="h-12 rounded-xl bg-white object-contain dark:bg-gray-900"
-                    :class="isSidebarVisible() ? 'w-20 px-1.5' : 'w-12 px-1'" />
-            @else
-                <div class="flex h-12 w-12 items-center justify-center rounded-full bg-brand-500 text-base font-semibold text-white">
-                    {{ $appBrandInitials }}
-                </div>
-            @endif
-            @if(empty($appLogoUrl))
-                <div class="flex flex-col"
-                     x-show="isSidebarVisible()">
-                    <span class="text-[2rem] font-bold leading-none tracking-tight text-gray-900 dark:text-white">{{ $appBrandName }}</span>
-                </div>
-            @endif
+    <!-- Logo Section -->
+    <div class="flex w-full justify-center px-5 pt-5 pb-4">
+        <a href="{{ route('admin.dashboard') }}" data-tour="sidebar-brand" class="inline-flex w-full justify-center">
+            <x-brand-mark variant="sidebar" name-mode="none" />
         </a>
     </div>
 
@@ -100,14 +83,19 @@
         <nav class="mb-6 px-5">
             <div class="flex flex-col gap-4">
                 @foreach ($menuGroups as $groupIndex => $menuGroup)
+                    @php
+                        $groupTitle = trim($menuGroup['title'] ?? '');
+                        $showGroupTitle = $groupTitle !== '';
+                    @endphp
                     <div class="{{ $groupIndex > 0 ? 'pt-4 mt-2 border-t border-gray-100 dark:border-gray-800' : '' }}">
+                        @if($showGroupTitle)
                         <!-- Menu Group Title -->
                         <h2 class="mb-4 text-xs uppercase flex leading-[20px] text-gray-400"
                             :class="!isSidebarVisible() ?
                             'lg:justify-center' : 'justify-start'">
                             <template
                                 x-if="isSidebarVisible()">
-                                <span>{{ $menuGroup['title'] }}</span>
+                                <span>{{ $groupTitle }}</span>
                             </template>
                             <template x-if="!isSidebarVisible()">
                                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -115,6 +103,7 @@
                                 </svg>
                             </template>
                         </h2>
+                        @endif
 
                         <!-- Menu Items -->
                         <ul class="flex flex-col gap-1">

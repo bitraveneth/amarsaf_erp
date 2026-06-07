@@ -232,30 +232,30 @@
                             @endif
                         </div>
                         
-                        <!-- KYC Documents - Full Width -->
+                        <!-- KYC Documents -->
                         <div class="sm:col-span-2">
                             <p class="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">KYC Documents</p>
-                            @php
-                                $kycDocs = is_array($agent->kyc_documents) ? $agent->kyc_documents : [];
-                            @endphp
-                            @if(empty($kycDocs))
+                            @if(empty($kycDocuments))
                                 <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">—</p>
                             @else
                                 <div class="mt-2 space-y-2">
-                                    @foreach($kycDocs as $doc)
-                                        <div class="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 p-2 dark:border-gray-700 dark:bg-gray-800/50">
-                                            @if(Str::startsWith($doc, 'agents/kyc/'))
-                                                <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                                                </svg>
-                                                <a href="{{ asset('storage/'.$doc) }}" target="_blank" class="text-sm text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300">
-                                                    {{ basename($doc) }}
+                                    @foreach($kycDocuments as $doc)
+                                        <div class="flex flex-col gap-1 rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-800/50 sm:flex-row sm:items-center sm:justify-between">
+                                            <div>
+                                                <span class="inline-flex rounded-full bg-brand-50 px-2.5 py-0.5 text-xs font-medium text-brand-700 dark:bg-brand-500/20 dark:text-brand-400">
+                                                    {{ $doc['type_name'] }}
+                                                </span>
+                                                @if(! empty($doc['size']))
+                                                    <span class="ml-2 text-xs text-gray-500 dark:text-gray-400">{{ \App\Support\AgentKycDocuments::formatBytes($doc['size']) }}</span>
+                                                @endif
+                                            </div>
+                                            @if(! empty($doc['path']))
+                                                <a href="{{ asset('storage/'.$doc['path']) }}" target="_blank"
+                                                   class="inline-flex items-center gap-1 text-sm text-brand-600 hover:text-brand-700 dark:text-brand-400">
+                                                    {{ $doc['original_name'] ?? basename($doc['path']) }}
                                                 </a>
                                             @else
-                                                <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l5 5a2 2 0 01.586 1.414V19a2 2 0 01-2 2H7a2 2 0 01-2-2V5a2 2 0 012-2z"/>
-                                                </svg>
-                                                <span class="text-sm text-gray-700 dark:text-gray-300">{{ $doc }}</span>
+                                                <span class="text-sm text-gray-600 dark:text-gray-400">No file attached</span>
                                             @endif
                                         </div>
                                     @endforeach

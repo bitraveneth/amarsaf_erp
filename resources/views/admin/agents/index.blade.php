@@ -2,17 +2,11 @@
 
 @section('content')
 <div class="space-y-6">
-    <!-- Header -->
-    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-            <h1 class="text-2xl font-semibold text-gray-900 dark:text-white">
-                Agent Master
-            </h1>
-            <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                List, search, and manage your agent network.
-            </p>
-        </div>
-        <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+    <x-admin.page-header
+        title="Agents"
+        subtitle="List, search, and manage your agent network."
+    >
+        <x-slot:actions>
             <!-- Search Form -->
             <form method="GET" action="{{ route('admin.agents.index') }}" class="flex gap-2">
                 <div class="relative">
@@ -48,32 +42,32 @@
                 </svg>
                 Add Agent
             </a>
-        </div>
-    </div>
+        </x-slot:actions>
+    </x-admin.page-header>
 
     <!-- Status Message -->
 
     <!-- Agents Table -->
     @if($agents->isNotEmpty())
-        <div class="rounded-2xl border border-gray-200 bg-white shadow-theme-sm dark:border-gray-800 dark:bg-gray-900 overflow-hidden">
-            <div class="overflow-x-auto">
-                <table class="w-full">
-                    <thead class="bg-gray-50 dark:bg-gray-800/50">
+        <div class="erp-table-card">
+            <div class="erp-table-wrap">
+                <table class="erp-table">
+                    <thead>
                         <tr>
-                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-700 dark:text-gray-300">Agent</th>
-                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-700 dark:text-gray-300">Zone</th>
-                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-700 dark:text-gray-300">Parent</th>
-                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-700 dark:text-gray-300">Credit Limit</th>
-                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-700 dark:text-gray-300">Status</th>
-                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-700 dark:text-gray-300">Commission</th>
-                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-700 dark:text-gray-300">Account</th>
-                            <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-700 dark:text-gray-300">Actions</th>
+                            <th>Agent</th>
+                            <th>Zone</th>
+                            <th>Parent</th>
+                            <th class="is-right">Credit Limit</th>
+                            <th>Status</th>
+                            <th>Commission</th>
+                            <th>Account</th>
+                            <th class="is-right">Actions</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
+                    <tbody>
                         @foreach($agents as $agent)
-                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                                <td class="px-4 py-3">
+                            <tr>
+                                <td>
                                     <div class="flex items-center">
                                         <div class="flex-shrink-0 h-8 w-8 rounded-full bg-brand-100 dark:bg-brand-500/20 flex items-center justify-center">
                                             <span class="text-xs font-medium text-brand-700 dark:text-brand-400">
@@ -81,11 +75,11 @@
                                             </span>
                                         </div>
                                         <div class="ml-3">
-                                            <p class="text-sm font-medium text-gray-900 dark:text-white">
+                                            <p class="erp-body-strong">
                                                 {{ $agent->name }}
                                             </p>
                                             @if($agent->code)
-                                                <p class="text-xs text-gray-500 dark:text-gray-400">
+                                                <p class="erp-caption">
                                                     {{ $agent->code }}
                                                 </p>
                                             @endif
@@ -114,8 +108,8 @@
                                         <span class="text-sm text-gray-500 dark:text-gray-400">—</span>
                                     @endif
                                 </td>
-                                <td class="px-4 py-3">
-                                    <span class="text-sm font-semibold text-gray-900 dark:text-white">
+                                <td class="is-right">
+                                    <span class="erp-table-num">
                                         BDT {{ number_format($agent->credit_limit, 2) }}
                                     </span>
                                 </td>
@@ -168,7 +162,7 @@
                                         <button
                                             type="button"
                                             @click="open = !open"
-                                            class="inline-flex items-center gap-1 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-white/[0.03]"
+                                            class="erp-btn-action"
                                         >
                                             Account
                                             <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -208,42 +202,15 @@
                                         </div>
                                     </div>
                                 </td>
-                                <td class="px-4 py-3 text-right">
-                                    <div class="flex items-center justify-end gap-2">
-                                        <a href="{{ route('admin.agents.show', $agent) }}" 
-                                           class="inline-flex items-center gap-1 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-white/[0.03]">
-                                            <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                                                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                                                      d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-                                            </svg>
-                                            View
-                                        </a>
-                                        <a href="{{ route('admin.agents.edit', $agent) }}" 
-                                           class="inline-flex items-center gap-1 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-white/[0.03]">
-                                            <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                                                      d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                                            </svg>
-                                            Edit
-                                        </a>
-                                        <form action="{{ route('admin.agents.destroy', $agent) }}" 
-                                              method="POST" 
-                                              onsubmit="return confirm('Delete this agent? This action cannot be undone.');"
-                                              class="inline">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" 
-                                                    class="inline-flex items-center gap-1 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-error-600 shadow-theme-xs hover:bg-error-50 hover:text-error-700 dark:border-gray-700 dark:bg-gray-800 dark:text-error-500 dark:hover:bg-error-500/10">
-                                                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                                                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                                                </svg>
-                                                Delete
-                                            </button>
-                                        </form>
-                                    </div>
+                                <td class="is-right">
+                                    <x-admin.action-group class="justify-end">
+                                        <x-admin.action-view :href="route('admin.agents.show', $agent)" />
+                                        <x-admin.action-edit :href="route('admin.agents.edit', $agent)" />
+                                        <x-admin.action-delete
+                                            :action="route('admin.agents.destroy', $agent)"
+                                            confirm="Delete this agent? This action cannot be undone."
+                                        />
+                                    </x-admin.action-group>
                                 </td>
                             </tr>
                         @endforeach

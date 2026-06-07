@@ -39,7 +39,7 @@
      }">
     <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
-            <h1 class="text-2xl font-semibold text-gray-900 dark:text-white">Chart of Accounts</h1>
+            <h1 class="text-2xl font-semibold text-gray-900 dark:text-white">Chart of accounts</h1>
             <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
                 Review account codes, types, and status in one simple list.
             </p>
@@ -194,9 +194,9 @@
                                         {{ optional($account->updated_at)->diffForHumans() }}
                                     </td>
                                     <td class="px-5 py-4 align-top">
-                                        <div class="flex items-center justify-end gap-2">
+                                        <div class="erp-action-group">
                                             <button type="button"
-                                                    class="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                                                    class="erp-btn-action"
                                                     @click="selectedAccount = @js([
                                                         'id' => $account->id,
                                                         'code' => $account->code,
@@ -214,12 +214,13 @@
                                                         'edit_url' => route('admin.accounts.edit', $account),
                                                         'delete_url' => route('admin.accounts.destroy', $account),
                                                     ]); showAccount = true">
+                                                <svg class="h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                                </svg>
                                                 View
                                             </button>
-                                            <a href="{{ route('admin.accounts.edit', $account) }}"
-                                               class="rounded-lg bg-brand-500 px-3 py-2 text-xs font-medium text-white hover:bg-brand-600">
-                                                Edit
-                                            </a>
+                                            <x-admin.action-edit :href="route('admin.accounts.edit', $account)" />
                                         </div>
                                     </td>
                                 </tr>

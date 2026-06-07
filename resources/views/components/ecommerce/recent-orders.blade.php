@@ -1,114 +1,169 @@
 @props([
     'orders' => [],
     'currencyCode' => 'BDT',
+    'showHeader' => true,
 ])
 
 @php
-    $getStatusClasses = function($status) {
-        $base = 'rounded-full px-2 py-0.5 text-theme-xs font-medium';
-        return match($status) {
-            'delivered' => $base . ' bg-success-50 text-success-600 dark:bg-success-500/15 dark:text-success-500',
-            'packed', 'picked', 'dispatched' => $base . ' bg-brand-50 text-brand-700 dark:bg-brand-500/15 dark:text-brand-400',
-            'exception', 'cancelled', 'canceled' => $base . ' bg-error-50 text-error-600 dark:bg-error-500/15 dark:text-error-500',
-            'confirmed' => $base . ' bg-warning-50 text-warning-600 dark:bg-warning-500/15 dark:text-orange-400',
-            default => $base . ' bg-gray-50 text-gray-600 dark:bg-gray-500/15 dark:text-gray-400',
-        };
-    };
+    $orderCount = count($orders);
 @endphp
 
-<div class="overflow-hidden rounded-2xl border border-gray-200 bg-white px-4 pb-3 pt-4 dark:border-gray-800 dark:bg-white/[0.03] sm:px-6">
-    <div class="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-            <h3 class="text-lg font-semibold text-gray-800 dark:text-white/90">Recent Orders</h3>
-        </div>
+<div {{ $attributes->merge(['class' => 'dash-activity-widget dash-recent-orders-widget']) }}
+     x-data="{
+        openProgressId: null,
+        toggleProgress(id) {
+            this.openProgressId = this.openProgressId === id ? null : id;
+        },
+     }"
+     @keydown.escape.window="openProgressId = null">
+    @if($showHeader)
+        <div class="dash-performance-widget-header">
+            <div class="min-w-0">
+                <div class="flex items-center gap-2.5">
+                    <span class="dash-activity-icon dash-activity-icon-brand">
+                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+                        </svg>
+                    </span>
+                    <div>
+                        <h3 class="dash-performance-widget-title">Recent orders</h3>
+                        <p class="dash-performance-widget-desc !mt-0">Latest sales and return activity</p>
+                    </div>
+                </div>
+            </div>
 
-        <div class="flex items-center gap-3">
-            <span class="inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-theme-sm font-medium text-gray-700 shadow-theme-xs dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">
-                Latest 10
+            <div class="flex items-center gap-2">
+                @if($orderCount > 0)
+                    <span class="dash-activity-summary-badge dash-activity-summary-badge-neutral">
+                        {{ number_format($orderCount) }} shown
+                    </span>
+                @endif
+                <a href="{{ route('admin.orders.index') }}" class="erp-btn-secondary !px-3 !py-1.5 !text-xs">
+                    See all
+                </a>
+            </div>
+        </div>
+    @elseif($orderCount > 0)
+        <div class="dash-recent-orders-widget__meta border-b border-gray-100/80 px-5 py-3 text-right dark:border-white/10">
+            <span class="dash-activity-summary-badge dash-activity-summary-badge-neutral">
+                {{ number_format($orderCount) }} shown
             </span>
-
-            <a href="{{ route('admin.orders.index') }}"
-               class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-theme-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200">
-                See all
-            </a>
         </div>
-    </div>
+    @endif
 
-    <div class="max-w-full overflow-x-auto custom-scrollbar">
-        <table class="min-w-full">
-            <thead>
-                <tr class="border-t border-gray-100 dark:border-gray-800">
-                    <th class="py-3 text-left">
-                        <p class="text-theme-xs font-medium text-gray-500 dark:text-gray-400">Order</p>
-                    </th>
-                    <th class="py-3 text-left">
-                        <p class="text-theme-xs font-medium text-gray-500 dark:text-gray-400">Agent</p>
-                    </th>
-                    <th class="py-3 text-left">
-                        <p class="text-theme-xs font-medium text-gray-500 dark:text-gray-400">Delivery date</p>
-                    </th>
-                    <th class="py-3 text-left">
-                        <p class="text-theme-xs font-medium text-gray-500 dark:text-gray-400">Total</p>
-                    </th>
-                    <th class="py-3 text-left">
-                        <p class="text-theme-xs font-medium text-gray-500 dark:text-gray-400">Status</p>
-                    </th>
-                </tr>
-            </thead>
-            <tbody>
-                @forelse($orders as $order)
-                    <tr class="border-t border-gray-100 dark:border-gray-800">
-                        <td class="whitespace-nowrap py-3">
-                            <p class="text-theme-sm font-medium text-gray-800 dark:text-white/90">
-                                #{{ $order->id }}
-                            </p>
-                            @php
-                                $type = $order->order_type ?? 'regular';
-                                $isReturn = $type === 'return';
-                            @endphp
-                            <span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-theme-xs font-medium {{ $isReturn ? 'bg-error-50 text-error-600 dark:bg-error-500/15 dark:text-error-400' : 'bg-gray-100 text-gray-600 dark:bg-gray-700/40 dark:text-gray-300' }}">
-                                @if($isReturn)
-                                    <span class="inline-block h-1.5 w-1.5 rounded-full bg-error-500"></span>
-                                @else
-                                    <span class="inline-block h-1.5 w-1.5 rounded-full bg-brand-500"></span>
-                                @endif
-                                {{ ucfirst($type) }}
-                            </span>
-                        </td>
-                        <td class="whitespace-nowrap py-3">
-                            <p class="text-theme-sm text-gray-800 dark:text-white/90">
-                                {{ $order->agent->name ?? '—' }}
-                            </p>
-                            @if($order->agent?->area || $order->agent?->zone)
-                                <span class="text-theme-xs text-gray-500 dark:text-gray-400">
-                                    {{ $order->agent->area }}{{ $order->agent->area && $order->agent->zone ? ', ' : '' }}{{ $order->agent->zone }}
-                                </span>
-                            @endif
-                        </td>
-                        <td class="whitespace-nowrap py-3">
-                            <p class="text-theme-sm text-gray-500 dark:text-gray-400">
-                                {{ optional($order->delivery_date)->format('d M Y') ?? '—' }}
-                            </p>
-                        </td>
-                        <td class="whitespace-nowrap py-3">
-                            <p class="text-theme-sm {{ isset($isReturn) && $isReturn ? 'text-error-600 dark:text-error-400' : 'text-gray-800 dark:text-white/90' }}">
-                                {{ $currencyCode }} {{ number_format($order->total ?? 0, 2) }}
-                            </p>
-                        </td>
-                        <td class="whitespace-nowrap py-3">
-                            <span class="{{ $getStatusClasses($order->status ?? '') }}">
-                                {{ ucfirst(str_replace('_', ' ', $order->status ?? '')) }}
-                            </span>
-                        </td>
-                    </tr>
-                @empty
+    @if($orderCount > 0)
+        <div class="dash-activity-table-wrap">
+            <table class="dash-activity-table">
+                <thead>
                     <tr>
-                        <td colspan="5" class="py-6 text-center text-theme-sm text-gray-500 dark:text-gray-400">
-                            No recent orders yet.
-                        </td>
+                        <th>Order</th>
+                        <th>Agent</th>
+                        <th>Delivery</th>
+                        <th class="is-right">Total</th>
+                        <th>Progress</th>
                     </tr>
-                @endforelse
-            </tbody>
-        </table>
-    </div>
+                </thead>
+                <tbody>
+                    @foreach($orders as $order)
+                        @php
+                            $type = $order->order_type ?? 'regular';
+                            $isReturn = $type === 'return';
+                            $agentName = $order->agent->name ?? '—';
+                            $initials = collect(explode(' ', trim($agentName)))
+                                ->filter()
+                                ->take(2)
+                                ->map(fn (string $part) => strtoupper(substr($part, 0, 1)))
+                                ->implode('');
+                            $salesStep = match ($order->status) {
+                                'draft' => 2,
+                                'confirmed' => 3,
+                                'picked', 'packed' => 3,
+                                'dispatched' => 4,
+                                'delivered' => 5,
+                                default => 1,
+                            };
+                            $salesProgress = in_array($order->status, ['picked', 'packed', 'dispatched'], true);
+                        @endphp
+                        <tr class="dash-order-row" :class="{ 'is-expanded': openProgressId === {{ $order->id }} }">
+                            <td class="whitespace-nowrap">
+                                <a href="{{ route('admin.orders.show', $order) }}" class="group inline-flex items-center gap-2">
+                                    <span class="dash-order-id">#{{ $order->id }}</span>
+                                    <span @class([
+                                        'dash-order-type',
+                                        'dash-order-type-return' => $isReturn,
+                                        'dash-order-type-regular' => ! $isReturn,
+                                    ])>
+                                        {{ $type }}
+                                    </span>
+                                </a>
+                            </td>
+                            <td>
+                                <div class="flex items-center gap-2.5">
+                                    <span class="dash-order-agent-avatar">{{ $initials ?: '—' }}</span>
+                                    <div class="min-w-0">
+                                        <p class="erp-body-strong truncate">{{ $agentName }}</p>
+                                        @if($order->agent?->area || $order->agent?->zone)
+                                            <p class="erp-caption truncate">
+                                                {{ $order->agent->area }}{{ $order->agent->area && $order->agent->zone ? ', ' : '' }}{{ $order->agent->zone }}
+                                            </p>
+                                        @endif
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="erp-table-cell whitespace-nowrap">
+                                {{ optional($order->delivery_date)->format('d M Y') ?? '—' }}
+                            </td>
+                            <td class="is-right whitespace-nowrap">
+                                <span @class([
+                                    'erp-table-num',
+                                    'text-error-600 dark:text-error-400' => $isReturn,
+                                ])>
+                                    {{ $currencyCode }} {{ number_format($order->total ?? 0, 0) }}
+                                </span>
+                            </td>
+                            <td class="dash-order-progress-cell">
+                                <x-dashboard.order-progress-trigger
+                                    :order-id="$order->id"
+                                    :status="$order->status"
+                                    :step="$salesStep"
+                                    :in-progress="$salesProgress"
+                                />
+                            </td>
+                        </tr>
+                        <tr x-show="openProgressId === {{ $order->id }}"
+                            x-cloak
+                            x-transition:enter="transition ease-out duration-200"
+                            x-transition:enter-start="opacity-0 -translate-y-1"
+                            x-transition:enter-end="opacity-100 translate-y-0"
+                            x-transition:leave="transition ease-in duration-150"
+                            x-transition:leave-start="opacity-100 translate-y-0"
+                            x-transition:leave-end="opacity-0 -translate-y-1"
+                            class="dash-order-progress-row">
+                            <td colspan="5" class="!p-0">
+                                <x-dashboard.order-progress-detail
+                                    :order-id="$order->id"
+                                    :status="$order->status"
+                                    :step="$salesStep"
+                                    :in-progress="$salesProgress"
+                                    :order-url="route('admin.orders.show', $order)"
+                                    :agent-name="$agentName"
+                                    :delivery-date="optional($order->delivery_date)->format('d M Y') ?? '—'"
+                                />
+                            </td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+    @else
+        <div class="dash-activity-widget-body flex flex-1 flex-col items-center justify-center py-12 text-center">
+            <div class="dash-activity-empty-icon dash-activity-empty-icon-neutral">
+                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007z" />
+                </svg>
+            </div>
+            <p class="erp-body-strong mt-4">No recent orders yet</p>
+            <p class="erp-caption mt-1">New orders will appear here as they come in.</p>
+        </div>
+    @endif
 </div>

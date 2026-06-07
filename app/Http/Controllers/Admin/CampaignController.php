@@ -6,12 +6,18 @@ use App\Helpers\Permission as PermissionHelper;
 use App\Http\Controllers\Controller;
 use App\Models\Campaign;
 use App\Models\LedgerEntry;
+use App\Services\Accounting\AccountingService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 class CampaignController extends Controller
 {
+    public function __construct(protected AccountingService $accounting)
+    {
+    }
+
     private const VALID_STATUSES = [
         Campaign::STATUS_PLANNED,
         Campaign::STATUS_RUNNING,
@@ -125,25 +131,26 @@ class CampaignController extends Controller
         }
 
         $description = $this->ledgerDescription($campaign);
+        $entryDate = Carbon::parse($campaign->start_date ?? now());
 
-        LedgerEntry::create([
-            'account' => 'Marketing Expense',
-            'description' => $description,
-            'debit' => $campaign->cost,
-            'credit' => 0,
-        ]);
-
-        LedgerEntry::create([
-            'account' => 'Bank',
-            'description' => $description,
-            'debit' => 0,
-            'credit' => $campaign->cost,
-        ]);
+        $this->accounting->post(
+            'campaign',
+            $entryDate,
+            [
+                ['account' => 'Marketing Expense', 'debit' => $campaign->cost, 'credit' => 0],
+                ['account' => 'Bank', 'debit' => 0, 'credit' => $campaign->cost],
+            ],
+            [
+                'description' => $description,
+                'source_type' => Campaign::class,
+                'source_id' => $campaign->id,
+            ]
+        );
     }
 
     protected function deleteLedgerEntries(Campaign $campaign): void
     {
-        LedgerEntry::where('description', $this->ledgerDescription($campaign))->delete();
+        $this->accounting->deleteByDescription($this->ledgerDescription($campaign));
     }
 
     protected function ledgerDescription(Campaign $campaign): string

@@ -16,7 +16,7 @@
                 </div>
                 <div>
                     <h1 class="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
-                        Balance Sheet
+                        Balance sheet
                     </h1>
                     <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
                         As of {{ $asOf->format('d M Y') }}
@@ -35,7 +35,7 @@
         </div>
     </div>
 
-    <!-- Balance Sheet Card -->
+    <!-- Balance sheet Card -->
     <div class="rounded-3xl border border-gray-200 bg-white shadow-xl dark:border-gray-800 dark:bg-gray-900 overflow-hidden">
         <!-- Card Header -->
         <div class="border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white px-8 py-6 dark:border-gray-800 dark:from-gray-900/50 dark:to-gray-900">
@@ -205,7 +205,7 @@
                 </svg>
             </div>
             <div class="flex-1">
-                <h3 class="text-sm font-semibold text-gray-900 dark:text-white">About the Balance Sheet</h3>
+                <h3 class="text-sm font-semibold text-gray-900 dark:text-white">About the Balance sheet</h3>
                 <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
                     The balance sheet provides a snapshot of the company's financial position at a specific point in time. 
                     It shows what the company owns (assets), what it owes (liabilities), and the shareholders' equity.

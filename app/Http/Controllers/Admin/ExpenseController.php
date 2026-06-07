@@ -5,12 +5,17 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Expense;
 use App\Models\LedgerEntry;
+use App\Services\Accounting\AccountingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class ExpenseController extends Controller
 {
+    public function __construct(protected AccountingService $accounting)
+    {
+    }
+
     private const VALID_STATUSES = [
         Expense::STATUS_RECORDED,
         Expense::STATUS_REVIEWED,
@@ -120,24 +125,24 @@ class ExpenseController extends Controller
         $description = $this->ledgerDescription($expense);
         $account = $this->expenseAccount($expense);
 
-        LedgerEntry::create([
-            'account' => $account,
-            'description' => $description,
-            'debit' => $expense->amount,
-            'credit' => 0,
-        ]);
-
-        LedgerEntry::create([
-            'account' => 'Bank',
-            'description' => $description,
-            'debit' => 0,
-            'credit' => $expense->amount,
-        ]);
+        $this->accounting->post(
+            'expense',
+            Carbon::parse($expense->date),
+            [
+                ['account' => $account, 'debit' => $expense->amount, 'credit' => 0],
+                ['account' => 'Bank', 'debit' => 0, 'credit' => $expense->amount],
+            ],
+            [
+                'description' => $description,
+                'source_type' => Expense::class,
+                'source_id' => $expense->id,
+            ]
+        );
     }
 
     protected function deleteLedgerEntries(Expense $expense): void
     {
-        LedgerEntry::where('description', $this->ledgerDescription($expense))->delete();
+        $this->accounting->deleteByDescription($this->ledgerDescription($expense));
     }
 
     protected function hasPostedLedgerEntries(Expense $expense): bool

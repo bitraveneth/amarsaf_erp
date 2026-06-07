@@ -73,15 +73,16 @@
                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
                 </svg>
-                Back to Finance
+                Back to finance
             </a>
+            <x-admin.document-actions type="invoice" :id="$invoice->id" />
             <button type="button" 
                     onclick="window.print()"
-                    class="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white/80 backdrop-blur-sm px-5 py-2.5 text-sm font-medium text-gray-700 shadow-xs hover:bg-white hover:shadow-sm dark:border-gray-700 dark:bg-gray-900/80 dark:text-gray-300 dark:hover:bg-gray-900 transition-all duration-200">
+                    class="print-hidden inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white/80 backdrop-blur-sm px-5 py-2.5 text-sm font-medium text-gray-700 shadow-xs hover:bg-white hover:shadow-sm dark:border-gray-700 dark:bg-gray-900/80 dark:text-gray-300 dark:hover:bg-gray-900 transition-all duration-200">
                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2z" />
                 </svg>
-                Print
+                Quick print
             </button>
             <button type="button" 
                     id="btn-open-credit-modal"
@@ -89,7 +90,7 @@
                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
                 </svg>
-                Add Credit
+                Add credit
             </button>
             <button type="button" 
                     id="btn-open-receipt-modal"
@@ -650,7 +651,7 @@
                         </svg>
                     </div>
                     <div>
-                        <h3 class="text-lg font-medium text-gray-900 dark:text-white">Add Credit Note</h3>
+                        <h3 class="text-lg font-medium text-gray-900 dark:text-white">Add credit Note</h3>
                         <p class="text-xs text-gray-500 dark:text-gray-400">
                             Invoice {{ $invoice->number }} · Total {{ $currencyCode }} {{ number_format($grossTotal, 2) }}
                         </p>

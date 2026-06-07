@@ -10,6 +10,7 @@
             </p>
         </div>
         <div class="flex items-center gap-3">
+            <x-admin.document-actions type="grn" :id="$receipt->id" compact />
             @if($receipt->status === 'posted')
                 <form action="{{ route('admin.goods-receipts.reverse', $receipt) }}" method="POST" onsubmit="return confirm('Reverse {{ $receipt->grn_number }}? This will remove its stock only if none of it has been used, transferred, reserved, or adjusted.');">
                     @csrf

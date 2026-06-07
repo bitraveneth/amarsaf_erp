@@ -19,6 +19,17 @@ class PackagingTypeController extends Controller
         return view('admin.packaging.index', compact('packagingTypes', 'conversions'));
     }
 
+    public function show(PackagingType $packagingType)
+    {
+        $packagingType->loadCount('products');
+        $packagingType->load([
+            'conversionsFrom.toType',
+            'conversionsTo.fromType',
+        ]);
+
+        return view('admin.packaging.show', compact('packagingType'));
+    }
+
     public function edit(PackagingType $packagingType)
     {
         return view('admin.packaging.edit', compact('packagingType'));

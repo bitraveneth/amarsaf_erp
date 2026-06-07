@@ -16,7 +16,7 @@
                 </div>
                 <div>
                     <h1 class="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
-                        Picking Lists
+                        Picking lists
                     </h1>
                     <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
                         Orders waiting for warehouse picking (confirmed → picked)
@@ -121,7 +121,7 @@
             </div>
         </div>
 
-        <!-- Picking Lists Table -->
+        <!-- Picking lists Table -->
         <div class="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900 overflow-hidden">
             <div class="border-b border-gray-100 px-6 py-4 dark:border-gray-800">
                 <div class="flex items-center justify-between">
@@ -230,7 +230,7 @@
                                         <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75z" />
                                         </svg>
-                                        View Picking List
+                                        View Picking list
                                     </a>
                                 </td>
                             </tr>

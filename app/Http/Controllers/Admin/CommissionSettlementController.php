@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Agent;
 use App\Models\AgentCommissionSettlement;
-use App\Models\LedgerEntry;
+use App\Services\Accounting\AccountingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -13,6 +13,10 @@ use App\Support\CommissionCalculator;
 
 class CommissionSettlementController extends Controller
 {
+    public function __construct(protected AccountingService $accounting)
+    {
+    }
+
     public function index(Request $request)
     {
         $month = $request->query('month')
@@ -149,23 +153,19 @@ class CommissionSettlementController extends Controller
 
         $description = $this->settlementDescription($settlement);
 
-        LedgerEntry::create([
-            'account' => 'Commission Expense',
-            'description' => $description,
-            'debit' => $settlement->commission_total,
-            'credit' => 0,
-            'order_id' => null,
-            'invoice_id' => null,
-        ]);
-
-        LedgerEntry::create([
-            'account' => 'Commission Payable',
-            'description' => $description,
-            'debit' => 0,
-            'credit' => $settlement->commission_total,
-            'order_id' => null,
-            'invoice_id' => null,
-        ]);
+        $this->accounting->post(
+            'commission_accrual',
+            Carbon::today(),
+            [
+                ['account' => 'Commission Expense', 'debit' => $settlement->commission_total, 'credit' => 0],
+                ['account' => 'Commission Payable', 'debit' => 0, 'credit' => $settlement->commission_total],
+            ],
+            [
+                'description' => $description,
+                'source_type' => AgentCommissionSettlement::class,
+                'source_id' => $settlement->id,
+            ]
+        );
 
         $settlement->forceFill([
             'accrued_at' => now(),
@@ -180,23 +180,19 @@ class CommissionSettlementController extends Controller
 
         $description = $this->settlementDescription($settlement) . ' payout';
 
-        LedgerEntry::create([
-            'account' => 'Commission Payable',
-            'description' => $description,
-            'debit' => $settlement->commission_total,
-            'credit' => 0,
-            'order_id' => null,
-            'invoice_id' => null,
-        ]);
-
-        LedgerEntry::create([
-            'account' => 'Bank',
-            'description' => $description,
-            'debit' => 0,
-            'credit' => $settlement->commission_total,
-            'order_id' => null,
-            'invoice_id' => null,
-        ]);
+        $this->accounting->post(
+            'commission_payment',
+            Carbon::today(),
+            [
+                ['account' => 'Commission Payable', 'debit' => $settlement->commission_total, 'credit' => 0],
+                ['account' => 'Bank', 'debit' => 0, 'credit' => $settlement->commission_total],
+            ],
+            [
+                'description' => $description,
+                'source_type' => AgentCommissionSettlement::class,
+                'source_id' => $settlement->id,
+            ]
+        );
 
         $settlement->forceFill([
             'paid_at' => now()->toDateString(),

@@ -14,6 +14,7 @@ class Product extends Model
         'sku',
         'name',
         'product_type',
+        'material_category_id',
         'description',
         'size',
         'uom',
@@ -30,6 +31,7 @@ class Product extends Model
         'image_path',
         'base_price',
         'standard_cost',
+        'reorder_level',
         'supplier_name',
         'is_active',
     ];
@@ -40,12 +42,18 @@ class Product extends Model
         'tds' => 'integer',
         'base_price' => 'decimal:2',
         'standard_cost' => 'decimal:2',
+        'reorder_level' => 'integer',
         'is_active' => 'boolean',
     ];
 
     public function packagingType()
     {
         return $this->belongsTo(PackagingType::class);
+    }
+
+    public function materialCategory()
+    {
+        return $this->belongsTo(MaterialCategory::class);
     }
 
     public function scopeSellable(Builder $query): Builder
@@ -63,6 +71,18 @@ class Product extends Model
         return $query
             ->whereIn('product_type', ['raw', 'service', 'inhouse'])
             ->where('is_active', true);
+    }
+
+    public function scopePurchasable(Builder $query): Builder
+    {
+        return $query
+            ->whereIn('product_type', ['raw', 'service'])
+            ->where('is_active', true);
+    }
+
+    public function isPurchasable(): bool
+    {
+        return in_array($this->product_type, ['raw', 'service'], true);
     }
 
     public function scopeStockTracked(Builder $query): Builder

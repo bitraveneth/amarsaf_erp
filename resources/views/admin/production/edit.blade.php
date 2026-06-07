@@ -43,7 +43,7 @@
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
                 </svg>
-                Back to Runs
+                Back to runs
             </a>
         </div>
     </div>
@@ -84,10 +84,10 @@
                 </div>
                 
                 <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    <!-- Production Order No. (Read-only) -->
+                    <!-- Production order No. (Read-only) -->
                     <div>
                         <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Production Order No.
+                            Production order No.
                         </label>
                         <div class="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 dark:border-gray-700 dark:bg-gray-800/50">
                             <svg class="h-4 w-4 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -144,7 +144,7 @@
                                 <select id="qc_status" 
                                         name="qc_status"
                                         class="w-full rounded-lg border border-gray-300 bg-white pl-10 pr-4 py-2.5 text-sm text-gray-900 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white">
-                                    @foreach(['pending', 'approved', 'rejected'] as $status)
+                                    @foreach(['pending', 'approved', 'partial', 'rejected'] as $status)
                                         <option value="{{ $status }}" {{ old('qc_status', $run->qc_status) == $status ? 'selected' : '' }}>
                                             {{ ucfirst($status) }}
                                         </option>

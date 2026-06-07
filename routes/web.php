@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\AgentController;
 use App\Http\Controllers\Admin\BatchController;
+use App\Http\Controllers\Admin\DocumentController;
 use App\Http\Controllers\Admin\DeliveryController;
 use App\Http\Controllers\Admin\FinanceController;
 use App\Http\Controllers\Admin\DeliveryRouteController;
@@ -16,6 +17,8 @@ use App\Http\Controllers\Admin\CommissionReportController;
 use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\CommissionSettlementController;
 use App\Http\Controllers\Admin\AccountController;
+use App\Http\Controllers\Admin\FiscalPeriodController;
+use App\Http\Controllers\Admin\JournalEntryController;
 use App\Http\Controllers\Admin\SalaryDistributionController;
 use App\Http\Controllers\Admin\SupplierController;
 use App\Http\Controllers\Admin\PurchaseBillController;
@@ -23,6 +26,8 @@ use App\Http\Controllers\Admin\PurchaseOrderController;
 use App\Http\Controllers\Admin\GoodsReceiptController;
 use App\Http\Controllers\Admin\ProductionController;
 use App\Http\Controllers\Admin\StockMovementController;
+use App\Http\Controllers\Admin\KycDocumentTypeController;
+use App\Http\Controllers\Admin\MaterialCategoryController;
 use App\Http\Controllers\Admin\TaxClassController;
 use App\Http\Controllers\Admin\WarehouseController;
 use App\Http\Controllers\Admin\VehicleLoadController;
@@ -45,6 +50,13 @@ use App\Http\Controllers\Admin\CampaignController;
 use App\Http\Controllers\Admin\ExpenseController;
 use App\Http\Controllers\Admin\EmployeeLocationController;
 use App\Http\Controllers\Admin\MenuController;
+use App\Http\Controllers\Admin\ErpAssistantController;
+use App\Http\Controllers\Admin\ExportCenterController;
+use App\Http\Controllers\Admin\ModuleExportController;
+use App\Http\Controllers\Admin\MrpController;
+use App\Http\Controllers\Admin\SearchController;
+use App\Http\Controllers\Admin\TallyExportController;
+use App\Http\Controllers\Admin\WebhookController;
 use App\Http\Controllers\Admin\CustomerGiftController;
 use App\Http\Controllers\Admin\BomController;
 use App\Http\Controllers\Admin\RoleController;
@@ -95,6 +107,16 @@ Route::get('/home', function () {
 
 Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::get('/', [AdminController::class, 'index'])->name('dashboard');
+    Route::get('export-center', ExportCenterController::class)->name('export-center');
+    Route::get('assistant/bootstrap', [ErpAssistantController::class, 'bootstrap'])->name('assistant.bootstrap');
+    Route::post('assistant/ask', [ErpAssistantController::class, 'ask'])
+        ->middleware('throttle:30,1')
+        ->name('assistant.ask');
+    Route::get('exports/{module}/{format}', ModuleExportController::class)
+        ->where('format', 'csv|pdf')
+        ->name('modules.export');
+    Route::get('documents/{type}/{id}', [DocumentController::class, 'preview'])->name('documents.preview');
+    Route::get('documents/{type}/{id}/pdf', [DocumentController::class, 'pdf'])->name('documents.pdf');
     Route::view('help', 'admin.help')->name('help');
     Route::view('client-guide', 'admin.client-guide')->name('client-guide');
     Route::get('settings', [SystemSettingController::class, 'index'])->middleware('perm:system.settings')->name('settings.index');
@@ -160,6 +182,7 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::post('menu/items/{item}/move-group', [MenuController::class, 'moveItemGroup'])->middleware('perm:permissions.manage')->name('menu.items.move-group');
 
     // Finished products catalog
+    Route::get('products/suggest-sku', [ProductController::class, 'suggestSku'])->middleware('perm:control.products')->name('products.suggest-sku');
     Route::get('products', [ProductController::class, 'index'])->middleware('perm:control.products')->name('products.index');
     Route::get('products/create', [ProductController::class, 'create'])->middleware('perm:control.products')->name('products.create');
     Route::post('products', [ProductController::class, 'store'])->middleware('perm:control.products')->name('products.store');
@@ -175,12 +198,19 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::get('materials', [ProductController::class, 'materialsIndex'])->middleware('perm:control.products')->name('materials.index');
     Route::get('materials/create', [ProductController::class, 'materialsCreate'])->middleware('perm:control.products')->name('materials.create');
     Route::post('materials', [ProductController::class, 'store'])->middleware('perm:control.products')->name('materials.store');
+    Route::get('materials/{product}', [ProductController::class, 'materialsShow'])->middleware('perm:control.products')->name('materials.show');
     Route::get('materials/{product}/edit', [ProductController::class, 'materialsEdit'])->middleware('perm:control.products')->name('materials.edit');
     Route::patch('materials/{product}', [ProductController::class, 'update'])->middleware('perm:control.products')->name('materials.update');
     Route::delete('materials/{product}', [ProductController::class, 'destroy'])->middleware('perm:control.products')->name('materials.destroy');
 
+    Route::get('material-categories', [MaterialCategoryController::class, 'index'])->middleware('perm:control.products')->name('material-categories.index');
+    Route::post('material-categories', [MaterialCategoryController::class, 'store'])->middleware('perm:control.products')->name('material-categories.store');
+    Route::patch('material-categories/{materialCategory}', [MaterialCategoryController::class, 'update'])->middleware('perm:control.products')->name('material-categories.update');
+    Route::delete('material-categories/{materialCategory}', [MaterialCategoryController::class, 'destroy'])->middleware('perm:control.products')->name('material-categories.destroy');
+
     Route::get('packaging', [PackagingTypeController::class, 'index'])->middleware('perm:control.products')->name('packaging.index');
     Route::post('packaging', [PackagingTypeController::class, 'store'])->middleware('perm:control.products')->name('packaging.store');
+    Route::get('packaging/{packagingType}', [PackagingTypeController::class, 'show'])->middleware('perm:control.products')->name('packaging.show');
     Route::get('packaging/{packagingType}/edit', [PackagingTypeController::class, 'edit'])->middleware('perm:control.products')->name('packaging.edit');
     Route::patch('packaging/{packagingType}', [PackagingTypeController::class, 'update'])->middleware('perm:control.products')->name('packaging.update');
     Route::delete('packaging/{packagingType}', [PackagingTypeController::class, 'destroy'])->middleware('perm:control.products')->name('packaging.destroy');
@@ -190,12 +220,14 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::get('boms', [BomController::class, 'index'])->middleware('perm:manufacturing.manage')->name('boms.index');
     Route::get('boms/create', [BomController::class, 'create'])->middleware('perm:manufacturing.manage')->name('boms.create');
     Route::post('boms', [BomController::class, 'store'])->middleware('perm:manufacturing.manage')->name('boms.store');
+    Route::get('boms/{bom}', [BomController::class, 'show'])->middleware('perm:manufacturing.manage')->name('boms.show');
     Route::get('boms/{bom}/edit', [BomController::class, 'edit'])->middleware('perm:manufacturing.manage')->name('boms.edit');
     Route::patch('boms/{bom}', [BomController::class, 'update'])->middleware('perm:manufacturing.manage')->name('boms.update');
     Route::delete('boms/{bom}', [BomController::class, 'destroy'])->middleware('perm:manufacturing.manage')->name('boms.destroy');
 
     Route::get('tax-classes', [TaxClassController::class, 'index'])->middleware('perm:control.products')->name('tax-classes.index');
     Route::post('tax-classes', [TaxClassController::class, 'store'])->middleware('perm:control.products')->name('tax-classes.store');
+    Route::get('tax-classes/{taxClass}', [TaxClassController::class, 'show'])->middleware('perm:control.products')->name('tax-classes.show');
     Route::get('tax-classes/{taxClass}/edit', [TaxClassController::class, 'edit'])->middleware('perm:control.products')->name('tax-classes.edit');
     Route::patch('tax-classes/{taxClass}', [TaxClassController::class, 'update'])->middleware('perm:control.products')->name('tax-classes.update');
     Route::delete('tax-classes/{taxClass}', [TaxClassController::class, 'destroy'])->middleware('perm:control.products')->name('tax-classes.destroy');
@@ -285,6 +317,10 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::get('agents/{agent}/edit', [AgentController::class, 'edit'])->middleware('perm:control.agents')->name('agents.edit');
     Route::patch('agents/{agent}', [AgentController::class, 'update'])->middleware('perm:control.agents')->name('agents.update');
     Route::delete('agents/{agent}', [AgentController::class, 'destroy'])->middleware('perm:control.agents')->name('agents.destroy');
+
+    Route::get('kyc-document-types', [KycDocumentTypeController::class, 'index'])->middleware('perm:control.agents')->name('kyc-document-types.index');
+    Route::post('kyc-document-types', [KycDocumentTypeController::class, 'store'])->middleware('perm:control.agents')->name('kyc-document-types.store');
+    Route::delete('kyc-document-types/{kycDocumentType}', [KycDocumentTypeController::class, 'destroy'])->middleware('perm:control.agents')->name('kyc-document-types.destroy');
     Route::get('agents/{agent}/pricing', [AgentPricingController::class, 'edit'])->middleware('perm:control.agents')->name('agents.pricing.edit');
     Route::patch('agents/{agent}/pricing', [AgentPricingController::class, 'update'])->middleware('perm:control.agents')->name('agents.pricing.update');
     Route::get('agents/{agent}/ledger', [AgentLedgerController::class, 'show'])->middleware('perm:control.agents')->name('agents.ledger.show');
@@ -318,11 +354,13 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::get('deliveries/packing-slips', [DeliveryController::class, 'packingIndex'])->middleware('perm:control.warehouses')->name('deliveries.packing-index');
     Route::get('deliveries/create', [DeliveryController::class, 'create'])->middleware('perm:control.warehouses')->name('deliveries.create');
     Route::post('deliveries', [DeliveryController::class, 'store'])->middleware('perm:control.warehouses')->name('deliveries.store');
+    Route::get('deliveries/{delivery}', [DeliveryController::class, 'show'])->middleware('perm:control.warehouses')->name('deliveries.show');
     Route::get('deliveries/{delivery}/edit', [DeliveryController::class, 'edit'])->middleware('perm:control.warehouses')->name('deliveries.edit');
     Route::post('deliveries/optimize', [DeliveryController::class, 'optimize'])->middleware('perm:control.warehouses')->name('deliveries.optimize');
     Route::patch('deliveries/{delivery}', [DeliveryController::class, 'update'])->middleware('perm:control.warehouses')->name('deliveries.update');
     Route::delete('deliveries/{delivery}', [DeliveryController::class, 'destroy'])->middleware('perm:control.warehouses')->name('deliveries.destroy');
     Route::get('deliveries/{delivery}/packing-slip', [DeliveryController::class, 'packingSlip'])->middleware('perm:control.warehouses')->name('deliveries.packing-slip');
+    Route::get('deliveries/{delivery}/pod-pdf', [DeliveryController::class, 'podPdf'])->middleware('perm:control.warehouses')->name('deliveries.pod-pdf');
     Route::get('delivery-routes', [DeliveryRouteController::class, 'index'])->middleware('perm:control.warehouses')->name('delivery-routes.index');
     Route::post('delivery-routes', [DeliveryRouteController::class, 'store'])->middleware('perm:control.warehouses')->name('delivery-routes.store');
     Route::get('vehicle-load', [VehicleLoadController::class, 'index'])->middleware('perm:control.warehouses')->name('vehicle-load.index');
@@ -341,6 +379,8 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
 
     Route::get('inventory', [InventoryController::class, 'index'])->middleware('perm:inventory.manage')->name('inventory.index');
     Route::get('inventory/materials', [InventoryController::class, 'materials'])->middleware('perm:inventory.manage')->name('inventory.materials');
+    Route::get('inventory/low-stock', [InventoryController::class, 'lowStock'])->middleware('perm:inventory.manage')->name('inventory.low-stock');
+    Route::get('mrp', [MrpController::class, 'index'])->middleware('perm:inventory.manage')->name('mrp.index');
 
     Route::get('notifications', [AdminController::class, 'notifications'])->name('notifications.index');
     Route::get('notifications/header-data', [AdminController::class, 'headerNotifications'])->name('notifications.header-data');
@@ -364,6 +404,10 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::get('suppliers', [SupplierController::class, 'index'])->middleware('perm:control.suppliers')->name('suppliers.index');
     Route::get('suppliers/create', [SupplierController::class, 'create'])->middleware('perm:control.suppliers')->name('suppliers.create');
     Route::post('suppliers', [SupplierController::class, 'store'])->middleware('perm:control.suppliers')->name('suppliers.store');
+    Route::get('suppliers/{supplier}', [SupplierController::class, 'show'])->middleware('perm:control.suppliers')->name('suppliers.show');
+    Route::get('suppliers/{supplier}/edit', [SupplierController::class, 'edit'])->middleware('perm:control.suppliers')->name('suppliers.edit');
+    Route::patch('suppliers/{supplier}', [SupplierController::class, 'update'])->middleware('perm:control.suppliers')->name('suppliers.update');
+    Route::delete('suppliers/{supplier}', [SupplierController::class, 'destroy'])->middleware('perm:control.suppliers')->name('suppliers.destroy');
 
     Route::get('production', [ProductionController::class, 'index'])->middleware('perm:manufacturing.manage')->name('production.index');
     Route::get('production/create', [ProductionController::class, 'create'])->middleware('perm:manufacturing.manage')->name('production.create');
@@ -373,6 +417,7 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::get('production/{production}', [ProductionController::class, 'show'])->middleware('perm:manufacturing.manage')->name('production.show');
     Route::get('production/{production}/edit', [ProductionController::class, 'edit'])->middleware('perm:manufacturing.manage')->name('production.edit');
     Route::patch('production/{production}', [ProductionController::class, 'update'])->middleware('perm:manufacturing.manage')->name('production.update');
+    Route::post('production/{production}/qc-review', [ProductionController::class, 'submitQcReview'])->middleware('perm:manufacturing.manage')->name('production.qc-review');
     Route::post('production/{production}/confirm-stock', [ProductionController::class, 'confirmStock'])->middleware('perm:manufacturing.manage')->name('production.confirm-stock');
     Route::delete('production/{production}', [ProductionController::class, 'destroy'])->middleware('perm:manufacturing.manage')->name('production.destroy');
 
@@ -381,10 +426,28 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::get('finance/{invoice}/credit-note', [FinanceController::class, 'showCreditNoteForm'])->middleware('perm:accounting.manage')->name('finance.credit-notes.create');
     Route::post('finance/{invoice}/credit-note', [FinanceController::class, 'storeCreditNote'])->middleware('perm:accounting.manage')->name('finance.credit-notes.store');
     Route::get('finance/{invoice}/pdf', [FinanceController::class, 'downloadPdf'])->middleware('perm:accounting.manage')->name('finance.pdf');
+    Route::get('finance/{invoice}/json', [FinanceController::class, 'exportJson'])->middleware('perm:accounting.manage')->name('finance.json');
+    Route::get('finance/{invoice}/e-invoice', [FinanceController::class, 'exportEInvoice'])->middleware('perm:accounting.manage')->name('finance.e-invoice');
     Route::get('finance/reconciliation', [BankReconciliationController::class, 'index'])->middleware('perm:accounting.manage')->name('finance.reconciliation');
+    Route::post('finance/reconciliation/import', [BankReconciliationController::class, 'import'])->middleware('perm:accounting.manage')->name('finance.reconciliation.import');
     Route::post('finance/reconciliation', [BankReconciliationController::class, 'update'])->middleware('perm:accounting.manage')->name('finance.reconciliation.update');
     Route::get('reports/pl', [ReportController::class, 'profitAndLoss'])->middleware('perm:reports.view')->name('reports.pl');
+    Route::get('reports/trial-balance', [ReportController::class, 'trialBalance'])->middleware('perm:reports.view')->name('reports.trial-balance');
+    Route::get('reports/general-ledger', [ReportController::class, 'generalLedger'])->middleware('perm:reports.view')->name('reports.general-ledger');
+    Route::get('reports/inventory-valuation', [ReportController::class, 'inventoryValuation'])->middleware('perm:reports.view')->name('reports.inventory-valuation');
+    Route::get('reports/ar-aging', [ReportController::class, 'receivableAging'])->middleware('perm:reports.view')->name('reports.ar-aging');
+    Route::get('reports/ap-aging', [ReportController::class, 'payableAging'])->middleware('perm:reports.view')->name('reports.ap-aging');
     Route::get('reports/vat', [ReportController::class, 'vat'])->middleware('perm:reports.view')->name('reports.vat');
+    Route::get('reports/vat/export', [ReportController::class, 'vatExport'])->middleware('perm:reports.view')->name('reports.vat.export');
+    Route::get('reports/production-variance', [ReportController::class, 'productionVariance'])->middleware('perm:reports.view')->name('reports.production-variance');
+    Route::get('reports/batch-trace', [ReportController::class, 'batchTraceLookup'])->middleware('perm:reports.view')->name('reports.batch-trace');
+    Route::get('reports/batch-trace/{batch}', [ReportController::class, 'batchTrace'])->middleware('perm:reports.view')->name('reports.batch-trace.show');
+    Route::get('exports/tally', [TallyExportController::class, 'download'])->middleware('perm:accounting.manage')->name('exports.tally');
+    Route::get('search', [SearchController::class, 'index'])->middleware('perm:reports.view')->name('search.index');
+    Route::get('search/suggest', [SearchController::class, 'suggest'])->middleware('perm:reports.view')->name('search.suggest');
+    Route::get('webhooks', [WebhookController::class, 'index'])->middleware('perm:system.settings')->name('webhooks.index');
+    Route::post('webhooks', [WebhookController::class, 'store'])->middleware('perm:system.settings')->name('webhooks.store');
+    Route::delete('webhooks/{webhook}', [WebhookController::class, 'destroy'])->middleware('perm:system.settings')->name('webhooks.destroy');
     Route::get('reports/bs', [ReportController::class, 'balanceSheet'])->middleware('perm:reports.view')->name('reports.bs');
     Route::get('reports/cashflow', [ReportController::class, 'cashflow'])->middleware('perm:reports.view')->name('reports.cashflow');
     Route::get('reports/agents', [ReportController::class, 'agentPerformance'])->middleware('perm:reports.view')->name('reports.agents');
@@ -413,6 +476,19 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::get('accounts/{account}/edit', [AccountController::class, 'edit'])->middleware('perm:accounting.manage')->name('accounts.edit');
     Route::patch('accounts/{account}', [AccountController::class, 'update'])->middleware('perm:accounting.manage')->name('accounts.update');
     Route::delete('accounts/{account}', [AccountController::class, 'destroy'])->middleware('perm:accounting.manage')->name('accounts.destroy');
+
+    Route::get('journals', [JournalEntryController::class, 'index'])->middleware('perm:accounting.manage')->name('journals.index');
+    Route::get('journals/create', [JournalEntryController::class, 'create'])->middleware('perm:accounting.manage')->name('journals.create');
+    Route::post('journals', [JournalEntryController::class, 'store'])->middleware('perm:accounting.manage')->name('journals.store');
+    Route::get('journals/{journal}', [JournalEntryController::class, 'show'])->middleware('perm:accounting.manage')->name('journals.show');
+    Route::get('journals/{journal}/edit', [JournalEntryController::class, 'edit'])->middleware('perm:accounting.manage')->name('journals.edit');
+    Route::patch('journals/{journal}', [JournalEntryController::class, 'update'])->middleware('perm:accounting.manage')->name('journals.update');
+    Route::post('journals/{journal}/post', [JournalEntryController::class, 'post'])->middleware('perm:accounting.manage')->name('journals.post');
+    Route::post('journals/{journal}/reverse', [JournalEntryController::class, 'reverse'])->middleware('perm:accounting.manage')->name('journals.reverse');
+
+    Route::get('accounting-periods', [FiscalPeriodController::class, 'index'])->middleware('perm:accounting.manage')->name('accounting-periods.index');
+    Route::patch('accounting-periods/{period}/close', [FiscalPeriodController::class, 'close'])->middleware('perm:accounting.manage')->name('accounting-periods.close');
+    Route::patch('accounting-periods/{period}/open', [FiscalPeriodController::class, 'open'])->middleware('perm:accounting.manage')->name('accounting-periods.open');
     Route::get('agent-advances', [AgentAdvanceController::class, 'index'])->middleware('perm:accounting.manage')->name('agent-advances.index');
     Route::get('agent-advances/create', [AgentAdvanceController::class, 'create'])->middleware('perm:accounting.manage')->name('agent-advances.create');
     Route::post('agent-advances', [AgentAdvanceController::class, 'store'])->middleware('perm:accounting.manage')->name('agent-advances.store');
@@ -424,11 +500,15 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::put('bills/{bill}', [PurchaseBillController::class, 'update'])->middleware('perm:accounting.manage')->name('bills.update');
     Route::delete('bills/{bill}', [PurchaseBillController::class, 'destroy'])->middleware('perm:accounting.manage')->name('bills.destroy');
     Route::post('bills/{bill}/pay', [PurchaseBillController::class, 'storePayment'])->middleware('perm:accounting.manage')->name('bills.pay');
+    Route::post('bills/batch-pay', [PurchaseBillController::class, 'storeBatchPayment'])->middleware('perm:accounting.manage')->name('bills.batch-pay');
 
     Route::get('purchase-orders', [PurchaseOrderController::class, 'index'])->middleware('perm:control.suppliers')->name('purchase-orders.index');
     Route::get('purchase-orders/create', [PurchaseOrderController::class, 'create'])->middleware('perm:control.suppliers')->name('purchase-orders.create');
     Route::post('purchase-orders', [PurchaseOrderController::class, 'store'])->middleware('perm:control.suppliers')->name('purchase-orders.store');
     Route::get('purchase-orders/{purchaseOrder}', [PurchaseOrderController::class, 'show'])->middleware('perm:control.suppliers')->name('purchase-orders.show');
+    Route::get('purchase-orders/{purchaseOrder}/edit', [PurchaseOrderController::class, 'edit'])->middleware('perm:control.suppliers')->name('purchase-orders.edit');
+    Route::patch('purchase-orders/{purchaseOrder}', [PurchaseOrderController::class, 'update'])->middleware('perm:control.suppliers')->name('purchase-orders.update');
+    Route::delete('purchase-orders/{purchaseOrder}', [PurchaseOrderController::class, 'destroy'])->middleware('perm:control.suppliers')->name('purchase-orders.destroy');
     Route::post('purchase-orders/{purchaseOrder}/approve', [PurchaseOrderController::class, 'approve'])->middleware('perm:control.suppliers')->name('purchase-orders.approve');
 
     Route::get('goods-receipts', [GoodsReceiptController::class, 'index'])->middleware('perm:inventory.manage')->name('goods-receipts.index');

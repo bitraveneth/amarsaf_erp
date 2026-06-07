@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Account;
+use App\Models\JournalEntryLine;
 use App\Models\LedgerEntry;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -51,7 +52,10 @@ class AccountController extends Controller
     {
         $data = $this->validated($request);
 
-        if ($data['name'] !== $account->name && LedgerEntry::where('account', $account->name)->exists()) {
+        if ($data['name'] !== $account->name && (
+            LedgerEntry::where('account', $account->name)->exists()
+            || JournalEntryLine::where('account_id', $account->id)->exists()
+        )) {
             return redirect()
                 ->route('admin.accounts.edit', $account)
                 ->withErrors(['name' => 'Accounts referenced by ledger entries cannot be renamed.']);
@@ -64,7 +68,7 @@ class AccountController extends Controller
 
     public function destroy(Account $account)
     {
-        if (LedgerEntry::where('account', $account->name)->exists()) {
+        if (LedgerEntry::where('account', $account->name)->exists() || JournalEntryLine::where('account_id', $account->id)->exists()) {
             return redirect()
                 ->route('admin.accounts.index')
                 ->with('error', 'Account is referenced by ledger entries and cannot be deleted.');

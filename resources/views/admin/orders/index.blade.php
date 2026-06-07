@@ -1,40 +1,22 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="space-y-8">
-    <!-- Header with gradient -->
-    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-            <div class="flex items-center gap-3">
-                <div class="relative">
-                    <div class="absolute -inset-1 bg-gradient-to-r from-brand-500 to-brand-600 rounded-xl blur opacity-20"></div>
-                    <div class="relative flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-brand-600 text-white shadow-lg">
-                        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z" />
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 7h6m-6 4h6m-6 4h4" />
-                        </svg>
-                    </div>
-                </div>
-                <div>
-                    <h1 class="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
-                        Orders
-                    </h1>
-                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                        Track agent orders and their current statuses
-                    </p>
-                </div>
-            </div>
-        </div>
-        
-        <a href="{{ route('admin.orders.create') }}" 
-           data-tour="orders-primary-action"
-           class="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-brand-500 to-brand-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md hover:from-brand-600 hover:to-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500/50 transition-all duration-200">
-            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-            </svg>
-            New Order
-        </a>
-    </div>
+<div class="space-y-8 erp-order-page">
+    <x-admin.order-toolbar
+        title="Sales orders"
+        subtitle="Track agent orders from draft through delivery."
+        :back-url="route('admin.dashboard')"
+        back-label="Dashboard"
+    >
+        <x-slot:actions>
+            <a href="{{ route('admin.orders.create') }}"
+               data-tour="orders-primary-action"
+               class="erp-order-btn erp-order-btn--primary">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                New sales order
+            </a>
+        </x-slot:actions>
+    </x-admin.order-toolbar>
 
     <!-- Status Message -->
 
@@ -161,7 +143,7 @@
             <div class="border-b border-gray-100 px-6 py-4 dark:border-gray-800">
                 <div class="flex items-center justify-between">
                     <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
-                        {{ $typeFilter === 'sales' ? 'Sales Orders' : ($typeFilter === 'return' ? 'Return Orders' : 'All Orders') }}
+                        {{ $typeFilter === 'sales' ? 'Sales orders' : ($typeFilter === 'return' ? 'Return Orders' : 'All Orders') }}
                     </h3>
                     <span class="rounded-full bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-300">
                         {{ $orders->count() }} of {{ $totalOrders }} orders
@@ -250,7 +232,7 @@
                                 <td class="px-6 py-4 text-right">
                                     <div class="flex items-center justify-end gap-2">
                                         <a href="{{ route('admin.orders.show', $order) }}" 
-                                           class="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 shadow-sm hover:bg-gray-50 hover:text-brand-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-brand-400 transition-colors">
+                                           class="erp-btn-action">
                                             <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
@@ -258,7 +240,7 @@
                                             View
                                         </a>
                                         <a href="{{ route('admin.orders.edit', $order) }}" 
-                                           class="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 shadow-sm hover:bg-gray-50 hover:text-brand-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-brand-400 transition-colors">
+                                           class="erp-btn-action">
                                             <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                                             </svg>
@@ -271,7 +253,7 @@
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit" 
-                                                    class="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-error-600 shadow-sm hover:bg-error-50 hover:text-error-700 dark:border-gray-700 dark:bg-gray-800 dark:text-error-500 dark:hover:bg-error-500/10 transition-colors">
+                                                    class="erp-btn-action-danger">
                                                 <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                                                 </svg>
@@ -306,9 +288,9 @@
                         </svg>
                     </div>
                 </div>
-                <h2 class="mt-8 text-2xl font-bold text-gray-900 dark:text-white">No Orders Yet</h2>
+                <h2 class="mt-8 text-2xl font-bold text-gray-900 dark:text-white">No orders yet</h2>
                 <p class="mt-3 text-base text-gray-500 dark:text-gray-400 max-w-md mx-auto">
-                    No orders have been placed yet. Click the "New Order" button to create your first order.
+                    No orders have been placed yet. Click "New sales order" to create your first order.
                 </p>
                 <div class="mt-8 flex items-center justify-center gap-4">
                     <a href="{{ route('admin.orders.create') }}" 

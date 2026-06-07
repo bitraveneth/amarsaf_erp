@@ -5,13 +5,17 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Agent;
 use App\Models\AgentAdvance;
-use App\Models\LedgerEntry;
+use App\Services\Accounting\AccountingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class AgentAdvanceController extends Controller
 {
+    public function __construct(protected AccountingService $accounting)
+    {
+    }
+
     public function index(Request $request)
     {
         $advances = AgentAdvance::with('agent')
@@ -60,31 +64,22 @@ class AgentAdvanceController extends Controller
 
             $agent = Agent::findOrFail($data['agent_id']);
             $description = $this->advanceLedgerDescription($advance, $agent);
-            $ledgerTimestamp = Carbon::parse($advance->advanced_at)->startOfDay();
+            $entryDate = Carbon::parse($advance->advanced_at);
 
-            $bankEntry = new LedgerEntry([
-                'account' => 'Bank',
-                'description' => $description,
-                'debit' => $advance->amount,
-                'credit' => 0,
-                'order_id' => null,
-                'invoice_id' => null,
-            ]);
-            $bankEntry->created_at = $ledgerTimestamp;
-            $bankEntry->updated_at = $ledgerTimestamp;
-            $bankEntry->save();
-
-            $advanceEntry = new LedgerEntry([
-                'account' => 'Agent Advances',
-                'description' => $description,
-                'debit' => 0,
-                'credit' => $advance->amount,
-                'order_id' => null,
-                'invoice_id' => null,
-            ]);
-            $advanceEntry->created_at = $ledgerTimestamp;
-            $advanceEntry->updated_at = $ledgerTimestamp;
-            $advanceEntry->save();
+            $this->accounting->post(
+                'agent_advance',
+                $entryDate,
+                [
+                    ['account' => 'Bank', 'debit' => $advance->amount, 'credit' => 0],
+                    ['account' => 'Agent Advances', 'debit' => 0, 'credit' => $advance->amount],
+                ],
+                [
+                    'description' => $description,
+                    'source_type' => AgentAdvance::class,
+                    'source_id' => $advance->id,
+                    'created_at' => $entryDate->copy()->startOfDay(),
+                ]
+            );
         });
 
         return redirect()->route('admin.agent-advances.index')->with('status', 'Agent advance recorded.');

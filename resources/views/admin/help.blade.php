@@ -464,7 +464,7 @@
                             <span class="text-xs font-medium text-gray-900 dark:text-white">Balance sheet</span>
                         </div>
                         <div class="bg-gray-50 dark:bg-gray-700/50 p-2 rounded text-center">
-                            <span class="text-xs font-medium text-gray-900 dark:text-white">Cashflow</span>
+                            <span class="text-xs font-medium text-gray-900 dark:text-white">Cash flow</span>
                         </div>
                         <div class="bg-gray-50 dark:bg-gray-700/50 p-2 rounded text-center">
                             <span class="text-xs font-medium text-gray-900 dark:text-white">VAT report</span>

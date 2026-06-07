@@ -4,12 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Helpers\Permission;
 use App\Models\Agent;
-use App\Models\Invoice;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\ProductionRun;
 use App\Models\SalesTarget;
 use App\Models\StockEntry;
+use App\Support\InvoiceRevenueMetrics;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
@@ -118,35 +118,56 @@ class AdminController extends Controller
         $monthlyAchieved = 0.0;
         $todayAchieved = 0.0;
         $outstandingReceivables = 0.0;
+        $collectionsThisMonth = 0.0;
+        $overdueInvoiceCount = 0;
         $todayProductionQty = 0.0;
+        $pendingQcCount = 0;
+        $todayOrderCount = 0;
+        $monthOrderCount = 0;
+        $monthReturnCount = 0;
         $lowStockAlertCount = 0;
         if ($invoiceReady) {
-            $monthlyInvoices = Invoice::query()
-                ->with(['creditNotes', 'receipts', 'advanceApplications'])
-                ->whereBetween('issued_at', [$currentMonthStart->toDateString(), $currentMonthEnd->toDateString()])
-                ->get();
+            $monthlyAchieved = round(InvoiceRevenueMetrics::sumNetSalesAfterCreditsInRange(
+                $currentMonthStart,
+                $currentMonthEnd,
+                $currentMonthStart,
+                $currentMonthEnd
+            ), 2);
 
-            $monthlyAchieved = round((float) $monthlyInvoices->sum(function (Invoice $invoice) use ($currentMonthStart, $currentMonthEnd) {
-                return $invoice->netSalesAfterCreditsInRange($currentMonthStart, $currentMonthEnd);
-            }), 2);
+            $todayAchieved = round(InvoiceRevenueMetrics::sumNetSalesAfterCreditsInRange(
+                $today,
+                $today,
+                $today,
+                $today
+            ), 2);
 
-            $todayAchieved = round((float) Invoice::query()
-                ->with('creditNotes')
-                ->whereDate('issued_at', $today)
-                ->get()
-                ->sum(function (Invoice $invoice) use ($today) {
-                    return $invoice->netSalesAfterCreditsInRange($today, $today);
-                }), 2);
+            $outstandingReceivables = InvoiceRevenueMetrics::sumOutstandingAsOf($today->copy()->endOfDay());
 
-            $openInvoices = Invoice::query()
-                ->with(['receipts', 'creditNotes', 'advanceApplications'])
-                ->whereDate('issued_at', '<=', $today->toDateString())
-                ->whereIn('status', ['issued', 'adjusted'])
-                ->get();
+            $collectionsThisMonth = round(InvoiceRevenueMetrics::sumReceiptsInRange(
+                $currentMonthStart,
+                $currentMonthEnd
+            ), 2);
 
-            $outstandingReceivables = round((float) $openInvoices->sum(function (Invoice $invoice) use ($today) {
-                return $invoice->outstandingAsOf($today->copy()->endOfDay());
-            }), 2);
+            $overdueInvoiceCount = InvoiceRevenueMetrics::countOverdueInvoices($today);
+        }
+
+        if ($orderReady) {
+            $todayOrderCount = Order::query()
+                ->where('order_type', '!=', 'return')
+                ->whereDate('delivery_date', $today)
+                ->count();
+
+            $monthOrderCount = Order::query()
+                ->where('order_type', '!=', 'return')
+                ->whereYear('delivery_date', $currentMonthStart->year)
+                ->whereMonth('delivery_date', $currentMonthStart->month)
+                ->whereDate('delivery_date', '<=', $currentMonthEnd->toDateString())
+                ->count();
+
+            $monthReturnCount = Order::query()
+                ->where('order_type', 'return')
+                ->whereBetween('created_at', [$currentMonthStart, $currentMonthEnd])
+                ->count();
         }
 
         if ($productionReady) {
@@ -154,6 +175,10 @@ class AdminController extends Controller
                 ->where('qc_status', 'approved')
                 ->whereDate('created_at', $today)
                 ->sum('quantity'), 2);
+
+            $pendingQcCount = ProductionRun::query()
+                ->where('qc_status', '!=', 'approved')
+                ->count();
         }
 
         if ($stockReady && $productReady) {
@@ -166,14 +191,55 @@ class AdminController extends Controller
             $trackedProducts = Product::query()
                 ->sellable()
                 ->stockTracked()
-                ->pluck('id');
+                ->get(['id', 'reorder_level']);
 
             $lowStockAlertCount = $trackedProducts
-                ->filter(function ($productId) use ($availableByProduct) {
-                    return (float) ($availableByProduct[$productId] ?? 0) <= 10;
+                ->filter(function ($product) use ($availableByProduct) {
+                    $threshold = (int) ($product->reorder_level ?? 0);
+                    if ($threshold <= 0) {
+                        $threshold = 10;
+                    }
+
+                    return (float) ($availableByProduct[$product->id] ?? 0) <= $threshold;
                 })
                 ->count();
         }
+
+        $targetGap = max(0, round($monthlySalesTarget - $monthlyAchieved, 2));
+        $collectionRate = $monthlyAchieved > 0
+            ? round(min(100, ($collectionsThisMonth / $monthlyAchieved) * 100), 1)
+            : 0.0;
+
+        $opsAlerts = collect([
+            [
+                'label' => 'Pending QC approval',
+                'value' => $pendingQcCount,
+                'caption' => 'Production runs waiting for quality check',
+                'tone' => $pendingQcCount > 0 ? 'warning' : 'neutral',
+                'href' => route('admin.production.index'),
+            ],
+            [
+                'label' => 'Low stock SKUs',
+                'value' => $lowStockAlertCount,
+                'caption' => 'Sellable items at or below reorder level',
+                'tone' => $lowStockAlertCount > 0 ? 'error' : 'neutral',
+                'href' => route('admin.inventory.low-stock'),
+            ],
+            [
+                'label' => 'Overdue invoices',
+                'value' => $overdueInvoiceCount,
+                'caption' => 'Open invoices past due date',
+                'tone' => $overdueInvoiceCount > 0 ? 'error' : 'neutral',
+                'href' => route('admin.finance.index'),
+            ],
+            [
+                'label' => 'Pending deliveries',
+                'value' => $pendingDeliveryCount,
+                'caption' => 'Orders confirmed through dispatched',
+                'tone' => $pendingDeliveryCount > 0 ? 'warning' : 'neutral',
+                'href' => route('admin.deliveries.index'),
+            ],
+        ])->filter(fn (array $alert) => (int) $alert['value'] > 0)->values();
 
         $monthlyTargetProgress = $monthlySalesTarget > 0
             ? round(min(100, ($monthlyAchieved / $monthlySalesTarget) * 100), 2)
@@ -210,18 +276,12 @@ class AdminController extends Controller
                     : 0;
 
                 $monthlyRevenue[] = $invoiceReady
-                    ? (float) Invoice::query()
-                        ->with('creditNotes')
-                        ->whereYear('issued_at', $month->year)
-                        ->whereMonth('issued_at', $month->month)
-                        ->whereDate('issued_at', '<=', $periodEnd->toDateString())
-                        ->get()
-                        ->sum(function (Invoice $invoice) use ($month, $periodEnd) {
-                            return $invoice->netSalesAfterCreditsInRange(
-                                $month->copy()->startOfMonth(),
-                                $periodEnd
-                            );
-                        })
+                    ? round(InvoiceRevenueMetrics::sumNetSalesAfterCreditsInRange(
+                        $month->copy()->startOfMonth(),
+                        $periodEnd,
+                        $month->copy()->startOfMonth(),
+                        $periodEnd
+                    ), 2)
                     : 0;
             }
         }
@@ -238,13 +298,12 @@ class AdminController extends Controller
                     : 0;
 
                 $revenueForDay = $invoiceReady
-                    ? (float) Invoice::query()
-                        ->with('creditNotes')
-                        ->whereDate('issued_at', $day)
-                        ->get()
-                        ->sum(function (Invoice $invoice) use ($day) {
-                            return $invoice->netSalesAfterCreditsInRange($day, $day);
-                        })
+                    ? round(InvoiceRevenueMetrics::sumNetSalesAfterCreditsInRange(
+                        $day,
+                        $day,
+                        $day,
+                        $day
+                    ), 2)
                     : 0;
 
                 $productionForDay = $productionReady
@@ -319,7 +378,16 @@ class AdminController extends Controller
             'lowStockAlertCount',
             'monthlyTargetProgress',
             'outstandingReceivables',
-            'targetMonthOptions'
+            'targetMonthOptions',
+            'collectionsThisMonth',
+            'overdueInvoiceCount',
+            'pendingQcCount',
+            'todayOrderCount',
+            'monthOrderCount',
+            'monthReturnCount',
+            'targetGap',
+            'collectionRate',
+            'opsAlerts'
         ));
     }
 

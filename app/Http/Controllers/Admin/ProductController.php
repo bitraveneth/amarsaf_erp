@@ -15,9 +15,11 @@ use App\Models\StockEntry;
 use App\Models\ProductionRun;
 use App\Models\PurchaseBillItem;
 use App\Models\PurchaseOrderItem;
+use App\Models\MaterialCategory;
 use App\Models\PackagingType;
 use App\Models\Product;
 use App\Models\TaxClass;
+use App\Support\SkuGenerator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -59,8 +61,10 @@ class ProductController extends Controller
     public function materialsIndex()
     {
         $search = request('q');
+        $categoryId = request('category');
 
-        $materialsQuery = Product::whereIn('product_type', ['raw', 'service', 'inhouse'])
+        $materialsQuery = Product::with('materialCategory')
+            ->whereIn('product_type', ['raw', 'service', 'inhouse'])
             ->orderBy('name');
 
         if ($search) {
@@ -72,10 +76,33 @@ class ProductController extends Controller
             });
         }
 
-        $materials = $materialsQuery->paginate(20);
-        $materials->appends(['q' => $search]);
+        if ($categoryId) {
+            $materialsQuery->where('material_category_id', $categoryId);
+        }
 
-        return view('admin.products.materials_index', compact('materials', 'search'));
+        $materials = $materialsQuery->paginate(20);
+        $materials->appends(['q' => $search, 'category' => $categoryId]);
+
+        $materialCategories = MaterialCategory::ordered()->get();
+
+        return view('admin.products.materials_index', compact('materials', 'search', 'materialCategories', 'categoryId'));
+    }
+
+    public function suggestSku(Request $request)
+    {
+        $data = $request->validate([
+            'product_type' => 'nullable|in:finished,raw,service,inhouse',
+            'size' => 'nullable|string|max:40',
+            'uom' => 'nullable|string|max:40',
+            'packaging' => 'nullable|string|max:40',
+            'material_kind' => 'nullable|string|max:40',
+        ]);
+
+        return response()->json([
+            'sku' => SkuGenerator::suggest($data),
+            'hint' => SkuGenerator::formatHint(),
+            'pattern' => SkuGenerator::pattern(),
+        ]);
     }
 
     public function create()
@@ -95,9 +122,10 @@ class ProductController extends Controller
     {
         $packagingTypes = PackagingType::orderBy('name')->get();
         $taxClasses = TaxClass::orderBy('name')->get();
+        $materialCategories = MaterialCategory::ordered()->get();
         $context = 'materials';
 
-        return view('admin.products.create', compact('packagingTypes', 'taxClasses', 'context'));
+        return view('admin.products.create', compact('packagingTypes', 'taxClasses', 'materialCategories', 'context'));
     }
 
     public function store(Request $request)
@@ -105,12 +133,13 @@ class ProductController extends Controller
         $isMaterialsRoute = $request->routeIs('admin.materials.*');
 
         $data = $request->validate([
-            'sku' => 'required|string|unique:products,sku',
+            'sku' => ['required', 'string', 'unique:products,sku', SkuGenerator::validationRule()],
             'name' => 'required|string',
             // When creating products from the main catalog screen we now focus on
             // sellable SKUs. The form silently posts "finished" as the type, but
             // we still allow other values for legacy records and API usage.
             'product_type' => 'nullable|in:finished,raw,service,inhouse',
+            'material_category_id' => ($isMaterialsRoute ? 'nullable' : 'prohibited') . '|exists:material_categories,id',
             'description' => 'nullable|string',
             'size' => 'nullable|string',
             'uom' => 'nullable|string',
@@ -127,9 +156,12 @@ class ProductController extends Controller
             'image_path' => 'nullable|string',
             'base_price' => ($isMaterialsRoute ? 'nullable' : 'required') . '|numeric|min:0',
             'standard_cost' => 'nullable|numeric|min:0',
+            'reorder_level' => 'nullable|integer|min:0',
             'supplier_name' => 'nullable|string',
             'is_active' => 'sometimes|boolean',
         ]);
+
+        $data['sku'] = SkuGenerator::normalize($data['sku']);
 
         // Default type to "finished" if the form did not explicitly send it
         $data['product_type'] = $data['product_type'] ?? 'finished';
@@ -178,9 +210,21 @@ class ProductController extends Controller
     {
         $packagingTypes = PackagingType::orderBy('name')->get();
         $taxClasses = TaxClass::orderBy('name')->get();
+        $materialCategories = MaterialCategory::ordered()->get();
         $context = 'materials';
 
-        return view('admin.products.edit', compact('product', 'packagingTypes', 'taxClasses', 'context'));
+        return view('admin.products.edit', compact('product', 'packagingTypes', 'taxClasses', 'materialCategories', 'context'));
+    }
+
+    public function materialsShow(Product $product)
+    {
+        if (! in_array($product->product_type, ['raw', 'service', 'inhouse'], true)) {
+            abort(404);
+        }
+
+        $product->load(['packagingType', 'taxClass', 'materialCategory']);
+
+        return view('admin.products.materials_show', compact('product'));
     }
 
     public function update(Request $request, Product $product)
@@ -188,9 +232,10 @@ class ProductController extends Controller
         $isMaterialsRoute = $request->routeIs('admin.materials.*');
 
         $data = $request->validate([
-            'sku' => 'required|string|unique:products,sku,' . $product->id,
+            'sku' => ['required', 'string', 'unique:products,sku,' . $product->id, SkuGenerator::validationRule()],
             'name' => 'required|string',
             'product_type' => 'nullable|in:finished,raw,service,inhouse',
+            'material_category_id' => ($isMaterialsRoute ? 'nullable' : 'prohibited') . '|exists:material_categories,id',
             'description' => 'nullable|string',
             'size' => 'nullable|string',
             'uom' => 'nullable|string',
@@ -207,9 +252,12 @@ class ProductController extends Controller
             'image_path' => 'nullable|string',
             'base_price' => ($isMaterialsRoute ? 'nullable' : 'required') . '|numeric|min:0',
             'standard_cost' => 'nullable|numeric|min:0',
+            'reorder_level' => 'nullable|integer|min:0',
             'supplier_name' => 'nullable|string',
             'is_active' => 'sometimes|boolean',
         ]);
+
+        $data['sku'] = SkuGenerator::normalize($data['sku']);
 
         $data['product_type'] = $data['product_type'] ?? $product->product_type ?? 'finished';
         if (! isset($data['standard_cost'])) {

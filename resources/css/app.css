@@ -1,5 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&display=swap') layer(base);
 @import 'prismjs/themes/prism.min.css';
+@import 'flatpickr/dist/flatpickr.min.css';
 @import 'tailwindcss';
 
 
@@ -42,52 +43,97 @@
   --text-theme-xs: 12px;
   --text-theme-xs--line-height: 18px;
 
+  /* ERP typography tokens — see docs/erp-design-guide.md */
+  --erp-size-h1: 1.25rem;
+  --erp-size-h1--line-height: 1.75rem;
+  --erp-size-h1-lg: 1.5rem;
+  --erp-size-h1-lg--line-height: 1.875rem;
+  --erp-size-dash-h1: 1.5rem;
+  --erp-size-dash-h1--line-height: 1.875rem;
+  --erp-size-dash-h1-lg: 1.875rem;
+  --erp-size-dash-h1-lg--line-height: 2.25rem;
+  --erp-size-h2: 1rem;
+  --erp-size-h2--line-height: 1.35rem;
+  --erp-size-h3: 0.875rem;
+  --erp-size-h3--line-height: 1.25rem;
+  --erp-size-body: 0.875rem;
+  --erp-size-body--line-height: 1.375rem;
+  --erp-size-caption: 0.75rem;
+  --erp-size-caption--line-height: 1.125rem;
+  --erp-size-eyebrow: 0.6875rem;
+  --erp-size-eyebrow--line-height: 1rem;
+  --erp-size-metric: 1.5rem;
+  --erp-size-metric--line-height: 1.875rem;
+  --erp-size-dash-metric: 2.25rem;
+  --erp-size-dash-metric--line-height: 2.625rem;
+  --erp-size-dash-metric-lg: 2.5rem;
+  --erp-size-dash-metric-lg--line-height: 2.875rem;
+  --erp-size-dash-section-title: 1.125rem;
+  --erp-size-dash-section-title--line-height: 1.5rem;
+  --erp-size-dash-section-title-lg: 1.25rem;
+  --erp-size-dash-section-title-lg--line-height: 1.625rem;
+  --erp-size-dash-section-desc: 0.8125rem;
+  --erp-size-dash-section-desc--line-height: 1.25rem;
+  --erp-size-table-head: 0.6875rem;
+  --erp-size-table-head--line-height: 1rem;
+  --erp-weight-heading: 700;
+  --erp-weight-label: 600;
+  --erp-weight-body: 400;
+
   --color-current: currentColor;
   --color-transparent: transparent;
   --color-white: #ffffff;
-  --color-black: #101828;
+  --color-black: #0e0f14;
 
-  --color-brand-25: #f2f7ff;
-  --color-brand-50: #ecf3ff;
-  --color-brand-100: #dde9ff;
-  --color-brand-200: #c2d6ff;
-  --color-brand-300: #9cb9ff;
-  --color-brand-400: #7592ff;
-  --color-brand-500: #465fff;
-  --color-brand-600: #3641f5;
-  --color-brand-700: #2a31d8;
-  --color-brand-800: #252dae;
-  --color-brand-900: #262e89;
-  --color-brand-950: #161950;
-  --color-app-text-light: #101828;
-  --color-app-text-dark: #f9fafb;
+  /* Saf brand palette — overridable in Admin → Settings → Colors */
+  --color-brand-25: #f7f5ff;
+  --color-brand-50: #e9e4ff;
+  --color-brand-100: #ddd4ff;
+  --color-brand-200: #c8b8ff;
+  --color-brand-300: #ad92ff;
+  --color-brand-400: #8f6bff;
+  --color-brand-500: #5f4bff;
+  --color-brand-600: #4d39e6;
+  --color-brand-700: #3f2ec4;
+  --color-brand-800: #33259e;
+  --color-brand-900: #281d7a;
+  --color-brand-950: #1a1252;
+  --color-app-text-light: #0e0f14;
+  --color-app-text-dark: #f3f4f6;
+  --color-canvas: #f3f4f6;
+  --color-canvas-dark: #0e0f14;
+  --color-accent-lavender: #e9e4ff;
+  --color-accent-blue: #d6e6ff;
+  --color-accent-green: #22b573;
+  --color-urgency: #ff8a24;
+  --color-danger: #ef4444;
 
-  --color-blue-light-25: #f5fbff;
-  --color-blue-light-50: #f0f9ff;
-  --color-blue-light-100: #e0f2fe;
-  --color-blue-light-200: #b9e6fe;
-  --color-blue-light-300: #7cd4fd;
-  --color-blue-light-400: #36bffa;
-  --color-blue-light-500: #0ba5ec;
-  --color-blue-light-600: #0086c9;
-  --color-blue-light-700: #026aa2;
-  --color-blue-light-800: #065986;
-  --color-blue-light-900: #0b4a6f;
-  --color-blue-light-950: #062c41;
+  --color-blue-light-25: #f5faff;
+  --color-blue-light-50: #ebf3ff;
+  --color-blue-light-100: #d6e6ff;
+  --color-blue-light-200: #b8d4ff;
+  --color-blue-light-300: #8fb8ff;
+  --color-blue-light-400: #6698ff;
+  --color-blue-light-500: #4b7fff;
+  --color-blue-light-600: #3565e6;
+  --color-blue-light-700: #2b51bf;
+  --color-blue-light-800: #244199;
+  --color-blue-light-900: #1f357a;
+  --color-blue-light-950: #14234f;
 
-  --color-gray-25: #fcfcfd;
-  --color-gray-50: #f9fafb;
-  --color-gray-100: #f2f4f7;
-  --color-gray-200: #e4e7ec;
-  --color-gray-300: #d0d5dd;
-  --color-gray-400: #98a2b3;
-  --color-gray-500: #667085;
-  --color-gray-600: #475467;
-  --color-gray-700: #344054;
-  --color-gray-800: #1d2939;
-  --color-gray-900: #101828;
-  --color-gray-950: #0c111d;
-  --color-gray-dark: #1a2231;
+  --color-gray-25: #f8fafc;
+  --color-gray-50: #f3f4f6;
+  --color-gray-100: #eceef2;
+  --color-gray-200: #e2e8f0;
+  --color-gray-300: #cbd5e1;
+  --color-gray-400: #94a3b8;
+  --color-gray-500: #64748b;
+  --color-gray-600: #475569;
+  --color-gray-700: #334155;
+  --color-gray-800: #1e293b;
+  --color-gray-900: #151821;
+  --color-gray-950: #0e0f14;
+  --color-gray-dark: #151821;
 
   --color-orange-25: #fffaf5;
   --color-orange-50: #fff6ed;
@@ -95,8 +141,8 @@
   --color-orange-200: #fddcab;
   --color-orange-300: #feb273;
   --color-orange-400: #fd853a;
-  --color-orange-500: #fb6514;
-  --color-orange-600: #ec4a0a;
+  --color-orange-500: #ff8a24;
+  --color-orange-600: #e67312;
   --color-orange-700: #c4320a;
   --color-orange-800: #9c2a10;
   --color-orange-900: #7e2410;
@@ -107,9 +153,9 @@
   --color-success-100: #d1fadf;
   --color-success-200: #a6f4c5;
   --color-success-300: #6ce9a6;
-  --color-success-400: #32d583;
-  --color-success-500: #12b76a;
-  --color-success-600: #039855;
+  --color-success-400: #3ecf8e;
+  --color-success-500: #22b573;
+  --color-success-600: #1a9460;
   --color-success-700: #027a48;
   --color-success-800: #05603a;
   --color-success-900: #054f31;
@@ -121,8 +167,8 @@
   --color-error-200: #fecdca;
   --color-error-300: #fda29b;
   --color-error-400: #f97066;
-  --color-error-500: #f04438;
-  --color-error-600: #d92d20;
+  --color-error-500: #ef4444;
+  --color-error-600: #dc2626;
   --color-error-700: #b42318;
   --color-error-800: #912018;
   --color-error-900: #7a271a;
@@ -134,8 +180,8 @@
   --color-warning-200: #fedf89;
   --color-warning-300: #fec84b;
   --color-warning-400: #fdb022;
-  --color-warning-500: #f79009;
-  --color-warning-600: #dc6803;
+  --color-warning-500: #ff8a24;
+  --color-warning-600: #e67312;
   --color-warning-700: #b54708;
   --color-warning-800: #93370d;
   --color-warning-900: #7a2e0e;
@@ -143,17 +189,17 @@
 
   --color-theme-pink-500: #ee46bc;
 
-  --color-theme-purple-500: #7a5af8;
+  --color-theme-purple-500: #5f4bff;
 
-  --shadow-theme-md: 0px 4px 8px -2px rgba(16, 24, 40, 0.1), 0px 2px 4px -2px rgba(16, 24, 40, 0.06);
+  --shadow-theme-md: 0px 4px 8px -2px rgba(14, 15, 20, 0.1), 0px 2px 4px -2px rgba(14, 15, 20, 0.06);
   --shadow-theme-lg: 0px 12px 16px -4px rgba(16, 24, 40, 0.08),
     0px 4px 6px -2px rgba(16, 24, 40, 0.03);
-  --shadow-theme-sm: 0px 1px 3px 0px rgba(16, 24, 40, 0.1), 0px 1px 2px 0px rgba(16, 24, 40, 0.06);
-  --shadow-theme-xs: 0px 1px 2px 0px rgba(16, 24, 40, 0.05);
+  --shadow-theme-sm: 0px 1px 2px 0px rgba(10, 10, 10, 0.06), 0px 4px 12px 0px rgba(10, 10, 10, 0.08);
+  --shadow-theme-xs: 0px 1px 2px 0px rgba(10, 10, 10, 0.05), 0px 1px 3px 0px rgba(10, 10, 10, 0.07);
   --shadow-theme-xl: 0px 20px 24px -4px rgba(16, 24, 40, 0.08),
     0px 8px 8px -4px rgba(16, 24, 40, 0.03);
   --shadow-datepicker: -5px 0 0 #262d3c, 5px 0 0 #262d3c;
-  --shadow-focus-ring: 0px 0px 0px 4px rgba(70, 95, 255, 0.12);
+  --shadow-focus-ring: 0px 0px 0px 4px rgba(95, 75, 255, 0.16);
   --shadow-slider-navigation: 0px 1px 2px 0px rgba(16, 24, 40, 0.1),
     0px 1px 3px 0px rgba(16, 24, 40, 0.1);
   --shadow-tooltip: 0px 4px 6px -2px rgba(16, 24, 40, 0.05),
@@ -182,7 +228,7 @@
   html {
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
-    background-color: var(--color-gray-50);
+    background-color: var(--color-canvas);
   }
 
   *,
@@ -197,7 +243,7 @@
     cursor: pointer;
   }
   body {
-    @apply relative font-normal font-outfit z-1 bg-gray-50;
+    @apply relative font-normal font-outfit z-1 bg-canvas dark:bg-gray-900;
     color: var(--color-app-text-light);
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
@@ -223,6 +269,56 @@
   .app-brand-logo-lg {
     width: 5.5rem;
     height: 5.5rem;
+  }
+
+  .erp-brand-mark {
+    @apply inline-flex min-w-0 items-center;
+  }
+
+  .erp-brand-mark--header {
+    @apply min-w-0 flex-1 items-center;
+  }
+
+  .erp-brand-mark--login,
+  .erp-brand-mark--loader {
+    @apply flex-col items-center gap-2 text-center;
+  }
+
+  .erp-brand-mark--inline {
+    @apply items-center gap-2.5;
+  }
+
+  .erp-brand-mark__logo {
+    @apply h-10 w-auto max-w-[5.5rem] object-contain;
+  }
+
+  .erp-brand-mark--sidebar {
+    @apply w-full items-center justify-center;
+  }
+
+  .erp-brand-mark--logo-only .erp-brand-mark__logo {
+    @apply h-11 max-w-[6.25rem];
+  }
+
+  .erp-brand-mark--sidebar.erp-brand-mark--logo-only .erp-brand-mark__logo {
+    @apply h-12 max-w-[7rem];
+  }
+
+  .erp-brand-mark--header.erp-brand-mark--logo-only .erp-brand-mark__logo {
+    @apply h-10 max-w-[5.5rem];
+  }
+
+  .erp-brand-mark--login .erp-brand-mark__logo,
+  .erp-brand-mark--loader .erp-brand-mark__logo {
+    @apply h-16 max-w-[8.5rem];
+  }
+
+  .erp-brand-mark__companion {
+    @apply text-[11px] font-semibold uppercase tracking-[0.28em] text-gray-400 dark:text-gray-500;
+  }
+
+  .erp-brand-mark--login .erp-brand-mark__companion {
+    @apply -mt-0.5;
   }
 
   .theme-text-scope .text-gray-900,
@@ -307,6 +403,24 @@
 
 @utility menu-item-arrow-inactive {
   @apply text-gray-500 group-hover:text-gray-700 dark:text-gray-400 dark:group-hover:text-gray-300;
+}
+
+/* TailAdmin surfaces — cream canvas in light mode, white cards */
+@utility ta-card {
+  @apply rounded-2xl border border-black/[0.06] bg-white shadow-[0_1px_2px_rgba(10,10,10,0.04),0_6px_20px_rgba(10,10,10,0.04)] dark:border-gray-800 dark:bg-white/[0.03] dark:shadow-none;
+}
+
+@utility ta-card-padded {
+  @apply rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6;
+}
+
+@utility ta-metric-icon {
+  @apply flex h-12 w-12 items-center justify-center rounded-xl bg-gray-100 dark:bg-gray-800;
+}
+
+@utility text-title-sm {
+  font-size: var(--text-title-sm);
+  line-height: var(--text-title-sm--line-height);
 }
 
 /* Sidebar hover/focus polish */
@@ -539,7 +653,7 @@
   @apply w-full;
 }
 .flatpickr-calendar {
-  @apply mt-2 !rounded-xl bg-black !p-5 !border !border-transparent dark:!border-white/5 !text-gray-500 dark:!bg-gray-dark dark:!text-gray-400 dark:!shadow-theme-xl 2xsm:!w-auto;
+  @apply mt-2 !rounded-xl bg-white !p-5 !border !border-gray-200 !text-gray-700 dark:!border-white/5 dark:!bg-gray-dark dark:!text-gray-400 dark:!shadow-theme-xl 2xsm:!w-auto;
 }
 .flatpickr-time input {
   background-color: #f9fafb !important;
@@ -637,13 +751,13 @@ span.flatpickr-weekday,
 .flatpickr-day.selected.nextMonthDay,
 .flatpickr-day.startRange.nextMonthDay,
 .flatpickr-day.endRange.nextMonthDay {
-  background: #465fff;
+  background: var(--color-brand-500);
   @apply !border-brand-500 !bg-brand-500 hover:!border-brand-500 hover:!bg-brand-500;
 }
 .flatpickr-day.selected.startRange + .endRange:not(:nth-child(7n + 1)),
 .flatpickr-day.startRange.startRange + .endRange:not(:nth-child(7n + 1)),
 .flatpickr-day.endRange.startRange + .endRange:not(:nth-child(7n + 1)) {
-  box-shadow: -10px 0 0 #465fff;
+  box-shadow: -10px 0 0 var(--color-brand-500);
 }
 
 .flatpickr-months .flatpickr-prev-month svg,
@@ -1006,4 +1120,2678 @@ pre[class*='language-'] {
   .flatpickr-calendar.static {
     margin-right: -60px !important;
   }
+}
+
+/* Saf ERP — shared admin UI primitives (TailAdmin-aligned) */
+@layer components {
+  /*
+   * ERP Typography — docs/erp-design-guide.md
+   */
+  .erp-h1,
+  .erp-page-title,
+  .erp-text-page-title {
+    font-size: var(--erp-size-h1);
+    line-height: var(--erp-size-h1--line-height);
+    font-weight: var(--erp-weight-heading);
+    letter-spacing: -0.01em;
+    @apply tracking-tight text-gray-900 dark:text-white;
+  }
+
+  @media (min-width: 768px) {
+    .erp-h1,
+    .erp-page-title,
+    .erp-text-page-title {
+      font-size: var(--erp-size-h1-lg);
+      line-height: var(--erp-size-h1-lg--line-height);
+    }
+  }
+
+  .erp-dash-h1,
+  .dash-title {
+    font-size: var(--erp-size-dash-h1);
+    line-height: var(--erp-size-dash-h1--line-height);
+    font-weight: var(--erp-weight-heading);
+    letter-spacing: -0.015em;
+    @apply tracking-tight text-gray-900 dark:text-white;
+  }
+
+  @media (min-width: 768px) {
+    .erp-dash-h1,
+    .dash-title {
+      font-size: var(--erp-size-dash-h1-lg);
+      line-height: var(--erp-size-dash-h1-lg--line-height);
+    }
+  }
+
+  .erp-h2,
+  .erp-text-section-title,
+  .dash-snapshot-title {
+    font-size: var(--erp-size-h2);
+    line-height: var(--erp-size-h2--line-height);
+    font-weight: var(--erp-weight-heading);
+    @apply text-gray-900 dark:text-white;
+  }
+
+  .erp-h3,
+  .erp-table-card-title,
+  .dash-card-title,
+  .dash-performance-widget-title {
+    font-size: var(--erp-size-h3);
+    line-height: var(--erp-size-h3--line-height);
+    font-weight: var(--erp-weight-heading);
+    @apply text-gray-900 dark:text-white;
+  }
+
+  .erp-eyebrow,
+  .dash-section-eyebrow,
+  .dash-snapshot-eyebrow {
+    font-size: var(--erp-size-eyebrow);
+    line-height: var(--erp-size-eyebrow--line-height);
+    font-weight: var(--erp-weight-label);
+    letter-spacing: 0.08em;
+    @apply uppercase text-gray-400 dark:text-gray-500;
+  }
+
+  .erp-body,
+  .erp-text-body,
+  .dash-snapshot-desc {
+    font-size: var(--erp-size-body);
+    line-height: var(--erp-size-body--line-height);
+    font-weight: var(--erp-weight-body);
+    @apply text-gray-700 dark:text-gray-300;
+  }
+
+  .erp-body-strong {
+    font-size: var(--erp-size-body);
+    line-height: var(--erp-size-body--line-height);
+    font-weight: var(--erp-weight-label);
+    @apply text-gray-900 dark:text-white;
+  }
+
+  .erp-caption,
+  .erp-text-caption,
+  .erp-page-subtitle,
+  .erp-table-card-description,
+  .dash-card-desc,
+  .dash-performance-widget-desc {
+    font-size: var(--erp-size-caption);
+    line-height: var(--erp-size-caption--line-height);
+    font-weight: var(--erp-weight-body);
+    @apply text-gray-500 dark:text-gray-400;
+  }
+
+  .erp-metric-label,
+  .erp-text-metric-label,
+  .erp-metric-card__label,
+  .erp-stat-label,
+  .erp-label,
+  .dash-snapshot-metric-label {
+    font-size: var(--erp-size-eyebrow);
+    line-height: var(--erp-size-eyebrow--line-height);
+    font-weight: var(--erp-weight-label);
+    letter-spacing: 0.08em;
+    @apply uppercase text-gray-500 dark:text-gray-400;
+  }
+
+  .erp-metric-value,
+  .erp-text-metric-value,
+  .erp-metric-card__value,
+  .erp-stat-value {
+    font-size: var(--erp-size-metric);
+    line-height: var(--erp-size-metric--line-height);
+    font-weight: var(--erp-weight-heading);
+    @apply max-w-full overflow-hidden text-ellipsis whitespace-nowrap leading-tight tracking-tight tabular-nums text-gray-900 dark:text-white;
+  }
+
+  .erp-metric-value--2xl {
+    font-size: 2.25rem;
+    line-height: 2.5rem;
+  }
+
+  .erp-metric-value--xl {
+    font-size: 2rem;
+    line-height: 2.25rem;
+  }
+
+  .erp-metric-value--lg {
+    font-size: var(--erp-size-metric);
+    line-height: var(--erp-size-metric--line-height);
+  }
+
+  .erp-metric-value--md {
+    font-size: 1.25rem;
+    line-height: 1.625rem;
+  }
+
+  .erp-metric-value--sm {
+    font-size: 1.125rem;
+    line-height: 1.5rem;
+  }
+
+  .erp-metric-value--xs {
+    font-size: 1rem;
+    line-height: 1.375rem;
+  }
+
+  .erp-metric-hint,
+  .erp-metric-card__hint,
+  .erp-stat-hint,
+  .dash-snapshot-metric-caption {
+    font-size: var(--erp-size-caption);
+    line-height: var(--erp-size-caption--line-height);
+    font-weight: var(--erp-weight-body);
+    @apply mt-1 text-gray-500 dark:text-gray-400;
+  }
+
+  .erp-table-head {
+    font-size: var(--erp-size-table-head);
+    line-height: var(--erp-size-table-head--line-height);
+    font-weight: var(--erp-weight-label);
+    letter-spacing: 0.06em;
+    @apply uppercase text-gray-500 dark:text-gray-400;
+  }
+
+  .erp-table th,
+  .dash-activity-table th {
+    font-size: var(--erp-size-table-head);
+    line-height: var(--erp-size-table-head--line-height);
+    font-weight: var(--erp-weight-label);
+    letter-spacing: 0.06em;
+    @apply uppercase text-gray-500 dark:text-gray-400;
+  }
+
+  .erp-table-cell {
+    font-size: var(--erp-size-body);
+    line-height: var(--erp-size-body--line-height);
+    font-weight: var(--erp-weight-body);
+    @apply text-gray-700 dark:text-gray-300;
+  }
+
+  .erp-table td {
+    font-size: var(--erp-size-body);
+    line-height: var(--erp-size-body--line-height);
+    font-weight: var(--erp-weight-body);
+    @apply px-4 py-3 text-gray-700 dark:text-gray-300;
+  }
+
+  .erp-table-num {
+    font-size: var(--erp-size-body);
+    line-height: var(--erp-size-body--line-height);
+    font-weight: var(--erp-weight-label);
+    @apply tabular-nums text-gray-900 dark:text-white;
+  }
+
+  .erp-table-link,
+  .dash-order-id {
+    font-size: var(--erp-size-body);
+    line-height: var(--erp-size-body--line-height);
+    font-weight: var(--erp-weight-label);
+    @apply text-gray-900 transition hover:text-brand-600 dark:text-white dark:hover:text-brand-400;
+  }
+
+  .erp-page-subtitle {
+    @apply mt-1 max-w-2xl;
+  }
+
+  .erp-table-card-description {
+    @apply mt-0.5;
+  }
+
+  .erp-metric-card__value {
+    @apply mt-3;
+  }
+
+  .erp-stat-value {
+    @apply mt-2;
+  }
+
+  .erp-label {
+    @apply mb-1.5 block;
+  }
+
+  .dash-snapshot-metric-label {
+    @apply normal-case tracking-normal;
+  }
+
+  .dash-card-desc,
+  .dash-performance-widget-desc {
+    @apply mt-0.5;
+  }
+
+  .dash-subtitle {
+    font-size: var(--erp-size-dash-section-desc);
+    line-height: var(--erp-size-dash-section-desc--line-height);
+    @apply mt-1 text-gray-500 dark:text-gray-400;
+  }
+
+  .dash-title {
+    @apply mt-0;
+  }
+
+  .erp-empty-title {
+    font-size: var(--erp-size-body);
+    line-height: var(--erp-size-body--line-height);
+    font-weight: var(--erp-weight-label);
+    @apply text-gray-900 dark:text-white;
+  }
+
+  .erp-empty-text {
+    font-size: var(--erp-size-caption);
+    line-height: var(--erp-size-caption--line-height);
+    font-weight: var(--erp-weight-body);
+    @apply mt-1 text-gray-500 dark:text-gray-400;
+  }
+
+  .erp-page-shell {
+    @apply relative min-h-[calc(100vh-4rem)] bg-canvas dark:bg-gray-900;
+    font-size: var(--erp-size-body);
+    line-height: var(--erp-size-body--line-height);
+    font-weight: var(--erp-weight-body);
+    @apply text-gray-700 dark:text-gray-300;
+  }
+
+  .erp-module-layout {
+    @apply grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-4;
+  }
+
+  .erp-module-layout__export {
+    @apply col-start-2 row-start-1;
+  }
+
+  .erp-module-layout__main {
+    @apply col-span-2 row-start-1 min-w-0;
+  }
+
+  .erp-page-shell:has(.erp-module-layout__export) .erp-module-layout__main > :first-child {
+    @apply pr-[8.5rem] sm:pr-[9.5rem];
+  }
+
+  .erp-metric-card {
+    @apply relative overflow-hidden rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition-all hover:shadow-md dark:border-gray-800 dark:bg-gray-900 md:p-6;
+    container-type: inline-size;
+  }
+
+  .erp-page {
+    @apply mx-auto w-full max-w-(--breakpoint-2xl) space-y-5 md:space-y-6;
+  }
+
+  .erp-page-header {
+    @apply flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between;
+  }
+
+  .erp-page-icon {
+    @apply relative shrink-0;
+  }
+
+  .erp-page-icon-glow {
+    @apply absolute -inset-1 rounded-xl bg-gradient-to-r from-brand-500 to-brand-600 opacity-15 blur;
+  }
+
+  .erp-page-icon-box {
+    @apply relative flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-brand-600 text-white shadow-theme-md md:h-12 md:w-12;
+  }
+
+  .erp-stat-grid {
+    @apply grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3;
+  }
+
+  .erp-stat-card {
+    @apply ta-card-padded;
+  }
+
+  .erp-filter-panel {
+    @apply flex flex-wrap items-end gap-3 ta-card-padded;
+  }
+
+  .erp-field {
+    @apply min-w-[10rem] flex-1;
+  }
+
+  .erp-input,
+  .erp-select,
+  .erp-textarea {
+    @apply w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:placeholder:text-gray-500;
+  }
+
+  .erp-form-page {
+    @apply mx-auto w-full max-w-4xl space-y-6;
+  }
+
+  .erp-form-card {
+    @apply overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-theme-sm dark:border-gray-800 dark:bg-gray-900;
+  }
+
+  .erp-form-section {
+    @apply space-y-4 px-5 py-5 sm:px-6;
+  }
+
+  .erp-form-section + .erp-form-section {
+    @apply border-t border-gray-100 dark:border-gray-800;
+  }
+
+  .erp-form-section__head {
+    @apply space-y-1;
+  }
+
+  .erp-form-section__desc {
+    font-size: var(--erp-size-caption);
+    line-height: var(--erp-size-caption--line-height);
+    @apply text-gray-500 dark:text-gray-400;
+  }
+
+  .erp-form-section__body {
+    @apply space-y-3;
+  }
+
+  .erp-form-grid {
+    @apply grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2;
+  }
+
+  .erp-form-field {
+    @apply min-w-0 space-y-1;
+  }
+
+  .erp-form-hint {
+    font-size: var(--erp-size-caption);
+    line-height: var(--erp-size-caption--line-height);
+    @apply text-gray-500 dark:text-gray-400;
+  }
+
+  .erp-form-error {
+    font-size: var(--erp-size-caption);
+    line-height: var(--erp-size-caption--line-height);
+    @apply text-error-600 dark:text-error-500;
+  }
+
+  .erp-form-actions {
+    @apply flex items-center justify-end gap-3 border-t border-gray-100 px-5 py-4 sm:px-6 dark:border-gray-800;
+  }
+
+  .erp-form-check {
+    @apply inline-flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300;
+  }
+
+  .erp-form-check-input {
+    @apply h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-900;
+  }
+
+  .erp-btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .erp-btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-semibold text-white shadow-theme-xs transition hover:bg-brand-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .erp-btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 hover:text-gray-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-white/[0.03];
+  }
+
+  .erp-btn-danger {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-error-600 transition hover:bg-error-50 dark:text-error-400 dark:hover:bg-error-500/10;
+  }
+
+  .erp-table-card {
+    @apply ta-card overflow-hidden;
+  }
+
+  .erp-table-card-header {
+    @apply border-b border-gray-100 px-4 py-3.5 dark:border-gray-800 md:px-5;
+  }
+
+  .erp-table-wrap {
+    @apply overflow-x-auto;
+  }
+
+  .erp-table {
+    @apply min-w-full divide-y divide-gray-200 dark:divide-gray-800;
+  }
+
+  .erp-table thead {
+    @apply bg-gray-50 dark:bg-gray-800/50;
+  }
+
+  .erp-table th {
+    @apply px-4 py-3 text-left;
+  }
+
+  .erp-table th.is-right,
+  .erp-table td.is-right {
+    @apply text-right;
+  }
+
+  .erp-table tbody {
+    @apply divide-y divide-gray-100 dark:divide-gray-800;
+  }
+
+  .erp-table td {
+    @apply px-4 py-3;
+  }
+
+  .erp-table tbody tr {
+    @apply transition hover:bg-gray-50/80 dark:hover:bg-gray-800/40;
+  }
+
+  .erp-link {
+    @apply font-medium text-brand-600 transition hover:text-brand-700 hover:underline dark:text-brand-400 dark:hover:text-brand-300;
+  }
+
+  .erp-empty {
+    @apply px-4 py-10 text-center;
+  }
+
+  .erp-list-card {
+    @apply ta-card overflow-hidden;
+  }
+
+  .erp-list-item {
+    @apply flex flex-col gap-3 border-b border-gray-100 px-4 py-4 transition last:border-b-0 hover:bg-gray-50/70 dark:border-gray-800 dark:hover:bg-gray-800/30 sm:flex-row sm:items-center sm:justify-between md:px-5;
+  }
+
+  .erp-badge {
+    @apply inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold;
+  }
+
+  .erp-badge-success {
+    @apply inline-flex items-center rounded-full bg-success-50 px-2.5 py-1 text-xs font-semibold text-success-700 dark:bg-success-500/10 dark:text-success-400;
+  }
+
+  .erp-badge-warning {
+    @apply inline-flex items-center rounded-full bg-orange-50 px-2.5 py-1 text-xs font-semibold text-orange-700 dark:bg-orange-500/10 dark:text-orange-400;
+  }
+
+  .erp-badge-neutral {
+    @apply inline-flex items-center rounded-full bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-700 dark:bg-gray-800 dark:text-gray-300;
+  }
+
+  .erp-action-group {
+    @apply flex flex-wrap items-center justify-end gap-2;
+  }
+
+  .erp-action-column {
+    @apply flex flex-col items-end gap-1.5;
+  }
+
+  .erp-action-column__crud {
+    @apply w-full;
+  }
+
+  .erp-action-column__crud .erp-action-group {
+    @apply justify-end;
+  }
+
+  .erp-action-column__extra {
+    @apply flex w-full min-w-[9.5rem] flex-col gap-1;
+  }
+
+  .erp-action-column__extra .erp-btn-action {
+    @apply w-full justify-center px-2 py-1 text-[11px];
+  }
+
+  .erp-header-date {
+    @apply inline-flex items-center gap-3 rounded-2xl border border-gray-200/90 bg-white/90 px-3 py-2 shadow-theme-xs backdrop-blur-sm dark:border-gray-800 dark:bg-gray-900/90;
+  }
+
+  .erp-header-date__badge {
+    @apply flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-brand-600 text-white shadow-sm;
+  }
+
+  .erp-header-date__month {
+    @apply text-[10px] font-bold uppercase leading-none tracking-[0.14em] text-white/90;
+  }
+
+  .erp-header-date__day {
+    @apply text-lg font-bold leading-none tabular-nums;
+  }
+
+  .erp-header-date__copy {
+    @apply min-w-0 pr-1 text-left leading-tight;
+  }
+
+  .erp-header-date__eyebrow {
+    @apply text-[10px] font-semibold uppercase tracking-[0.12em] text-brand-600 dark:text-brand-400;
+  }
+
+  .erp-header-date__label {
+    @apply mt-0.5 text-sm font-semibold tabular-nums text-gray-900 dark:text-white;
+  }
+
+  .erp-btn-action {
+    @apply inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 transition hover:border-gray-300 hover:bg-gray-50 hover:text-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:border-gray-600 dark:hover:bg-white/[0.03] dark:hover:text-white;
+  }
+
+  .erp-btn-action-danger {
+    @apply inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-error-600 transition hover:border-error-200 hover:bg-error-50 hover:text-error-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-error-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-error-500 dark:hover:border-error-500/30 dark:hover:bg-error-500/10;
+  }
+
+  .erp-btn-action-success {
+    @apply inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-success-600 transition hover:border-success-200 hover:bg-success-50 hover:text-success-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-success-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-success-500 dark:hover:border-success-500/30 dark:hover:bg-success-500/10;
+  }
+
+  .erp-btn-action-warning {
+    @apply inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-orange-600 transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-orange-500 dark:hover:border-orange-500/30 dark:hover:bg-orange-500/10;
+  }
+
+  .erp-btn-action-compact {
+    @apply px-2 py-1;
+  }
+
+  .erp-btn-action-md {
+    @apply px-4 py-2.5 text-sm;
+  }
+
+  /* Dashboard — unified layout & widgets */
+  .dash-page {
+    @apply space-y-8 md:space-y-10;
+  }
+
+  .dash-header,
+  .dash-page-header {
+    @apply flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between;
+  }
+
+  .dash-page-header__intro {
+    @apply min-w-0 flex-1;
+  }
+
+  .dash-page-header__aside {
+    @apply flex shrink-0 flex-col items-start gap-3 sm:items-end;
+  }
+
+  .dash-page-header--domain .dash-page-header__aside {
+    @apply lg:pt-1;
+  }
+
+  .dash-page-meta {
+    font-size: var(--erp-size-caption);
+    line-height: var(--erp-size-caption--line-height);
+    font-weight: var(--erp-weight-label);
+    @apply text-gray-500 dark:text-gray-400;
+  }
+
+  .dash-page-meta time {
+    @apply tabular-nums;
+  }
+
+  .dash-period-badge {
+    font-size: var(--erp-size-eyebrow);
+    line-height: var(--erp-size-eyebrow--line-height);
+    font-weight: var(--erp-weight-label);
+    letter-spacing: 0.08em;
+    @apply inline-flex items-center rounded-full bg-brand-50 px-2.5 py-0.5 uppercase tracking-wide text-brand-700 dark:bg-brand-500/10 dark:text-brand-400;
+  }
+
+  .dash-actions {
+    @apply flex flex-wrap items-center gap-2;
+  }
+
+  .dash-section {
+    @apply space-y-3;
+  }
+
+  .dash-card {
+    @apply ta-card overflow-hidden;
+  }
+
+  .dash-card-header {
+    @apply flex flex-col gap-2 border-b border-gray-100 px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between sm:px-5 dark:border-gray-800;
+  }
+
+  .dash-card-body {
+    @apply px-4 py-3 sm:px-5;
+  }
+
+  .dash-select {
+    @apply rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-medium text-gray-600 shadow-theme-xs focus:border-brand-300 focus:outline-none focus:ring-2 focus:ring-brand-500/15 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300;
+  }
+
+  .dash-kpi-grid {
+    @apply grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4;
+  }
+
+  .dash-kpi {
+    @apply ta-card block p-4 transition hover:border-brand-200 hover:shadow-[0_4px_16px_rgba(124,58,237,0.08)] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/25 dark:hover:border-brand-500/30;
+  }
+
+  .dash-kpi:hover .dash-kpi-icon {
+    @apply bg-brand-100 dark:bg-brand-500/15;
+  }
+
+  .dash-kpi-icon {
+    @apply flex h-10 w-10 items-center justify-center rounded-xl bg-brand-50 text-brand-600 transition dark:bg-brand-500/10 dark:text-brand-400;
+  }
+
+  .dash-kpi-label {
+    @apply text-xs font-medium text-gray-500 dark:text-gray-400;
+  }
+
+  .dash-kpi-value {
+    @apply mt-2 text-xl font-bold tracking-tight text-gray-900 dark:text-white;
+  }
+
+  .dash-kpi-value-error {
+    @apply text-error-600 dark:text-error-500;
+  }
+
+  .dash-kpi-caption {
+    @apply mt-1 text-[11px] leading-4 text-gray-400 dark:text-gray-500;
+  }
+
+  .dash-ops-strip {
+    @apply ta-card grid grid-cols-2 divide-x divide-y divide-gray-100 dark:divide-gray-800 md:grid-cols-4 md:divide-y-0;
+  }
+
+  .dash-ops-item {
+    @apply block px-4 py-3.5 transition hover:bg-gray-50/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-500/20 dark:hover:bg-white/[0.02];
+  }
+
+  .dash-segment {
+    @apply inline-flex items-center gap-0.5 rounded-lg bg-gray-100 p-0.5 dark:bg-gray-900;
+  }
+
+  .dash-segment-btn {
+    @apply rounded-md px-3 py-1.5 text-xs font-medium text-gray-500 transition hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200;
+  }
+
+  .dash-segment-btn.dashboard-stats-active {
+    @apply bg-white text-gray-900 shadow-theme-xs dark:bg-gray-800 dark:text-white;
+  }
+
+  .dash-chip {
+    @apply inline-flex items-center rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-[11px] font-medium text-gray-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400;
+  }
+
+  .dash-alert-item {
+    @apply flex items-center justify-between gap-3 px-4 py-3.5 transition hover:bg-gray-50/80 dark:hover:bg-white/[0.02] sm:px-5;
+  }
+
+  .dash-alert-count {
+    @apply inline-flex min-w-[2rem] items-center justify-center rounded-full px-2 py-0.5 text-xs font-bold tabular-nums;
+  }
+
+  .dash-alert-count-error {
+    @apply bg-error-50 text-error-700 dark:bg-error-500/10 dark:text-error-400;
+  }
+
+  .dash-alert-count-warning {
+    @apply bg-orange-50 text-orange-700 dark:bg-orange-500/10 dark:text-orange-400;
+  }
+
+  /* Module dashboards — shared shell (Reports, Sales, Accounting, P&L) */
+  .erp-dash-page {
+    @apply space-y-6 md:space-y-8;
+  }
+
+  .erp-dash-h1 {
+    font-size: var(--erp-size-dash-h1, 1.875rem);
+    line-height: 1.2;
+    font-weight: var(--erp-weight-heading, 600);
+    @apply tracking-tight text-gray-900 dark:text-white;
+  }
+
+  .erp-dash-hero {
+    @apply relative overflow-hidden rounded-3xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900 md:p-8;
+  }
+
+  .erp-dash-hero::before {
+    content: '';
+    @apply pointer-events-none absolute inset-0 opacity-100;
+    background:
+      radial-gradient(circle at top right, color-mix(in srgb, var(--color-brand-500) 14%, transparent), transparent 34%),
+      radial-gradient(circle at bottom left, color-mix(in srgb, var(--color-success-500) 10%, transparent), transparent 36%);
+  }
+
+  .erp-dash-hero__main,
+  .erp-dash-hero__actions {
+    @apply relative;
+  }
+
+  .erp-dash-hero {
+    @apply flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between;
+  }
+
+  .erp-dash-hero__eyebrow {
+    @apply inline-flex items-center rounded-full border border-brand-200 bg-brand-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-brand-700 dark:border-brand-500/20 dark:bg-brand-500/10 dark:text-brand-300;
+  }
+
+  .erp-dash-hero__subtitle {
+    @apply mt-3 max-w-3xl text-sm leading-6 text-gray-600 dark:text-gray-400 md:text-base;
+  }
+
+  .erp-dash-hero__period {
+    @apply mt-2 text-sm font-medium text-gray-500 dark:text-gray-400;
+  }
+
+  .erp-dash-hero__actions {
+    @apply flex flex-wrap items-center gap-2;
+  }
+
+  .erp-dash-filter {
+    @apply rounded-2xl border border-gray-200 bg-gray-50 p-5 dark:border-gray-800 dark:bg-gray-950/50;
+  }
+
+  .erp-dash-filter__header {
+    @apply flex flex-wrap items-start justify-between gap-3;
+  }
+
+  .erp-dash-filter__badge {
+    @apply rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-theme-xs dark:bg-gray-900 dark:text-gray-200;
+  }
+
+  .erp-dash-filter__fields {
+    @apply mt-5 grid gap-4 md:grid-cols-3;
+  }
+
+  .erp-dash-filter__field {
+    @apply flex flex-col gap-1.5;
+  }
+
+  .erp-dash-filter__actions {
+    @apply mt-5 flex flex-wrap items-center justify-end gap-2 border-t border-gray-200 pt-4 dark:border-gray-800;
+  }
+
+  .erp-dash-kpi-grid {
+    @apply grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4;
+  }
+
+  .erp-dash-kpi {
+    @apply rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900;
+  }
+
+  .erp-dash-kpi__label {
+    @apply text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400;
+  }
+
+  .erp-dash-kpi__value {
+    @apply mt-3 text-2xl font-semibold text-gray-900 dark:text-white md:text-3xl;
+  }
+
+  .erp-dash-kpi__hint {
+    @apply mt-2 text-xs leading-5 text-gray-500 dark:text-gray-400;
+  }
+
+  .erp-dash-kpi--success .erp-dash-kpi__value {
+    @apply text-success-600 dark:text-success-400;
+  }
+
+  .erp-dash-kpi--warning .erp-dash-kpi__value {
+    @apply text-orange-600 dark:text-orange-400;
+  }
+
+  .erp-dash-kpi--danger .erp-dash-kpi__value {
+    @apply text-error-600 dark:text-error-400;
+  }
+
+  .erp-dash-kpi--brand .erp-dash-kpi__value {
+    @apply text-brand-600 dark:text-brand-400;
+  }
+
+  .erp-dash-panel {
+    @apply rounded-3xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900 md:p-7;
+  }
+
+  .erp-dash-panel__header {
+    @apply flex flex-wrap items-start justify-between gap-3;
+  }
+
+  .erp-dash-panel__title {
+    @apply text-lg font-semibold text-gray-900 dark:text-white md:text-xl;
+  }
+
+  .erp-dash-panel__subtitle {
+    @apply mt-1 text-sm text-gray-500 dark:text-gray-400;
+  }
+
+  .erp-dash-panel__badge {
+    @apply rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700 dark:bg-brand-500/10 dark:text-brand-300;
+  }
+
+  .erp-dash-panel__body {
+    @apply mt-5;
+  }
+
+  .erp-dash-layout-split {
+    @apply grid grid-cols-1 gap-5 xl:grid-cols-[1.2fr_0.8fr];
+  }
+
+  .erp-dash-layout-thirds {
+    @apply grid grid-cols-1 gap-5 lg:grid-cols-3;
+  }
+
+  .erp-dash-highlight {
+    @apply rounded-3xl bg-gray-950 px-6 py-7 text-white dark:bg-black;
+  }
+
+  .erp-dash-highlight__label {
+    @apply text-xs font-semibold uppercase tracking-[0.14em] text-white/60;
+  }
+
+  .erp-dash-highlight__value {
+    @apply mt-3 text-3xl font-semibold md:text-4xl;
+  }
+
+  .erp-dash-highlight__hint {
+    @apply mt-3 text-sm leading-6 text-white/65;
+  }
+
+  .erp-dash-progress__head {
+    @apply flex items-center justify-between gap-3;
+  }
+
+  .erp-dash-progress__label {
+    @apply text-sm font-medium text-gray-700 dark:text-gray-300;
+  }
+
+  .erp-dash-progress__value {
+    @apply text-sm font-semibold text-gray-900 dark:text-white;
+  }
+
+  .erp-dash-progress__track {
+    @apply mt-3 h-2.5 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800;
+  }
+
+  .erp-dash-progress__fill {
+    @apply h-full rounded-full bg-brand-500 transition-all;
+  }
+
+  .erp-dash-progress--success .erp-dash-progress__fill {
+    @apply bg-success-500;
+  }
+
+  .erp-dash-progress--warning .erp-dash-progress__fill {
+    @apply bg-orange-500;
+  }
+
+  .erp-dash-progress__hint {
+    @apply mt-2 text-xs text-gray-500 dark:text-gray-400;
+  }
+
+  .erp-dash-chart__legend {
+    @apply mb-4 flex flex-wrap gap-4 text-xs font-medium text-gray-600 dark:text-gray-400;
+  }
+
+  .erp-dash-chart__legend-item {
+    @apply inline-flex items-center gap-2;
+  }
+
+  .erp-dash-chart__swatch {
+    @apply h-2.5 w-2.5 rounded-full;
+  }
+
+  .erp-dash-chart__swatch--primary {
+    @apply bg-brand-500;
+  }
+
+  .erp-dash-chart__swatch--secondary {
+    @apply bg-success-500;
+  }
+
+  .erp-dash-chart__grid {
+    @apply flex items-end gap-2 overflow-x-auto pb-2;
+  }
+
+  .erp-dash-chart__column {
+    @apply flex min-w-[2.75rem] flex-1 flex-col items-center gap-2;
+  }
+
+  .erp-dash-chart__bars {
+    @apply flex h-40 w-full items-end justify-center gap-1;
+  }
+
+  .erp-dash-chart__bar {
+    @apply w-3 rounded-t-md transition-all md:w-4;
+  }
+
+  .erp-dash-chart__bar--primary {
+    @apply bg-brand-500/90;
+  }
+
+  .erp-dash-chart__bar--secondary {
+    @apply bg-success-500/85;
+  }
+
+  .erp-dash-chart__label {
+    @apply text-[10px] font-medium text-gray-500 dark:text-gray-400;
+  }
+
+  .erp-dash-rank__title {
+    @apply mb-4 text-sm font-semibold text-gray-900 dark:text-white;
+  }
+
+  .erp-dash-rank__list {
+    @apply space-y-3;
+  }
+
+  .erp-dash-rank__item {
+    @apply flex items-center gap-3 rounded-xl border border-gray-100 px-3 py-2.5 dark:border-gray-800;
+  }
+
+  .erp-dash-rank__index {
+    @apply flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-xs font-bold text-brand-700 dark:bg-brand-500/10 dark:text-brand-300;
+  }
+
+  .erp-dash-rank__content {
+    @apply min-w-0 flex-1;
+  }
+
+  .erp-dash-rank__label {
+    @apply block truncate text-sm font-medium text-gray-900 dark:text-white;
+  }
+
+  .erp-dash-rank__meta {
+    @apply block text-xs text-gray-500 dark:text-gray-400;
+  }
+
+  .erp-dash-rank__value {
+    @apply shrink-0 text-sm font-semibold tabular-nums text-gray-900 dark:text-white;
+  }
+
+  .erp-dash-links {
+    @apply grid grid-cols-1 gap-3 sm:grid-cols-2;
+  }
+
+  .erp-dash-links__item {
+    @apply rounded-2xl border border-gray-200 px-4 py-3 transition hover:border-brand-300 hover:bg-brand-50 dark:border-gray-800 dark:hover:border-brand-700 dark:hover:bg-brand-500/10;
+  }
+
+  .erp-dash-links__label {
+    @apply block text-sm font-semibold text-gray-800 dark:text-gray-100;
+  }
+
+  .erp-dash-links__hint {
+    @apply mt-1 block text-xs text-gray-500 dark:text-gray-400;
+  }
+
+  .erp-dash-statement {
+    @apply overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900;
+  }
+
+  .erp-dash-statement__head {
+    @apply border-b border-gray-100 px-6 py-5 dark:border-gray-800 md:px-8;
+  }
+
+  .erp-dash-statement__table {
+    @apply w-full;
+  }
+
+  .erp-dash-statement__section td {
+    @apply bg-gray-50/80 px-6 py-3 text-sm font-semibold text-gray-900 dark:bg-gray-800/40 dark:text-white md:px-8;
+  }
+
+  .erp-dash-statement__row td {
+    @apply px-6 py-3.5 text-sm md:px-8;
+  }
+
+  .erp-dash-statement__row td:first-child {
+    @apply pl-10 text-gray-700 dark:text-gray-300;
+  }
+
+  .erp-dash-statement__row td:last-child {
+    @apply text-right font-medium tabular-nums;
+  }
+
+  .erp-dash-statement__total td {
+    @apply border-t-2 border-gray-200 px-6 py-4 text-sm font-bold dark:border-gray-700 md:px-8;
+  }
+
+  .erp-dash-statement__total td:first-child {
+    @apply pl-10 text-gray-900 dark:text-white;
+  }
+
+  .erp-dash-statement__total td:last-child {
+    @apply text-right text-lg;
+  }
+
+  .erp-dash-cost-row {
+    @apply flex items-center justify-between gap-4 rounded-2xl border border-gray-200 px-4 py-4 dark:border-gray-800;
+  }
+
+  .erp-dash-cost-row__label {
+    @apply text-sm font-medium text-gray-900 dark:text-white;
+  }
+
+  .erp-dash-cost-row__hint {
+    @apply mt-1 text-xs text-gray-500 dark:text-gray-400;
+  }
+
+  .erp-dash-cost-row__value {
+    @apply text-right text-lg font-semibold tabular-nums text-error-600 dark:text-error-400;
+  }
+
+  .erp-dash-cost-row__share {
+    @apply text-xs text-gray-500 dark:text-gray-400;
+  }
+
+  .dash-alert-count-neutral {
+    @apply bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300;
+  }
+
+  .dash-snapshot {
+    @apply relative;
+  }
+
+  .dash-section-header,
+  .dash-snapshot-header {
+    @apply mb-1;
+  }
+
+  .dash-section-header {
+    @apply flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between;
+  }
+
+  .dash-section-header__intro {
+    @apply min-w-0 space-y-1;
+  }
+
+  .dash-section-header__actions {
+    @apply flex items-center gap-2;
+  }
+
+  .dash-section-eyebrow,
+  .dash-snapshot-eyebrow {
+    font-size: var(--erp-size-eyebrow);
+    line-height: var(--erp-size-eyebrow--line-height);
+    font-weight: var(--erp-weight-label);
+    letter-spacing: 0.1em;
+    @apply uppercase text-brand-600/90 dark:text-brand-400/90;
+  }
+
+  .dash-section-title,
+  .dash-snapshot-title {
+    font-size: var(--erp-size-dash-section-title);
+    line-height: var(--erp-size-dash-section-title--line-height);
+    font-weight: var(--erp-weight-heading);
+    letter-spacing: -0.012em;
+    @apply mt-1 normal-case text-gray-900 dark:text-white;
+  }
+
+  @media (min-width: 768px) {
+    .dash-section-title,
+    .dash-snapshot-title {
+      font-size: var(--erp-size-dash-section-title-lg);
+      line-height: var(--erp-size-dash-section-title-lg--line-height);
+    }
+  }
+
+  .dash-section-desc,
+  .dash-snapshot-desc {
+    font-size: var(--erp-size-dash-section-desc);
+    line-height: var(--erp-size-dash-section-desc--line-height);
+    font-weight: var(--erp-weight-body);
+    @apply max-w-2xl text-gray-500 dark:text-gray-400;
+  }
+
+  .dash-snapshot-header {
+    @apply mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between;
+  }
+
+  .dash-snapshot-grid {
+    @apply grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4;
+  }
+
+  .dash-snapshot-metric {
+    @apply relative flex min-h-[11rem] flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white p-5 text-center shadow-theme-xs transition duration-200 hover:-translate-y-0.5 hover:border-gray-300 hover:shadow-theme-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/25 dark:border-gray-800 dark:bg-gray-900 dark:hover:border-gray-700;
+    container-type: inline-size;
+  }
+
+  .dash-snapshot-metric::before {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 4px;
+    border-radius: 999px 0 0 999px;
+  }
+
+  .dash-snapshot-metric::after {
+    content: none;
+  }
+
+  .dash-snapshot-metric > * {
+    @apply relative z-[1];
+  }
+
+  .dash-snapshot-metric--success {
+    @apply bg-success-50/50 dark:bg-success-500/5;
+  }
+
+  .dash-snapshot-metric--brand {
+    @apply bg-brand-50/50 dark:bg-brand-500/5;
+  }
+
+  .dash-snapshot-metric--error {
+    @apply bg-error-50/50 dark:bg-error-500/5;
+  }
+
+  .dash-snapshot-metric--purple {
+    @apply bg-brand-50/60 dark:bg-brand-500/8;
+  }
+
+  .dash-snapshot-metric--orange {
+    @apply bg-orange-50/60 dark:bg-orange-500/5;
+  }
+
+  .dash-snapshot-metric--blue {
+    @apply bg-blue-50/60 dark:bg-blue-500/5;
+  }
+
+  .dash-snapshot-metric--amber {
+    @apply bg-amber-50/60 dark:bg-amber-500/5;
+  }
+
+  .dash-snapshot-metric--success::before { @apply bg-success-500; }
+  .dash-snapshot-metric--brand::before { @apply bg-brand-500; }
+  .dash-snapshot-metric--error::before { @apply bg-error-500; }
+  .dash-snapshot-metric--purple::before { @apply bg-brand-600; }
+  .dash-snapshot-metric--orange::before { @apply bg-orange-500; }
+  .dash-snapshot-metric--blue::before { @apply bg-blue-500; }
+  .dash-snapshot-metric--amber::before { @apply bg-amber-500; }
+
+  .dash-snapshot-metric-head {
+    @apply flex shrink-0 items-start justify-between gap-3 text-left;
+  }
+
+  .dash-snapshot-metric-body {
+    @apply flex w-full flex-1 items-center justify-center px-1 py-2 text-center;
+  }
+
+  .dash-snapshot-icon {
+    @apply flex h-12 w-12 shrink-0 items-center justify-center rounded-xl shadow-sm;
+  }
+
+  .dash-snapshot-icon--success {
+    @apply bg-success-100 text-success-600 dark:bg-success-500/15 dark:text-success-400;
+  }
+
+  .dash-snapshot-icon--brand {
+    @apply bg-brand-100 text-brand-600 dark:bg-brand-500/15 dark:text-brand-400;
+  }
+
+  .dash-snapshot-icon--error {
+    @apply bg-error-100 text-error-600 dark:bg-error-500/15 dark:text-error-500;
+  }
+
+  .dash-snapshot-icon--purple {
+    @apply bg-brand-100 text-brand-700 dark:bg-brand-500/15 dark:text-brand-400;
+  }
+
+  .dash-snapshot-icon--orange {
+    @apply bg-orange-100 text-orange-600 dark:bg-orange-500/15 dark:text-orange-400;
+  }
+
+  .dash-snapshot-icon--blue {
+    @apply bg-blue-100 text-blue-600 dark:bg-blue-500/15 dark:text-blue-400;
+  }
+
+  .dash-snapshot-icon--amber {
+    @apply bg-amber-100 text-amber-600 dark:bg-amber-500/15 dark:text-amber-400;
+  }
+
+  .dash-snapshot-metric-value {
+    font-size: var(--erp-size-dash-metric-lg);
+    line-height: var(--erp-size-dash-metric-lg--line-height);
+    font-weight: var(--erp-weight-heading);
+    @apply mx-auto mt-1 flex w-full max-w-full flex-1 items-center justify-center gap-2 text-center tracking-tight tabular-nums text-gray-900 dark:text-white;
+  }
+
+  .dash-snapshot-metric-currency {
+    font-size: var(--erp-size-dash-metric-lg);
+    line-height: var(--erp-size-dash-metric-lg--line-height);
+    font-weight: var(--erp-weight-heading);
+    @apply shrink-0 text-gray-500 dark:text-gray-400;
+  }
+
+  .dash-snapshot-metric-number {
+    @apply min-w-0 max-w-full truncate;
+  }
+
+  .dash-snapshot-metric-value--brand .dash-snapshot-metric-number,
+  .dash-snapshot-metric-value--brand .dash-snapshot-metric-currency {
+    @apply text-brand-600 dark:text-brand-400;
+  }
+
+  .dash-snapshot-metric-value--warning .dash-snapshot-metric-number,
+  .dash-snapshot-metric-value--warning .dash-snapshot-metric-currency {
+    @apply text-orange-600 dark:text-orange-400;
+  }
+
+  .dash-snapshot-metric-value--danger .dash-snapshot-metric-number,
+  .dash-snapshot-metric-value--danger .dash-snapshot-metric-currency {
+    @apply text-error-600 dark:text-error-500;
+  }
+
+  .dash-snapshot-metric-caption {
+    @apply mt-1 w-full shrink-0 px-1 text-center;
+  }
+
+  .dash-snapshot-icon-success { @apply text-success-600 dark:text-success-400; }
+  .dash-snapshot-icon-brand { @apply text-brand-600 dark:text-brand-400; }
+  .dash-snapshot-icon-error { @apply text-error-600 dark:text-error-500; }
+  .dash-snapshot-icon-purple { @apply text-brand-700 dark:text-brand-400; }
+  .dash-snapshot-icon-orange { @apply text-orange-600 dark:text-orange-400; }
+  .dash-snapshot-icon-blue { @apply text-blue-600 dark:text-blue-400; }
+  .dash-snapshot-icon-amber { @apply text-amber-600 dark:text-amber-400; }
+
+  .dash-performance {
+    @apply relative;
+  }
+
+  .dash-performance-grid {
+    @apply mt-6 space-y-4 md:space-y-5;
+  }
+
+  .dash-performance-row {
+    @apply grid grid-cols-12 items-stretch gap-4 md:gap-5;
+  }
+
+  .dash-performance-widget {
+    @apply flex h-full min-h-[22rem] flex-col overflow-hidden rounded-2xl border border-white/70 bg-white/45 shadow-[0_8px_32px_rgba(16,24,40,0.06),inset_0_1px_0_rgba(255,255,255,0.85)] backdrop-blur-xl backdrop-saturate-150 dark:border-white/10 dark:bg-gray-900/40 dark:shadow-[0_8px_32px_rgba(0,0,0,0.25),inset_0_1px_0_rgba(255,255,255,0.06)];
+  }
+
+  .dash-white-card {
+    @apply overflow-hidden rounded-2xl border border-gray-100/90 bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04),0_10px_28px_rgba(16,24,40,0.07)] dark:border-gray-800 dark:bg-gray-950 dark:shadow-none;
+  }
+
+  .dash-activity-panel {
+    @apply relative mt-8;
+  }
+
+  .dash-performance-widget-header {
+    @apply flex flex-col gap-3 border-b border-gray-100/80 px-5 py-4 sm:flex-row sm:items-center sm:justify-between dark:border-white/10;
+  }
+
+  .dash-performance-widget-body {
+    @apply flex flex-1 flex-col px-5 py-4;
+  }
+
+  .dash-performance-chart {
+    @apply min-h-[13.75rem] flex-1 w-full;
+  }
+
+  .dash-target-gauge {
+    @apply relative;
+  }
+
+  .dash-target-gauge-svg {
+    @apply h-[7rem];
+  }
+
+  .dash-target-gauge-label {
+    @apply absolute inset-x-0 top-[59%] -translate-y-1/2 px-2;
+  }
+
+  .dash-recent-orders-section {
+    @apply mt-8;
+  }
+
+  .dash-recent-orders-widget {
+    @apply min-h-0;
+  }
+
+  .dash-activity-grid {
+    @apply grid grid-cols-1 items-stretch gap-4 md:gap-5 lg:grid-cols-2;
+  }
+
+  .dash-activity-widget {
+    @apply flex h-full min-h-[24rem] flex-col overflow-hidden rounded-2xl border border-white/70 bg-white/45 shadow-[0_8px_32px_rgba(16,24,40,0.06),inset_0_1px_0_rgba(255,255,255,0.85)] backdrop-blur-xl backdrop-saturate-150 dark:border-white/10 dark:bg-gray-900/40 dark:shadow-[0_8px_32px_rgba(0,0,0,0.25),inset_0_1px_0_rgba(255,255,255,0.06)];
+  }
+
+  .dash-activity-icon {
+    @apply flex h-9 w-9 shrink-0 items-center justify-center rounded-xl;
+  }
+
+  .dash-activity-icon-brand {
+    @apply bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400;
+  }
+
+  .dash-activity-icon-warning {
+    @apply bg-orange-50 text-orange-600 dark:bg-orange-500/10 dark:text-orange-400;
+  }
+
+  .dash-activity-summary-badge {
+    @apply inline-flex shrink-0 items-center rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.08em];
+  }
+
+  .dash-activity-summary-badge-success {
+    @apply bg-success-50 text-success-700 dark:bg-success-500/10 dark:text-success-400;
+  }
+
+  .dash-activity-summary-badge-warning {
+    @apply bg-orange-50 text-orange-700 dark:bg-orange-500/10 dark:text-orange-400;
+  }
+
+  .dash-activity-summary-badge-neutral {
+    @apply bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300;
+  }
+
+  .dash-activity-widget-body {
+    @apply flex flex-1 flex-col px-4 py-4 sm:px-5;
+  }
+
+  .dash-activity-empty-icon {
+    @apply flex h-12 w-12 items-center justify-center rounded-2xl bg-success-50 text-success-600 dark:bg-success-500/10 dark:text-success-400;
+  }
+
+  .dash-activity-empty-icon-neutral {
+    @apply bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400;
+  }
+
+  .dash-alert-card {
+    @apply flex items-center gap-3 rounded-xl border border-gray-100 bg-gray-50/70 px-3 py-3 transition hover:-translate-y-0.5 hover:border-gray-200 hover:bg-white hover:shadow-[0_8px_20px_rgba(16,24,40,0.06)] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900/40 dark:hover:border-gray-700 dark:hover:bg-gray-900;
+  }
+
+  .dash-alert-card-error {
+    @apply border-error-100/80 dark:border-error-500/20;
+  }
+
+  .dash-alert-card-warning {
+    @apply border-orange-100/80 dark:border-orange-500/20;
+  }
+
+  .dash-alert-card-icon {
+    @apply flex h-10 w-10 shrink-0 items-center justify-center rounded-xl;
+  }
+
+  .dash-alert-card-icon-error {
+    @apply bg-error-50 text-error-600 dark:bg-error-500/10 dark:text-error-400;
+  }
+
+  .dash-alert-card-icon-warning {
+    @apply bg-orange-50 text-orange-600 dark:bg-orange-500/10 dark:text-orange-400;
+  }
+
+  .dash-alert-card-icon-neutral {
+    @apply bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300;
+  }
+
+  .dash-alert-card-chevron {
+    @apply h-4 w-4 shrink-0 text-gray-300 transition group-hover:text-brand-500 dark:text-gray-600;
+  }
+
+  .dash-alert-card:hover .dash-alert-card-chevron {
+    @apply text-brand-500 dark:text-brand-400;
+  }
+
+  .dash-activity-table-wrap {
+    @apply flex-1 overflow-x-auto;
+  }
+
+  .dash-activity-table {
+    @apply min-w-full;
+  }
+
+  .dash-activity-table thead {
+    @apply border-b border-gray-100 dark:border-gray-800;
+  }
+
+  .dash-activity-table th {
+    @apply px-4 py-3 text-left sm:px-5;
+  }
+
+  .dash-activity-table th.is-right,
+  .dash-activity-table td.is-right {
+    @apply text-right;
+  }
+
+  .dash-activity-table tbody {
+    @apply divide-y divide-gray-100 dark:divide-gray-800;
+  }
+
+  .dash-activity-table td {
+    @apply px-4 py-3.5 align-middle sm:px-5;
+  }
+
+  .dash-activity-table tbody tr {
+    @apply transition hover:bg-brand-50/40 dark:hover:bg-brand-500/[0.04];
+  }
+
+  .dash-order-type {
+    @apply inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide;
+  }
+
+  .dash-order-type-regular {
+    @apply bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400;
+  }
+
+  .dash-order-type-return {
+    @apply bg-error-50 text-error-600 dark:bg-error-500/10 dark:text-error-400;
+  }
+
+  .dash-order-agent-avatar {
+    @apply flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-50 text-[11px] font-bold text-brand-700 dark:bg-brand-500/10 dark:text-brand-300;
+  }
+
+  .dash-order-status {
+    @apply inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold;
+  }
+
+  .dash-order-status-success {
+    @apply bg-success-50 text-success-700 dark:bg-success-500/10 dark:text-success-400;
+  }
+
+  .dash-order-status-brand {
+    @apply bg-brand-50 text-brand-700 dark:bg-brand-500/10 dark:text-brand-400;
+  }
+
+  .dash-order-status-error {
+    @apply bg-error-50 text-error-700 dark:bg-error-500/10 dark:text-error-500;
+  }
+
+  .dash-order-status-warning {
+    @apply bg-orange-50 text-orange-700 dark:bg-orange-500/10 dark:text-orange-400;
+  }
+
+  .dash-order-status-neutral {
+    @apply bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300;
+  }
+
+  .dash-order-progress-cell {
+    @apply min-w-[11rem] whitespace-nowrap;
+  }
+
+  .dash-order-progress-trigger {
+    @apply inline-flex w-full max-w-[12.5rem] items-center gap-2 rounded-xl border border-gray-200/80 bg-white px-2.5 py-2 text-left shadow-sm transition hover:border-brand-200 hover:bg-brand-50/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/25 dark:border-gray-700 dark:bg-gray-900/80 dark:hover:border-brand-500/30 dark:hover:bg-brand-500/5;
+  }
+
+  .dash-order-progress-trigger .dash-order-status {
+    @apply max-w-[5.25rem] shrink-0 truncate px-2 py-0.5 text-[10px];
+  }
+
+  .dash-order-row.is-expanded .dash-order-progress-trigger {
+    @apply border-brand-300 bg-brand-50/70 ring-2 ring-brand-500/15 dark:border-brand-500/40 dark:bg-brand-500/10;
+  }
+
+  .dash-order-progress-track {
+    @apply flex min-w-0 flex-1 items-center gap-1;
+  }
+
+  .dash-order-progress-seg {
+    @apply h-1.5 flex-1 rounded-full bg-gray-200 transition dark:bg-gray-700;
+  }
+
+  .dash-order-progress-seg.is-complete {
+    @apply bg-emerald-500 dark:bg-emerald-400;
+  }
+
+  .dash-order-progress-seg.is-active {
+    @apply bg-brand-500 dark:bg-brand-400;
+  }
+
+  .dash-order-progress-seg.is-pulse {
+    @apply animate-pulse bg-brand-500 dark:bg-brand-400;
+  }
+
+  .dash-order-progress-chevron {
+    @apply flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-gray-400 transition dark:text-gray-500;
+  }
+
+  .dash-order-progress-chevron.is-open {
+    @apply rotate-180 text-brand-600 dark:text-brand-400;
+  }
+
+  .dash-order-progress-row {
+    @apply bg-brand-50/30 dark:bg-brand-500/[0.04];
+  }
+
+  .dash-order-progress-row:hover {
+    @apply bg-brand-50/30 dark:bg-brand-500/[0.04];
+  }
+
+  .dash-order-progress-panel {
+    @apply border-t border-brand-100/80 bg-gradient-to-br from-white via-brand-50/30 to-white px-4 py-4 sm:px-5 dark:border-brand-500/15 dark:from-gray-900 dark:via-brand-500/5 dark:to-gray-900;
+  }
+
+  .dash-order-progress-panel__head {
+    @apply mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between;
+  }
+
+  .dash-order-progress-panel__eyebrow {
+    @apply text-[10px] font-bold uppercase tracking-[0.18em] text-brand-600/90 dark:text-brand-400/90;
+  }
+
+  .dash-order-progress-panel__title {
+    @apply mt-1 text-sm font-semibold text-gray-900 dark:text-white;
+  }
+
+  .dash-order-progress-panel__meta {
+    @apply mt-1 text-xs text-gray-500 dark:text-gray-400;
+  }
+
+  .dash-order-progress-panel__sep {
+    @apply mx-1 text-gray-300 dark:text-gray-600;
+  }
+
+  .dash-order-progress-panel__link {
+    @apply inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 transition hover:border-brand-200 hover:text-brand-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:border-brand-500/30 dark:hover:text-brand-300;
+  }
+
+  /* Data export center */
+  .export-center-hero {
+    @apply relative overflow-hidden rounded-3xl border border-brand-100 bg-gradient-to-br from-white via-brand-50/40 to-white p-6 shadow-theme-sm dark:border-brand-500/20 dark:from-gray-900 dark:via-brand-500/5 dark:to-gray-900 md:p-8;
+  }
+
+  .export-center-hero__glow {
+    @apply pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-brand-400/10 blur-3xl dark:bg-brand-500/10;
+  }
+
+  .export-center-hero__inner {
+    @apply relative flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between;
+  }
+
+  .export-center-hero__stats {
+    @apply grid w-full grid-cols-2 gap-3 sm:grid-cols-3 xl:max-w-xl;
+  }
+
+  .export-center-stat {
+    @apply rounded-2xl border border-white/80 bg-white/80 p-4 shadow-sm backdrop-blur dark:border-gray-800 dark:bg-gray-950/80;
+  }
+
+  .export-center-stat--wide {
+    @apply col-span-2 sm:col-span-1;
+  }
+
+  .export-center-stat__label {
+    font-size: var(--erp-size-eyebrow);
+    line-height: var(--erp-size-eyebrow--line-height);
+    font-weight: var(--erp-weight-label);
+    @apply normal-case tracking-normal text-gray-500 dark:text-gray-400;
+  }
+
+  .export-center-panel {
+    @apply rounded-2xl border border-gray-200 bg-white p-4 shadow-theme-xs dark:border-gray-800 dark:bg-gray-900 md:p-5;
+  }
+
+  .export-center-panel__head {
+    @apply flex flex-col gap-1 border-b border-gray-100 pb-4 dark:border-gray-800 sm:flex-row sm:items-end sm:justify-between;
+  }
+
+  .export-center-panel--compact {
+    @apply p-4 md:p-5;
+  }
+
+  .export-center-ranges {
+    @apply grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4;
+  }
+
+  .export-center-mode {
+    @apply grid grid-cols-1 gap-2 sm:grid-cols-3 sm:gap-2;
+  }
+
+  .export-center-mode__option {
+    @apply block cursor-pointer;
+  }
+
+  .export-center-mode__card {
+    @apply flex h-full min-h-[4.5rem] flex-col rounded-xl border border-gray-200 bg-white p-2.5 transition hover:border-brand-200 dark:border-gray-700 dark:bg-gray-900 dark:hover:border-brand-500/30;
+  }
+
+  .export-center-mode__card.is-active {
+    @apply border-brand-300 bg-brand-50 ring-2 ring-brand-500/15 dark:border-brand-500/40 dark:bg-brand-500/10;
+  }
+
+  .export-center-mode__title {
+    font-size: var(--erp-size-body);
+    line-height: var(--erp-size-body--line-height);
+    font-weight: var(--erp-weight-label);
+    @apply text-gray-900 dark:text-white;
+  }
+
+  .export-center-mode__desc {
+    font-size: var(--erp-size-caption);
+    line-height: var(--erp-size-caption--line-height);
+    @apply mt-1 text-gray-500 dark:text-gray-400;
+  }
+
+  .export-center-calendar {
+    @apply rounded-xl border border-gray-200 bg-white p-2.5 dark:border-gray-700 dark:bg-gray-900;
+  }
+
+  .export-center-calendar__fields {
+    @apply grid grid-cols-1 gap-4 sm:grid-cols-2;
+  }
+
+  .export-center-calendar__field {
+    @apply flex flex-col gap-1.5;
+  }
+
+  .export-center-date-input {
+    @apply h-12 w-full cursor-pointer rounded-xl border border-gray-200 bg-white px-4 text-sm font-medium text-gray-900 shadow-theme-xs focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white;
+  }
+
+  .export-center-calendar__quick {
+    @apply rounded-xl border border-gray-200 bg-white p-2.5 dark:border-gray-700 dark:bg-gray-900;
+  }
+
+  .export-center-calendar__custom {
+    @apply grid grid-cols-1 gap-3 sm:grid-cols-2;
+  }
+
+  .export-center-builder {
+    @apply grid gap-4 pt-4 lg:grid-cols-2 lg:items-start xl:gap-5;
+  }
+
+  .export-center-builder__left {
+    @apply flex min-w-0 flex-col gap-4;
+  }
+
+  .export-center-builder__module {
+    @apply flex min-w-0 flex-col gap-3 rounded-xl border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-900 lg:p-4;
+  }
+
+  .export-center-builder__featured {
+    @apply rounded-xl border border-gray-200 bg-gradient-to-br from-gray-50 to-white p-3 dark:border-gray-700 dark:from-gray-800/50 dark:to-gray-900 lg:p-4;
+  }
+
+  .export-center-module-picker {
+    @apply grid gap-4;
+  }
+
+  @media (min-width: 1024px) {
+    .export-center-module-picker {
+      @apply grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] items-start;
+    }
+  }
+
+  .export-center-module-picker__main {
+    @apply flex min-w-0 flex-col gap-3;
+  }
+
+  .export-center-module-picker__featured {
+    @apply rounded-xl border border-gray-200 bg-gradient-to-br from-gray-50 to-white p-3 dark:border-gray-700 dark:from-gray-800/50 dark:to-gray-900;
+  }
+
+  .export-center-featured-grid {
+    @apply mt-2.5 grid grid-cols-2 gap-2;
+  }
+
+  .export-center-featured-card {
+    @apply rounded-xl border border-gray-200/90 bg-white p-2.5 text-left transition hover:border-brand-200 hover:shadow-sm dark:border-gray-700 dark:bg-gray-950 dark:hover:border-brand-500/30;
+  }
+
+  .export-center-featured-card.is-active {
+    @apply border-brand-300 bg-brand-50/80 ring-2 ring-brand-500/15 dark:border-brand-500/40 dark:bg-brand-500/10;
+  }
+
+  .export-center-featured-card__badge {
+    font-size: 0.5625rem;
+    line-height: 0.875rem;
+    @apply inline-flex rounded-full bg-gray-100 px-1.5 py-0.5 font-semibold uppercase tracking-wide text-gray-500 dark:bg-gray-800 dark:text-gray-400;
+  }
+
+  .export-center-featured-card.is-active .export-center-featured-card__badge {
+    @apply bg-brand-100 text-brand-700 dark:bg-brand-500/15 dark:text-brand-300;
+  }
+
+  .export-center-featured-card__title {
+    font-size: 0.8125rem;
+    line-height: 1.125rem;
+    font-weight: var(--erp-weight-label);
+    @apply mt-1.5 block text-gray-900 dark:text-white;
+  }
+
+  .export-center-featured-card__hint {
+    font-size: 0.6875rem;
+    line-height: 1rem;
+    @apply mt-0.5 block text-gray-500 dark:text-gray-400;
+  }
+
+  .export-center-calendar-range {
+    @apply overflow-hidden rounded-2xl border border-brand-100/80 bg-gradient-to-br from-brand-50/40 via-white to-white p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] dark:border-brand-500/15 dark:from-brand-500/5 dark:via-gray-900 dark:to-gray-900;
+  }
+
+  .export-center-calendar-range__head {
+    @apply mb-3;
+  }
+
+  .export-center-calendar-range__title-wrap {
+    @apply flex items-start gap-2.5;
+  }
+
+  .export-center-calendar-range__icon {
+    @apply mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-brand-500/10 text-brand-600 ring-1 ring-brand-500/15 dark:bg-brand-500/15 dark:text-brand-300 dark:ring-brand-500/25;
+  }
+
+  .export-center-calendar-range__title {
+    font-size: var(--erp-size-body);
+    line-height: var(--erp-size-body--line-height);
+    font-weight: var(--erp-weight-label);
+    @apply text-gray-900 dark:text-white;
+  }
+
+  .export-center-calendar-range__desc {
+    font-size: var(--erp-size-caption);
+    line-height: var(--erp-size-caption--line-height);
+    @apply mt-0.5 text-gray-500 dark:text-gray-400;
+  }
+
+  .export-center-calendar-range__summary {
+    @apply mb-3 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2;
+  }
+
+  .export-center-date-pill {
+    @apply min-w-0 rounded-xl border border-white/80 bg-white/90 px-2.5 py-2 shadow-sm ring-1 ring-gray-200/80 dark:border-gray-700 dark:bg-gray-950/80 dark:ring-gray-700;
+  }
+
+  .export-center-date-pill__label {
+    font-size: 0.625rem;
+    line-height: 0.875rem;
+    @apply block font-semibold uppercase tracking-[0.16em] text-gray-400 dark:text-gray-500;
+  }
+
+  .export-center-date-pill__value {
+    font-size: 0.8125rem;
+    line-height: 1.125rem;
+    font-weight: var(--erp-weight-label);
+    @apply mt-0.5 block truncate text-gray-900 dark:text-white;
+  }
+
+  .export-center-date-pill__arrow {
+    @apply flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-500/10 text-brand-600 dark:bg-brand-500/15 dark:text-brand-300;
+  }
+
+  .export-center-custom-range {
+    @apply grid grid-cols-1 gap-2 min-[520px]:grid-cols-2;
+  }
+
+  .export-center-custom-range__panel {
+    @apply min-w-0 overflow-hidden rounded-xl border border-gray-200/90 bg-white/95 p-1.5 shadow-sm dark:border-gray-700 dark:bg-gray-950/90;
+  }
+
+  .export-center-custom-range__panel:first-child {
+    @apply ring-1 ring-brand-100/80 dark:ring-brand-500/15;
+  }
+
+  .export-center-custom-range__panel:last-child {
+    @apply ring-1 ring-violet-100/80 dark:ring-violet-500/15;
+  }
+
+  .export-center-inline-calendar {
+    @apply w-full min-w-0 overflow-hidden rounded-lg bg-transparent;
+  }
+
+  .export-center-inline-calendar .flatpickr-calendar,
+  .export-center-inline-calendar .export-center-flatpickr {
+    @apply !mx-auto !mt-0 !w-full !max-w-none !rounded-lg !border-0 !bg-transparent !p-1 !text-gray-900 !shadow-none dark:!bg-transparent dark:!text-white;
+    box-shadow: none !important;
+  }
+
+  .export-center-inline-calendar .flatpickr-months {
+    @apply !mb-0.5 !mt-0 !h-8;
+  }
+
+  .export-center-inline-calendar .flatpickr-months .flatpickr-prev-month,
+  .export-center-inline-calendar .flatpickr-months .flatpickr-next-month {
+    @apply !top-1.5 !h-6 !w-6 !p-0;
+  }
+
+  .export-center-inline-calendar .flatpickr-current-month {
+    @apply !h-8 !py-0 !text-sm;
+  }
+
+  .export-center-inline-calendar .flatpickr-weekdays {
+    @apply !my-1 !h-auto;
+  }
+
+  .export-center-inline-calendar span.flatpickr-weekday {
+    font-size: 0.625rem !important;
+    @apply !font-semibold !uppercase !tracking-wide;
+  }
+
+  .export-center-inline-calendar .flatpickr-days,
+  .export-center-inline-calendar .flatpickr-months,
+  .export-center-inline-calendar .flatpickr-weekdays {
+    @apply !w-full;
+  }
+
+  .export-center-inline-calendar .dayContainer {
+    @apply !min-w-0 !w-full !max-w-full;
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .export-center-inline-calendar .flatpickr-day {
+    @apply !m-0 !h-7 !max-w-none !flex-[1_1_14.28%] !leading-7;
+    font-size: 0.75rem !important;
+    border-radius: 0.45rem !important;
+  }
+
+  .export-center-inline-calendar .flatpickr-months .flatpickr-month,
+  .export-center-inline-calendar span.flatpickr-weekday,
+  .export-center-inline-calendar .flatpickr-current-month .cur-month,
+  .export-center-inline-calendar .flatpickr-current-month input.cur-year {
+    @apply !text-gray-900 dark:!text-white;
+    fill: currentColor !important;
+    color: inherit !important;
+  }
+
+  .export-center-inline-calendar .flatpickr-day.prevMonthDay,
+  .export-center-inline-calendar .flatpickr-day.nextMonthDay {
+    @apply !text-gray-400 dark:!text-gray-500;
+  }
+
+  .export-center-inline-calendar .flatpickr-day.today {
+    @apply !border-brand-300 !bg-brand-50 !text-brand-700 dark:!border-brand-500/40 dark:!bg-brand-500/10 dark:!text-brand-300;
+  }
+
+  .export-center-inline-calendar .flatpickr-day.selected,
+  .export-center-inline-calendar .flatpickr-day.startRange,
+  .export-center-inline-calendar .flatpickr-day.endRange {
+    @apply !border-brand-500 !bg-brand-500 !text-white !shadow-sm;
+  }
+
+  .export-center-inline-calendar .flatpickr-day:hover {
+    @apply !border-brand-200 !bg-brand-50 dark:!border-brand-500/30 dark:!bg-brand-500/10;
+  }
+
+  .export-center-builder__range {
+    @apply flex min-w-0 flex-col gap-3 rounded-2xl border border-gray-200/90 bg-gradient-to-br from-gray-50/80 via-white to-white p-3 shadow-sm dark:border-gray-700 dark:from-gray-900 dark:via-gray-900 dark:to-gray-950 lg:p-4;
+  }
+
+  .export-center-builder__footer {
+    @apply mt-1 flex flex-wrap items-center gap-2 border-t border-gray-100 pt-3 dark:border-gray-800;
+  }
+
+  .export-center-builder__active {
+    font-size: var(--erp-size-caption);
+    line-height: var(--erp-size-caption--line-height);
+    @apply ml-auto text-gray-500 dark:text-gray-400;
+  }
+
+  .export-center-format {
+    @apply inline-flex rounded-xl border border-gray-200 bg-gray-50 p-1 dark:border-gray-700 dark:bg-gray-800/50;
+  }
+
+  .export-center-format__btn {
+    @apply rounded-lg px-4 py-2 text-xs font-semibold text-gray-600 transition dark:text-gray-300;
+  }
+
+  .export-center-format__btn.is-active {
+    @apply bg-white text-brand-700 shadow-sm dark:bg-gray-900 dark:text-brand-300;
+  }
+
+  .export-center-download-actions {
+    @apply flex flex-wrap gap-2;
+  }
+
+  .export-center-download {
+    @apply inline-flex min-h-10 flex-1 items-center justify-center rounded-lg px-3 py-2 text-xs font-semibold transition sm:flex-none;
+  }
+
+  .export-center-calendar__quick-label {
+    font-size: var(--erp-size-caption);
+    line-height: var(--erp-size-caption--line-height);
+    font-weight: var(--erp-weight-label);
+    @apply uppercase tracking-wide text-gray-500 dark:text-gray-400;
+  }
+
+  .export-center-quick-chips {
+    @apply mt-2 flex flex-wrap gap-2;
+  }
+
+  .export-center-quick-chip {
+    @apply rounded-full border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 transition hover:border-brand-200 hover:bg-brand-50 hover:text-brand-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:border-brand-500/30 dark:hover:bg-brand-500/10 dark:hover:text-brand-300;
+  }
+
+  .export-center-range {
+    @apply flex flex-col items-start rounded-xl border border-gray-200 bg-gray-50/80 px-4 py-3 text-left transition hover:border-brand-200 hover:bg-brand-50/50 dark:border-gray-700 dark:bg-gray-800/40 dark:hover:border-brand-500/30 dark:hover:bg-brand-500/5;
+  }
+
+  .export-center-range.is-active {
+    @apply border-brand-300 bg-brand-50 ring-2 ring-brand-500/15 dark:border-brand-500/40 dark:bg-brand-500/10;
+  }
+
+  .export-center-range__label {
+    font-size: var(--erp-size-body);
+    line-height: var(--erp-size-body--line-height);
+    font-weight: var(--erp-weight-label);
+    @apply text-gray-900 dark:text-white;
+  }
+
+  .export-center-range__desc {
+    font-size: var(--erp-size-caption);
+    line-height: var(--erp-size-caption--line-height);
+    @apply mt-0.5 text-gray-500 dark:text-gray-400;
+  }
+
+  .export-center-group__head {
+    @apply mb-4 flex flex-wrap items-end justify-between gap-2;
+  }
+
+  .export-center-group__count {
+    font-size: var(--erp-size-caption);
+    line-height: var(--erp-size-caption--line-height);
+    @apply rounded-full bg-gray-100 px-2.5 py-1 text-gray-500 dark:bg-gray-800 dark:text-gray-400;
+  }
+
+  .export-center-grid {
+    @apply grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3;
+  }
+
+  .export-center-card {
+    @apply flex h-full flex-col rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-brand-200 hover:shadow-md dark:border-gray-800 dark:bg-gray-900 dark:hover:border-brand-500/30;
+  }
+
+  .export-center-card__top {
+    @apply flex items-start justify-between gap-3;
+  }
+
+  .export-center-card__icon {
+    @apply flex h-10 w-10 items-center justify-center rounded-xl bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400;
+  }
+
+  .export-center-card__badge {
+    @apply rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-gray-500 dark:bg-gray-800 dark:text-gray-400;
+  }
+
+  .export-center-card__badge--dated {
+    @apply bg-brand-50 text-brand-700 dark:bg-brand-500/10 dark:text-brand-300;
+  }
+
+  .export-center-card__actions {
+    @apply mt-auto flex flex-wrap items-center gap-2 pt-4;
+  }
+
+  .export-center-download--csv {
+    @apply bg-brand-500 text-white hover:bg-brand-600;
+  }
+
+  .export-center-download--pdf {
+    @apply border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-200 dark:hover:bg-white/[0.03];
+  }
+
+  .export-center-link {
+    @apply ml-auto text-xs font-semibold text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300;
+  }
+}
+
+/* Export center calendars — unlayered so they beat global flatpickr defaults */
+.export-center .export-center-inline-calendar .flatpickr-calendar,
+.export-center .export-center-flatpickr.flatpickr-calendar {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  color: #374151 !important;
+  width: 100% !important;
+  max-width: none !important;
+  padding: 0.25rem !important;
+}
+
+.dark .export-center .export-center-inline-calendar .flatpickr-calendar,
+.dark .export-center .export-center-flatpickr.flatpickr-calendar {
+  background: transparent !important;
+  color: #e5e7eb !important;
+}
+
+.export-center .export-center-inline-calendar .flatpickr-months .flatpickr-month,
+.export-center .export-center-inline-calendar span.flatpickr-weekday,
+.export-center .export-center-inline-calendar .flatpickr-current-month .cur-month,
+.export-center .export-center-inline-calendar .flatpickr-current-month input.cur-year,
+.export-center .export-center-flatpickr .flatpickr-months .flatpickr-month,
+.export-center .export-center-flatpickr span.flatpickr-weekday {
+  color: #111827 !important;
+  fill: #111827 !important;
+}
+
+.dark .export-center .export-center-inline-calendar .flatpickr-months .flatpickr-month,
+.dark .export-center .export-center-inline-calendar span.flatpickr-weekday,
+.dark .export-center .export-center-inline-calendar .flatpickr-current-month .cur-month,
+.dark .export-center .export-center-flatpickr span.flatpickr-weekday {
+  color: #f3f4f6 !important;
+  fill: #f3f4f6 !important;
+}
+
+.export-center .export-center-inline-calendar .flatpickr-day,
+.export-center .export-center-flatpickr .flatpickr-day {
+  color: #1f2937 !important;
+  border-radius: 0.45rem !important;
+  height: 1.75rem !important;
+  line-height: 1.75rem !important;
+  max-width: none !important;
+}
+
+.dark .export-center .export-center-inline-calendar .flatpickr-day,
+.dark .export-center .export-center-flatpickr .flatpickr-day {
+  color: #e5e7eb !important;
+}
+
+.export-center .export-center-inline-calendar .flatpickr-day.selected,
+.export-center .export-center-inline-calendar .flatpickr-day.startRange,
+.export-center .export-center-inline-calendar .flatpickr-day.endRange,
+.export-center .export-center-flatpickr .flatpickr-day.selected {
+  background: var(--color-brand-500, #5f4bff) !important;
+  border-color: var(--color-brand-500, #5f4bff) !important;
+  color: #ffffff !important;
+}
+
+.export-center .export-center-inline-calendar .flatpickr-day.today:not(.selected),
+.export-center .export-center-flatpickr .flatpickr-day.today:not(.selected) {
+  background: rgba(70, 95, 255, 0.08) !important;
+  border-color: rgba(70, 95, 255, 0.35) !important;
+  color: #4338ca !important;
+}
+
+.export-center .export-center-inline-calendar .dayContainer,
+.export-center .export-center-flatpickr .dayContainer {
+  min-width: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+.export-center .export-center-inline-calendar .flatpickr-weekdays,
+.export-center .export-center-inline-calendar .flatpickr-days,
+.export-center .export-center-flatpickr .flatpickr-days {
+  width: 100% !important;
+}
+
+.export-center .export-center-inline-calendar .flatpickr-months .flatpickr-prev-month svg,
+.export-center .export-center-inline-calendar .flatpickr-months .flatpickr-next-month svg {
+  width: 0.875rem !important;
+  height: 0.875rem !important;
+}
+
+/* ERP Assistant — floating glass chat */
+[x-cloak] {
+  display: none !important;
+}
+
+.erp-assistant-root {
+  @apply fixed bottom-5 right-5 z-[1002] flex flex-col items-end;
+}
+
+.erp-assistant-shell {
+  @apply relative flex flex-col items-end;
+}
+
+.erp-assistant-fab-wrap {
+  @apply relative;
+}
+
+.erp-assistant-fab-dismiss {
+  @apply absolute -right-1 -top-1 z-[3] flex h-7 w-7 items-center justify-center rounded-full border border-white/70 bg-white text-gray-600 shadow-md transition hover:bg-gray-50 hover:text-gray-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/30 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white;
+}
+
+.erp-assistant-restore {
+  @apply inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white/95 px-3 py-2 text-sm font-semibold text-gray-700 shadow-theme-sm backdrop-blur-sm transition hover:border-brand-200 hover:text-brand-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/25 dark:border-gray-700 dark:bg-gray-900/95 dark:text-gray-200 dark:hover:border-brand-500/30 dark:hover:text-brand-300;
+}
+
+.erp-assistant-restore__label {
+  @apply text-xs font-bold uppercase tracking-[0.14em];
+}
+
+.erp-assistant-fab {
+  @apply relative inline-flex min-h-[4.5rem] items-center gap-3.5 overflow-hidden rounded-[1.75rem] border border-white/20 bg-gradient-to-br from-brand-500 via-violet-600 to-indigo-700 px-4 py-3 text-left text-white shadow-[0_14px_40px_rgba(79,70,229,0.42),inset_0_1px_0_rgba(255,255,255,0.25)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_18px_48px_rgba(79,70,229,0.5)] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-300/60;
+}
+
+.erp-assistant-fab--open {
+  @apply from-slate-700 via-slate-800 to-slate-900 shadow-[0_14px_40px_rgba(15,23,42,0.35)];
+}
+
+.erp-assistant-fab__state {
+  @apply relative z-[1] flex items-center gap-3.5;
+}
+
+.erp-assistant-fab__state--close {
+  @apply gap-3;
+}
+
+.erp-assistant-fab__glow {
+  @apply pointer-events-none absolute inset-0;
+  background: radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.28), transparent 42%), radial-gradient(circle at 80% 80%, rgba(255, 255, 255, 0.12), transparent 40%);
+  animation: erp-assistant-pulse 3.2s ease-in-out infinite;
+}
+
+.erp-assistant-fab__icon-wrap {
+  @apply relative z-[1] flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/15 ring-1 ring-white/30 backdrop-blur-sm;
+}
+
+.erp-assistant-fab__icon-wrap--close {
+  @apply bg-white/20 ring-white/40;
+}
+
+.erp-assistant-fab__icon--close {
+  @apply h-7 w-7;
+}
+
+.erp-assistant-fab__icon {
+  @apply h-8 w-8;
+}
+
+.erp-assistant-fab__copy {
+  @apply relative z-[1] flex min-w-[5.5rem] flex-col leading-none;
+}
+
+.erp-assistant-fab__eyebrow {
+  @apply text-[11px] font-semibold uppercase tracking-[0.22em] text-white/75;
+}
+
+.erp-assistant-fab__brand {
+  @apply mt-1 text-[1.35rem] font-extrabold tracking-tight text-white;
+}
+
+.erp-assistant-fab__status {
+  @apply absolute right-3 top-3 z-[2] h-2.5 w-2.5 rounded-full border-2 border-white/80 bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.8)];
+}
+
+.erp-assistant-panel {
+  @apply absolute bottom-[5.25rem] right-0 flex w-[min(100vw-2.5rem,24rem)] min-w-[19rem] flex-col overflow-hidden rounded-[1.35rem] border border-brand-200/60 bg-white/92 shadow-[0_20px_60px_rgba(16,24,40,0.2),inset_0_1px_0_rgba(255,255,255,0.95)] backdrop-blur-xl backdrop-saturate-150 dark:border-brand-500/20 dark:bg-gray-900/95 dark:shadow-[0_20px_60px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.06)];
+}
+
+.erp-assistant-panel__header {
+  @apply flex items-center gap-3 border-b border-white/60 px-4 py-3 dark:border-white/10;
+}
+
+.erp-assistant-panel__avatar {
+  @apply flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-500/15 to-violet-500/10 ring-1 ring-brand-200/70 dark:from-brand-500/20 dark:to-violet-500/10 dark:ring-brand-500/25;
+}
+
+.erp-assistant-panel__title {
+  @apply truncate text-sm font-semibold text-gray-900 dark:text-white;
+}
+
+.erp-assistant-panel__status {
+  @apply mt-0.5 flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400;
+}
+
+.erp-assistant-panel__dot {
+  @apply h-1.5 w-1.5 rounded-full bg-emerald-500;
+}
+
+.erp-assistant-panel__close {
+  @apply flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-500 shadow-sm transition hover:border-gray-300 hover:bg-gray-50 hover:text-gray-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:border-gray-600 dark:hover:bg-gray-700 dark:hover:text-white;
+}
+
+.erp-assistant-panel__messages {
+  @apply flex max-h-[min(50vh,20rem)] flex-col gap-3 overflow-y-auto px-4 py-4;
+}
+
+.erp-assistant-message {
+  @apply flex;
+}
+
+.erp-assistant-message--agent {
+  @apply justify-start;
+}
+
+.erp-assistant-message--user {
+  @apply justify-end;
+}
+
+.erp-assistant-message__bubble {
+  @apply max-w-[90%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed;
+}
+
+.erp-assistant-message--agent .erp-assistant-message__bubble {
+  @apply rounded-bl-md border border-brand-100/80 bg-brand-50/90 text-gray-800 dark:border-brand-500/20 dark:bg-brand-500/10 dark:text-gray-100;
+}
+
+.erp-assistant-message--user .erp-assistant-message__bubble {
+  @apply rounded-br-md bg-gray-900 text-white dark:bg-white/10 dark:text-gray-100;
+}
+
+.erp-assistant-message__links {
+  @apply mt-2 flex flex-wrap gap-2;
+}
+
+.erp-assistant-message__link {
+  @apply inline-flex rounded-lg bg-white/80 px-2.5 py-1 text-xs font-semibold text-brand-700 ring-1 ring-brand-200/80 transition hover:bg-white dark:bg-white/5 dark:text-brand-300 dark:ring-brand-500/30 dark:hover:bg-white/10;
+}
+
+.erp-assistant-panel__chips {
+  @apply flex flex-wrap gap-2 border-t border-white/60 px-4 py-3 dark:border-white/10;
+}
+
+.erp-assistant-chip {
+  @apply rounded-full border border-gray-200/80 bg-white/70 px-3 py-1 text-xs font-medium text-gray-700 transition hover:border-brand-200 hover:bg-brand-50 hover:text-brand-700 dark:border-gray-700 dark:bg-gray-950/50 dark:text-gray-300 dark:hover:border-brand-500/30 dark:hover:bg-brand-500/10 dark:hover:text-brand-300;
+}
+
+.erp-assistant-panel__input {
+  @apply flex items-center gap-2 border-t border-white/60 px-3 py-3 dark:border-white/10;
+}
+
+.erp-assistant-input {
+  @apply min-w-0 flex-1 rounded-xl border border-gray-200/80 bg-white/80 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-950/60 dark:text-white dark:placeholder:text-gray-500;
+}
+
+.erp-assistant-send {
+  @apply inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-500 text-white transition hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-40;
+}
+
+.erp-assistant-typing {
+  @apply flex items-center gap-1 px-4 py-3;
+}
+
+.erp-assistant-typing span {
+  @apply h-1.5 w-1.5 rounded-full bg-brand-400/80;
+  animation: erp-assistant-dot 1.2s ease-in-out infinite;
+}
+
+.erp-assistant-typing span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.erp-assistant-typing span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes erp-assistant-pulse {
+  0%, 100% { opacity: 0.55; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.04); }
+}
+
+@keyframes erp-assistant-dot {
+  0%, 80%, 100% { opacity: 0.35; transform: translateY(0); }
+  40% { opacity: 1; transform: translateY(-2px); }
+}
+
+@media (max-width: 640px) {
+  .erp-assistant-root {
+    @apply bottom-4 right-4;
+  }
+
+  .erp-assistant-fab {
+    @apply min-h-[4rem] gap-3 px-3.5 py-2.5;
+  }
+
+  .erp-assistant-fab__icon-wrap {
+    @apply h-12 w-12;
+  }
+
+  .erp-assistant-fab__icon {
+    @apply h-7 w-7;
+  }
+
+  .erp-assistant-fab__brand {
+    @apply text-xl;
+  }
+
+  .erp-assistant-panel {
+    @apply w-[min(100vw-2rem,24rem)];
+  }
+}
+
+/* ─── Unified order pages (PO, SO, etc.) ─── */
+.erp-order-page {
+  @apply mx-auto w-full max-w-6xl space-y-6 pb-8;
+}
+
+.erp-order-toolbar {
+  @apply flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between;
+}
+
+.erp-order-toolbar__title {
+  @apply text-2xl font-semibold tracking-tight text-gray-900 dark:text-white sm:text-3xl;
+}
+
+.erp-order-toolbar__subtitle {
+  @apply mt-1 max-w-2xl text-sm leading-relaxed text-gray-500 dark:text-gray-400;
+}
+
+.erp-order-toolbar__actions {
+  @apply flex flex-wrap items-center gap-2;
+}
+
+.erp-order-form {
+  @apply overflow-hidden rounded-2xl border border-gray-200/80 bg-white shadow-[0_8px_30px_rgba(15,23,42,0.06)] dark:border-gray-800 dark:bg-gray-950 dark:shadow-none;
+}
+
+.erp-order-form__workflow {
+  @apply border-b border-gray-100 dark:border-gray-800;
+}
+
+.erp-order-form__body {
+  @apply space-y-6 p-5 sm:p-6 lg:p-8;
+}
+
+.erp-order-panel {
+  @apply rounded-2xl border border-gray-200/70 bg-gray-50/50 p-5 dark:border-gray-800 dark:bg-gray-900/40 sm:p-6;
+}
+
+.erp-order-panel__head {
+  @apply mb-5 flex flex-wrap items-start justify-between gap-3;
+}
+
+.erp-order-panel__title {
+  @apply text-base font-semibold tracking-tight text-gray-900 dark:text-white;
+}
+
+.erp-order-panel__desc {
+  @apply mt-0.5 text-sm text-gray-500 dark:text-gray-400;
+}
+
+.erp-order-field-grid {
+  @apply grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-12;
+}
+
+.erp-order-label {
+  @apply mb-1.5 block text-xs font-medium text-gray-600 dark:text-gray-400;
+}
+
+.erp-order-input {
+  @apply w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-sm text-gray-900 shadow-sm transition focus:border-brand-400 focus:outline-none focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white;
+}
+
+.erp-order-input--num {
+  @apply text-base font-semibold tabular-nums;
+}
+
+.erp-order-segment {
+  @apply inline-flex rounded-xl border border-gray-200 bg-white p-1 dark:border-gray-700 dark:bg-gray-900;
+}
+
+.erp-order-segment__btn {
+  @apply rounded-lg px-3 py-1.5 text-xs font-semibold text-gray-600 transition dark:text-gray-300;
+}
+
+.erp-order-segment__btn.is-active {
+  @apply bg-gray-900 text-white shadow-sm dark:bg-white dark:text-gray-900;
+}
+
+.erp-order-lines {
+  @apply overflow-hidden rounded-2xl border border-gray-200/80 bg-white dark:border-gray-800 dark:bg-gray-950;
+}
+
+.erp-order-lines__head {
+  @apply flex items-center justify-between gap-3 border-b border-gray-100 px-5 py-4 dark:border-gray-800;
+}
+
+.erp-order-lines__table-wrap {
+  @apply overflow-x-auto;
+}
+
+.erp-order-lines__table {
+  @apply min-w-full text-sm;
+}
+
+.erp-order-lines__table thead {
+  @apply bg-gray-50/80 text-left text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:bg-gray-900 dark:text-gray-400;
+}
+
+.erp-order-lines__table th {
+  @apply px-3 py-3;
+}
+
+.erp-order-lines__table td {
+  @apply px-3 py-3 align-top;
+}
+
+.erp-order-lines__table tbody {
+  @apply divide-y divide-gray-100 dark:divide-gray-800;
+}
+
+.erp-order-lines__add {
+  @apply flex w-full items-center justify-center gap-2 border-t border-dashed border-gray-200 bg-gray-50/40 px-4 py-3.5 text-sm font-semibold text-gray-600 transition hover:border-brand-300 hover:bg-brand-50/50 hover:text-brand-700 dark:border-gray-700 dark:bg-gray-900/30 dark:text-gray-300 dark:hover:border-brand-500/40 dark:hover:bg-brand-500/5 dark:hover:text-brand-300;
+}
+
+.erp-order-total-pill {
+  @apply inline-flex min-w-[8rem] flex-col items-end rounded-xl border border-brand-200/80 bg-gradient-to-br from-brand-50 to-white px-4 py-2.5 dark:border-brand-500/25 dark:from-brand-500/10 dark:to-gray-950;
+}
+
+.erp-order-total-pill__label {
+  @apply text-[10px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400;
+}
+
+.erp-order-total-pill__value {
+  @apply text-lg font-bold tabular-nums text-brand-700 dark:text-brand-300;
+}
+
+.erp-order-btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition focus:outline-none focus:ring-4 focus:ring-brand-500/15 disabled:cursor-not-allowed disabled:opacity-50;
+}
+
+.erp-order-btn--primary {
+  @apply bg-gray-900 text-white shadow-lg shadow-gray-900/10 hover:bg-gray-800 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-100;
+}
+
+.erp-order-btn--secondary {
+  @apply border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800;
+}
+
+.erp-order-btn--ghost {
+  @apply border border-transparent text-gray-600 hover:border-gray-200 hover:bg-gray-50 dark:text-gray-300 dark:hover:border-gray-700 dark:hover:bg-gray-900;
+}
+
+.erp-order-btn--success {
+  @apply bg-emerald-600 text-white hover:bg-emerald-700 focus:ring-emerald-500/20;
+}
+
+.erp-order-btn--brand {
+  @apply bg-brand-600 text-white hover:bg-brand-700 focus:ring-brand-500/20;
+}
+
+.erp-order-btn--danger-icon {
+  @apply rounded-lg p-2 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10;
+}
+
+.erp-order-footer {
+  @apply flex flex-col gap-4 border-t border-gray-100 bg-gray-50/60 px-5 py-4 dark:border-gray-800 dark:bg-gray-900/40 sm:flex-row sm:items-center sm:justify-between sm:px-6;
+}
+
+.erp-order-footer__hint {
+  @apply text-sm text-gray-500 dark:text-gray-400;
+}
+
+.erp-order-footer__actions {
+  @apply flex flex-wrap items-center justify-end gap-2;
+}
+
+/* Workflow — hero */
+.erp-order-flow--hero {
+  @apply bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 px-5 py-6 text-white sm:px-8 sm:py-8;
+}
+
+.erp-order-flow__head {
+  @apply mb-6 sm:mb-8;
+}
+
+.erp-order-flow__eyebrow {
+  @apply text-xs font-bold uppercase tracking-[0.2em] text-brand-300;
+}
+
+.erp-order-flow__hint {
+  @apply mt-1 text-sm text-slate-300;
+}
+
+.erp-order-flow__track {
+  @apply flex items-start;
+}
+
+.erp-order-flow__step {
+  @apply flex min-w-0 flex-1 items-start;
+}
+
+.erp-order-flow__connector {
+  @apply relative mx-2 mt-7 h-1 min-w-[1.5rem] flex-1 overflow-hidden rounded-full bg-white/15 sm:mx-3 sm:min-w-[2.5rem];
+}
+
+.erp-order-flow__connector-fill {
+  @apply absolute inset-y-0 left-0 w-0 rounded-full bg-brand-400 transition-all duration-500;
+}
+
+.erp-order-flow__connector-fill.is-filled {
+  @apply w-full;
+}
+
+.erp-order-flow__node-wrap {
+  @apply flex shrink-0 flex-col items-center gap-2 text-center sm:gap-3;
+}
+
+.erp-order-flow__node {
+  @apply flex h-11 w-11 items-center justify-center rounded-full border-2 text-sm font-bold transition sm:h-14 sm:w-14 sm:text-base;
+}
+
+.erp-order-flow__node.is-upcoming {
+  @apply border-white/20 bg-white/5 text-slate-400;
+}
+
+.erp-order-flow__node.is-active {
+  @apply border-brand-400 bg-brand-500 text-white shadow-[0_0_0_6px_rgba(70,95,255,0.25)] ring-4 ring-brand-400/20;
+}
+
+.erp-order-flow__node.is-pulse {
+  @apply border-brand-400 bg-brand-500 text-white shadow-[0_0_0_6px_rgba(70,95,255,0.25)] animate-pulse;
+}
+
+.erp-order-flow__node.is-complete {
+  @apply border-emerald-400 bg-emerald-500 text-white;
+}
+
+.erp-order-flow__check {
+  @apply h-5 w-5 sm:h-6 sm:w-6;
+}
+
+.erp-order-flow__title {
+  @apply text-xs font-semibold text-slate-400 sm:text-sm;
+}
+
+.erp-order-flow__title.is-active {
+  @apply text-white;
+}
+
+.erp-order-flow__title.is-complete {
+  @apply text-emerald-300;
+}
+
+.erp-order-flow__sub {
+  @apply hidden text-[11px] text-slate-400 sm:block;
+}
+
+/* Workflow — mini (lists, dashboard) */
+.erp-order-flow--mini {
+  @apply w-full max-w-md;
+}
+
+.erp-order-flow__mini-label {
+  @apply mb-2 text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500;
+}
+
+.erp-order-flow--mini .erp-order-flow__track {
+  @apply rounded-xl border border-gray-200 bg-gray-50/80 p-3 dark:border-gray-700 dark:bg-gray-900/50;
+}
+
+.erp-order-flow--mini .erp-order-flow__connector {
+  @apply mt-4 bg-gray-200 dark:bg-gray-700;
+}
+
+.erp-order-flow--mini .erp-order-flow__connector-fill.is-filled {
+  @apply bg-brand-500;
+}
+
+.erp-order-flow--mini .erp-order-flow__node {
+  @apply h-8 w-8 text-[11px] sm:h-9 sm:w-9;
+}
+
+.erp-order-flow--mini .erp-order-flow__node.is-upcoming {
+  @apply border-gray-200 bg-white text-gray-400 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-500;
+}
+
+.erp-order-flow--mini .erp-order-flow__node.is-active {
+  @apply border-brand-500 bg-brand-500 text-white shadow-md ring-2 ring-brand-500/20;
+}
+
+.erp-order-flow--mini .erp-order-flow__node.is-complete {
+  @apply border-emerald-500 bg-emerald-500 text-white;
+}
+
+.erp-order-flow--mini .erp-order-flow__title.is-active {
+  @apply text-brand-600 dark:text-brand-400;
+}
+
+.erp-order-flow--mini .erp-order-flow__title.is-complete {
+  @apply text-emerald-600 dark:text-emerald-400;
+}
+
+.erp-order-flow--mini .erp-order-flow__title {
+  @apply text-[10px] sm:text-[11px];
+}
+
+/* Workflow — dashboard expand panel */
+.erp-order-flow--dash {
+  @apply w-full;
+}
+
+.erp-order-flow--dash .erp-order-flow__track {
+  @apply rounded-xl border border-gray-200/80 bg-white/80 p-4 dark:border-gray-700 dark:bg-gray-900/60;
+}
+
+.erp-order-flow--dash .erp-order-flow__connector {
+  @apply mx-1.5 mt-5 h-1 min-w-[1rem] bg-gray-200 dark:bg-gray-700;
+}
+
+.erp-order-flow--dash .erp-order-flow__connector-fill.is-filled {
+  @apply bg-brand-500;
+}
+
+.erp-order-flow--dash .erp-order-flow__node {
+  @apply h-9 w-9 border-2 text-xs;
+}
+
+.erp-order-flow--dash .erp-order-flow__node.is-upcoming {
+  @apply border-gray-200 bg-gray-50 text-gray-400 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-500;
+}
+
+.erp-order-flow--dash .erp-order-flow__node.is-active {
+  @apply border-brand-500 bg-brand-500 text-white shadow-md ring-2 ring-brand-500/20;
+}
+
+.erp-order-flow--dash .erp-order-flow__node.is-pulse {
+  @apply border-brand-500 bg-brand-500 text-white shadow-md ring-2 ring-brand-500/20 animate-pulse;
+}
+
+.erp-order-flow--dash .erp-order-flow__node.is-complete {
+  @apply border-emerald-500 bg-emerald-500 text-white;
+}
+
+.erp-order-flow--dash .erp-order-flow__title {
+  @apply text-[10px] font-semibold text-gray-500 dark:text-gray-400;
+}
+
+.erp-order-flow--dash .erp-order-flow__title.is-active {
+  @apply text-brand-600 dark:text-brand-400;
+}
+
+.erp-order-flow--dash .erp-order-flow__title.is-complete {
+  @apply text-emerald-600 dark:text-emerald-400;
+}
+
+.erp-order-flow--dash .erp-order-flow__sub {
+  @apply mt-0.5 block text-[10px] text-gray-400 dark:text-gray-500;
+}
+
+.erp-order-show-grid {
+  @apply grid gap-4 sm:grid-cols-2 lg:grid-cols-4;
+}
+
+.erp-order-stat {
+  @apply rounded-2xl border border-gray-200/80 bg-white p-5 dark:border-gray-800 dark:bg-gray-950;
+}
+
+.erp-order-stat__label {
+  @apply text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400;
+}
+
+.erp-order-stat__value {
+  @apply mt-2 text-2xl font-bold tracking-tight text-gray-900 dark:text-white;
+}
+
+.erp-order-list-table {
+  @apply min-w-full;
+}
+
+.erp-order-list-table thead {
+  @apply bg-gray-50/80 dark:bg-gray-900/80;
+}
+
+.erp-order-list-table th {
+  @apply px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400;
+}
+
+.erp-order-list-table td {
+  @apply px-4 py-3.5 text-sm text-gray-700 dark:text-gray-300;
+}
+
+.erp-order-list-table tbody {
+  @apply divide-y divide-gray-100 dark:divide-gray-800;
+}
+
+.erp-order-list-card {
+  @apply overflow-hidden rounded-2xl border border-gray-200/80 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-950;
 }

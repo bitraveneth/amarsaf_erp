@@ -5,80 +5,42 @@ namespace Database\Seeders\Accounting;
 use App\Models\Account;
 use Illuminate\Database\Seeder;
 
-/**
- * Seed data for Accounting → Chart of accounts.
- *
- * Creates a very small but realistic chart so that
- * ledger entries, P&L and balance sheet screens
- * have something to aggregate.
- */
 class ChartOfAccountsModuleSeeder extends Seeder
 {
     public function run(): void
     {
-        // Assets
-        Account::firstOrCreate(
-            ['code' => '1000'],
-            ['name' => 'Bank', 'type' => 'asset', 'is_active' => true]
-        );
+        $accounts = [
+            ['1000', 'Bank', 'asset'],
+            ['1100', 'Accounts Receivable', 'asset'],
+            ['1150', 'Input VAT', 'asset'],
+            ['1160', 'Withholding Tax Receivable', 'asset'],
+            ['1200', 'Agent Advances', 'asset'],
+            ['1300', 'Raw Materials Inventory', 'asset'],
+            ['1310', 'Finished Goods Inventory', 'asset'],
+            ['1350', 'Work in Progress', 'asset'],
+            ['2000', 'VAT Payable', 'liability'],
+            ['2100', 'Accounts Payable', 'liability'],
+            ['2190', 'GRNI Accrual', 'liability'],
+            ['2200', 'Commission Payable', 'liability'],
+            ['3000', 'Owner\'s Equity', 'equity'],
+            ['4000', 'Sales Revenue', 'income'],
+            ['4050', 'Sales Returns', 'income'],
+            ['4100', 'Other Income', 'income'],
+            ['5000', 'Cost of Goods Sold', 'expense'],
+            ['5050', 'Purchases', 'expense'],
+            ['5100', 'Selling & Distribution Expense', 'expense'],
+            ['5150', 'Inventory Write-Off Expense', 'expense'],
+            ['5200', 'Marketing Expense', 'expense'],
+            ['5300', 'Payroll Expense', 'expense'],
+            ['5350', 'Commission Expense', 'expense'],
+            ['5400', 'Utilities Expense', 'expense'],
+        ];
 
-        Account::firstOrCreate(
-            ['code' => '1100'],
-            ['name' => 'Accounts Receivable', 'type' => 'asset', 'is_active' => true]
-        );
-
-        // Liabilities
-        Account::firstOrCreate(
-            ['code' => '2000'],
-            ['name' => 'VAT Payable', 'type' => 'liability', 'is_active' => true]
-        );
-
-        Account::firstOrCreate(
-            ['code' => '2100'],
-            ['name' => 'Accounts Payable', 'type' => 'liability', 'is_active' => true]
-        );
-
-        // Equity
-        Account::firstOrCreate(
-            ['code' => '3000'],
-            ['name' => 'Owner\'s Equity', 'type' => 'equity', 'is_active' => true]
-        );
-
-        // Income
-        Account::firstOrCreate(
-            ['code' => '4000'],
-            ['name' => 'Sales Revenue', 'type' => 'income', 'is_active' => true]
-        );
-
-        Account::firstOrCreate(
-            ['code' => '4100'],
-            ['name' => 'Other Income', 'type' => 'income', 'is_active' => true]
-        );
-
-        // Expenses
-        Account::firstOrCreate(
-            ['code' => '5000'],
-            ['name' => 'Cost of Goods Sold', 'type' => 'expense', 'is_active' => true]
-        );
-
-        Account::firstOrCreate(
-            ['code' => '5100'],
-            ['name' => 'Selling & Distribution Expense', 'type' => 'expense', 'is_active' => true]
-        );
-
-        Account::firstOrCreate(
-            ['code' => '5200'],
-            ['name' => 'Marketing Expense', 'type' => 'expense', 'is_active' => true]
-        );
-
-        Account::firstOrCreate(
-            ['code' => '5300'],
-            ['name' => 'Payroll Expense', 'type' => 'expense', 'is_active' => true]
-        );
-
-        Account::firstOrCreate(
-            ['code' => '5400'],
-            ['name' => 'Utilities Expense', 'type' => 'expense', 'is_active' => true]
-        );
+        foreach ($accounts as [$code, $name, $type]) {
+            Account::firstOrCreate(
+                ['code' => $code],
+                ['name' => $name, 'type' => $type, 'is_active' => true]
+            );
+        }
     }
 }

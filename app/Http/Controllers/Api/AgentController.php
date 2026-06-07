@@ -15,6 +15,7 @@ use App\Models\Delivery;
 use App\Models\Invoice;
 use App\Models\Receipt;
 use App\Models\CreditNote;
+use App\Support\CommissionCalculator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -394,12 +395,7 @@ class AgentController extends Controller
             })
             ->get();
 
-        $outstanding = $invoices->sum(function (Invoice $invoice) {
-            $gross = ($invoice->net_total + $invoice->vat_amount) - $invoice->withholding;
-            $paid = $invoice->receipts->sum('amount');
-
-            return max($gross - $paid, 0);
-        });
+        $outstanding = $invoices->sum(fn (Invoice $invoice) => (float) $invoice->outstanding);
 
         $lastReceipt = Receipt::whereHas('invoice.order', function ($q) use ($agent) {
                 $q->where('agent_id', $agent->id);
@@ -412,6 +408,24 @@ class AgentController extends Controller
             'delivered_this_month' => $deliveredThisMonth,
             'outstanding_balance' => $outstanding,
             'last_receipt' => $lastReceipt,
+        ]);
+    }
+
+    public function commissions(Request $request)
+    {
+        $agent = $this->requireAgent($request);
+        $month = $request->query('month')
+            ? \Illuminate\Support\Carbon::parse($request->query('month') . '-01')->startOfMonth()
+            : \Illuminate\Support\Carbon::now()->startOfMonth();
+
+        $from = $month->copy()->startOfMonth();
+        $to = $month->copy()->endOfMonth();
+        $calculator = app(CommissionCalculator::class);
+
+        return response()->json([
+            'month' => $month->format('Y-m'),
+            'accrual' => $calculator->buildMonthlySummaryForAgent($agent, $from, $to),
+            'collection' => $calculator->buildCollectionSummaryForAgent($agent, $from, $to),
         ]);
     }
 }

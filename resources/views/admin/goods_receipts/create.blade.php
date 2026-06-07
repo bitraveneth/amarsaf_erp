@@ -79,7 +79,7 @@
 
                 <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                     <div class="lg:col-span-2">
-                        <label class="{{ $labelClass }}">Purchase Order</label>
+                        <label class="{{ $labelClass }}">Purchase order</label>
                         <select id="po-select" name="purchase_order_id" class="{{ $fieldClass }}">
                             <option value="">No PO</option>
                             @foreach($purchaseOrders as $po)

@@ -23,7 +23,7 @@ export function initChartSix() {
                     data: [21, 7, 25, 13, 22, 8, 18, 20],
                 },
             ],
-            colors: ["#2a31d8", "#465fff", "#7592ff", "#c2d6ff"],
+            colors: ["#4d39e6", "#5f4bff", "#8f6bff", "#d6e6ff"],
             chart: {
                 fontFamily: uiFontStack,
                 type: "bar",

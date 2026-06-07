@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Admin\Concerns\ResolvesDashboardPeriod;
 use App\Http\Controllers\Controller;
+use App\Models\Agent;
 use App\Models\Campaign;
 use App\Models\CustomerGift;
 use App\Models\Expense;
@@ -11,45 +13,46 @@ use App\Models\InvoiceItem;
 use App\Models\LedgerEntry;
 use App\Models\ProductionRun;
 use App\Models\SalaryDistribution;
-use App\Models\Agent;
+use App\Support\DashboardChartBuilder;
 use Carbon\Carbon;
+use Illuminate\Http\Request;
 
 class ReportsDashboardController extends Controller
 {
-    public function __invoke()
-    {
-        $today = Carbon::today();
-        $startOfYear = $today->copy()->startOfYear();
-        $endOfPeriod = $today->copy()->endOfDay();
+    use ResolvesDashboardPeriod;
 
-        // Revenue side
-        $invoices = Invoice::with(['receipts', 'creditNotes', 'advanceApplications'])
-            ->whereBetween('issued_at', [$startOfYear, $endOfPeriod])
+    public function __invoke(Request $request)
+    {
+        [$from, $to, $range] = $this->resolveDashboardPeriod($request, 'year');
+        $currencyCode = config('app.currency', 'BDT');
+
+        $invoices = Invoice::with(['receipts', 'creditNotes', 'advanceApplications', 'order.agent'])
+            ->whereBetween('issued_at', [$from, $to])
             ->get();
 
-        $grossRevenue = round((float) $invoices->sum(function (Invoice $invoice) use ($startOfYear, $endOfPeriod) {
-            return $invoice->netSalesAfterCreditsInRange($startOfYear, $endOfPeriod);
+        $grossRevenue = round((float) $invoices->sum(function (Invoice $invoice) use ($from, $to) {
+            return $invoice->netSalesAfterCreditsInRange($from, $to);
         }), 2);
+
         $withholdingTotal = $invoices->sum('withholding');
 
-        $totalCollections = round((float) $invoices->sum(function (Invoice $invoice) use ($startOfYear, $endOfPeriod) {
-            return $invoice->receiptsTotalInRange($startOfYear, $endOfPeriod);
+        $totalCollections = round((float) $invoices->sum(function (Invoice $invoice) use ($from, $to) {
+            return $invoice->receiptsTotalInRange($from, $to);
         }), 2);
 
-        $outstanding = round((float) $invoices->sum(function (Invoice $invoice) use ($endOfPeriod) {
-            return $invoice->outstandingAsOf($endOfPeriod);
+        $outstanding = round((float) $invoices->sum(function (Invoice $invoice) use ($to) {
+            return $invoice->outstandingAsOf($to);
         }), 2);
 
-        // Cost side
-        $expenses = (float) Expense::whereBetween('date', [$startOfYear, $endOfPeriod])
+        $expenses = (float) Expense::whereBetween('date', [$from->toDateString(), $to->toDateString()])
             ->whereIn('status', [Expense::STATUS_RECORDED, Expense::STATUS_REVIEWED, 'paid', 'overdue'])
             ->sum('amount');
-        $giftExpenses = (float) CustomerGift::whereBetween('date', [$startOfYear, $endOfPeriod])
+        $giftExpenses = (float) CustomerGift::whereBetween('date', [$from->toDateString(), $to->toDateString()])
             ->whereIn('status', [CustomerGift::STATUS_GIVEN, 'delivered'])
             ->sum('amount');
-        $campaignExpenses = Campaign::where(function ($query) use ($startOfYear, $endOfPeriod) {
-            $query->whereBetween('created_at', [$startOfYear, $endOfPeriod])
-                ->orWhereBetween('start_date', [$startOfYear->toDateString(), $endOfPeriod->toDateString()]);
+        $campaignExpenses = Campaign::where(function ($query) use ($from, $to) {
+            $query->whereBetween('created_at', [$from, $to])
+                ->orWhereBetween('start_date', [$from->toDateString(), $to->toDateString()]);
         })->whereIn('status', [
             Campaign::STATUS_RUNNING,
             Campaign::STATUS_COMPLETED,
@@ -58,36 +61,73 @@ class ReportsDashboardController extends Controller
         ])->sum('cost');
         $totalExpenses = $expenses + $giftExpenses + $campaignExpenses;
 
-        $salaryDistributions = SalaryDistribution::whereBetween('period_start', [$startOfYear, $endOfPeriod])->get();
+        $salaryDistributions = SalaryDistribution::whereBetween('period_start', [$from, $to])->get();
         $totalPayroll = $salaryDistributions->sum(function ($d) {
             return $d->base_salary + $d->bonus + $d->ta_allowances + $d->da_allowances + $d->commission;
         });
-        $commissionsTotal = (float) LedgerEntry::where('account', 'Commission Expense')
-            ->whereBetween('created_at', [$startOfYear, $endOfPeriod])
-            ->sum('debit');
-        $cogsEstimate = $this->estimateCogs($startOfYear, $endOfPeriod);
 
-        $productionQty = ProductionRun::whereBetween('created_at', [$startOfYear, $endOfPeriod])
+        $commissionsTotal = (float) LedgerEntry::where('account', 'Commission Expense')
+            ->whereBetween('created_at', [$from, $to])
+            ->sum('debit');
+
+        $cogsEstimate = $this->estimateCogs($from, $to);
+        $productionQty = ProductionRun::whereBetween('created_at', [$from, $to])
             ->where('qc_status', 'approved')
             ->sum('quantity');
-
         $activeAgents = Agent::where('is_active', true)->count();
-
         $netProfitEstimate = $grossRevenue - ($cogsEstimate + $commissionsTotal + $totalExpenses + $totalPayroll);
+        $collectionRate = $grossRevenue > 0 ? ($totalCollections / $grossRevenue) * 100 : 0;
+
+        $chart = DashboardChartBuilder::revenueAndCollectionsSeries($from, $to);
+
+        $topAgents = DashboardChartBuilder::normalizeRankList(
+            $invoices
+                ->filter(fn (Invoice $invoice) => $invoice->order?->agent)
+                ->groupBy(fn (Invoice $invoice) => (string) $invoice->order->agent_id)
+                ->map(function ($group) use ($from, $to) {
+                    $agent = $group->first()->order->agent;
+
+                    return [
+                        'label' => $agent->name ?? 'Unknown agent',
+                        'value' => $group->sum(fn (Invoice $invoice) => $invoice->netSalesAfterCreditsInRange($from, $to)),
+                        'meta' => $agent->zone ?? null,
+                    ];
+                })
+                ->values()
+        );
+
+        $costChart = DashboardChartBuilder::costBreakdownSeries([
+            ['label' => 'COGS', 'value' => $cogsEstimate],
+            ['label' => 'Commissions', 'value' => $commissionsTotal],
+            ['label' => 'Operating', 'value' => $totalExpenses],
+            ['label' => 'Payroll', 'value' => $totalPayroll],
+        ]);
 
         return view('admin.reports.dashboard', [
-            'yearLabel'          => $startOfYear->format('Y'),
-            'grossRevenue'       => $grossRevenue,
-            'withholdingTotal'   => $withholdingTotal,
-            'totalCollections'   => $totalCollections,
-            'outstanding'        => $outstanding,
-            'cogsEstimate'       => $cogsEstimate,
-            'commissionsTotal'   => $commissionsTotal,
-            'totalExpenses'      => $totalExpenses,
-            'totalPayroll'       => $totalPayroll,
-            'netProfitEstimate'  => $netProfitEstimate,
-            'productionQty'      => $productionQty,
-            'activeAgents'       => $activeAgents,
+            'from' => $from,
+            'to' => $to,
+            'range' => $range,
+            'rangeOptions' => $this->dashboardRangeOptions(),
+            'periodLabel' => $this->dashboardPeriodLabel($from, $to),
+            'currencyCode' => $currencyCode,
+            'grossRevenue' => $grossRevenue,
+            'withholdingTotal' => $withholdingTotal,
+            'totalCollections' => $totalCollections,
+            'outstanding' => $outstanding,
+            'cogsEstimate' => $cogsEstimate,
+            'commissionsTotal' => $commissionsTotal,
+            'totalExpenses' => $totalExpenses,
+            'totalPayroll' => $totalPayroll,
+            'netProfitEstimate' => $netProfitEstimate,
+            'productionQty' => $productionQty,
+            'activeAgents' => $activeAgents,
+            'collectionRate' => $collectionRate,
+            'chartLabels' => $chart['labels'],
+            'chartRevenue' => $chart['values'],
+            'chartCollections' => $chart['secondary'],
+            'topAgents' => $topAgents,
+            'costChartLabels' => $costChart['labels'],
+            'costChartValues' => $costChart['values'],
         ]);
     }
 
@@ -97,12 +137,7 @@ class ReportsDashboardController extends Controller
             $query
                 ->whereDate('issued_at', '>=', $from->toDateString())
                 ->whereDate('issued_at', '<=', $to->toDateString());
-        })->get();
-
-        $costByProduct = ProductionRun::whereNotNull('material_unit_cost')
-            ->get()
-            ->groupBy('product_id')
-            ->map(fn ($group) => (float) $group->avg('material_unit_cost'));
+        })->with('product')->get();
 
         $cogs = 0.0;
 
@@ -111,9 +146,15 @@ class ReportsDashboardController extends Controller
                 continue;
             }
 
-            $unitCost = $costByProduct->get($item->product_id);
+            $unitCost = (float) ($item->product?->standard_cost ?? 0);
 
-            if ($unitCost === null) {
+            if ($unitCost <= 0) {
+                $unitCost = (float) (ProductionRun::where('product_id', $item->product_id)
+                    ->whereNotNull('material_unit_cost')
+                    ->avg('material_unit_cost') ?? 0);
+            }
+
+            if ($unitCost <= 0) {
                 continue;
             }
 

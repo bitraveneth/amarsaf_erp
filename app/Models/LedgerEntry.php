@@ -10,6 +10,8 @@ class LedgerEntry extends Model
     use HasFactory;
 
     protected $fillable = [
+        'journal_entry_id',
+        'account_id',
         'account',
         'description',
         'debit',
@@ -22,6 +24,16 @@ class LedgerEntry extends Model
         'debit' => 'decimal:2',
         'credit' => 'decimal:2',
     ];
+
+    public function journalEntry()
+    {
+        return $this->belongsTo(JournalEntry::class);
+    }
+
+    public function accountModel()
+    {
+        return $this->belongsTo(Account::class, 'account_id');
+    }
 
     public function order()
     {

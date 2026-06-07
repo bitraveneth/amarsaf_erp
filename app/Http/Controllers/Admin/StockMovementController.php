@@ -7,6 +7,7 @@ use App\Models\StockEntry;
 use App\Models\StockMovement;
 use App\Models\Warehouse;
 use App\Models\WarehouseLocation;
+use App\Services\Accounting\InventoryAccountingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -215,11 +216,18 @@ class StockMovementController extends Controller
             $entry->quantity = (float) $entry->quantity - (float) $data['quantity'];
             $entry->save();
 
-            StockMovement::recordFor(
+            $movement = StockMovement::recordFor(
                 $entry,
                 $data['reason'],
                 (float) $data['quantity'] * -1,
                 $data['notes']
+            );
+
+            app(InventoryAccountingService::class)->postWriteOff(
+                $entry,
+                (float) $data['quantity'],
+                $data['notes'] ?? ('Write-off: ' . $data['reason']),
+                $movement->id
             );
         });
 
@@ -247,11 +255,18 @@ class StockMovementController extends Controller
             $lockedEntry->quantity = 0;
             $lockedEntry->save();
 
-            StockMovement::recordFor(
+            $movement = StockMovement::recordFor(
                 $lockedEntry,
                 'expired',
                 $quantity * -1,
                 'Written off as expired from inventory view.'
+            );
+
+            app(InventoryAccountingService::class)->postWriteOff(
+                $lockedEntry,
+                $quantity,
+                'Written off as expired from inventory view.',
+                $movement->id
             );
 
             return true;

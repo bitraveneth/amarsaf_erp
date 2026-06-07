@@ -80,7 +80,7 @@
 @endphp
 
 <header
-    class="print-hidden sticky top-0 z-30 flex w-full border-b border-gray-200 bg-white/80 backdrop-blur-sm shadow-sm dark:border-gray-800 dark:bg-gray-900/80 xl:border-b"
+    class="print-hidden sticky top-0 z-30 flex w-full border-b border-gray-200/80 bg-canvas/95 backdrop-blur-sm dark:border-gray-800 dark:bg-gray-900/80 xl:border-b"
     x-data="{
         isApplicationMenuOpen: false,
         toggleApplicationMenu() {
@@ -130,18 +130,11 @@
             </button>
 
             {{-- Logo (mobile) --}}
-            <a href="{{ route('admin.dashboard') }}" class="flex items-center gap-2 xl:hidden">
-                @if(!empty($appLogoUrl))
-                    <img src="{{ $appLogoUrl }}" alt="{{ $appBrandName }}" class="app-brand-logo rounded-xl border border-gray-200 object-cover dark:border-gray-700" />
-                @else
-                    <span class="app-brand-logo flex items-center justify-center rounded-full bg-brand-500 text-sm font-semibold text-white">
-                        {{ $appBrandInitials }}
-                    </span>
-                @endif
-                @if(empty($appLogoUrl))
-                    <span class="text-sm font-semibold text-gray-900 dark:text-white">{{ $appBrandName }}</span>
-                @endif
+            <a href="{{ route('admin.dashboard') }}" class="xl:hidden">
+                <x-brand-mark variant="header" name-mode="none" />
             </a>
+
+            <x-layout.header-date compact class="shrink-0 xl:hidden" />
 
             {{-- Application menu toggle (mobile) --}}
             <button @click="toggleApplicationMenu()"
@@ -171,6 +164,7 @@
                             data-tour="command-search"
                             data-command-search
                             data-search-index='@json($__menuSearchItems)'
+                            data-entity-search-url="{{ route('admin.search.suggest') }}"
                             class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-200 bg-transparent py-2.5 pl-12 pr-14 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-white/3 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800 xl:w-[430px]" />
                         <button
                             type="button"
@@ -194,336 +188,9 @@
         {{-- Application menu (mobile) + right-side actions (desktop) --}}
         <div :class="isApplicationMenuOpen ? 'flex' : 'hidden'"
             class="w-full min-w-0 items-center justify-between gap-3 px-4 py-3 shadow-theme-md xl:w-auto xl:shrink-0 xl:flex xl:justify-end xl:px-0 xl:py-0 xl:shadow-none">
+            <x-layout.header-date class="hidden shrink-0 xl:flex xl:mr-1" />
+
             <div class="flex items-center gap-2 2xsm:gap-3">
-                {{-- Clock --}}
-                <div
-                    class="relative"
-                    x-data="{
-                        open: false,
-                        openingFromTrigger: false,
-                        dragging: false,
-                        dragMoved: false,
-                        isMobileView: window.matchMedia('(max-width: 767px)').matches,
-                        storageKeyOpen: 'headerAnalogClockOpen',
-                        storageKeyPos: 'headerAnalogClockPos',
-                        nowDate: '',
-                        nowTime: '',
-                        hourDeg: 0,
-                        minDeg: 0,
-                        secDeg: 0,
-                        posX: 0,
-                        posY: 0,
-                        dragOffsetX: 0,
-                        dragOffsetY: 0,
-                        dateFmt: null,
-                        timeFmt: null,
-                        getPoint(event) {
-                            if (event.touches && event.touches.length) {
-                                return { x: event.touches[0].clientX, y: event.touches[0].clientY };
-                            }
-                            return { x: event.clientX, y: event.clientY };
-                        },
-                        popupEl() {
-                            return document.getElementById('analog-clock-popup');
-                        },
-                        viewportSize() {
-                            return {
-                                w: document.documentElement.clientWidth || window.innerWidth,
-                                h: document.documentElement.clientHeight || window.innerHeight,
-                            };
-                        },
-                        syncViewportMode() {
-                            this.isMobileView = window.matchMedia('(max-width: 767px)').matches;
-                        },
-                        clampToViewport() {
-                            const popup = this.popupEl();
-                            if (!popup) return;
-                            const rect = popup.getBoundingClientRect();
-                            const width = popup.offsetWidth || rect.width || 256;
-                            const height = popup.offsetHeight || rect.height || 320;
-                            const vp = this.viewportSize();
-                            const maxX = Math.max(8, vp.w - width - 8);
-                            const maxY = Math.max(8, vp.h - height - 8);
-                            this.posX = Math.min(Math.max(this.posX, 8), maxX);
-                            this.posY = Math.min(Math.max(this.posY, 8), maxY);
-                        },
-                        settleClamp() {
-                            let frames = 0;
-                            const tick = () => {
-                                if (!this.open || this.dragging || frames > 24) return;
-                                this.clampToViewport();
-                                frames += 1;
-                                requestAnimationFrame(tick);
-                            };
-                            requestAnimationFrame(tick);
-                        },
-                        setInitialPosition(btnRect = null) {
-                            const btn = this.$refs.clockBtn;
-                            const popup = this.popupEl();
-                            if (!btn || !popup) return;
-                            const b = btnRect || btn.getBoundingClientRect();
-                            const width = popup.offsetWidth || 256;
-                            this.posX = b.right - width;
-                            this.posY = b.bottom + 12;
-                            this.clampToViewport();
-                        },
-                        centerPopup() {
-                            const popup = this.popupEl();
-                            if (!popup) return;
-                            const width = popup.offsetWidth || 256;
-                            const height = popup.offsetHeight || 320;
-                            const vp = this.viewportSize();
-                            this.posX = vp.w - width - 16;
-                            this.posY = vp.h - height - 16;
-                            this.clampToViewport();
-                        },
-                        openFromTrigger() {
-                            if (this.open || this.isMobileView || !this.$refs.clockBtn) {
-                                return;
-                            }
-
-                            const btnRect = this.$refs.clockBtn.getBoundingClientRect();
-                            this.openingFromTrigger = true;
-                            this.open = true;
-
-                            this.$nextTick(() => {
-                                if (!this.loadPosition()) {
-                                    this.setInitialPosition(btnRect);
-                                } else {
-                                    this.clampToViewport();
-                                }
-
-                                requestAnimationFrame(() => {
-                                    this.clampToViewport();
-                                    this.settleClamp();
-                                    this.openingFromTrigger = false;
-                                });
-                            });
-                        },
-                        closePopup() {
-                            this.open = false;
-                            this.openingFromTrigger = false;
-                            this.dragging = false;
-                            this.dragMoved = false;
-                        },
-                        startDrag(event) {
-                            this.dragging = true;
-                            this.dragMoved = false;
-                            const point = this.getPoint(event);
-                            this.dragOffsetX = point.x - this.posX;
-                            this.dragOffsetY = point.y - this.posY;
-                        },
-                        onDrag(event) {
-                            if (!this.dragging) return;
-                            const point = this.getPoint(event);
-                            this.posX = point.x - this.dragOffsetX;
-                            this.posY = point.y - this.dragOffsetY;
-                            this.dragMoved = true;
-                            this.clampToViewport();
-                        },
-                        endDrag() {
-                            if (!this.dragging) return;
-                            const moved = this.dragMoved;
-                            this.dragging = false;
-                            this.dragMoved = false;
-                            if (moved) {
-                                this.persistPosition();
-                            }
-                        },
-                        persistPosition() {
-                            try {
-                                localStorage.setItem(this.storageKeyPos, JSON.stringify({
-                                    x: this.posX,
-                                    y: this.posY,
-                                }));
-                            } catch (e) {}
-                        },
-                        persistOpenState() {
-                            if (this.isMobileView) return;
-                            try {
-                                localStorage.setItem(this.storageKeyOpen, this.open ? '1' : '0');
-                            } catch (e) {}
-                        },
-                        loadOpenState() {
-                            if (this.isMobileView) {
-                                return false;
-                            }
-
-                            try {
-                                const raw = localStorage.getItem(this.storageKeyOpen);
-                                if (raw === null) {
-                                    return true;
-                                }
-                                return raw === '1';
-                            } catch (e) {
-                                return true;
-                            }
-                        },
-                        loadPosition() {
-                            try {
-                                const raw = localStorage.getItem(this.storageKeyPos);
-                                if (!raw) return false;
-                                const parsed = JSON.parse(raw);
-                                if (typeof parsed?.x !== 'number' || typeof parsed?.y !== 'number') return false;
-                                this.posX = parsed.x;
-                                this.posY = parsed.y;
-                                this.clampToViewport();
-                                return true;
-                            } catch (e) {
-                                return false;
-                            }
-                        },
-                        placePopupFromStorageOrCenter() {
-                            let frames = 0;
-                            const tick = () => {
-                                const popup = this.popupEl();
-                                if (!this.open || this.isMobileView || !popup || this.dragging) return;
-                                if ((popup.offsetWidth || 0) === 0 || (popup.offsetHeight || 0) === 0) {
-                                    if (frames < 24) {
-                                        frames += 1;
-                                        requestAnimationFrame(tick);
-                                    }
-                                    return;
-                                }
-                                if (!this.loadPosition()) {
-                                    this.centerPopup();
-                                }
-                                this.clampToViewport();
-                                this.settleClamp();
-                            };
-                            requestAnimationFrame(tick);
-                        },
-                        updateClock() {
-                            const d = new Date();
-                            this.nowDate = this.dateFmt.format(d);
-                            this.nowTime = this.timeFmt.format(d);
-                            const h = d.getHours() % 12;
-                            const m = d.getMinutes();
-                            const s = d.getSeconds();
-                            this.hourDeg = (h * 30) + (m * 0.5);
-                            this.minDeg = (m * 6) + (s * 0.1);
-                            this.secDeg = s * 6;
-                        },
-                        init() {
-                            this.dateFmt = new Intl.DateTimeFormat(undefined, {
-                                weekday: 'short',
-                                day: '2-digit',
-                                month: 'short',
-                            });
-                            this.timeFmt = new Intl.DateTimeFormat(undefined, {
-                                hour: '2-digit',
-                                minute: '2-digit',
-                                second: '2-digit',
-                            });
-                            this.updateClock();
-                            setInterval(() => this.updateClock(), 1000);
-                            this.syncViewportMode();
-                            window.addEventListener('resize', () => {
-                                const wasMobile = this.isMobileView;
-                                this.syncViewportMode();
-
-                                if (!wasMobile && this.isMobileView) {
-                                    this.closePopup();
-                                    return;
-                                }
-
-                                if (wasMobile && !this.isMobileView) {
-                                    this.open = this.loadOpenState();
-                                }
-
-                                this.clampToViewport();
-                            });
-                            this.$watch('open', (value) => {
-                                this.persistOpenState();
-                                if (value) {
-                                    if (!this.openingFromTrigger) {
-                                        this.placePopupFromStorageOrCenter();
-                                    }
-                                } else {
-                                    this.dragging = false;
-                                    this.dragMoved = false;
-                                }
-                            });
-                            this.$watch('$store.loader.show', (loading) => {
-                                if (!loading && this.open) {
-                                    this.placePopupFromStorageOrCenter();
-                                }
-                            });
-
-                            this.open = this.isMobileView ? false : this.loadOpenState();
-                        }
-                    }"
-                    @mousemove.window="onDrag($event)"
-                    @mouseup.window="endDrag()"
-                    @touchmove.window="onDrag($event)"
-                    @touchend.window="endDrag()"
-                    @keydown.escape.window="closePopup()"
-                >
-                    <button
-                        type="button"
-                        x-ref="clockBtn"
-                        x-show="!open && !$store.loader.show"
-                        @click="if (!isMobileView) openFromTrigger()"
-                        :title="isMobileView ? 'Current time' : 'Open clock'"
-                        :class="isMobileView ? 'cursor-default pr-2.5' : ''"
-                        class="flex items-center gap-3 rounded-xl border border-gray-200/90 bg-gradient-to-r from-white to-gray-50 px-3 py-2 shadow-theme-xs transition hover:border-brand-300 dark:border-gray-800 dark:from-gray-900 dark:to-gray-800/70 dark:hover:border-brand-700"
-                    >
-                        <div class="leading-tight text-left">
-                            <div class="text-[10px] font-medium uppercase tracking-wide text-[var(--color-app-text-light)]/70 dark:text-[var(--color-app-text-dark)]/70" x-text="nowDate"></div>
-                            <div class="font-semibold text-[var(--color-app-text-light)] dark:text-[var(--color-app-text-dark)]" x-text="nowTime"></div>
-                        </div>
-                        <span class="h-2 w-2 rounded-full bg-success-500" x-show="!isMobileView"></span>
-                    </button>
-
-                    <template x-teleport="body">
-                        <div
-                            id="analog-clock-popup"
-                            x-show="!isMobileView && open && !$store.loader.show"
-                            x-cloak
-                            x-transition:enter="transition ease-out duration-120"
-                            x-transition:enter-start="opacity-0"
-                            x-transition:enter-end="opacity-100"
-                            x-transition:leave="transition ease-in duration-90"
-                            x-transition:leave-start="opacity-100"
-                            x-transition:leave-end="opacity-0"
-                            class="group/clock fixed z-[99999] w-52 max-w-[calc(100vw-1rem)] bg-transparent p-0 shadow-none"
-                            :style="`left:${posX}px; top:${posY}px;`"
-                            role="dialog"
-                            aria-modal="false"
-                            aria-label="Clock popup"
-                        >
-                            <button
-                                type="button"
-                                @click.stop="closePopup()"
-                                class="absolute right-2 top-2 z-10 flex h-7 w-7 items-center justify-center rounded-md border border-error-300 bg-error-50/95 text-error-600 opacity-90 shadow-theme-xs transition hover:bg-error-100 hover:text-error-700 hover:opacity-100 dark:border-error-700 dark:bg-error-500/15 dark:text-error-400 dark:hover:bg-error-500/20 dark:hover:text-error-300"
-                                aria-label="Close clock popup"
-                                title="Close"
-                            >
-                                <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                    <path d="M6 6L14 14M14 6L6 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                                </svg>
-                            </button>
-
-                            <div class="mx-auto h-40 w-40 cursor-move select-none touch-none rounded-full border-4 border-gray-200 bg-white/10 backdrop-blur-[2px] shadow-inner dark:border-gray-700 dark:bg-white/5 relative"
-                                 @mousedown.prevent="startDrag($event)"
-                                 @touchstart.prevent="startDrag($event)">
-                                <template x-for="n in 12" :key="n">
-                                    <span class="absolute left-1/2 top-2 h-2 w-0.5 -translate-x-1/2 bg-gray-500 dark:bg-gray-300"
-                                          :style="`transform: translateX(-50%) rotate(${n * 30}deg); transform-origin: 50% 72px;`"></span>
-                                </template>
-
-                                <span class="absolute left-1/2 bottom-1/2 h-10 w-1 -translate-x-1/2 rounded-full bg-gray-800 dark:bg-gray-100"
-                                      :style="`transform: translateX(-50%) rotate(${hourDeg}deg); transform-origin: 50% 100%;`"></span>
-                                <span class="absolute left-1/2 bottom-1/2 h-14 w-0.5 -translate-x-1/2 rounded-full bg-brand-500"
-                                      :style="`transform: translateX(-50%) rotate(${minDeg}deg); transform-origin: 50% 100%;`"></span>
-                                <span class="absolute left-1/2 bottom-1/2 h-16 w-px -translate-x-1/2 rounded-full bg-error-500"
-                                      :style="`transform: translateX(-50%) rotate(${secDeg}deg); transform-origin: 50% 100%;`"></span>
-                                <span class="absolute left-1/2 top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-gray-800 dark:bg-gray-100"></span>
-                            </div>
-
-                        </div>
-                    </template>
-                </div>
                 {{-- Theme toggle --}}
                 <button
                     class="relative flex h-11 w-11 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-500 shadow-theme-xs transition-colors hover:bg-gray-100 hover:text-gray-700 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white"

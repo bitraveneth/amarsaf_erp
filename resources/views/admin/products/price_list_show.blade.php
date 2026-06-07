@@ -168,7 +168,7 @@
                                     <td class="px-4 py-3 text-right">
                                         @if($row->agent)
                                             <a href="{{ route('admin.agents.pricing.edit', $row->agent) }}" 
-                                               class="inline-flex items-center gap-1 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-white/[0.03]">
+                                               class="erp-btn-action">
                                                 <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
                                                           d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>

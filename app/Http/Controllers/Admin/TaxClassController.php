@@ -15,6 +15,16 @@ class TaxClassController extends Controller
         return view('admin.tax.index', compact('taxClasses'));
     }
 
+    public function show(TaxClass $taxClass)
+    {
+        $products = $taxClass->products()
+            ->orderBy('sku')
+            ->limit(20)
+            ->get();
+
+        return view('admin.tax.show', compact('taxClass', 'products'));
+    }
+
     public function edit(TaxClass $taxClass)
     {
         return view('admin.tax.edit', compact('taxClass'));

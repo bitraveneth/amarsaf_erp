@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class DeliveryController extends Controller
 {
@@ -24,6 +25,13 @@ class DeliveryController extends Controller
             ->orderByDesc('created_at')
             ->paginate(12);
         return view('admin.deliveries.index', compact('deliveries'));
+    }
+
+    public function show(Delivery $delivery)
+    {
+        $delivery->load(['order.agent', 'route', 'vehicle', 'pod', 'items.product']);
+
+        return view('admin.deliveries.show', compact('delivery'));
     }
 
     /**
@@ -332,13 +340,35 @@ class DeliveryController extends Controller
             return $zone . '|' . str_pad((string)$d->order_id, 6, '0', STR_PAD_LEFT);
         })->values();
 
+        $vehicleCapacities = Vehicle::pluck('capacity_crates', 'id');
+        $loadByVehicle = [];
+
         foreach ($sorted as $index => $delivery) {
+            $vehicleId = $delivery->vehicle_id ?: 0;
+            $crates = (float) $delivery->order?->items?->sum('quantity') ?? 0;
+            $capacity = (float) ($vehicleCapacities[$vehicleId] ?? 0);
+            $currentLoad = (float) ($loadByVehicle[$vehicleId] ?? 0);
+
+            if ($capacity > 0 && ($currentLoad + $crates) > $capacity) {
+                $delivery->exception_notes = trim((string) (($delivery->exception_notes ? $delivery->exception_notes . "\n" : '') . 'Route warning: vehicle capacity exceeded'));
+            }
+
+            $loadByVehicle[$vehicleId] = $currentLoad + $crates;
             $delivery->sequence = $index + 1;
             $delivery->save();
         }
 
         return redirect()->route('admin.deliveries.index')
             ->with('status', 'Deliveries sequenced for ' . $date . '.');
+    }
+
+    public function podPdf(Delivery $delivery)
+    {
+        $delivery->load(['order.agent', 'order.items.product', 'route', 'vehicle', 'pod', 'items.product']);
+
+        $pdf = Pdf::loadView('admin.deliveries.pod_pdf', compact('delivery'));
+
+        return $pdf->download('pod-delivery-' . $delivery->id . '.pdf');
     }
 
     public function destroy(Delivery $delivery)

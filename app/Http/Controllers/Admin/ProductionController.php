@@ -13,6 +13,7 @@ use App\Models\StockEntry;
 use App\Models\StockMovement;
 use App\Models\Warehouse;
 use App\Models\Employee;
+use App\Services\Accounting\InventoryAccountingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -58,7 +59,7 @@ class ProductionController extends Controller
     {
         $warehouseIds = auth()->user()?->accessibleWarehouseIds();
         $runs = ProductionRun::with(['product', 'batch', 'warehouse', 'approver'])
-            ->where('qc_status', 'approved')
+            ->whereIn('qc_status', ['approved', 'partial'])
             ->whereNull('stock_confirmed_at')
             ->when($warehouseIds !== null, function ($query) use ($warehouseIds) {
                 $query->whereIn('warehouse_id', $warehouseIds);
@@ -339,10 +340,17 @@ class ProductionController extends Controller
 
         // Only admin/super admin and QC officer can change QC status
         if ($user?->hasAnyRole(['admin', 'super_admin', 'qc_officer'])) {
-            $rules['qc_status'] = 'required|in:pending,approved,rejected';
+            $rules['qc_status'] = 'required|in:pending,approved,rejected,partial';
+            $rules['qc_passed_quantity'] = 'nullable|integer|min:0|max:' . max(0, (int) $production->quantity);
+            $rules['qc_rejected_quantity'] = 'nullable|integer|min:0|max:' . max(0, (int) $production->quantity);
+            $rules['qc_notes'] = 'nullable|string|max:2000';
         }
 
         $data = $request->validate($rules);
+
+        if (array_key_exists('qc_status', $data)) {
+            $data = $this->normalizeQcPayload($data, $production);
+        }
 
         $previousQcStatus = $production->qc_status;
 
@@ -351,7 +359,7 @@ class ProductionController extends Controller
         // If QC just moved to approved for the first time, stamp approver + time
         if (array_key_exists('qc_status', $data)
             && $previousQcStatus !== 'approved'
-            && $production->qc_status === 'approved') {
+            && in_array($production->qc_status, ['approved', 'partial'], true)) {
             if (! $production->approved_at) {
                 $production->approved_at = now();
             }
@@ -364,6 +372,128 @@ class ProductionController extends Controller
         }
 
         return redirect()->route('admin.production.index')->with('status', 'Production run updated.');
+    }
+
+    public function submitQcReview(Request $request, ProductionRun $production)
+    {
+        $this->ensureWarehouseAccess($production->warehouse_id);
+
+        if ($production->stock_confirmed_at) {
+            return redirect()
+                ->route('admin.production.show', $production)
+                ->withErrors(['qc' => 'Stock is already confirmed for this run. QC cannot be changed.']);
+        }
+
+        $user = auth()->user();
+        if (! $user?->hasAnyRole(['admin', 'super_admin', 'qc_officer'])) {
+            abort(403, 'Only QC staff can submit batch quality reviews.');
+        }
+
+        $data = $request->validate([
+            'qc_decision' => 'required|in:approve_all,partial,reject_all',
+            'qc_passed_quantity' => 'nullable|integer|min:0|max:' . max(0, (int) $production->quantity),
+            'qc_rejected_quantity' => 'nullable|integer|min:0|max:' . max(0, (int) $production->quantity),
+            'qc_notes' => 'nullable|string|max:2000',
+            'rejected_disposition' => 'nullable|in:scrap,rework,hold',
+        ]);
+
+        $payload = match ($data['qc_decision']) {
+            'approve_all' => [
+                'qc_status' => 'approved',
+                'qc_passed_quantity' => (int) $production->quantity,
+                'qc_rejected_quantity' => 0,
+            ],
+            'reject_all' => [
+                'qc_status' => 'rejected',
+                'qc_passed_quantity' => 0,
+                'qc_rejected_quantity' => (int) $production->quantity,
+            ],
+            'partial' => [
+                'qc_status' => 'partial',
+                'qc_passed_quantity' => (int) ($data['qc_passed_quantity'] ?? 0),
+                'qc_rejected_quantity' => (int) ($data['qc_rejected_quantity'] ?? 0),
+            ],
+        };
+
+        $passed = (int) $payload['qc_passed_quantity'];
+        $rejected = (int) $payload['qc_rejected_quantity'];
+
+        if ($payload['qc_status'] === 'partial' && ($passed + $rejected !== (int) $production->quantity)) {
+            throw ValidationException::withMessages([
+                'qc_passed_quantity' => 'Passed and rejected quantities must add up to the run quantity (' . (int) $production->quantity . ').',
+            ]);
+        }
+
+        if ($payload['qc_status'] === 'partial' && $passed <= 0) {
+            throw ValidationException::withMessages([
+                'qc_passed_quantity' => 'Enter how many units passed QC, or choose Reject all instead.',
+            ]);
+        }
+
+        $notes = trim((string) ($data['qc_notes'] ?? ''));
+        if (! empty($data['rejected_disposition']) && $rejected > 0) {
+            $notes = trim($notes . ' Rejected units disposition: ' . $data['rejected_disposition'] . '.');
+        }
+
+        $payload['qc_notes'] = $notes !== '' ? $notes : null;
+        $previousQcStatus = $production->qc_status;
+
+        $production->update($payload);
+
+        if ($previousQcStatus !== $production->qc_status
+            && in_array($production->qc_status, ['approved', 'partial'], true)) {
+            $production->approved_at = now();
+            $production->approved_by = auth()->id();
+            $production->save();
+        }
+
+        if ($production->batch && in_array($production->qc_status, ['approved', 'partial', 'rejected'], true)) {
+            $batchStatus = match ($production->qc_status) {
+                'approved' => 'approved',
+                'partial' => 'approved',
+                'rejected' => 'rejected',
+                default => $production->batch->qc_status,
+            };
+
+            $production->batch->update([
+                'qc_status' => $batchStatus,
+                'notes' => trim(($production->batch->notes ? $production->batch->notes . ' ' : '') . ($payload['qc_notes'] ?? '')),
+            ]);
+        }
+
+        return redirect()
+            ->route('admin.production.show', $production)
+            ->with('status', 'QC review saved. ' . number_format($passed) . ' units cleared for stock, ' . number_format($rejected) . ' rejected.');
+    }
+
+    protected function normalizeQcPayload(array $data, ProductionRun $production): array
+    {
+        $quantity = max(0, (int) $production->quantity);
+
+        if (($data['qc_status'] ?? '') === 'approved') {
+            $data['qc_passed_quantity'] = $quantity;
+            $data['qc_rejected_quantity'] = 0;
+        } elseif (($data['qc_status'] ?? '') === 'rejected') {
+            $data['qc_passed_quantity'] = 0;
+            $data['qc_rejected_quantity'] = $quantity;
+        } elseif (($data['qc_status'] ?? '') === 'partial') {
+            $passed = (int) ($data['qc_passed_quantity'] ?? 0);
+            $rejected = (int) ($data['qc_rejected_quantity'] ?? max(0, $quantity - $passed));
+
+            if ($passed + $rejected !== $quantity) {
+                throw ValidationException::withMessages([
+                    'qc_passed_quantity' => 'Passed and rejected quantities must add up to ' . $quantity . '.',
+                ]);
+            }
+
+            $data['qc_passed_quantity'] = $passed;
+            $data['qc_rejected_quantity'] = $rejected;
+        } else {
+            $data['qc_passed_quantity'] = null;
+            $data['qc_rejected_quantity'] = null;
+        }
+
+        return $data;
     }
 
     public function destroy(ProductionRun $production)
@@ -397,9 +527,9 @@ class ProductionController extends Controller
                 ->with('status', 'Only admin or warehouse officer can confirm stock.');
         }
 
-        if ($production->qc_status !== 'approved') {
+        if (! $production->isQcReadyForStock()) {
             return redirect()->route('admin.production.index')
-                ->with('status', 'QC must be approved before confirming stock.');
+                ->with('status', 'QC must approve sellable quantity before confirming stock.');
         }
 
         if ($production->stock_confirmed_at) {
@@ -408,7 +538,6 @@ class ProductionController extends Controller
         }
 
         DB::transaction(function () use ($production) {
-            // Post finished goods + consume BOM materials atomically.
             $this->postStockForApprovedRun($production);
 
             $production->stock_confirmed_at = now();
@@ -416,13 +545,13 @@ class ProductionController extends Controller
                 $production->stock_confirmed_by = auth()->id();
             }
 
-            // Once stock is confirmed we can safely treat the production order / run
-            // as completed from a process point of view.
             if (! in_array($production->status, ['cancelled'], true)) {
                 $production->status = 'completed';
             }
 
             $production->save();
+
+            app(InventoryAccountingService::class)->postProductionRun($production->fresh());
         });
 
         return redirect()->route('admin.production.index')
@@ -450,6 +579,11 @@ class ProductionController extends Controller
             return;
         }
 
+        $sellableQty = $run->sellableQuantity();
+        if ($sellableQty <= 0) {
+            return;
+        }
+
         // Consume raw materials based on active BOM, if any
         $bom = BillOfMaterial::where('product_id', $run->product_id)
             ->where('is_active', true)
@@ -462,14 +596,14 @@ class ProductionController extends Controller
                 'warehouse_id' => $run->warehouse_id,
                 'product_id' => $run->product_id,
                 'batch_id' => $run->batch_id,
-                'quantity' => $run->quantity,
+                'quantity' => $sellableQty,
                 'status' => 'available',
             ]);
 
             StockMovement::recordFor(
                 $entry,
                 'production-output',
-                (float) $run->quantity,
+                (float) $sellableQty,
                 'Confirmed from production run ' . ($run->order_number ?? ('#' . $run->id))
             );
 
@@ -625,15 +759,16 @@ class ProductionController extends Controller
             'warehouse_id' => $run->warehouse_id,
             'product_id' => $run->product_id,
             'batch_id' => $run->batch_id,
-            'quantity' => $run->quantity,
+            'quantity' => $sellableQty,
             'status' => 'available',
         ]);
 
         StockMovement::recordFor(
             $entry,
             'production-output',
-            (float) $run->quantity,
+            (float) $sellableQty,
             'Confirmed from production run ' . ($run->order_number ?? ('#' . $run->id))
+            . ($run->qc_rejected_quantity ? ' (' . (int) $run->qc_rejected_quantity . ' units rejected at QC)' : '')
         );
 
         // Persist material cost snapshot on the production run so that future

@@ -1,107 +1,41 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="max-w-7xl mx-auto space-y-8">
-    <!-- Header with gradient -->
-    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-            <div class="flex items-center gap-3">
-                <div class="relative">
-                    <div class="absolute -inset-1 bg-gradient-to-r from-brand-500 to-brand-600 rounded-xl blur opacity-20"></div>
-                    <div class="relative flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-brand-600 text-white shadow-lg">
-                        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z" />
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 7h6m-6 4h6m-6 4h4" />
-                        </svg>
-                    </div>
-                </div>
-                <div>
-                    <h1 class="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
-                        New Order
-                    </h1>
-                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                        Capture SKU, quantity, and delivery info for the agent
-                    </p>
-                </div>
-            </div>
-        </div>
-        
-        <a href="{{ route('admin.orders.index') }}" 
-           class="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white/80 backdrop-blur-sm px-5 py-2.5 text-sm font-medium text-gray-700 shadow-xs hover:bg-white hover:shadow-sm dark:border-gray-700 dark:bg-gray-900/80 dark:text-gray-300 dark:hover:bg-gray-900 transition-all duration-200">
-            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
-            </svg>
-            Back to Orders
-        </a>
-    </div>
+<div class="erp-order-page">
+    <x-admin.order-toolbar
+        title="New sales order"
+        subtitle="Sell finished products to agents — confirm, fulfill, then deliver."
+        :back-url="route('admin.orders.index')"
+        back-label="All sales orders"
+    />
 
-    <!-- Form Card -->
-    <div class="rounded-3xl border border-gray-200 bg-white shadow-xl dark:border-gray-800 dark:bg-gray-900 overflow-hidden">
-        <!-- Card Header -->
-        <div class="border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white px-8 py-6 dark:border-gray-800 dark:from-gray-900/50 dark:to-gray-900">
-            <div class="flex items-center gap-4">
-                <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-500 to-brand-600 text-white shadow-md">
-                    <svg class="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                    </svg>
-                </div>
-                <div>
-                    <h2 class="text-xl font-bold text-gray-900 dark:text-white">Order Details</h2>
-                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Enter agent information and order items</p>
-                </div>
-            </div>
-            
-            <!-- Progress Steps -->
-            <div class="mt-6 flex items-center gap-2">
-                <div class="flex items-center gap-2">
-                    <span class="flex h-7 w-7 items-center justify-center rounded-full bg-brand-100 text-xs font-semibold text-brand-700 dark:bg-brand-900/50 dark:text-brand-400">1</span>
-                    <span class="text-sm font-medium text-gray-900 dark:text-white">Agent & Order</span>
-                </div>
-                <div class="h-0.5 w-8 bg-gray-200 dark:bg-gray-700"></div>
-                <div class="flex items-center gap-2">
-                    <span class="flex h-7 w-7 items-center justify-center rounded-full bg-gray-100 text-xs font-semibold text-gray-500 dark:bg-gray-800 dark:text-gray-400">2</span>
-                    <span class="text-sm font-medium text-gray-500 dark:text-gray-400">Order Items</span>
-                </div>
-                <div class="h-0.5 w-8 bg-gray-200 dark:bg-gray-700"></div>
-                <div class="flex items-center gap-2">
-                    <span class="flex h-7 w-7 items-center justify-center rounded-full bg-gray-100 text-xs font-semibold text-gray-500 dark:bg-gray-800 dark:text-gray-400">3</span>
-                    <span class="text-sm font-medium text-gray-500 dark:text-gray-400">Review</span>
-                </div>
-            </div>
+    <form action="{{ route('admin.orders.store') }}" method="POST" class="erp-order-form">
+        @csrf
+
+        <div class="erp-order-form__workflow">
+            <x-admin.order-workflow type="sales" :step="1" variant="hero" />
         </div>
 
-        <!-- Form Body -->
-        <div class="p-8">
-            <form action="{{ route('admin.orders.store') }}" method="POST">
-                @csrf
-                
+        <div class="erp-order-form__body">
                 <!-- Agent & Order Section -->
-                <div class="space-y-6">
-                    <div class="flex items-center gap-3">
-                        <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-brand-100 to-brand-50 dark:from-brand-900/30 dark:to-brand-800/30">
-                            <svg class="h-4 w-4 text-brand-700 dark:text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                            </svg>
+                <section class="erp-order-panel">
+                    <div class="erp-order-panel__head">
+                        <div>
+                            <h3 class="erp-order-panel__title">Agent &amp; delivery</h3>
+                            <p class="erp-order-panel__desc">Who is ordering and where goods should go</p>
                         </div>
-                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Agent & Order Information</h3>
                     </div>
                     
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pl-11">
+                    <div class="erp-order-field-grid">
                         <!-- Agent -->
-                        <div class="space-y-2">
-                            <label for="agent_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Agent <span class="text-error-500">*</span>
+                        <div class="lg:col-span-4 space-y-2">
+                            <label for="agent_id" class="erp-order-label">
+                                Agent <span class="text-red-500">*</span>
                             </label>
-                            <div class="relative group">
-                                <div class="absolute inset-y-0 left-0 flex items-center pl-3">
-                                    <svg class="h-5 w-5 text-gray-400 group-focus-within:text-brand-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                                    </svg>
-                                </div>
-                                <select id="agent_id" 
-                                        name="agent_id" 
-                                        required
-                                        class="w-full rounded-xl border border-gray-200 bg-white/50 pl-10 pr-10 py-3 text-sm text-gray-900 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800/50 dark:text-white appearance-none transition-all">
+                            <select id="agent_id" 
+                                    name="agent_id" 
+                                    required
+                                    class="erp-order-input">
                                     <option value="">Select agent</option>
                                     @foreach($agents as $agent)
                                         <option value="{{ $agent->id }}"{{ old('agent_id') == $agent->id ? ' selected' : '' }}>
@@ -109,14 +43,8 @@
                                         </option>
                                     @endforeach
                                 </select>
-                                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
-                                    <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                                    </svg>
-                                </div>
-                            </div>
                             @error('agent_id')
-                                <p class="text-sm text-error-600 dark:text-error-500">{{ $message }}</p>
+                                <p class="text-sm text-red-600">{{ $message }}</p>
                             @enderror
                         </div>
 
@@ -303,25 +231,19 @@
                             </div>
                         </div>
                     </div>
-                </div>
+                </section>
 
                 <!-- Order Items Section -->
-                <div class="mt-12 space-y-6">
-                    <div class="flex items-center gap-3">
-                        <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-brand-100 to-brand-50 dark:from-brand-900/30 dark:to-brand-800/30">
-                            <svg class="h-4 w-4 text-brand-700 dark:text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                            </svg>
-                        </div>
+                <section class="erp-order-lines mt-6">
+                    <div class="erp-order-lines__head">
                         <div>
-                            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Order Items</h3>
-                            <p class="text-sm text-gray-500 dark:text-gray-400">Add SKUs, quantity, and negotiated price (from price list or default)</p>
+                            <h3 class="erp-order-panel__title">Order lines</h3>
+                            <p class="erp-order-panel__desc">Finished products, quantities and negotiated prices</p>
                         </div>
                     </div>
 
-                    <!-- Order Items Container -->
-                    <div id="order-items" class="space-y-4 pl-11">
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 rounded-xl bg-gray-50 dark:bg-gray-800/30 border border-gray-100 dark:border-gray-800">
+                    <div id="order-items" class="divide-y divide-gray-100 dark:divide-gray-800">
+                        <div class="grid grid-cols-1 gap-4 p-5 md:grid-cols-3">
                             <div class="space-y-2">
                                 <label class="block text-xs font-medium text-gray-700 dark:text-gray-300">Product</label>
                                 <select name="items[0][product_id]" 
@@ -366,36 +288,19 @@
                         </div>
                     </div>
 
-                    <!-- Add Item Button -->
-                    <div class="pl-11">
-                        <button type="button" 
-                                id="add-item"
-                                class="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white/80 px-4 py-2.5 text-sm font-medium text-gray-700 shadow-xs hover:bg-white hover:shadow-sm dark:border-gray-700 dark:bg-gray-800/80 dark:text-gray-300 dark:hover:bg-gray-800 transition-all duration-200">
-                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                            </svg>
-                            Add Another Item
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Form Actions -->
-                <div class="mt-12 flex items-center justify-end gap-4 border-t border-gray-100 pt-6 dark:border-gray-800">
-                    <a href="{{ route('admin.orders.index') }}" 
-                       class="inline-flex items-center rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition-all">
-                        Cancel
-                    </a>
-                    <button type="submit"
-                            class="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-brand-500 to-brand-600 px-6 py-2.5 text-sm font-semibold text-white shadow-md hover:from-brand-600 hover:to-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500/50 transition-all duration-200">
-                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                        </svg>
-                        Create Order
+                    <button type="button" id="add-item" class="erp-order-lines__add">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                        Add line item
                     </button>
-                </div>
-            </form>
+                </section>
         </div>
-    </div>
+
+        <x-admin.order-footer
+            submit-label="Create sales order"
+            :cancel-url="route('admin.orders.index')"
+            hint="Order starts as draft until confirmed"
+        />
+    </form>
 </div>
 
 @push('scripts')

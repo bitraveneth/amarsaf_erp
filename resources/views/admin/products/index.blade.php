@@ -13,10 +13,6 @@
             </p>
         </div>
         <div class="flex items-center gap-3">
-            <a href="{{ route('admin.products.export') }}"
-               class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-white/[0.03]">
-                Export CSV
-            </a>
             <a href="{{ route('admin.products.create') }}"
                data-tour="products-primary-action"
                class="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-semibold text-white shadow-theme-xs hover:bg-brand-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/50">
@@ -146,27 +142,14 @@
                                 @endif
                             </td>
                             <td class="px-5 py-3 text-right">
-                                <div class="inline-flex items-center gap-2">
-                                    <a href="{{ route('admin.products.show', $product) }}"
-                                       class="text-theme-xs font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300">
-                                        View
-                                    </a>
-                                    <a href="{{ route('admin.products.edit', $product) }}"
-                                       class="text-theme-xs font-medium text-gray-600 hover:text-gray-800 dark:text-gray-300 dark:hover:text-gray-100">
-                                        Edit
-                                    </a>
-                                    <form action="{{ route('admin.products.destroy', $product) }}"
-                                          method="POST"
-                                          class="inline"
-                                          onsubmit="return confirm('Delete this product?');">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit"
-                                                class="text-theme-xs font-medium text-error-600 hover:text-error-700 dark:text-error-400 dark:hover:text-error-300">
-                                            Delete
-                                        </button>
-                                    </form>
-                                </div>
+                                <x-admin.action-group>
+                                    <x-admin.action-view :href="route('admin.products.show', $product)" />
+                                    <x-admin.action-edit :href="route('admin.products.edit', $product)" />
+                                    <x-admin.action-delete
+                                        :action="route('admin.products.destroy', $product)"
+                                        confirm="Delete this product?"
+                                    />
+                                </x-admin.action-group>
                             </td>
                         </tr>
                     @endforeach

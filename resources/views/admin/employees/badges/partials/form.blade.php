@@ -74,7 +74,7 @@
                             </svg>
                         </div>
                         @php
-                            $currentColor = old('color', $badge->color ?? '#465fff');
+                            $currentColor = old('color', $badge->color ?? '#5f4bff');
                         @endphp
                         <input type="color" 
                                id="color" 

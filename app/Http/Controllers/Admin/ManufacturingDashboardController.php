@@ -2,39 +2,36 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Admin\Concerns\ResolvesDashboardPeriod;
 use App\Http\Controllers\Controller;
 use App\Models\Batch;
 use App\Models\ProductionRun;
-use Carbon\Carbon;
+use Illuminate\Http\Request;
 
 class ManufacturingDashboardController extends Controller
 {
-    public function __invoke()
+    use ResolvesDashboardPeriod;
+
+    public function __invoke(Request $request)
     {
-        $today = Carbon::today();
-        $startOfMonth = $today->copy()->startOfMonth();
-        $endOfMonth = $today->copy()->endOfMonth();
+        [$from, $to, $range] = $this->resolveDashboardPeriod($request);
         $warehouseIds = auth()->user()?->accessibleWarehouseIds();
 
         $runQuery = ProductionRun::with(['product', 'warehouse'])
-            ->whereBetween('created_at', [$startOfMonth, $endOfMonth])
+            ->whereBetween('created_at', [$from, $to])
             ->when($warehouseIds !== null, function ($query) use ($warehouseIds) {
                 $query->whereIn('warehouse_id', $warehouseIds);
             });
 
         $runs = $runQuery->get();
-
         $totalRuns = $runs->count();
         $totalQuantity = $runs->sum('quantity');
-
         $approvedRuns = $runs->where('qc_status', 'approved');
         $approvedQuantity = $approvedRuns->sum('quantity');
-
         $pendingQcCount = $runs->where('qc_status', '!=', 'approved')->count();
 
-        // Batches produced this month
         $batches = Batch::with('product')
-            ->whereBetween('production_date', [$startOfMonth, $endOfMonth])
+            ->whereBetween('production_date', [$from->toDateString(), $to->toDateString()])
             ->when($warehouseIds !== null, function ($query) use ($warehouseIds) {
                 $query->whereHas('productionRuns', function ($runQuery) use ($warehouseIds) {
                     $runQuery->whereIn('warehouse_id', $warehouseIds);
@@ -43,6 +40,7 @@ class ManufacturingDashboardController extends Controller
             ->get();
 
         $batchCount = $batches->count();
+        $today = now()->startOfDay();
 
         $expiringSoon = Batch::with('product')
             ->whereNotNull('expiry_date')
@@ -54,24 +52,21 @@ class ManufacturingDashboardController extends Controller
             })
             ->get();
 
-        // Top products by produced quantity
         $topProducts = $runs
             ->groupBy(fn ($run) => (string) ($run->product_id ?? 'unknown'))
             ->map(function ($group) {
                 $product = $group->first()->product;
 
                 return [
-                    'product_id' => $product?->id,
-                    'product_name' => $product?->name ?? 'Unknown product',
-                    'qty' => $group->sum('quantity'),
-                    'runs' => $group->count(),
+                    'label' => $product?->name ?? 'Unknown product',
+                    'value' => $group->sum('quantity'),
+                    'meta' => $group->count() . ' runs',
                 ];
             })
-            ->sortByDesc('qty')
-            ->values()
-            ->take(5);
+            ->sortByDesc('value')
+            ->take(5)
+            ->values();
 
-        // Output by line / shift
         $byLine = $runs
             ->groupBy('line')
             ->map(fn ($group) => $group->sum('quantity'))
@@ -82,8 +77,15 @@ class ManufacturingDashboardController extends Controller
             ->map(fn ($group) => $group->sum('quantity'))
             ->sortDesc();
 
+        $chartLabels = $byLine->keys()->map(fn ($line) => 'Line ' . ($line ?: '—'))->values()->all();
+        $chartValues = $byLine->values()->map(fn ($qty) => (float) $qty)->all();
+
         return view('admin.manufacturing.dashboard', [
-            'periodLabel' => $startOfMonth->format('d M Y') . ' – ' . $endOfMonth->format('d M Y'),
+            'from' => $from,
+            'to' => $to,
+            'range' => $range,
+            'rangeOptions' => $this->dashboardRangeOptions(),
+            'periodLabel' => $this->dashboardPeriodLabel($from, $to),
             'totalRuns' => $totalRuns,
             'totalQuantity' => $totalQuantity,
             'approvedQuantity' => $approvedQuantity,
@@ -94,6 +96,8 @@ class ManufacturingDashboardController extends Controller
             'topProducts' => $topProducts,
             'byLine' => $byLine,
             'byShift' => $byShift,
+            'chartLabels' => $chartLabels,
+            'chartValues' => $chartValues,
         ]);
     }
 }

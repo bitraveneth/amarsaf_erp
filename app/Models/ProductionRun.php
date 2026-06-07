@@ -20,6 +20,9 @@ class ProductionRun extends Model
         'status',
         'supervisor_id',
         'qc_status',
+        'qc_passed_quantity',
+        'qc_rejected_quantity',
+        'qc_notes',
         'approved_by',
         'approved_at',
         'material_unit_cost',
@@ -32,6 +35,8 @@ class ProductionRun extends Model
 
     protected $casts = [
         'quantity' => 'integer',
+        'qc_passed_quantity' => 'integer',
+        'qc_rejected_quantity' => 'integer',
         'approved_at' => 'datetime',
         'stock_confirmed_at' => 'datetime',
         'material_unit_cost' => 'decimal:4',
@@ -71,5 +76,28 @@ class ProductionRun extends Model
     public function materialIssues()
     {
         return $this->hasMany(ProductionMaterialIssue::class);
+    }
+
+    public function sellableQuantity(): int
+    {
+        if ($this->qc_status === 'rejected') {
+            return 0;
+        }
+
+        if ($this->qc_passed_quantity !== null) {
+            return max(0, (int) $this->qc_passed_quantity);
+        }
+
+        if (in_array($this->qc_status, ['approved', 'partial'], true)) {
+            return max(0, (int) $this->quantity);
+        }
+
+        return 0;
+    }
+
+    public function isQcReadyForStock(): bool
+    {
+        return in_array($this->qc_status, ['approved', 'partial'], true)
+            && $this->sellableQuantity() > 0;
     }
 }

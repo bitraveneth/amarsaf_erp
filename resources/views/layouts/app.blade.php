@@ -40,8 +40,8 @@
             applyTheme(theme) {
                 const html = document.documentElement;
                 const body = document.body;
-                const lightBg = '#F9FAFB';
-                const darkBg = '#101828';
+                const lightBg = '#F3F4F6';
+                const darkBg = '#0E0F14';
 
                 if (theme === 'dark') {
                     html.classList.add('dark');
@@ -49,7 +49,7 @@
                     html.style.colorScheme = 'dark';
                     if (body) {
                         body.classList.add('dark', 'bg-gray-900');
-                        body.classList.remove('bg-gray-50');
+                        body.classList.remove('bg-canvas', 'bg-gray-50');
                         body.style.backgroundColor = darkBg;
                         body.style.colorScheme = 'dark';
                     }
@@ -59,7 +59,7 @@
                     html.style.colorScheme = 'light';
                     if (body) {
                         body.classList.remove('dark', 'bg-gray-900');
-                        body.classList.add('bg-gray-50');
+                        body.classList.add('bg-canvas');
                         body.style.backgroundColor = lightBg;
                         body.style.colorScheme = 'light';
                     }
@@ -257,7 +257,7 @@
                 : { width: '100%' }">
             @include('layouts.app-header')
 
-            <div class="mx-auto w-full min-w-0 max-w-(--breakpoint-2xl) p-4 md:p-6 print:!mx-0 print:!w-full print:!max-w-none print:!p-0" data-tour="page-content">
+            <div class="erp-page-shell mx-auto w-full min-w-0 max-w-(--breakpoint-2xl) p-4 md:p-6 print:!mx-0 print:!w-full print:!max-w-none print:!p-0" data-tour="page-content">
                 @if(session('status'))
                     <div x-data="{ open: true }"
                          x-init="setTimeout(() => open = false, 2600)"
@@ -343,8 +343,12 @@
         </div>
     </div>
 
-    <div class="fixed bottom-5 right-5 z-[1001] print-hidden" x-data>
-        <div class="flex flex-col items-end gap-3">
+    @auth
+        <x-assistant.floating-agent />
+    @endauth
+
+    <div class="fixed bottom-5 left-5 z-[1001] print-hidden" x-data>
+        <div class="flex flex-col items-start gap-3">
             <div x-show="$store.tour.launcherOpen"
                  x-cloak
                  x-transition:enter="transition ease-out duration-200"
@@ -404,8 +408,11 @@
             <button type="button"
                     data-tour="help-launcher"
                     @click="$store.tour.toggleLauncher()"
-                    class="flex h-14 w-14 items-center justify-center rounded-full bg-brand-500 text-xl font-semibold text-white shadow-2xl transition hover:bg-brand-600">
-                ?
+                    class="flex h-11 w-11 items-center justify-center rounded-full border border-gray-200/80 bg-white/90 text-gray-600 shadow-lg backdrop-blur transition hover:bg-white hover:text-brand-600 dark:border-gray-700 dark:bg-gray-900/90 dark:text-gray-300 dark:hover:text-brand-300"
+                    aria-label="Open ERP help tour">
+                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
             </button>
         </div>
     </div>

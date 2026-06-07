@@ -4,107 +4,51 @@
 @php
     $isReturnOrder = ($order->order_type ?? null) === 'return';
     $currencyCode = config('app.currency', 'BDT');
+    $salesWorkflowStep = match ($order->status) {
+        'draft' => 2,
+        'confirmed' => 3,
+        'picked', 'packed' => 3,
+        'dispatched' => 4,
+        'delivered' => 5,
+        default => 1,
+    };
+    $salesInProgress = in_array($order->status, ['picked', 'packed', 'dispatched'], true);
+    $statusColors = [
+        'draft' => 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400',
+        'pending' => 'bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-400',
+        'confirmed' => 'bg-success-100 text-success-700 dark:bg-success-500/20 dark:text-success-400',
+        'picked' => 'bg-brand-100 text-brand-700 dark:bg-brand-500/20 dark:text-brand-400',
+        'packed' => 'bg-brand-100 text-brand-700 dark:bg-brand-500/20 dark:text-brand-400',
+        'dispatched' => 'bg-blue-light-100 text-blue-light-700 dark:bg-blue-light-500/20 dark:text-blue-light-400',
+        'processing' => 'bg-brand-100 text-brand-700 dark:bg-brand-500/20 dark:text-brand-400',
+        'shipped' => 'bg-blue-light-100 text-blue-light-700 dark:bg-blue-light-500/20 dark:text-blue-light-400',
+        'delivered' => 'bg-success-100 text-success-700 dark:bg-success-500/20 dark:text-success-400',
+        'cancelled' => 'bg-error-100 text-error-700 dark:bg-error-500/20 dark:text-error-400',
+        'canceled' => 'bg-error-100 text-error-700 dark:bg-error-500/20 dark:text-error-400',
+        'exception' => 'bg-error-100 text-error-700 dark:bg-error-500/20 dark:text-error-400',
+    ];
+    $statusColor = $statusColors[$order->status] ?? 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400';
 @endphp
-<div class="screen-order-view max-w-7xl mx-auto space-y-8">
-    <!-- Header with gradient -->
-    <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
-        <div>
-            <div class="flex items-center gap-3">
-                <div class="relative">
-                    <div class="absolute -inset-1 bg-gradient-to-r from-brand-500 to-brand-600 rounded-xl blur opacity-20"></div>
-                    <div class="relative flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-brand-600 text-white shadow-lg">
-                        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z" />
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 7h6m-6 4h6m-6 4h4" />
-                        </svg>
-                    </div>
-                </div>
-                <div>
-                    <div class="flex items-center gap-3 flex-wrap">
-                        <h1 class="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
-                            {{ $isReturnOrder ? 'Return Order' : 'Order' }} #{{ $order->id }}
-                        </h1>
-                        @php
-                            $statusColors = [
-                                'draft' => 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400',
-                                'confirmed' => 'bg-success-100 text-success-700 dark:bg-success-500/20 dark:text-success-400',
-                                'picked' => 'bg-brand-100 text-brand-700 dark:bg-brand-500/20 dark:text-brand-400',
-                                'packed' => 'bg-blue-light-100 text-blue-light-700 dark:bg-blue-light-500/20 dark:text-blue-light-400',
-                                'dispatched' => 'bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-400',
-                                'delivered' => 'bg-success-100 text-success-700 dark:bg-success-500/20 dark:text-success-400',
-                            ];
-                            $statusColor = $statusColors[$order->status] ?? 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400';
-                        @endphp
-                        <span class="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium {{ $statusColor }}">
-                            <span class="h-1.5 w-1.5 rounded-full {{ $order->status === 'delivered' || $order->status === 'confirmed' ? 'bg-success-500' : ($order->status === 'picked' ? 'bg-brand-500' : ($order->status === 'packed' ? 'bg-blue-light-500' : ($order->status === 'dispatched' ? 'bg-purple-500' : 'bg-gray-500'))) }}"></span>
-                            {{ ucfirst($order->status) }}
-                        </span>
-                        @if($isReturnOrder)
-                            <span class="inline-flex items-center rounded-full bg-error-100 px-3 py-1.5 text-xs font-medium text-error-700 dark:bg-error-500/20 dark:text-error-400">
-                                Customer return
-                            </span>
-                        @endif
-                    </div>
-                    <div class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-gray-600 dark:text-gray-400">
-                        <div class="flex items-center gap-1.5">
-                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                            </svg>
-                            <span>{{ $order->agent->name }} · {{ $order->agent->zone ?? '—' }}</span>
-                        </div>
-                        <div class="flex items-center gap-1.5">
-                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 20l4-16 4 4 4-4 4 16H7z" />
-                            </svg>
-                            <span class="capitalize">{{ $isReturnOrder ? 'Return' : $order->order_type }}</span>
-                        </div>
-                        @if($order->agent_reference)
-                        <div class="flex items-center gap-1.5">
-                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 20l4-16 4 4 4-4 4 16H7z" />
-                            </svg>
-                            <span>PO: {{ $order->agent_reference }}</span>
-                        </div>
-                        @endif
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="flex flex-wrap items-center gap-3">
-            <a href="{{ route('admin.orders.index') }}" 
-               class="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white/80 backdrop-blur-sm px-4 py-2.5 text-sm font-medium text-gray-700 shadow-xs hover:bg-white hover:shadow-sm dark:border-gray-700 dark:bg-gray-900/80 dark:text-gray-300 dark:hover:bg-gray-900 transition-all duration-200">
-                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
-                </svg>
-                Orders
-            </a>
+<div class="erp-order-page screen-order-view">
+    <x-admin.order-toolbar
+        :title="($isReturnOrder ? 'Return order' : 'Sales order') . ' #' . $order->id"
+        :subtitle="$order->agent->name . ' · ' . ucfirst($order->order_type ?? 'regular')"
+        :back-url="route('admin.orders.index')"
+        back-label="All sales orders"
+    >
+        <x-slot:actions>
             @if($isReturnOrder)
-                <a href="{{ route('admin.returns.customer.create') }}?order_id={{ $order->id }}"
-                   class="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-error-500 to-error-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md hover:from-error-600 hover:to-error-700 focus:outline-none focus:ring-2 focus:ring-error-500/50 transition-all duration-200">
-                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                    </svg>
-                    Record stock return
-                </a>
+                <a href="{{ route('admin.returns.customer.create') }}?order_id={{ $order->id }}" class="erp-order-btn erp-order-btn--secondary">Record return</a>
+            @else
+                <a href="{{ route('admin.orders.picking-list', $order) }}" class="erp-order-btn erp-order-btn--brand">Picking list</a>
             @endif
-            <button type="button" 
-                    onclick="window.print()"
-                    class="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white/80 backdrop-blur-sm px-4 py-2.5 text-sm font-medium text-gray-700 shadow-xs hover:bg-white hover:shadow-sm dark:border-gray-700 dark:bg-gray-900/80 dark:text-gray-300 dark:hover:bg-gray-900 transition-all duration-200">
-                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2z" />
-                </svg>
-                Print
-            </button>
-            @unless($isReturnOrder)
-                <a href="{{ route('admin.orders.picking-list', $order) }}" 
-                   class="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-brand-500 to-brand-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md hover:from-brand-600 hover:to-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500/50 transition-all duration-200">
-                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75z" />
-                    </svg>
-                    Picking List
-                </a>
-            @endunless
+            <x-admin.document-actions type="sales-order" :id="$order->id" />
+        </x-slot:actions>
+    </x-admin.order-toolbar>
+
+    <div class="erp-order-form mb-6">
+        <div class="erp-order-form__workflow">
+            <x-admin.order-workflow type="sales" :step="$salesWorkflowStep" :in-progress="$salesInProgress" variant="hero" />
         </div>
     </div>
 

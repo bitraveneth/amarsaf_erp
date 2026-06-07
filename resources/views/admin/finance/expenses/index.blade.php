@@ -128,29 +128,13 @@
                                     </span>
                                 </td>
                                 <td class="px-5 py-4 text-right">
-                                    <div class="flex items-center justify-end gap-2">
-                                        <a href="{{ route('admin.expenses.edit', $expense) }}" 
-                                           class="edit-button inline-flex items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-theme-sm font-medium text-gray-700 shadow-theme-xs transition hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-white/[0.03] dark:hover:text-white">
-                                            <svg width="18" height="18" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                <path d="M14.1667 2.5L17.5 5.83333M2.5 14.1667L11.6667 5L15 8.33333L5.83333 17.5H2.5V14.1667Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                                            </svg>
-                                            Edit
-                                        </a>
-                                        <form action="{{ route('admin.expenses.destroy', $expense) }}" 
-                                              method="POST" 
-                                              class="inline-flex"
-                                              onsubmit="return confirm('Delete this expense? This cannot be undone.');">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" 
-                                                    class="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-theme-sm font-medium text-error-700 shadow-theme-xs transition hover:bg-error-50 hover:text-error-800 dark:border-gray-700 dark:bg-gray-800 dark:text-error-400 dark:hover:bg-error-500/20">
-                                                <svg width="18" height="18" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                    <path d="M2.5 5H4.16667H17.5M15.8333 5V16.6667C15.8333 17.5 15 18.3333 14.1667 18.3333H5.83333C5 18.3333 4.16667 17.5 4.16667 16.6667V5M6.66667 5V3.33333C6.66667 2.5 7.5 1.66667 8.33333 1.66667H11.6667C12.5 1.66667 13.3333 2.5 13.3333 3.33333V5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                                                </svg>
-                                                Delete
-                                            </button>
-                                        </form>
-                                    </div>
+                                    <x-admin.action-group>
+                                        <x-admin.action-edit :href="route('admin.expenses.edit', $expense)" />
+                                        <x-admin.action-delete
+                                            :action="route('admin.expenses.destroy', $expense)"
+                                            confirm="Delete this expense? This cannot be undone."
+                                        />
+                                    </x-admin.action-group>
                                 </td>
                             </tr>
                         @endforeach

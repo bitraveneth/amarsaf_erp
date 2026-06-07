@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\AgentController;
 use App\Http\Controllers\Api\EmployeeController;
 use App\Http\Controllers\Api\DriverController;
+use App\Http\Controllers\Api\FinanceSummaryController;
 
 /*
 |--------------------------------------------------------------------------
@@ -34,7 +35,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('invoices', [AgentController::class, 'invoices']);
         Route::get('invoices/{invoice}', [AgentController::class, 'showInvoice']);
         Route::get('dashboard', [AgentController::class, 'dashboard']);
+        Route::get('commissions', [AgentController::class, 'commissions']);
     });
+
+    Route::get('finance/summary', [FinanceSummaryController::class, 'summary']);
 
     Route::prefix('employee')->group(function () {
         Route::get('profile', [EmployeeController::class, 'profile']);

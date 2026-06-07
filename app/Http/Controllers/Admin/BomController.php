@@ -20,6 +20,24 @@ class BomController extends Controller
         return view('admin.boms.index', compact('boms'));
     }
 
+    public function show(BillOfMaterial $bom)
+    {
+        $bom->load(['product', 'items.component']);
+
+        $bomUnitCost = $bom->material_unit_cost;
+        if (is_null($bomUnitCost)) {
+            $acc = 0.0;
+            foreach ($bom->items as $item) {
+                if (! is_null($item->unit_cost)) {
+                    $acc += (float) $item->unit_cost * (float) $item->quantity;
+                }
+            }
+            $bomUnitCost = $acc > 0 ? $acc : null;
+        }
+
+        return view('admin.boms.show', compact('bom', 'bomUnitCost'));
+    }
+
     public function create()
     {
         // Finished products that can be produced via BOMs
@@ -143,7 +161,7 @@ class BomController extends Controller
             ]);
         }
 
-        return redirect()->route('admin.boms.index')->with('status', 'BOM updated.');
+        return redirect()->route('admin.boms.show', $bom)->with('status', 'BOM updated.');
     }
 
     public function destroy(BillOfMaterial $bom)

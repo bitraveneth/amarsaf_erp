@@ -16,7 +16,7 @@
                 </div>
                 <div>
                     <h1 class="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
-                        Cashflow
+                        Cash flow
                     </h1>
                     <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
                         {{ $from->format('d M Y') }} – {{ $to->format('d M Y') }}
@@ -36,14 +36,14 @@
         </div>
     </div>
 
-    <!-- Cashflow Card -->
+    <!-- Cash flow Card -->
     <div class="relative overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-xl dark:border-gray-800 dark:bg-gray-900">
         <!-- Decorative background -->
         <div class="absolute right-0 top-0 -mt-10 -mr-10 h-64 w-64 rounded-full bg-gradient-to-br from-brand-100 to-brand-50 opacity-20 dark:from-brand-900 dark:to-brand-800 blur-3xl"></div>
         <div class="absolute bottom-0 left-0 -mb-10 -ml-10 h-64 w-64 rounded-full bg-gradient-to-br from-success-100 to-success-50 opacity-20 dark:from-success-900 dark:to-success-800 blur-3xl"></div>
         
         <div class="relative p-8">
-            <!-- Cashflow Visualization -->
+            <!-- Cash flow Visualization -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <!-- Cash Inflows -->
                 <div class="flex flex-col items-center p-6 rounded-2xl bg-gradient-to-br from-success-50 to-white dark:from-success-950/30 dark:to-gray-900 border border-success-100 dark:border-success-900/30">
@@ -77,14 +77,14 @@
                     </p>
                 </div>
 
-                <!-- Net Cashflow -->
+                <!-- Net Cash flow -->
                 <div class="flex flex-col items-center p-6 rounded-2xl bg-gradient-to-br from-brand-50 to-white dark:from-brand-950/30 dark:to-gray-900 border border-brand-100 dark:border-brand-900/30">
                     <div class="flex h-16 w-16 items-center justify-center rounded-full bg-brand-100 dark:bg-brand-900/30 mb-4">
                         <svg class="h-8 w-8 text-brand-600 dark:text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
                         </svg>
                     </div>
-                    <p class="text-sm font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1">Net Cashflow</p>
+                    <p class="text-sm font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1">Net Cash flow</p>
                     <p class="text-3xl font-bold {{ $net >= 0 ? 'text-brand-600 dark:text-brand-400' : 'text-error-600 dark:text-error-500' }}">
                         {{ $net >= 0 ? '+' : '-' }}{{ number_format(abs($net), 2) }}
                     </p>
@@ -130,9 +130,9 @@
         </div>
     </div>
 
-    <!-- Cashflow Ratio Card -->
+    <!-- Cash flow Ratio Card -->
     <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-        <!-- Cashflow Ratio -->
+        <!-- Cash flow Ratio -->
         <div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
             <div class="flex items-center gap-3 mb-4">
                 <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-100 dark:bg-brand-900/30">
@@ -140,7 +140,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                     </svg>
                 </div>
-                <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Cashflow Ratio</h3>
+                <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Cash flow Ratio</h3>
             </div>
             @php
                 $ratio = $cashOut > 0 ? $cashIn / $cashOut : ($cashIn > 0 ? 999 : 0);
@@ -214,7 +214,7 @@
                 </svg>
             </div>
             <div class="flex-1">
-                <h3 class="text-sm font-semibold text-gray-900 dark:text-white">About Cashflow</h3>
+                <h3 class="text-sm font-semibold text-gray-900 dark:text-white">About Cash flow</h3>
                 <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
                     Cash inflows represent money received from customers (receipts), while cash outflows represent 
                     payments made to suppliers, employees, and other expenses. A positive net cashflow indicates 

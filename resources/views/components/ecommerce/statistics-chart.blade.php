@@ -1,53 +1,47 @@
 @php
     $rangeLabel = 'Last 7 days';
+    $options = [
+        ['value' => 'overview', 'label' => 'Overview'],
+        ['value' => 'sales', 'label' => 'Sales'],
+        ['value' => 'production', 'label' => 'Production'],
+        ['value' => 'revenue', 'label' => 'Revenue'],
+    ];
 @endphp
 
-<div
-    class="rounded-2xl border border-gray-200 bg-white px-5 pb-5 pt-5 dark:border-gray-800 dark:bg-white/[0.03] sm:px-6 sm:pt-6">
-    <div class="mb-6 flex flex-col gap-5 sm:flex-row sm:justify-between">
-        <div class="w-full">
-            <h3 class="text-lg font-semibold text-gray-800 dark:text-white/90">
-                Statistics
-            </h3>
-            <p class="mt-1 text-theme-sm text-gray-500 dark:text-gray-400">
-                Orders, production, and revenue over the last 7 days.
-            </p>
+<div class="dash-performance-widget min-h-[24rem]">
+    <div class="dash-performance-widget-header">
+        <div class="min-w-0">
+            <div class="flex items-center gap-2.5">
+                <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400">
+                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18 9 11.25l4.306 4.306a11.95 11.95 0 0 1 5.814-5.518l2.74-1.22m0 0-5.94-2.281m5.94 2.28-2.28 5.941" />
+                    </svg>
+                </span>
+                <div>
+                    <h3 class="dash-performance-widget-title">Last 7 days</h3>
+                    <p class="dash-performance-widget-desc !mt-0">Daily orders, production, and revenue trend</p>
+                </div>
+            </div>
         </div>
 
-        <div class="flex w-full items-start gap-3 sm:justify-end">
-            <div x-data="{ selected: 'overview' }"
-                class="inline-flex w-fit items-center gap-0.5 rounded-lg bg-gray-100 p-0.5 dark:bg-gray-900">
-                @php
-                    $options = [
-                        ['value' => 'overview', 'label' => 'Overview'],
-                        ['value' => 'sales', 'label' => 'Sales'],
-                        ['value' => 'production', 'label' => 'Production'],
-                        ['value' => 'revenue', 'label' => 'Revenue'],
-                    ];
-                @endphp
-
+        <div class="flex flex-wrap items-center gap-2">
+            <div class="dash-segment !p-1">
                 @foreach ($options as $option)
                     <button
                         type="button"
                         data-stats-tab="{{ $option['value'] }}"
-                        @click="selected = '{{ $option['value'] }}'"
-                        :class="selected === '{{ $option['value'] }}'
-                            ? 'shadow-theme-xs text-gray-900 dark:text-white bg-white dark:bg-gray-800'
-                            : 'text-gray-500 dark:text-gray-400'"
-                        class="rounded-md px-3 py-2 text-theme-sm font-medium hover:text-gray-900 dark:hover:text-white">
+                        @class(['dash-segment-btn !px-3.5 !py-2 !text-sm', 'dashboard-stats-active' => $option['value'] === 'overview'])
+                    >
                         {{ $option['label'] }}
                     </button>
                 @endforeach
             </div>
 
-            <div
-                class="inline-flex items-center rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-medium text-gray-600 shadow-theme-xs dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">
-                {{ $rangeLabel }}
-            </div>
+            <span class="dash-chip !px-3 !py-2 !text-xs">{{ $rangeLabel }}</span>
         </div>
     </div>
 
-    <div class="w-full">
-        <div id="chartThree" class="w-full"></div>
+    <div class="dash-performance-widget-body pb-5">
+        <div id="chartThree" class="h-[280px] w-full"></div>
     </div>
 </div>

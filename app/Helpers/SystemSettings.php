@@ -12,13 +12,13 @@ class SystemSettings
 {
     protected static ?array $cache = null;
 
-    protected static string $defaultBrandPrimary = '#465fff';
+    protected static string $defaultBrandPrimary = '#5F4BFF';
 
-    protected static string $defaultBrandSecondary = '#3641f5';
+    protected static string $defaultBrandSecondary = '#4D39E6';
 
-    protected static string $defaultTextColorLight = '#101828';
+    protected static string $defaultTextColorLight = '#0E0F14';
 
-    protected static string $defaultTextColorDark = '#F9FAFB';
+    protected static string $defaultTextColorDark = '#F3F4F6';
 
     protected static array $encryptedKeys = [
         'smtp_password',
@@ -98,7 +98,17 @@ class SystemSettings
         self::$cache = null;
     }
 
-    public static function logoUrl(): ?string
+    public static function defaultLogoAsset(): string
+    {
+        return 'images/brand/saf-logo.png';
+    }
+
+    public static function defaultLogoUrl(): string
+    {
+        return asset(self::defaultLogoAsset());
+    }
+
+    public static function uploadedLogoUrl(): ?string
     {
         $path = self::get('company_logo_path');
 
@@ -107,6 +117,44 @@ class SystemSettings
         }
 
         return Storage::disk('public')->url($path);
+    }
+
+    public static function hasCustomLogo(): bool
+    {
+        return self::uploadedLogoUrl() !== null;
+    }
+
+    public static function logoUrl(): string
+    {
+        return self::uploadedLogoUrl() ?? self::defaultLogoUrl();
+    }
+
+    /**
+     * @return array{title: string, tagline: ?string, full: string}
+     */
+    public static function brandDisplay(?string $name = null): array
+    {
+        $full = is_string($name) && trim($name) !== ''
+            ? trim($name)
+            : self::brandName();
+
+        $parts = preg_split('/\s+/', $full, 2) ?: [];
+        $title = trim((string) ($parts[0] ?? $full));
+        $tagline = isset($parts[1]) ? trim($parts[1]) : null;
+
+        if ($tagline === null || $tagline === '' || mb_strlen($tagline) > 16) {
+            return [
+                'title' => $full,
+                'tagline' => null,
+                'full' => $full,
+            ];
+        }
+
+        return [
+            'title' => $title,
+            'tagline' => $tagline,
+            'full' => $full,
+        ];
     }
 
     public static function defaultBrandPrimary(): string
@@ -218,7 +266,7 @@ class SystemSettings
             '--color-brand-950' => self::mixWithBlack($secondary, 0.70),
             '--color-app-text-light' => $textLight,
             '--color-app-text-dark' => $textDark,
-            '--shadow-focus-ring' => '0px 0px 0px 4px ' . self::rgba($primary, 0.12),
+            '--shadow-focus-ring' => '0px 0px 0px 4px ' . self::rgba($primary, 0.16),
         ];
     }
 

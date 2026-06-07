@@ -39,7 +39,7 @@
             width: 40px;
             height: 40px;
             border-radius: 9999px;
-            background: #465fff;
+            background: #5f4bff;
             color: #ffffff;
             display: inline-flex;
             align-items: center;

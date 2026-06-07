@@ -10,6 +10,11 @@
         $totalAmount = $receipts->sum('amount');
         $reconciledAmount = $receipts->where('reconciled', true)->sum('amount');
         $pendingAmount = $receipts->where('reconciled', false)->sum('amount');
+        $totalPayments = $billPayments->count();
+        $reconciledPaymentCount = $billPayments->where('reconciled', true)->count();
+        $pendingPaymentCount = $billPayments->where('reconciled', false)->count();
+        $suggestedReceiptIds = $suggestedReceiptIds ?? [];
+        $suggestedPaymentIds = $suggestedPaymentIds ?? [];
     @endphp
 
     <!-- Header with gradient -->
@@ -26,7 +31,7 @@
                 </div>
                 <div>
                     <h1 class="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
-                        Bank Reconciliation
+                        Bank reconciliation
                     </h1>
                     <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
                         Mark customer receipts as matched to bank statements for 
@@ -115,9 +120,41 @@
         </form>
     </div>
 
+    <div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Import bank statement CSV</h3>
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                    Upload a CSV with columns like date, amount, reference. Saf will suggest matches for receipts and supplier payments.
+                </p>
+            </div>
+            <form action="{{ route('admin.finance.reconciliation.import') }}" method="POST" enctype="multipart/form-data" class="flex flex-wrap items-end gap-3">
+                @csrf
+                <input type="hidden" name="range" value="{{ $range }}">
+                <input type="hidden" name="from" value="{{ $from->toDateString() }}">
+                <input type="hidden" name="to" value="{{ $to->toDateString() }}">
+                <input type="file" name="statement" accept=".csv,text/csv" required class="text-sm text-gray-700 dark:text-gray-300">
+                <button type="submit" class="rounded-lg bg-brand-500 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-600">Import & match</button>
+            </form>
+        </div>
+        @error('statement')
+            <p class="mt-3 text-sm text-error-600">{{ $message }}</p>
+        @enderror
+    </div>
+
+    @if(!empty($importResults))
+        <div class="rounded-2xl border border-brand-200 bg-brand-50/40 p-5 dark:border-brand-500/30 dark:bg-brand-500/5">
+            <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Import summary</h3>
+            <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                Parsed {{ $importResults['total_rows'] ?? 0 }} row(s).
+                Suggested {{ $importResults['matched_receipts'] ?? 0 }} receipt match(es) and {{ $importResults['matched_payments'] ?? 0 }} supplier payment match(es).
+            </p>
+        </div>
+    @endif
+
     <!-- Status Message -->
 
-    @if($receipts->isEmpty())
+    @if($receipts->isEmpty() && $billPayments->isEmpty())
         <!-- Empty State -->
         <div class="relative overflow-hidden rounded-3xl border border-gray-200 bg-white/50 backdrop-blur-sm p-16 text-center shadow-sm dark:border-gray-800 dark:bg-gray-900/50">
             <div class="absolute top-0 right-0 -mt-10 -mr-10 h-40 w-40 rounded-full bg-gradient-to-br from-brand-100 to-brand-50 opacity-20 dark:from-brand-900 dark:to-brand-800 blur-3xl"></div>
@@ -245,7 +282,7 @@
                 </div>
             </div>
 
-            <form action="{{ route('admin.finance.reconciliation.update') }}" method="POST" class="p-6">
+            <form id="reconciliation-form" action="{{ route('admin.finance.reconciliation.update') }}" method="POST" class="p-6">
                 @csrf
                 <input type="hidden" name="range" value="{{ $range }}">
                 <input type="hidden" name="from" value="{{ $from->toDateString() }}">
@@ -284,7 +321,7 @@
                                             <input type="checkbox" 
                                                    name="reconciled[]" 
                                                    value="{{ $receipt->id }}"
-                                                   @checked($receipt->reconciled)
+                                                   @checked($receipt->reconciled || in_array($receipt->id, $suggestedReceiptIds, true))
                                                    class="receipt-checkbox h-4 w-4 rounded border-gray-300 bg-white text-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800 dark:checked:bg-brand-500">
                                         </label>
                                     </td>
@@ -363,6 +400,50 @@
             </form>
         </div>
 
+        @if($billPayments->isNotEmpty())
+            <div class="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900 overflow-hidden mt-6">
+                <div class="border-b border-gray-100 px-6 py-4 dark:border-gray-800">
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Supplier payment reconciliation</h3>
+                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ $pendingPaymentCount }} pending outflow(s) in this period</p>
+                </div>
+                <div class="p-6">
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="bg-gray-50 dark:bg-gray-800/50">
+                                <tr>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase">Match</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase">Date</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase">Bill</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase">Supplier</th>
+                                    <th class="px-4 py-3 text-right text-xs font-semibold uppercase">Amount</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
+                                @foreach($billPayments as $payment)
+                                    <tr>
+                                        <td class="px-4 py-3">
+                                            <input type="checkbox"
+                                                   name="reconciled_payments[]"
+                                                   value="{{ $payment->id }}"
+                                                   form="reconciliation-form"
+                                                   @checked($payment->reconciled || in_array($payment->id, $suggestedPaymentIds, true))
+                                                   class="payment-checkbox h-4 w-4 rounded border-gray-300 text-brand-500">
+                                        </td>
+                                        <td class="px-4 py-3 text-sm">{{ $payment->paid_at?->format('d M Y') }}</td>
+                                        <td class="px-4 py-3 text-sm font-mono">{{ $payment->bill?->number ?? '—' }}</td>
+                                        <td class="px-4 py-3 text-sm">{{ $payment->bill?->supplier?->name ?? '—' }}</td>
+                                        <td class="px-4 py-3 text-right text-sm font-semibold">{{ $currencyCode }} {{ number_format($payment->amount, 2) }}</td>
+                                        <td class="px-4 py-3 text-sm">{{ $payment->reconciled ? 'Reconciled' : 'Pending' }}</td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        @endif
+
         <!-- Reconciliation Summary -->
         <div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
             <div class="flex items-start gap-4">
@@ -372,9 +453,9 @@
                     </svg>
                 </div>
                 <div class="flex-1">
-                    <h3 class="text-sm font-semibold text-gray-900 dark:text-white">About Bank Reconciliation</h3>
+                    <h3 class="text-sm font-semibold text-gray-900 dark:text-white">About Bank reconciliation</h3>
                     <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                        Use the checkboxes to match or unmatch receipts against the current bank statement for this period.
+                        Match customer receipts and supplier payments against the bank statement for this period. Import a CSV to pre-select likely matches.
                     </p>
                     <div class="mt-4 flex items-center gap-4">
                         <div class="flex items-center gap-2">

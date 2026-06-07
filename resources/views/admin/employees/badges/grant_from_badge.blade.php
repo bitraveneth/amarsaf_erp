@@ -22,8 +22,8 @@
                             Grant Badge
                         </h1>
                         <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium"
-                              style="background: {{ $badge->color ?? '#465fff' }}15; color: {{ $badge->color ?? '#465fff' }}; border: 1px solid {{ $badge->color ?? '#465fff' }}30;">
-                            <span class="h-1.5 w-1.5 rounded-full mr-1" style="background: {{ $badge->color ?? '#465fff' }};"></span>
+                              style="background: {{ $badge->color ?? '#5f4bff' }}15; color: {{ $badge->color ?? '#5f4bff' }}; border: 1px solid {{ $badge->color ?? '#5f4bff' }}30;">
+                            <span class="h-1.5 w-1.5 rounded-full mr-1" style="background: {{ $badge->color ?? '#5f4bff' }};"></span>
                             {{ $badge->code }}
                         </span>
                     </div>
@@ -50,8 +50,8 @@
         <div class="flex items-start gap-4">
             <!-- Badge Color Preview -->
             <div class="flex h-20 w-20 items-center justify-center rounded-2xl" 
-                 style="background: {{ $badge->color ?? '#465fff' }}15; border: 2px solid {{ $badge->color ?? '#465fff' }}30;">
-                <span class="text-3xl font-bold" style="color: {{ $badge->color ?? '#465fff' }};">
+                 style="background: {{ $badge->color ?? '#5f4bff' }}15; border: 2px solid {{ $badge->color ?? '#5f4bff' }}30;">
+                <span class="text-3xl font-bold" style="color: {{ $badge->color ?? '#5f4bff' }};">
                     {{ substr($badge->name, 0, 1) }}
                 </span>
             </div>
@@ -229,14 +229,14 @@
                 <div class="mt-6 rounded-xl bg-gradient-to-r from-brand-50 to-white p-5 dark:from-brand-950/30 dark:to-gray-900 border border-brand-100 dark:border-brand-800">
                     <div class="flex items-center gap-3">
                         <div class="flex h-10 w-10 items-center justify-center rounded-lg" 
-                             style="background: {{ $badge->color ?? '#465fff' }}15;">
-                            <span class="text-sm font-bold" style="color: {{ $badge->color ?? '#465fff' }};">
+                             style="background: {{ $badge->color ?? '#5f4bff' }}15;">
+                            <span class="text-sm font-bold" style="color: {{ $badge->color ?? '#5f4bff' }};">
                                 {{ substr($badge->name, 0, 1) }}
                             </span>
                         </div>
                         <div class="flex-1">
                             <p class="text-sm font-medium text-gray-900 dark:text-white">
-                                You are about to grant the <span style="color: {{ $badge->color ?? '#465fff' }};">{{ $badge->name }}</span> badge
+                                You are about to grant the <span style="color: {{ $badge->color ?? '#5f4bff' }};">{{ $badge->name }}</span> badge
                             </p>
                             <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                                 This badge will be visible on the employee's profile immediately after granting.

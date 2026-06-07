@@ -224,7 +224,7 @@
                                           class="inline">
                                         @csrf
                                         <button type="submit" 
-                                                class="inline-flex items-center gap-1 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-success-600 shadow-theme-xs hover:bg-success-50 hover:text-success-700 dark:border-gray-700 dark:bg-gray-800 dark:text-success-500 dark:hover:bg-success-500/10">
+                                                class="erp-btn-action-success">
                                             <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
                                             </svg>

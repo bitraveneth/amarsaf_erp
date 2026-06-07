@@ -1,5 +1,6 @@
 import './bootstrap';
 import './invoice';
+import { registerAssistantBot } from './assistant-bot';
 import { registerSystemTour } from './system-tour';
 import Alpine from 'alpinejs';
 import ApexCharts from 'apexcharts';
@@ -37,6 +38,7 @@ window.erpPlatform = detectClientPlatform();
 
 document.addEventListener('alpine:init', () => {
     registerSystemTour(Alpine, window.erpTourSteps || []);
+    registerAssistantBot(Alpine);
 });
 
 Alpine.start();
@@ -241,7 +243,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         };
 
-        const updateFiltered = () => {
+        const updateFiltered = async () => {
             const q = commandInput.value.trim().toLowerCase();
             if (!q) {
                 filtered = [];
@@ -253,8 +255,29 @@ document.addEventListener('DOMContentLoaded', () => {
                 .filter((item) => {
                     const haystack = `${item.label} ${item.group} ${item.path}`.toLowerCase();
                     return haystack.includes(q);
-                })
-                .slice(0, 10);
+                });
+
+            const entitySearchUrl = commandInput.dataset.entitySearchUrl;
+            if (entitySearchUrl && q.length >= 2) {
+                try {
+                    const response = await fetch(`${entitySearchUrl}?q=${encodeURIComponent(q)}`, {
+                        headers: { Accept: 'application/json' },
+                    });
+                    if (response.ok) {
+                        const payload = await response.json();
+                        const entityItems = (payload.data || []).map((item) => ({
+                            label: item.label,
+                            group: item.group,
+                            path: item.path,
+                        }));
+                        filtered = filtered.concat(entityItems);
+                    }
+                } catch (e) {
+                    // ignore search API failures and keep menu matches only
+                }
+            }
+
+            filtered = filtered.slice(0, 10);
             activeIndex = filtered.length ? 0 : -1;
             renderResults();
         };

@@ -16,7 +16,7 @@
                 </div>
                 <div>
                     <h1 class="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
-                        VAT Summary
+                        VAT report
                     </h1>
                     <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
                         VAT payable for {{ $month->format('F Y') }} (from ledger)
@@ -26,6 +26,8 @@
         </div>
         
         <div class="flex items-center gap-2">
+            <a href="{{ route('admin.reports.vat.export', ['month' => $month->format('Y-m')]) }}" class="inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">Export CSV</a>
+            <a href="{{ route('admin.exports.tally', ['from' => $from->toDateString(), 'to' => $to->toDateString()]) }}" class="inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">Tally XML</a>
             <!-- Month Navigation - Only show if route exists -->
             @if(Route::has('admin.vat.summary'))
             <div class="flex items-center gap-1 rounded-lg border border-gray-300 bg-white shadow-theme-xs dark:border-gray-700 dark:bg-gray-800">

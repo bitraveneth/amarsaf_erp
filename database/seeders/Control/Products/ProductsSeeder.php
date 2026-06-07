@@ -77,6 +77,7 @@ class ProductsSeeder extends Seeder
                 'ph'               => 7.2,
                 'tds'              => 150,
                 'base_price'       => 550, // demo selling price per carton
+                'standard_cost'    => 380,
                 'is_active'        => true,
             ]
         );
@@ -97,6 +98,7 @@ class ProductsSeeder extends Seeder
                 'ph'               => 7.2,
                 'tds'              => 150,
                 'base_price'       => 45,  // demo retail price per bottle
+                'standard_cost'    => 28,
                 'is_active'        => true,
             ]
         );
@@ -117,6 +119,7 @@ class ProductsSeeder extends Seeder
                 'ph'               => 7.2,
                 'tds'              => 150,
                 'base_price'       => 900, // demo price per 1L carton
+                'standard_cost'    => 620,
                 'is_active'        => true,
             ]
         );
@@ -137,6 +140,7 @@ class ProductsSeeder extends Seeder
                 'ph'               => 7.2,
                 'tds'              => 150,
                 'base_price'       => 250, // demo price per jar
+                'standard_cost'    => 165,
                 'is_active'        => true,
             ]
         );

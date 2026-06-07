@@ -222,36 +222,10 @@
                         @enderror
                     </div>
 
-                    <!-- KYC Documents (Comma-separated) -->
-                    <div class="sm:col-span-2 lg:col-span-3">
-                        <label for="kyc_documents" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                            KYC Documents (Comma-separated)
-                        </label>
-                        <input type="text" id="kyc_documents" name="kyc_documents[]" value="{{ old('kyc_documents.0') }}"
-                               class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 placeholder-gray-500 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-400"
-                               placeholder="Trade License, TIN Certificate, NID, Passport, etc.">
-                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                            Add multiple documents separated by commas. File upload feature coming soon.
-                        </p>
-                        @error('kyc_documents')
-                            <p class="mt-1 text-sm text-error-600 dark:text-error-500">{{ $message }}</p>
-                        @enderror
-                    </div>
-
-                    <!-- KYC Files Upload -->
-                    <div class="sm:col-span-2 lg:col-span-3">
-                        <label for="kyc_files" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Upload KYC Documents
-                        </label>
-                        <input type="file" id="kyc_files" name="kyc_files[]" multiple
-                               class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 file:mr-4 file:rounded-md file:border-0 file:bg-gray-100 file:px-4 file:py-2 file:text-sm file:font-medium file:text-gray-700 hover:file:bg-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:file:bg-gray-700 dark:file:text-gray-300">
-                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                            Optional: Attach scanned trade license, TIN, NID, or other supporting documents.
-                        </p>
-                        @error('kyc_files')
-                            <p class="mt-1 text-sm text-error-600 dark:text-error-500">{{ $message }}</p>
-                        @enderror
-                    </div>
+                    <!-- KYC Documents -->
+                    <x-admin.kyc-documents-field
+                        :document-types="$kycDocumentTypes"
+                    />
                 </div>
             </div>
 

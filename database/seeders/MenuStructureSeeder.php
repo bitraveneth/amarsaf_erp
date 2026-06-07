@@ -19,8 +19,13 @@ class MenuStructureSeeder extends Seeder
         $structure = MenuHelper::getFallbackMenu();
 
         foreach ($structure as $groupIndex => $group) {
+            $groupKey = $group['key'] ?? Str::slug($group['title']);
+            if ($groupKey === '') {
+                $groupKey = 'dashboard';
+            }
+
             $menuGroup = MenuGroup::updateOrCreate(
-                ['key' => Str::slug($group['title'])],
+                ['key' => $groupKey],
                 [
                     'title'    => $group['title'],
                     'position' => $groupIndex,
@@ -76,5 +81,35 @@ class MenuStructureSeeder extends Seeder
         MenuItem::where('name', 'Expenses & allowances')
             ->where('path', '/admin/expenses')
             ->delete();
+
+        MenuGroup::query()
+            ->whereIn('key', ['overview'])
+            ->orWhereRaw('LOWER(TRIM(title)) = ?', ['overview'])
+            ->update(['title' => '', 'key' => 'dashboard']);
+
+        $this->syncMenuLabelsFromFallback();
+    }
+
+    protected function syncMenuLabelsFromFallback(): void
+    {
+        $labelsByPath = [];
+
+        foreach (MenuHelper::getFallbackMenu() as $group) {
+            foreach ($group['items'] as $item) {
+                if (! empty($item['path']) && ($item['path'] ?? '#') !== '#') {
+                    $labelsByPath[$item['path']] = $item['name'];
+                }
+
+                foreach ($item['subItems'] ?? [] as $subItem) {
+                    if (! empty($subItem['path'])) {
+                        $labelsByPath[$subItem['path']] = $subItem['name'];
+                    }
+                }
+            }
+        }
+
+        foreach ($labelsByPath as $path => $name) {
+            MenuItem::where('path', $path)->update(['name' => $name]);
+        }
     }
 }

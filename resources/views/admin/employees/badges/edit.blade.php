@@ -22,8 +22,8 @@
                             Edit Badge
                         </h1>
                         <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium"
-                              style="background: {{ $badge->color ?? '#465fff' }}15; color: {{ $badge->color ?? '#465fff' }}; border: 1px solid {{ $badge->color ?? '#465fff' }}30;">
-                            <span class="h-1.5 w-1.5 rounded-full mr-1" style="background: {{ $badge->color ?? '#465fff' }};"></span>
+                              style="background: {{ $badge->color ?? '#5f4bff' }}15; color: {{ $badge->color ?? '#5f4bff' }}; border: 1px solid {{ $badge->color ?? '#5f4bff' }}30;">
+                            <span class="h-1.5 w-1.5 rounded-full mr-1" style="background: {{ $badge->color ?? '#5f4bff' }};"></span>
                             {{ $badge->code }}
                         </span>
                     </div>
@@ -192,7 +192,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function updateLivePreview() {
         const name = nameInput?.value || 'Badge';
         const code = codeInput?.value || 'CODE';
-        const color = colorInput?.value || '#465fff';
+        const color = colorInput?.value || '#5f4bff';
         const isActive = isActiveCheckbox?.checked || false;
         
         const initial = name.charAt(0);

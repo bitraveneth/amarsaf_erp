@@ -22,7 +22,7 @@
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
             </svg>
-            Back to Deliveries
+            Back to deliveries
         </a>
     </div>
 
@@ -188,7 +188,7 @@
                 <!-- POD Photo -->
                 <div class="sm:col-span-2 lg:col-span-3">
                     <label for="pod_photo" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Proof of Delivery (POD) Photo
+                        Proof of delivery (POD) Photo
                     </label>
                     <div class="relative">
                         <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">

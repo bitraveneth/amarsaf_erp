@@ -8,12 +8,17 @@ use App\Models\Agent;
 use App\Models\CustomerGift;
 use App\Models\Employee;
 use App\Models\LedgerEntry;
+use App\Services\Accounting\AccountingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class CustomerGiftController extends Controller
 {
+    public function __construct(protected AccountingService $accounting)
+    {
+    }
+
     public function index(Request $request)
     {
         $from = $request->query('from')
@@ -135,24 +140,24 @@ class CustomerGiftController extends Controller
 
         $description = $this->ledgerDescription($gift);
 
-        LedgerEntry::create([
-            'account' => 'Selling & Distribution Expense',
-            'description' => $description,
-            'debit' => $gift->amount,
-            'credit' => 0,
-        ]);
-
-        LedgerEntry::create([
-            'account' => 'Bank',
-            'description' => $description,
-            'debit' => 0,
-            'credit' => $gift->amount,
-        ]);
+        $this->accounting->post(
+            'customer_gift',
+            Carbon::parse($gift->date),
+            [
+                ['account' => 'Selling & Distribution Expense', 'debit' => $gift->amount, 'credit' => 0],
+                ['account' => 'Bank', 'debit' => 0, 'credit' => $gift->amount],
+            ],
+            [
+                'description' => $description,
+                'source_type' => CustomerGift::class,
+                'source_id' => $gift->id,
+            ]
+        );
     }
 
     protected function deleteLedgerEntries(CustomerGift $gift): void
     {
-        LedgerEntry::where('description', $this->ledgerDescription($gift))->delete();
+        $this->accounting->deleteByDescription($this->ledgerDescription($gift));
     }
 
     protected function ledgerDescription(CustomerGift $gift): string

@@ -3,15 +3,19 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Exceptions\AccountingPeriodClosedException;
 use App\Models\AgentAdvance;
 use App\Models\AgentAdvanceApplication;
 use App\Models\CreditNote;
 use App\Models\DeliveryItem;
-use App\Models\LedgerEntry;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
+use App\Models\JournalEntry;
+use App\Models\LedgerEntry;
 use App\Models\Order;
 use App\Models\Receipt;
+use App\Services\Accounting\AccountingService;
+use App\Services\Accounting\InventoryAccountingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -21,6 +25,12 @@ use Barryvdh\DomPDF\Facade\Pdf;
 
 class FinanceController extends Controller
 {
+    public function __construct(
+        protected AccountingService $accounting,
+        protected InventoryAccountingService $inventoryAccounting
+    ) {
+    }
+
     public function index()
     {
         $invoices = Invoice::with(['order.agent', 'receipts', 'creditNotes', 'advanceApplications'])->latest()->paginate(10);
@@ -51,11 +61,15 @@ class FinanceController extends Controller
             $invoice->withholding = round((float) $data['withholding'], 2);
             $invoice->save();
 
-            $this->recordWithholdingLedgerAdjustment(
-                $invoice,
-                $invoice->withholding - $previousWithholding,
-                'Withholding adjustment on ' . $invoice->number
-            );
+            try {
+                $this->recordWithholdingLedgerAdjustment(
+                    $invoice,
+                    $invoice->withholding - $previousWithholding,
+                    'Withholding adjustment on ' . $invoice->number
+                );
+            } catch (AccountingPeriodClosedException $e) {
+                throw $e;
+            }
 
             $invoice->recalculateStatus();
         });
@@ -188,35 +202,24 @@ class FinanceController extends Controller
             }
 
             $invoiceDescription = 'Invoice ' . $invoice->number;
+            $entryDate = Carbon::parse($invoice->issued_at);
 
-            LedgerEntry::create([
-                'account' => 'Accounts Receivable',
-                'description' => $invoiceDescription,
-                'debit' => $invoice->net_total + $invoice->vat_amount,
-                'credit' => 0,
-                'order_id' => $order->id,
-                'invoice_id' => $invoice->id,
-            ]);
-
-            LedgerEntry::create([
-                'account' => 'Sales Revenue',
-                'description' => $invoiceDescription,
-                'debit' => 0,
-                'credit' => $invoice->net_total,
-                'order_id' => $order->id,
-                'invoice_id' => $invoice->id,
-            ]);
+            $lines = [
+                ['account' => 'Accounts Receivable', 'debit' => $invoice->net_total + $invoice->vat_amount, 'credit' => 0],
+                ['account' => 'Sales Revenue', 'debit' => 0, 'credit' => $invoice->net_total],
+            ];
 
             if ((float) $invoice->vat_amount > 0) {
-                LedgerEntry::create([
-                    'account' => 'VAT Payable',
-                    'description' => 'VAT on ' . $invoice->number,
-                    'debit' => 0,
-                    'credit' => $invoice->vat_amount,
-                    'order_id' => $order->id,
-                    'invoice_id' => $invoice->id,
-                ]);
+                $lines[] = ['account' => 'VAT Payable', 'debit' => 0, 'credit' => $invoice->vat_amount, 'description' => 'VAT on ' . $invoice->number];
             }
+
+            $this->accounting->post('sales_invoice', $entryDate, $lines, [
+                'description' => $invoiceDescription,
+                'order_id' => $order->id,
+                'invoice_id' => $invoice->id,
+                'source_type' => Invoice::class,
+                'source_id' => $invoice->id,
+            ]);
 
             $this->recordWithholdingLedgerAdjustment(
                 $invoice,
@@ -226,6 +229,7 @@ class FinanceController extends Controller
 
             $this->applyAvailableAgentAdvances($invoice);
             $invoice->recalculateStatus();
+            $this->inventoryAccounting->postInvoiceCogs($invoice->fresh(['items.product']));
         });
 
         return $invoice?->fresh();
@@ -259,23 +263,21 @@ class FinanceController extends Controller
 
             $description = $this->receiptLedgerDescription($receipt, $invoice);
 
-            LedgerEntry::create([
-                'account' => 'Bank',
-                'description' => $description,
-                'debit' => $receipt->amount,
-                'credit' => 0,
-                'order_id' => $invoice->order_id,
-                'invoice_id' => $invoice->id,
-            ]);
-
-            LedgerEntry::create([
-                'account' => 'Accounts Receivable',
-                'description' => $description,
-                'debit' => 0,
-                'credit' => $receipt->amount,
-                'order_id' => $invoice->order_id,
-                'invoice_id' => $invoice->id,
-            ]);
+            $this->accounting->post(
+                'customer_receipt',
+                Carbon::parse($receipt->received_at),
+                [
+                    ['account' => 'Bank', 'debit' => $receipt->amount, 'credit' => 0],
+                    ['account' => 'Accounts Receivable', 'debit' => 0, 'credit' => $receipt->amount],
+                ],
+                [
+                    'description' => $description,
+                    'order_id' => $invoice->order_id,
+                    'invoice_id' => $invoice->id,
+                    'source_type' => Receipt::class,
+                    'source_id' => $receipt->id,
+                ]
+            );
 
             $invoice->recalculateStatus();
         });
@@ -350,34 +352,28 @@ class FinanceController extends Controller
                 'number' => $this->formatCreditNoteNumber($credit->id),
             ]);
 
-            LedgerEntry::create([
-                'account' => 'Sales Returns',
-                'description' => 'Credit note ' . $credit->number,
-                'debit' => $creditBreakdown['net'],
-                'credit' => 0,
-                'order_id' => $invoice->order_id,
-                'invoice_id' => $invoice->id,
-            ]);
+            $lines = [
+                ['account' => 'Sales Returns', 'debit' => $creditBreakdown['net'], 'credit' => 0],
+            ];
 
             if ($creditBreakdown['vat'] > 0) {
-                LedgerEntry::create([
-                    'account' => 'VAT Payable',
-                    'description' => 'VAT reversal on ' . $credit->number,
-                    'debit' => $creditBreakdown['vat'],
-                    'credit' => 0,
-                    'order_id' => $invoice->order_id,
-                    'invoice_id' => $invoice->id,
-                ]);
+                $lines[] = ['account' => 'VAT Payable', 'debit' => $creditBreakdown['vat'], 'credit' => 0, 'description' => 'VAT reversal on ' . $credit->number];
             }
 
-            LedgerEntry::create([
-                'account' => 'Accounts Receivable',
-                'description' => 'Credit note ' . $credit->number,
-                'debit' => 0,
-                'credit' => $credit->amount,
-                'order_id' => $invoice->order_id,
-                'invoice_id' => $invoice->id,
-            ]);
+            $lines[] = ['account' => 'Accounts Receivable', 'debit' => 0, 'credit' => $credit->amount];
+
+            $this->accounting->post(
+                'credit_note',
+                Carbon::parse($credit->issued_at),
+                $lines,
+                [
+                    'description' => 'Credit note ' . $credit->number,
+                    'order_id' => $invoice->order_id,
+                    'invoice_id' => $invoice->id,
+                    'source_type' => CreditNote::class,
+                    'source_id' => $credit->id,
+                ]
+            );
 
             $invoice->recalculateStatus();
         });
@@ -431,9 +427,17 @@ class FinanceController extends Controller
                 ->withErrors(['invoice' => 'Invoice has receipts or credit notes and cannot be deleted.']);
         }
 
-        LedgerEntry::where('invoice_id', $invoice->id)->delete();
-        $invoice->items()->delete();
-        $invoice->delete();
+        DB::transaction(function () use ($invoice) {
+            JournalEntry::where('invoice_id', $invoice->id)->each(function (JournalEntry $journal) {
+                LedgerEntry::where('journal_entry_id', $journal->id)->delete();
+                $journal->lines()->delete();
+                $journal->delete();
+            });
+
+            LedgerEntry::where('invoice_id', $invoice->id)->delete();
+            $invoice->items()->delete();
+            $invoice->delete();
+        });
 
         return redirect()->route('admin.finance.index')->with('status', 'Invoice deleted.');
     }
@@ -523,7 +527,7 @@ class FinanceController extends Controller
 
             $applyAmount = min($availableAmount, $remainingOutstanding);
 
-            AgentAdvanceApplication::create([
+            $application = AgentAdvanceApplication::create([
                 'agent_advance_id' => $advance->id,
                 'invoice_id' => $invoice->id,
                 'amount' => $applyAmount,
@@ -538,23 +542,21 @@ class FinanceController extends Controller
 
             $description = 'Advance applied from ' . $agent->name . ' to ' . $invoice->number;
 
-            LedgerEntry::create([
-                'account' => 'Agent Advances',
-                'description' => $description,
-                'debit' => $applyAmount,
-                'credit' => 0,
-                'order_id' => $invoice->order_id,
-                'invoice_id' => $invoice->id,
-            ]);
-
-            LedgerEntry::create([
-                'account' => 'Accounts Receivable',
-                'description' => $description,
-                'debit' => 0,
-                'credit' => $applyAmount,
-                'order_id' => $invoice->order_id,
-                'invoice_id' => $invoice->id,
-            ]);
+            $this->accounting->post(
+                'agent_advance_application',
+                Carbon::parse($invoice->issued_at),
+                [
+                    ['account' => 'Agent Advances', 'debit' => $applyAmount, 'credit' => 0],
+                    ['account' => 'Accounts Receivable', 'debit' => 0, 'credit' => $applyAmount],
+                ],
+                [
+                    'description' => $description,
+                    'order_id' => $invoice->order_id,
+                    'invoice_id' => $invoice->id,
+                    'source_type' => AgentAdvanceApplication::class,
+                    'source_id' => $application->id,
+                ]
+            );
 
             $remainingOutstanding -= $applyAmount;
         }
@@ -569,45 +571,89 @@ class FinanceController extends Controller
         }
 
         if ($delta > 0) {
-            LedgerEntry::create([
-                'account' => 'Withholding Tax Receivable',
-                'description' => $description,
-                'debit' => $delta,
-                'credit' => 0,
-                'order_id' => $invoice->order_id,
-                'invoice_id' => $invoice->id,
-            ]);
-
-            LedgerEntry::create([
-                'account' => 'Accounts Receivable',
-                'description' => $description,
-                'debit' => 0,
-                'credit' => $delta,
-                'order_id' => $invoice->order_id,
-                'invoice_id' => $invoice->id,
-            ]);
+            $this->accounting->post(
+                'withholding_adjustment',
+                Carbon::parse($invoice->issued_at),
+                [
+                    ['account' => 'Withholding Tax Receivable', 'debit' => $delta, 'credit' => 0],
+                    ['account' => 'Accounts Receivable', 'debit' => 0, 'credit' => $delta],
+                ],
+                [
+                    'description' => $description,
+                    'order_id' => $invoice->order_id,
+                    'invoice_id' => $invoice->id,
+                    'source_type' => Invoice::class,
+                    'source_id' => $invoice->id,
+                ]
+            );
 
             return;
         }
 
         $amount = abs($delta);
 
-        LedgerEntry::create([
-            'account' => 'Accounts Receivable',
-            'description' => $description,
-            'debit' => $amount,
-            'credit' => 0,
-            'order_id' => $invoice->order_id,
-            'invoice_id' => $invoice->id,
-        ]);
+        $this->accounting->post(
+            'withholding_adjustment',
+            Carbon::parse($invoice->issued_at),
+            [
+                ['account' => 'Accounts Receivable', 'debit' => $amount, 'credit' => 0],
+                ['account' => 'Withholding Tax Receivable', 'debit' => 0, 'credit' => $amount],
+            ],
+            [
+                'description' => $description,
+                'order_id' => $invoice->order_id,
+                'invoice_id' => $invoice->id,
+                'source_type' => Invoice::class,
+                'source_id' => $invoice->id,
+            ]
+        );
+    }
 
-        LedgerEntry::create([
-            'account' => 'Withholding Tax Receivable',
-            'description' => $description,
-            'debit' => 0,
-            'credit' => $amount,
-            'order_id' => $invoice->order_id,
-            'invoice_id' => $invoice->id,
+    public function exportJson(Invoice $invoice)
+    {
+        $invoice->load(['order.agent', 'items.product', 'receipts', 'creditNotes', 'advanceApplications']);
+
+        return response()->json([
+            'invoice' => $invoice,
+            'outstanding' => $invoice->outstanding,
+            'gross_total' => $invoice->gross_total,
+            'cash_total' => $invoice->cash_total,
+        ]);
+    }
+
+    public function exportEInvoice(Invoice $invoice)
+    {
+        $invoice->load(['order.agent', 'items.product.taxClass']);
+
+        return response()->json([
+            'format' => 'saf-einvoice-v1',
+            'issuer' => [
+                'name' => config('app.name', 'Saf ERP'),
+                'currency' => config('app.currency', 'BDT'),
+            ],
+            'buyer' => [
+                'name' => $invoice->order?->agent?->name,
+                'reference' => $invoice->order?->agent?->special_code ?? $invoice->order?->agent?->location_code,
+            ],
+            'invoice' => [
+                'number' => $invoice->number,
+                'issued_at' => $invoice->issued_at?->toDateString(),
+                'due_at' => $invoice->due_at?->toDateString(),
+                'net_total' => (float) $invoice->net_total,
+                'vat_amount' => (float) $invoice->vat_amount,
+                'withholding' => (float) $invoice->withholding,
+                'status' => $invoice->status,
+            ],
+            'lines' => $invoice->items->map(function (InvoiceItem $item) {
+                return [
+                    'description' => $item->description,
+                    'sku' => $item->product?->sku,
+                    'quantity' => (float) $item->quantity,
+                    'unit_price' => (float) $item->unit_price,
+                    'line_total' => (float) $item->line_total,
+                    'tax_rate' => (float) ($item->product?->taxClass?->rate ?? 0),
+                ];
+            })->values(),
         ]);
     }
 }

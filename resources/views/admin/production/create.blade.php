@@ -7,7 +7,7 @@
         <div>
             <div class="flex items-center gap-3">
                 <h1 class="text-2xl font-semibold text-gray-900 dark:text-white">
-                    New Production Order
+                    New Production order
                 </h1>
                 <span class="inline-flex items-center rounded-full bg-brand-50 px-3 py-1 text-xs font-medium text-brand-700 dark:bg-brand-500/20 dark:text-brand-400">
                     Manufacturing
@@ -49,10 +49,10 @@
             @csrf
             
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                <!-- Production Order Number -->
+                <!-- Production order Number -->
                 <div class="sm:col-span-2 lg:col-span-1">
                     <label for="order_number" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Production Order No.
+                        Production order No.
                     </label>
                     <div class="flex gap-2">
                         <div class="relative flex-1">

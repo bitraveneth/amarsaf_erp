@@ -16,6 +16,11 @@ class Supplier extends Model
         'phone',
         'address',
         'tax_id',
+        'is_one_time',
+    ];
+
+    protected $casts = [
+        'is_one_time' => 'boolean',
     ];
 
     public function bills()

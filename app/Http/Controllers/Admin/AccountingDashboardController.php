@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Admin\Concerns\ResolvesDashboardPeriod;
 use App\Http\Controllers\Controller;
 use App\Models\Campaign;
 use App\Models\CustomerGift;
@@ -14,16 +15,12 @@ use Illuminate\Http\Request;
 
 class AccountingDashboardController extends Controller
 {
+    use ResolvesDashboardPeriod;
+
     public function __invoke(Request $request)
     {
-        [$from, $to, $range] = $this->resolvePeriod($request);
-        $rangeOptions = [
-            '7d' => 'Last 7 days',
-            'month' => 'This month',
-            'quarter' => 'This quarter',
-            'year' => 'This year',
-            'custom' => 'Custom range',
-        ];
+        [$from, $to, $range] = $this->resolveDashboardPeriod($request);
+        $currencyCode = config('app.currency', 'BDT');
 
         $invoices = Invoice::query()
             ->select(['id', 'issued_at', 'net_total', 'vat_amount', 'withholding'])
@@ -39,9 +36,7 @@ class AccountingDashboardController extends Controller
             return max(0.0, (float) $invoice->vat_amount - $invoice->creditNotesVatTotalInRange($from, $to));
         }), 2);
         $withholdingTotal = $invoices->sum('withholding');
-
         $collected = Receipt::whereBetween('received_at', [$from, $to])->sum('amount');
-
         $outstanding = Invoice::query()
             ->with(['receipts', 'creditNotes', 'advanceApplications'])
             ->whereDate('issued_at', '<=', $to->toDateString())
@@ -78,13 +73,18 @@ class AccountingDashboardController extends Controller
         });
 
         $netProfitEstimate = $netSales - ($totalExpenses + $totalPayroll);
+        $collectionRate = $netSales > 0 ? ($collected / $netSales) * 100 : 0;
+        $cashGap = $collected - ($totalExpenses + $totalPayroll);
+
+        $chart = \App\Support\DashboardChartBuilder::revenueAndCollectionsSeries($from, $to);
 
         return view('admin.accounting.dashboard', [
             'from' => $from,
             'to' => $to,
             'range' => $range,
-            'rangeOptions' => $rangeOptions,
-            'periodLabel' => $from->format('d M Y') . ' – ' . $to->format('d M Y'),
+            'rangeOptions' => $this->dashboardRangeOptions(),
+            'periodLabel' => $this->dashboardPeriodLabel($from, $to),
+            'currencyCode' => $currencyCode,
             'totalInvoices' => $totalInvoices,
             'netSales' => $netSales,
             'vatTotal' => $vatTotal,
@@ -94,51 +94,11 @@ class AccountingDashboardController extends Controller
             'totalExpenses' => $totalExpenses,
             'totalPayroll' => $totalPayroll,
             'netProfitEstimate' => $netProfitEstimate,
+            'collectionRate' => $collectionRate,
+            'cashGap' => $cashGap,
+            'chartLabels' => $chart['labels'],
+            'chartRevenue' => $chart['values'],
+            'chartCollections' => $chart['secondary'],
         ]);
-    }
-
-    protected function resolvePeriod(Request $request): array
-    {
-        $range = $request->query('range');
-        $hasCustomDates = $request->filled('from') || $request->filled('to');
-        $today = Carbon::today();
-
-        if ($range === 'custom' || (! $range && $hasCustomDates)) {
-            $from = $request->filled('from')
-                ? Carbon::parse($request->query('from'))->startOfDay()
-                : $today->copy()->startOfMonth();
-            $to = $request->filled('to')
-                ? Carbon::parse($request->query('to'))->endOfDay()
-                : $today->copy()->endOfMonth();
-
-            if ($from->gt($to)) {
-                [$from, $to] = [$to->copy()->startOfDay(), $from->copy()->endOfDay()];
-            }
-
-            return [$from, $to, 'custom'];
-        }
-
-        switch ($range) {
-            case '7d':
-                $from = $today->copy()->subDays(6)->startOfDay();
-                $to = $today->copy()->endOfDay();
-                break;
-            case 'quarter':
-                $from = $today->copy()->startOfQuarter();
-                $to = $today->copy()->endOfDay();
-                break;
-            case 'year':
-                $from = $today->copy()->startOfYear();
-                $to = $today->copy()->endOfDay();
-                break;
-            case 'month':
-            default:
-                $from = $today->copy()->startOfMonth();
-                $to = $today->copy()->endOfDay();
-                $range = 'month';
-                break;
-        }
-
-        return [$from, $to, $range];
     }
 }

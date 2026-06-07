@@ -16,7 +16,7 @@
                 </div>
                 <div>
                     <h1 class="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
-                        Stock Movements
+                        Stock movements
                     </h1>
                     <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
                         Review receipts, production activity, reservations, transfers, returns, and write-offs

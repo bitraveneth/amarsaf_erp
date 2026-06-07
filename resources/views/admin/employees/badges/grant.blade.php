@@ -113,7 +113,7 @@
                                 <option value="">Select a badge</option>
                                 @foreach($badges as $badge)
                                     <option value="{{ $badge->id }}" 
-                                            data-color="{{ $badge->color ?? '#465fff' }}"
+                                            data-color="{{ $badge->color ?? '#5f4bff' }}"
                                             data-code="{{ $badge->code }}"
                                             data-description="{{ $badge->description ?? '' }}"
                                             {{ old('badge_id') == $badge->id ? 'selected' : '' }}>
@@ -263,7 +263,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         if (selectedOption && selectedOption.value) {
             const badgeId = selectedOption.value;
-            const badgeColor = selectedOption.dataset.color || '#465fff';
+            const badgeColor = selectedOption.dataset.color || '#5f4bff';
             const badgeCodeText = selectedOption.dataset.code || '';
             const badgeDescriptionText = selectedOption.dataset.description || '';
             const badgeNameText = selectedOption.text.split(' (')[0];

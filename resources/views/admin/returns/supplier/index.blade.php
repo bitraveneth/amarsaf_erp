@@ -252,7 +252,7 @@
                         </svg>
                     </div>
                 </div>
-                <h2 class="mt-8 text-2xl font-bold text-gray-900 dark:text-white">No Supplier Returns</h2>
+                <h2 class="mt-8 text-2xl font-bold text-gray-900 dark:text-white">No supplier returns</h2>
                 <p class="mt-3 text-base text-gray-500 dark:text-gray-400 max-w-md mx-auto">
                     No supplier returns have been recorded yet. Use the stock write-off screen and select "Return to supplier" to record returns.
                 </p>

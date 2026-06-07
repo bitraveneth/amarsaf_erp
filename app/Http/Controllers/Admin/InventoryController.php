@@ -92,4 +92,37 @@ class InventoryController extends Controller
             'rows' => $rows,
         ]);
     }
+
+    public function lowStock()
+    {
+        $warehouseIds = auth()->user()?->accessibleWarehouseIds();
+
+        $availableByProduct = StockEntry::query()
+            ->selectRaw('product_id, SUM(quantity) as total')
+            ->when($warehouseIds !== null, fn ($q) => $q->whereIn('warehouse_id', $warehouseIds))
+            ->where('status', 'available')
+            ->groupBy('product_id')
+            ->pluck('total', 'product_id');
+
+        $rows = \App\Models\Product::stockTracked()
+            ->where('is_active', true)
+            ->whereNotNull('reorder_level')
+            ->orderBy('name')
+            ->get()
+            ->map(function ($product) use ($availableByProduct) {
+                $available = (float) ($availableByProduct[$product->id] ?? 0);
+
+                return [
+                    'product' => $product,
+                    'available' => $available,
+                    'reorder_level' => (float) $product->reorder_level,
+                    'shortage' => max(0.0, (float) $product->reorder_level - $available),
+                ];
+            })
+            ->filter(fn (array $row) => $row['shortage'] > 0)
+            ->sortByDesc('shortage')
+            ->values();
+
+        return view('admin.inventory.low_stock', compact('rows'));
+    }
 }

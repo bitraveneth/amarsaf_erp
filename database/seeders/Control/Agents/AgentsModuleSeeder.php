@@ -16,6 +16,7 @@ class AgentsModuleSeeder extends Seeder
     public function run(): void
     {
         $this->call([
+            \Database\Seeders\KycDocumentTypeSeeder::class,
             AgentsSeeder::class,
             CommissionRulesSeeder::class,
         ]);

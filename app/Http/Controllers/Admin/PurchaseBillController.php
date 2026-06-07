@@ -11,6 +11,8 @@ use App\Models\PurchaseBillItem;
 use App\Models\Supplier;
 use App\Models\StockEntry;
 use App\Models\Warehouse;
+use App\Services\Accounting\AccountingService;
+use App\Services\Accounting\InventoryAccountingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -18,6 +20,12 @@ use Illuminate\Support\Str;
 
 class PurchaseBillController extends Controller
 {
+    public function __construct(
+        protected AccountingService $accounting,
+        protected InventoryAccountingService $inventoryAccounting
+    ) {
+    }
+
     public function index()
     {
         $bills = PurchaseBill::with('supplier', 'payments')->latest('bill_date')->paginate(15);
@@ -171,61 +179,125 @@ class PurchaseBillController extends Controller
         $data = $request->validate([
             'amount' => 'nullable|numeric|min:0.01',
             'paid_at' => 'nullable|date',
-            'method' => 'nullable|string',
+            'method' => 'nullable|string|max:100',
         ]);
 
-        $paidAt = $data['paid_at'] ?? Carbon::today();
+        $amount = isset($data['amount']) ? (float) $data['amount'] : (float) $bill->outstanding;
 
-        // যদি amount না আসে (index page থেকে), তাহলে পুরো বাকি টাকা pay করি
-        $alreadyPaid = $bill->payments()->sum('amount');
-        $totalDue    = ($bill->net_total + $bill->vat_amount) - $alreadyPaid;
-
-        if (empty($data['amount'])) {
-            $data['amount'] = $totalDue;
-        }
-
-        // Already paid or invalid amount
-        if ($data['amount'] <= 0) {
+        if ($amount <= 0) {
             return redirect()
                 ->route('admin.bills.index')
                 ->with('error', 'This bill is already fully paid.');
         }
 
-        if ($data['amount'] > $totalDue) {
+        if ($amount > $bill->outstanding + 0.00001) {
             return redirect()
                 ->route('admin.bills.index')
                 ->withErrors(['amount' => 'Payment amount exceeds the remaining amount due for this bill.']);
         }
 
-        $payment = BillPayment::create([
-            'purchase_bill_id' => $bill->id,
-            'amount' => $data['amount'],
-            'paid_at' => $paidAt,
-            'method' => $data['method'] ?? null,
-        ]);
-
-        LedgerEntry::create([
-            'account' => 'Accounts Payable',
-            'description' => 'Payment for ' . $bill->number,
-            'debit' => $payment->amount,
-            'credit' => 0,
-        ]);
-
-        LedgerEntry::create([
-            'account' => 'Bank',
-            'description' => 'Payment for ' . $bill->number,
-            'debit' => 0,
-            'credit' => $payment->amount,
-        ]);
-
-        $paidTotal = $bill->payments()->sum('amount');
-        if ($paidTotal >= $bill->net_total + $bill->vat_amount) {
-            $bill->update(['status' => 'paid']);
-        } elseif ($paidTotal > 0) {
-            $bill->update(['status' => 'part_paid']);
-        }
+        $this->recordBillPayment(
+            $bill,
+            $amount,
+            Carbon::parse($data['paid_at'] ?? Carbon::today()),
+            $data['method'] ?? null
+        );
 
         return redirect()->route('admin.bills.index')->with('status', 'Bill payment recorded.');
+    }
+
+    public function storeBatchPayment(Request $request)
+    {
+        $data = $request->validate([
+            'bill_ids' => 'required|array|min:1',
+            'bill_ids.*' => 'integer|exists:purchase_bills,id',
+            'paid_at' => 'nullable|date',
+            'method' => 'nullable|string|max:100',
+            'batch_reference' => 'nullable|string|max:100',
+        ]);
+
+        $paidAt = Carbon::parse($data['paid_at'] ?? Carbon::today());
+        $batchReference = trim((string) ($data['batch_reference'] ?? ''));
+        if ($batchReference === '') {
+            $batchReference = 'PAYB-' . now()->format('Ymd-His');
+        }
+
+        $bills = PurchaseBill::with('payments')
+            ->whereIn('id', $data['bill_ids'])
+            ->get();
+
+        $paidCount = 0;
+        $totalPaid = 0.0;
+
+        DB::transaction(function () use ($bills, $paidAt, $data, $batchReference, &$paidCount, &$totalPaid) {
+            foreach ($bills as $bill) {
+                $amount = (float) $bill->outstanding;
+                if ($amount <= 0) {
+                    continue;
+                }
+
+                $this->recordBillPayment(
+                    $bill,
+                    $amount,
+                    $paidAt,
+                    $data['method'] ?? null,
+                    $batchReference
+                );
+
+                $paidCount++;
+                $totalPaid += $amount;
+            }
+        });
+
+        if ($paidCount === 0) {
+            return redirect()
+                ->route('admin.bills.index')
+                ->with('error', 'No outstanding balance remained on the selected bills.');
+        }
+
+        return redirect()
+            ->route('admin.bills.index')
+            ->with('status', "Batch {$batchReference} recorded {$paidCount} bill payment(s) totalling BDT " . number_format($totalPaid, 2) . '.');
+    }
+
+    protected function recordBillPayment(
+        PurchaseBill $bill,
+        float $amount,
+        Carbon $paidAt,
+        ?string $method = null,
+        ?string $batchReference = null
+    ): BillPayment {
+        $amount = round($amount, 2);
+
+        $payment = BillPayment::create([
+            'purchase_bill_id' => $bill->id,
+            'amount' => $amount,
+            'paid_at' => $paidAt,
+            'method' => $method,
+            'batch_reference' => $batchReference,
+        ]);
+
+        $description = $batchReference
+            ? "Batch payment {$batchReference} for {$bill->number}"
+            : 'Payment for ' . $bill->number;
+
+        $this->accounting->post(
+            'bill_payment',
+            $paidAt,
+            [
+                ['account' => 'Accounts Payable', 'debit' => $amount, 'credit' => 0],
+                ['account' => 'Bank', 'debit' => 0, 'credit' => $amount],
+            ],
+            [
+                'description' => $description,
+                'source_type' => BillPayment::class,
+                'source_id' => $payment->id,
+            ]
+        );
+
+        $bill->refresh()->recalculateStatus();
+
+        return $payment;
     }
 
     public function destroy(PurchaseBill $bill)
@@ -315,36 +387,28 @@ class PurchaseBillController extends Controller
     {
         $description = 'Purchase bill ' . $bill->number;
 
-        LedgerEntry::where('description', $description)->delete();
+        $this->accounting->deleteByDescription($description);
 
-        LedgerEntry::create([
-            'account' => 'Purchases',
-            'description' => $description,
-            'debit' => $netTotal,
-            'credit' => 0,
-            'order_id' => null,
-            'invoice_id' => null,
-        ]);
+        $debitLines = $this->inventoryAccounting->refreshPurchaseBillLedger($bill, $netTotal, $vatTotal);
+
+        $lines = $debitLines;
 
         if ($vatTotal > 0) {
-            LedgerEntry::create([
-                'account' => 'Input VAT',
-                'description' => $description,
-                'debit' => $vatTotal,
-                'credit' => 0,
-                'order_id' => null,
-                'invoice_id' => null,
-            ]);
+            $lines[] = ['account' => 'Input VAT', 'debit' => $vatTotal, 'credit' => 0];
         }
 
-        LedgerEntry::create([
-            'account' => 'Accounts Payable',
-            'description' => $description,
-            'debit' => 0,
-            'credit' => $netTotal + $vatTotal,
-            'order_id' => null,
-            'invoice_id' => null,
-        ]);
+        $lines[] = ['account' => 'Accounts Payable', 'debit' => 0, 'credit' => $netTotal + $vatTotal];
+
+        $this->accounting->post(
+            'purchase_bill',
+            Carbon::parse($bill->bill_date),
+            $lines,
+            [
+                'description' => $description,
+                'source_type' => PurchaseBill::class,
+                'source_id' => $bill->id,
+            ]
+        );
     }
 
     protected function formatPurchaseBillNumber(int $purchaseBillId): string

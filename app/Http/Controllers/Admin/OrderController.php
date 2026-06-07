@@ -15,6 +15,7 @@ use App\Models\Delivery;
 use App\Models\StockMovement;
 use App\Models\Product;
 use App\Models\StockEntry;
+use App\Support\Documents\PickingListBuilder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -69,61 +70,7 @@ class OrderController extends Controller
     public function pickingList(Order $order)
     {
         $order->load('agent', 'items.product', 'delivery');
-
-        $lines = [];
-
-        foreach ($order->items as $item) {
-            if (!$item->product) {
-                continue;
-            }
-
-            $remaining = $item->quantity;
-
-            $entries = StockEntry::with('warehouse', 'batch')
-                ->where('product_id', $item->product_id)
-                ->where('status', 'available')
-                ->get()
-                ->sortBy(function ($entry) {
-                    if ($entry->batch && $entry->batch->expiry_date) {
-                        return $entry->batch->expiry_date;
-                    }
-                    if ($entry->batch && $entry->batch->production_date) {
-                        return $entry->batch->production_date;
-                    }
-                    return $entry->created_at;
-                });
-
-            foreach ($entries as $entry) {
-                if ($remaining <= 0) {
-                    break;
-                }
-
-                $pickQty = min($remaining, (int) $entry->quantity);
-                if ($pickQty <= 0) {
-                    continue;
-                }
-
-                $lines[] = [
-                    'sku' => $item->product->sku ?? '',
-                    'name' => $item->product->name ?? '',
-                    'quantity' => $pickQty,
-                    'warehouse' => $entry->warehouse->name ?? null,
-                    'batch' => $entry->batch->batch_code ?? null,
-                ];
-
-                $remaining -= $pickQty;
-            }
-
-            if ($remaining > 0) {
-                $lines[] = [
-                    'sku' => $item->product->sku ?? '',
-                    'name' => $item->product->name ?? '',
-                    'quantity' => $remaining,
-                    'warehouse' => 'Unassigned (shortage)',
-                    'batch' => null,
-                ];
-            }
-        }
+        $lines = PickingListBuilder::linesForOrder($order);
 
         return view('admin.orders.picking_list', compact('order', 'lines'));
     }

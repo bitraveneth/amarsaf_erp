@@ -16,7 +16,7 @@
                 </div>
                 <div>
                     <h1 class="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
-                        Inventory Dashboard
+                        Inventory dashboard
                     </h1>
                     <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
                         View reserved vs. available stock and expiring batches
@@ -192,7 +192,7 @@
         @endif
     </div>
 
-    <!-- Recent Stock Movements Section -->
+    <!-- Recent Stock movements Section -->
     <div class="space-y-4">
         <div class="flex items-center gap-3">
             <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-light-100 to-blue-light-50 dark:from-blue-light-900/30 dark:to-blue-light-800/30">
@@ -201,7 +201,7 @@
                 </svg>
             </div>
             <div>
-                <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Recent Stock Movements</h2>
+                <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Recent Stock movements</h2>
                 <p class="text-sm text-gray-500 dark:text-gray-400">Last 10 inventory transactions – transfers, write‑offs, deliveries</p>
             </div>
         </div>

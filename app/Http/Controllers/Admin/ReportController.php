@@ -2,11 +2,14 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Admin\Concerns\ResolvesDashboardPeriod;
 use App\Http\Controllers\Controller;
 use App\Models\Account;
+use App\Models\Batch;
 use App\Models\Campaign;
 use App\Models\CustomerGift;
 use App\Models\Invoice;
+use App\Models\JournalEntryLine;
 use App\Models\LedgerEntry;
 use App\Models\ProductionRun;
 use App\Models\InvoiceItem;
@@ -17,20 +20,24 @@ use App\Models\EmployeeAllowance;
 use App\Models\BillOfMaterial;
 use App\Models\SalaryDistribution;
 use App\Models\PurchaseBill;
+use App\Services\Accounting\AgingReportService;
+use App\Services\Accounting\InventoryCostingService;
+use App\Services\BatchTraceabilityService;
+use App\Services\ProductionVarianceService;
 use Illuminate\Support\Collection;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Schema;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ReportController extends Controller
 {
+    use ResolvesDashboardPeriod;
+
     public function profitAndLoss(Request $request)
     {
-        [$from, $to] = $this->resolveDateRange(
-            $request,
-            Carbon::now()->startOfMonth(),
-            Carbon::now()->endOfMonth()
-        );
+        [$from, $to, $range] = $this->resolveDashboardPeriod($request);
+        $currencyCode = config('app.currency', 'BDT');
 
         $entries = LedgerEntry::whereBetween('created_at', [$from, $to])->get();
 
@@ -67,7 +74,7 @@ class ReportController extends Controller
             fn ($group) => (float) $group->avg('material_unit_cost')
         );
 
-        $cogs = 0.0;
+        $cogsEstimated = 0.0;
         foreach ($invoiceItems as $item) {
             if (! $item->product_id) {
                 continue;
@@ -76,8 +83,15 @@ class ReportController extends Controller
             if ($unitCost === null) {
                 continue;
             }
-            $cogs += $unitCost * (float) $item->quantity;
+            $cogsEstimated += $unitCost * (float) $item->quantity;
         }
+
+        $cogsGl = (float) LedgerEntry::where('account', config('accounting.accounts.cogs', 'Cost of Goods Sold'))
+            ->whereBetween('created_at', [$from, $to])
+            ->sum('debit');
+
+        $cogs = $cogsGl > 0 ? $cogsGl : $cogsEstimated;
+        $cogsSource = $cogsGl > 0 ? 'gl' : 'estimated';
 
         $grossProfit = $netSales - $cogs;
         $profit = $grossProfit - $commissions - $otherExpenses - $payroll;
@@ -99,6 +113,8 @@ class ReportController extends Controller
         return view('admin.finance.pl', compact(
             'from',
             'to',
+            'range',
+            'currencyCode',
             'sales',
             'returns',
             'commissions',
@@ -106,10 +122,16 @@ class ReportController extends Controller
             'payroll',
             'netSales',
             'cogs',
+            'cogsEstimated',
+            'cogsGl',
+            'cogsSource',
             'grossProfit',
             'profit',
             'accountRows'
-        ));
+        ))->with([
+            'rangeOptions' => $this->dashboardRangeOptions(),
+            'periodLabel' => $this->dashboardPeriodLabel($from, $to),
+        ]);
     }
 
     public function vat(Request $request)
@@ -543,5 +565,277 @@ class ReportController extends Controller
         ])->sum('cost');
 
         return $expenses + $giftExpenses + $campaignExpenses;
+    }
+
+    public function trialBalance(Request $request)
+    {
+        [$from, $to] = $this->resolveDateRange(
+            $request,
+            Carbon::now()->startOfMonth(),
+            Carbon::now()->endOfMonth()
+        );
+
+        $accounts = Account::orderBy('code')->get();
+        $rows = [];
+
+        foreach ($accounts as $account) {
+            $openingDebit = $this->accountDebitTotal($account->id, null, $from->copy()->subDay()->endOfDay());
+            $openingCredit = $this->accountCreditTotal($account->id, null, $from->copy()->subDay()->endOfDay());
+            $periodDebit = $this->accountDebitTotal($account->id, $from, $to);
+            $periodCredit = $this->accountCreditTotal($account->id, $from, $to);
+            $closingDebit = $openingDebit + $periodDebit;
+            $closingCredit = $openingCredit + $periodCredit;
+            $balance = round($closingDebit - $closingCredit, 2);
+
+            if (
+                abs($openingDebit) < 0.01 && abs($openingCredit) < 0.01
+                && abs($periodDebit) < 0.01 && abs($periodCredit) < 0.01
+            ) {
+                continue;
+            }
+
+            $rows[] = [
+                'account' => $account,
+                'opening_debit' => round($openingDebit - $openingCredit, 2) > 0 ? round($openingDebit - $openingCredit, 2) : 0,
+                'opening_credit' => round($openingCredit - $openingDebit, 2) > 0 ? round($openingCredit - $openingDebit, 2) : 0,
+                'period_debit' => $periodDebit,
+                'period_credit' => $periodCredit,
+                'closing_debit' => $balance > 0 ? $balance : 0,
+                'closing_credit' => $balance < 0 ? abs($balance) : 0,
+            ];
+        }
+
+        $totals = [
+            'opening_debit' => collect($rows)->sum('opening_debit'),
+            'opening_credit' => collect($rows)->sum('opening_credit'),
+            'period_debit' => collect($rows)->sum('period_debit'),
+            'period_credit' => collect($rows)->sum('period_credit'),
+            'closing_debit' => collect($rows)->sum('closing_debit'),
+            'closing_credit' => collect($rows)->sum('closing_credit'),
+        ];
+
+        return view('admin.finance.trial_balance', compact('from', 'to', 'rows', 'totals'));
+    }
+
+    public function generalLedger(Request $request)
+    {
+        [$from, $to] = $this->resolveDateRange(
+            $request,
+            Carbon::now()->startOfMonth(),
+            Carbon::now()->endOfMonth()
+        );
+
+        $accounts = Account::orderBy('code')->get();
+        $selectedAccount = $request->query('account_id')
+            ? Account::find($request->query('account_id'))
+            : null;
+
+        $lines = collect();
+        $runningBalance = 0.0;
+
+        if ($selectedAccount) {
+            $openingDebit = $this->accountDebitTotal($selectedAccount->id, null, $from->copy()->subDay()->endOfDay());
+            $openingCredit = $this->accountCreditTotal($selectedAccount->id, null, $from->copy()->subDay()->endOfDay());
+            $runningBalance = round($openingDebit - $openingCredit, 2);
+
+            $entries = JournalEntryLine::query()
+                ->with(['journalEntry', 'account'])
+                ->where('account_id', $selectedAccount->id)
+                ->whereHas('journalEntry', function ($query) use ($from, $to) {
+                    $query->where('status', 'posted')
+                        ->whereDate('entry_date', '>=', $from->toDateString())
+                        ->whereDate('entry_date', '<=', $to->toDateString());
+                })
+                ->join('journal_entries', 'journal_entry_lines.journal_entry_id', '=', 'journal_entries.id')
+                ->orderBy('journal_entries.entry_date')
+                ->orderBy('journal_entries.id')
+                ->orderBy('journal_entry_lines.line_number')
+                ->select('journal_entry_lines.*')
+                ->get();
+
+            $lines = $entries->map(function (JournalEntryLine $line) use (&$runningBalance) {
+                $runningBalance = round($runningBalance + (float) $line->debit - (float) $line->credit, 2);
+
+                return [
+                    'date' => $line->journalEntry->entry_date,
+                    'journal' => $line->journalEntry,
+                    'description' => $line->description ?: $line->journalEntry->description,
+                    'debit' => (float) $line->debit,
+                    'credit' => (float) $line->credit,
+                    'balance' => $runningBalance,
+                ];
+            });
+        }
+
+        return view('admin.finance.general_ledger', compact(
+            'from',
+            'to',
+            'accounts',
+            'selectedAccount',
+            'lines',
+            'runningBalance'
+        ));
+    }
+
+    protected function accountDebitTotal(int $accountId, ?Carbon $from, Carbon $to): float
+    {
+        return (float) JournalEntryLine::query()
+            ->where('account_id', $accountId)
+            ->whereHas('journalEntry', function ($query) use ($from, $to) {
+                $query->where('status', 'posted')
+                    ->when($from, fn ($q) => $q->whereDate('entry_date', '>=', $from->toDateString()))
+                    ->whereDate('entry_date', '<=', $to->toDateString());
+            })
+            ->sum('debit');
+    }
+
+    protected function accountCreditTotal(int $accountId, ?Carbon $from, Carbon $to): float
+    {
+        return (float) JournalEntryLine::query()
+            ->where('account_id', $accountId)
+            ->whereHas('journalEntry', function ($query) use ($from, $to) {
+                $query->where('status', 'posted')
+                    ->when($from, fn ($q) => $q->whereDate('entry_date', '>=', $from->toDateString()))
+                    ->whereDate('entry_date', '<=', $to->toDateString());
+            })
+            ->sum('credit');
+    }
+
+    public function inventoryValuation(Request $request)
+    {
+        $costing = app(InventoryCostingService::class);
+        $rows = $costing->valuationReport();
+        $operationalValue = $costing->operationalStockValue();
+        $ledgerValue = $costing->ledgerInventoryBalance();
+        $variance = round($operationalValue - $ledgerValue, 2);
+
+        return view('admin.finance.inventory_valuation', compact(
+            'rows',
+            'operationalValue',
+            'ledgerValue',
+            'variance'
+        ));
+    }
+
+    public function receivableAging(Request $request)
+    {
+        $asOf = $request->filled('as_of')
+            ? Carbon::parse($request->input('as_of'))->endOfDay()
+            : Carbon::today()->endOfDay();
+
+        $report = app(AgingReportService::class)->receivableAging($asOf);
+        $bucketLabels = AgingReportService::BUCKET_LABELS;
+
+        return view('admin.finance.ar_aging', array_merge($report, compact('bucketLabels', 'asOf')));
+    }
+
+    public function payableAging(Request $request)
+    {
+        $asOf = $request->filled('as_of')
+            ? Carbon::parse($request->input('as_of'))->endOfDay()
+            : Carbon::today()->endOfDay();
+
+        $report = app(AgingReportService::class)->payableAging($asOf);
+        $bucketLabels = AgingReportService::BUCKET_LABELS;
+
+        return view('admin.finance.ap_aging', array_merge($report, compact('bucketLabels', 'asOf')));
+    }
+
+    public function productionVariance(Request $request)
+    {
+        [$from, $to] = $this->resolveDateRange(
+            $request,
+            Carbon::now()->startOfMonth(),
+            Carbon::now()->endOfMonth()
+        );
+
+        $rows = app(ProductionVarianceService::class)->report($from, $to);
+        $totals = [
+            'variance' => round((float) $rows->sum('variance_total'), 2),
+            'actual' => round((float) $rows->sum(fn (array $row) => $row['actual_unit_cost'] * $row['quantity']), 2),
+            'standard' => round((float) $rows->sum(fn (array $row) => $row['standard_unit_cost'] * $row['quantity']), 2),
+        ];
+
+        return view('admin.finance.production_variance', compact('from', 'to', 'rows', 'totals'));
+    }
+
+    public function batchTraceLookup(Request $request)
+    {
+        $query = trim((string) $request->query('q', ''));
+        $batches = $query !== ''
+            ? Batch::with('product')->where('batch_code', 'like', '%' . $query . '%')->limit(20)->get()
+            : Batch::with('product')->latest('id')->limit(20)->get();
+
+        return view('admin.finance.batch_trace_lookup', compact('query', 'batches'));
+    }
+
+    public function batchTrace(Batch $batch, BatchTraceabilityService $traceability)
+    {
+        $trace = $traceability->trace($batch);
+
+        return view('admin.finance.batch_trace', $trace);
+    }
+
+    public function vatExport(Request $request): StreamedResponse
+    {
+        $month = $request->query('month')
+            ? Carbon::parse($request->query('month') . '-01')->startOfMonth()
+            : Carbon::now()->startOfMonth();
+
+        $from = $month->copy()->startOfMonth();
+        $to = $month->copy()->endOfMonth();
+
+        $invoices = Invoice::with(['order.agent', 'creditNotes'])
+            ->whereDate('issued_at', '>=', $from->toDateString())
+            ->whereDate('issued_at', '<=', $to->toDateString())
+            ->orderBy('issued_at')
+            ->get();
+
+        $purchaseBills = PurchaseBill::with('supplier')
+            ->whereDate('bill_date', '>=', $from->toDateString())
+            ->whereDate('bill_date', '<=', $to->toDateString())
+            ->orderBy('bill_date')
+            ->get();
+
+        $filename = 'vat-return-' . $month->format('Y-m') . '.csv';
+
+        return response()->streamDownload(function () use ($invoices, $purchaseBills, $from, $to) {
+            $handle = fopen('php://output', 'w');
+            fputcsv($handle, ['Type', 'Date', 'Number', 'Party', 'Taxable', 'VAT', 'Rate']);
+
+            foreach ($invoices as $invoice) {
+                $taxable = $invoice->netSalesAfterCreditsInRange($from, $to);
+                $vat = max(0.0, (float) $invoice->vat_amount - $invoice->creditNotesVatTotalInRange($from, $to));
+                $rate = $taxable > 0 ? round(($vat / $taxable) * 100, 2) : 0;
+
+                fputcsv($handle, [
+                    'Output VAT',
+                    $invoice->issued_at?->format('Y-m-d'),
+                    $invoice->number,
+                    $invoice->order?->agent?->name,
+                    number_format($taxable, 2, '.', ''),
+                    number_format($vat, 2, '.', ''),
+                    number_format($rate, 2, '.', ''),
+                ]);
+            }
+
+            foreach ($purchaseBills as $bill) {
+                $rate = (float) $bill->net_total > 0
+                    ? round(((float) $bill->vat_amount / (float) $bill->net_total) * 100, 2)
+                    : 0;
+
+                fputcsv($handle, [
+                    'Input VAT',
+                    $bill->bill_date?->format('Y-m-d'),
+                    $bill->number,
+                    $bill->supplier?->name,
+                    number_format((float) $bill->net_total, 2, '.', ''),
+                    number_format((float) $bill->vat_amount, 2, '.', ''),
+                    number_format($rate, 2, '.', ''),
+                ]);
+            }
+
+            fclose($handle);
+        }, $filename, ['Content-Type' => 'text/csv; charset=UTF-8']);
     }
 }

@@ -6,14 +6,8 @@
 <div class="w-full max-w-md">
     <div class="rounded-xl border border-gray-200 bg-white p-8 shadow-theme-lg dark:border-gray-800 dark:bg-gray-900">
         <header class="mb-8 text-center">
-            <div class="mb-4 inline-flex items-center justify-center">
-                @if(!empty($appLogoUrl))
-                    <img src="{{ $appLogoUrl }}" alt="{{ $appBrandName }}" class="h-14 w-24 rounded-xl bg-white object-contain px-1.5 shadow-theme-xs dark:bg-gray-900" />
-                @else
-                    <div class="app-brand-logo flex items-center justify-center rounded-xl bg-brand-50 text-sm font-semibold text-brand-600 shadow-theme-xs dark:bg-brand-500/10 dark:text-brand-400">
-                        {{ $appBrandInitials ?? \App\Helpers\SystemSettings::initials($appBrandName ?? config('app.name')) }}
-                    </div>
-                @endif
+            <div class="mb-5 flex justify-center">
+                <x-brand-mark variant="login" class="mx-auto" />
             </div>
             <h1 class="text-title-md font-semibold text-gray-900 dark:text-white">Forgot password</h1>
             <p class="mt-2 text-theme-sm text-gray-600 dark:text-gray-400">Enter your email and we will send you a password reset link.</p>

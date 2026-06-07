@@ -107,6 +107,29 @@
         </div>
 
         <!-- Bills Table -->
+        <form action="{{ route('admin.bills.batch-pay') }}" method="POST" id="batch-pay-form">
+            @csrf
+            <div class="mb-4 flex flex-col gap-3 rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                    <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Batch supplier payment</h3>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Select unpaid bills below and pay the remaining balance in one journal batch.</p>
+                </div>
+                <div class="flex flex-wrap items-end gap-3">
+                    <div>
+                        <label class="mb-1 block text-xs font-medium text-gray-500">Paid on</label>
+                        <input type="date" name="paid_at" value="{{ now()->toDateString() }}" class="rounded-lg border-gray-300 text-sm dark:border-gray-700 dark:bg-gray-800">
+                    </div>
+                    <div>
+                        <label class="mb-1 block text-xs font-medium text-gray-500">Method</label>
+                        <input type="text" name="method" placeholder="Bank transfer" class="rounded-lg border-gray-300 text-sm dark:border-gray-700 dark:bg-gray-800">
+                    </div>
+                    <div>
+                        <label class="mb-1 block text-xs font-medium text-gray-500">Batch ref</label>
+                        <input type="text" name="batch_reference" placeholder="Auto-generated" class="rounded-lg border-gray-300 text-sm dark:border-gray-700 dark:bg-gray-800">
+                    </div>
+                    <button type="submit" class="rounded-lg bg-brand-500 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-600">Pay selected bills</button>
+                </div>
+            </div>
         <div class="rounded-2xl border border-gray-200 bg-white shadow-theme-sm dark:border-gray-800 dark:bg-gray-900 overflow-hidden">
             <div class="border-b border-gray-100 px-6 py-4 dark:border-gray-800">
                 <div class="flex items-center justify-between">
@@ -120,6 +143,7 @@
                 <table class="w-full">
                     <thead class="bg-gray-50 dark:bg-gray-800/50">
                         <tr>
+                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-700 dark:text-gray-300 w-10">Pay</th>
                             <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-700 dark:text-gray-300">Bill #</th>
                             <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-700 dark:text-gray-300">Supplier</th>
                             <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-700 dark:text-gray-300">Date</th>
@@ -147,6 +171,11 @@
                                 $statusColor = $statusColors[$bill->status] ?? 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400';
                             @endphp
                             <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50 {{ $isOverdue ? 'bg-error-50/30 dark:bg-error-500/5' : '' }}">
+                                <td class="px-4 py-3">
+                                    @if($due > 0 && $bill->status !== 'paid')
+                                        <input type="checkbox" name="bill_ids[]" value="{{ $bill->id }}" form="batch-pay-form" class="bill-select h-4 w-4 rounded border-gray-300 text-brand-500">
+                                    @endif
+                                </td>
                                 <td class="px-4 py-3">
                                     <div class="flex items-center gap-2">
                                         <span class="font-mono text-sm font-medium text-gray-900 dark:text-white">
@@ -227,7 +256,7 @@
                                             <form action="{{ route('admin.bills.pay', $bill) }}" method="POST" class="inline">
                                                 @csrf
                                                 <button type="submit" 
-                                                        class="inline-flex items-center gap-1 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-white/[0.03]">
+                                                        class="erp-btn-action">
                                                     <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
                                                     </svg>
@@ -238,7 +267,7 @@
 
                                         @if(Route::has('admin.bills.edit'))
                                             <a href="{{ route('admin.bills.edit', $bill) }}" 
-                                               class="inline-flex items-center gap-1 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-white/[0.03]">
+                                               class="erp-btn-action">
                                                 <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                                                 </svg>
@@ -254,7 +283,7 @@
                                                 @csrf
                                                 @method('DELETE')
                                                 <button type="submit" 
-                                                        class="inline-flex items-center gap-1 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-error-600 shadow-theme-xs hover:bg-error-50 hover:text-error-700 dark:border-gray-700 dark:bg-gray-800 dark:text-error-500 dark:hover:bg-error-500/10">
+                                                        class="erp-btn-action-danger">
                                                     <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                                                     </svg>
@@ -270,6 +299,7 @@
                 </table>
             </div>
         </div>
+        </form>
 
         <!-- Pagination -->
         <div class="mt-6">

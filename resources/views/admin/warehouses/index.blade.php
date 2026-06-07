@@ -222,7 +222,7 @@ use Illuminate\Support\Str;
     <div class="mt-8 space-y-4">
         <div class="flex items-center justify-between">
             <div>
-                <h2 class="text-lg font-medium text-gray-900 dark:text-white">Recent Stock Movements</h2>
+                <h2 class="text-lg font-medium text-gray-900 dark:text-white">Recent Stock movements</h2>
                 <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Latest inventory entries across all warehouses</p>
             </div>
             @if($entries->isNotEmpty() && method_exists($entries, 'links'))

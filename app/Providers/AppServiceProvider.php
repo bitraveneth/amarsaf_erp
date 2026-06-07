@@ -51,9 +51,11 @@ class AppServiceProvider extends ServiceProvider
         ]);
 
         View::share('appLogoUrl', $logoUrl);
+        View::share('appLogoIsCustom', SystemSettings::hasCustomLogo());
         View::share('brandThemeVariables', $brandThemeVariables);
         View::share('defaultThemeMode', $defaultThemeMode);
         View::share('appBrandName', $brandName);
+        View::share('appBrandDisplay', SystemSettings::brandDisplay($brandName));
         View::share('appBrandInitials', SystemSettings::initials($brandName));
         View::share('legalCompanyName', $legalCompanyName);
         View::share('legalCompanyInitials', SystemSettings::initials($legalCompanyName));

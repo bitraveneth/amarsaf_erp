@@ -14,6 +14,7 @@ use App\Models\StockMovement;
 use App\Models\Supplier;
 use App\Models\Warehouse;
 use App\Models\WarehouseLocation;
+use App\Services\Accounting\InventoryAccountingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -192,6 +193,8 @@ class GoodsReceiptController extends Controller
                 $purchaseOrder->refresh()->load('items');
                 $this->recalculatePurchaseOrderStatus($purchaseOrder);
             }
+
+            app(InventoryAccountingService::class)->postGoodsReceipt($receipt->fresh(['items.product', 'warehouse']));
         });
 
         return redirect()
@@ -276,6 +279,8 @@ class GoodsReceiptController extends Controller
                 $goodsReceipt->purchaseOrder->refresh()->load('items');
                 $this->recalculatePurchaseOrderStatus($goodsReceipt->purchaseOrder);
             }
+
+            app(InventoryAccountingService::class)->postGoodsReceiptReversal($goodsReceipt->fresh(['items.product']));
         });
 
         return redirect()
