@@ -363,4 +363,45 @@ class SystemSettings
             hexdec(substr($hex, 4, 2)),
         ];
     }
+
+    /**
+     * @return array{message: string, type: string, label: string, link: ?string}|null
+     */
+    public static function headerNotice(): ?array
+    {
+        if (self::get('header_notice_enabled') !== '1') {
+            return null;
+        }
+
+        $message = trim((string) self::get('header_notice_message', ''));
+        if ($message === '') {
+            return null;
+        }
+
+        $type = (string) self::get('header_notice_type', 'info');
+        if (! in_array($type, ['info', 'warning', 'urgent'], true)) {
+            $type = 'info';
+        }
+
+        $labels = app()->getLocale() === 'bn'
+            ? [
+                'info' => 'নোটিশ',
+                'warning' => 'সতর্কতা',
+                'urgent' => 'জরুরি',
+            ]
+            : [
+                'info' => 'Notice',
+                'warning' => 'Heads up',
+                'urgent' => 'Urgent',
+            ];
+
+        $link = trim((string) self::get('header_notice_link', ''));
+
+        return [
+            'message' => $message,
+            'type' => $type,
+            'label' => $labels[$type],
+            'link' => $link !== '' ? $link : null,
+        ];
+    }
 }

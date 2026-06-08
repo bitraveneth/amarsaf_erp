@@ -4,6 +4,7 @@ namespace App\Support;
 
 use App\Helpers\Permission;
 use App\Models\User;
+use App\Services\Accounting\FinancialReportExportService;
 use App\Support\ExportDateRange;
 use App\Support\ModuleExports\ModuleExportBuilders;
 use Illuminate\Http\Request;
@@ -31,6 +32,17 @@ class ModuleExportRegistry
         'salary-distributions' => 'period_start',
         'settlements' => 'period_start',
         'sales-targets' => 'period_start',
+        'profit-loss' => 'entry_date',
+        'trial-balance' => 'entry_date',
+        'general-ledger' => 'entry_date',
+        'balance-sheet' => 'entry_date',
+        'cash-flow' => 'entry_date',
+        'ar-aging' => 'issued_at',
+        'ap-aging' => 'bill_date',
+        'outstanding-invoices' => 'issued_at',
+        'outstanding-bills' => 'bill_date',
+        'sales-register' => 'issued_at',
+        'vat-report' => 'issued_at',
     ];
 
     public static function dateColumnFor(string $slug): ?string
@@ -59,9 +71,12 @@ class ModuleExportRegistry
         abort_unless($definition, 404);
 
         $builder = $definition['builder'];
-        $rows = is_array($builder)
-            ? call_user_func($builder, $request)
-            : app($builder)->__invoke($request);
+        if (is_array($builder)) {
+            [$class, $method] = $builder;
+            $rows = app($class)->{$method}($request);
+        } else {
+            $rows = app($builder)->__invoke($request);
+        }
 
         return [
             'title' => $definition['title'] . self::titleRangeSuffix($request),
@@ -84,6 +99,14 @@ class ModuleExportRegistry
     }
 
     public static function definitions(): array
+    {
+        return array_merge(self::moduleDefinitions(), self::reportDefinitions());
+    }
+
+    /**
+     * @return array<string, array<string, mixed>>
+     */
+    public static function moduleDefinitions(): array
     {
         return [
             'products' => [
@@ -409,6 +432,103 @@ class ModuleExportRegistry
         ];
     }
 
+    /**
+     * @return array<string, array<string, mixed>>
+     */
+    public static function reportDefinitions(): array
+    {
+        return [
+            'profit-loss' => [
+                'route' => 'admin.reports.pl',
+                'title' => 'Profit & Loss',
+                'filename' => 'profit-and-loss',
+                'permission' => 'reports.view',
+                'columns' => ['Line', 'Amount'],
+                'builder' => [FinancialReportExportService::class, 'profitAndLoss'],
+            ],
+            'trial-balance' => [
+                'route' => 'admin.reports.trial-balance',
+                'title' => 'Trial Balance',
+                'filename' => 'trial-balance',
+                'permission' => 'reports.view',
+                'columns' => ['Code', 'Account', 'Opening debit', 'Opening credit', 'Period debit', 'Period credit', 'Closing debit', 'Closing credit'],
+                'builder' => [FinancialReportExportService::class, 'trialBalance'],
+            ],
+            'general-ledger' => [
+                'route' => 'admin.reports.general-ledger',
+                'title' => 'General Ledger',
+                'filename' => 'general-ledger',
+                'permission' => 'reports.view',
+                'columns' => ['Code', 'Account', 'Date', 'Journal', 'Description', 'Debit', 'Credit'],
+                'builder' => [FinancialReportExportService::class, 'generalLedger'],
+            ],
+            'ar-aging' => [
+                'route' => 'admin.reports.ar-aging',
+                'title' => 'AR Aging (Debtors)',
+                'filename' => 'ar-aging',
+                'permission' => 'reports.view',
+                'columns' => ['Invoice', 'Agent', 'Due date', 'Days past due', 'Bucket', 'Outstanding'],
+                'builder' => [FinancialReportExportService::class, 'receivableAging'],
+            ],
+            'ap-aging' => [
+                'route' => 'admin.reports.ap-aging',
+                'title' => 'AP Aging (Creditors)',
+                'filename' => 'ap-aging',
+                'permission' => 'reports.view',
+                'columns' => ['Bill', 'Supplier', 'Due date', 'Days past due', 'Bucket', 'Outstanding'],
+                'builder' => [FinancialReportExportService::class, 'payableAging'],
+            ],
+            'vat-report' => [
+                'route' => 'admin.reports.vat',
+                'title' => 'VAT Report',
+                'filename' => 'vat-report',
+                'permission' => 'reports.view',
+                'columns' => ['Type', 'Date', 'Number', 'Party', 'Taxable', 'VAT', 'Rate %'],
+                'builder' => [FinancialReportExportService::class, 'vatReport'],
+            ],
+            'balance-sheet' => [
+                'route' => 'admin.reports.bs',
+                'title' => 'Balance Sheet',
+                'filename' => 'balance-sheet',
+                'permission' => 'reports.view',
+                'columns' => ['Section', 'Account', 'Amount'],
+                'builder' => [FinancialReportExportService::class, 'balanceSheet'],
+            ],
+            'cash-flow' => [
+                'route' => 'admin.reports.cashflow',
+                'title' => 'Cash Flow',
+                'filename' => 'cash-flow',
+                'permission' => 'reports.view',
+                'columns' => ['Line', 'Amount'],
+                'builder' => [FinancialReportExportService::class, 'cashFlow'],
+            ],
+            'outstanding-invoices' => [
+                'route' => 'admin.finance.index',
+                'title' => 'Outstanding Invoices',
+                'filename' => 'outstanding-invoices',
+                'permission' => 'accounting.manage',
+                'columns' => ['Invoice', 'Agent', 'Issued', 'Due', 'Days past due', 'Gross', 'Paid', 'Outstanding', 'Status'],
+                'builder' => [FinancialReportExportService::class, 'outstandingInvoices'],
+            ],
+            'outstanding-bills' => [
+                'route' => 'admin.bills.index',
+                'title' => 'Outstanding Bills',
+                'filename' => 'outstanding-bills',
+                'permission' => 'accounting.manage',
+                'columns' => ['Bill', 'Supplier', 'Bill date', 'Due', 'Days past due', 'Net', 'Paid', 'Outstanding', 'Status'],
+                'builder' => [FinancialReportExportService::class, 'outstandingBills'],
+            ],
+            'sales-register' => [
+                'route' => 'admin.finance.index',
+                'title' => 'Sales Register',
+                'filename' => 'sales-register',
+                'permission' => 'reports.view',
+                'columns' => ['Date', 'Invoice', 'Order', 'Agent', 'Net', 'VAT', 'Withholding', 'Gross', 'Status'],
+                'builder' => [FinancialReportExportService::class, 'salesRegister'],
+            ],
+        ];
+    }
+
     public static function modulesGroupedForUser(?User $user, array $query = []): array
     {
         $grouped = [];
@@ -444,21 +564,36 @@ class ModuleExportRegistry
     public static function featuredModulesForUser(?User $user, array $query = []): array
     {
         $featured = [
-            ['slug' => 'orders', 'badge' => 'Most used', 'hint' => 'Sales & return orders'],
-            ['slug' => 'agents', 'badge' => 'Important', 'hint' => 'Selling partner master'],
-            ['slug' => 'invoices', 'badge' => 'Finance', 'hint' => 'Issued invoices'],
-            ['slug' => 'products', 'badge' => 'Master data', 'hint' => 'Product catalog'],
-            ['slug' => 'production', 'badge' => 'Operations', 'hint' => 'Daily production'],
-            ['slug' => 'expenses', 'badge' => 'Finance', 'hint' => 'Expense entries'],
+            ['slug' => 'month-end-pack', 'badge' => 'Close', 'hint' => 'ZIP all key finance files'],
+            ['slug' => 'profit-loss', 'badge' => 'Finance', 'hint' => 'P&L summary for the period'],
+            ['slug' => 'balance-sheet', 'badge' => 'Statements', 'hint' => 'Assets, liabilities, equity'],
+            ['slug' => 'sales-register', 'badge' => 'Revenue', 'hint' => 'Invoice audit trail'],
+            ['slug' => 'outstanding-invoices', 'badge' => 'Collections', 'hint' => 'Open customer balances'],
+            ['slug' => 'trial-balance', 'badge' => 'Ledger', 'hint' => 'Opening, movement, closing'],
+            ['slug' => 'ar-aging', 'badge' => 'Debtors', 'hint' => 'Who owes you'],
+            ['slug' => 'vat-report', 'badge' => 'Tax', 'hint' => 'Output & input VAT lines'],
+            ['slug' => 'tally-xml', 'badge' => 'Tally', 'hint' => 'Posted journals for CA'],
         ];
 
         $available = collect(self::modulesGroupedForUser($user, $query))
             ->flatten(1)
             ->keyBy('slug');
 
+        $special = collect(self::specialExportsForUser($user, $query))->keyBy('slug');
+
         return collect($featured)
-            ->filter(fn (array $item) => $available->has($item['slug']))
-            ->map(fn (array $item) => array_merge($item, $available->get($item['slug'])))
+            ->filter(fn (array $item) => $available->has($item['slug']) || $special->has($item['slug']))
+            ->map(function (array $item) use ($available, $special) {
+                if ($special->has($item['slug'])) {
+                    return array_merge($item, $special->get($item['slug']), [
+                        'is_special' => true,
+                    ]);
+                }
+
+                return array_merge($item, $available->get($item['slug']), [
+                    'is_special' => false,
+                ]);
+            })
             ->values()
             ->all();
     }
@@ -466,6 +601,7 @@ class ModuleExportRegistry
     public static function categoryFor(string $permission): string
     {
         return match (true) {
+            str_starts_with($permission, 'reports.') => 'Financial reports',
             str_starts_with($permission, 'control.products') => 'Products & packaging',
             str_starts_with($permission, 'control.agents') => 'Sales & agents',
             str_starts_with($permission, 'sales.') => 'Sales & agents',
@@ -486,6 +622,77 @@ class ModuleExportRegistry
             'module' => $slug,
             'format' => $format,
         ], $query));
+    }
+
+    public static function previewUrl(string $slug, array $query = []): string
+    {
+        return route('admin.modules.export.preview', array_merge([
+            'module' => $slug,
+        ], $query));
+    }
+
+    /**
+     * @return array<string, array<string, mixed>>
+     */
+    public static function specialDefinitions(): array
+    {
+        return [
+            'tally-xml' => [
+                'title' => 'Tally XML',
+                'description' => 'Posted journal vouchers for import into Tally (CA / external GL).',
+                'permission' => 'accounting.manage',
+                'supports_date_range' => true,
+                'badge' => 'Accounting',
+                'hint' => 'Posted journals only',
+            ],
+            'month-end-pack' => [
+                'title' => 'Month-end export pack',
+                'description' => 'Download a ZIP with P&L, balance sheet, trial balance, aging, VAT, sales register, and more for the selected period.',
+                'permission' => 'reports.view',
+                'supports_date_range' => true,
+                'badge' => 'Month close',
+                'hint' => 'All key finance CSVs (+ Tally if allowed)',
+            ],
+        ];
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    public static function specialExportsForUser(?User $user, array $query = []): array
+    {
+        $exports = [];
+
+        foreach (self::specialDefinitions() as $slug => $definition) {
+            if (! Permission::can($user, $definition['permission'])) {
+                continue;
+            }
+
+            $previewUrl = match ($slug) {
+                'month-end-pack' => null,
+                'tally-xml' => route('admin.exports.tally.preview', $query),
+                default => null,
+            };
+
+            $downloadUrl = match ($slug) {
+                'month-end-pack' => route('admin.exports.month-end-pack.download', $query),
+                'tally-xml' => route('admin.exports.tally.download', $query),
+                default => null,
+            };
+
+            $exports[] = array_merge($definition, [
+                'slug' => $slug,
+                'preview_url' => $previewUrl,
+                'download_url' => $downloadUrl,
+            ]);
+        }
+
+        return $exports;
+    }
+
+    public static function isSpecialExport(string $slug): bool
+    {
+        return array_key_exists($slug, self::specialDefinitions());
     }
 
     public static function currentExportUrl(string $format): ?string

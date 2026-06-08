@@ -58,14 +58,26 @@ class InventoryController extends Controller
         return view('admin.inventory.index', compact('summary', 'expiringSoon', 'recentMovements', 'recentRuns'));
     }
 
-    public function materials()
+    public function materials(Request $request)
     {
         $warehouseIds = auth()->user()?->accessibleWarehouseIds();
+        $warehouseFilter = $request->integer('warehouse_id') ?: null;
+
+        if ($warehouseFilter !== null && $warehouseIds !== null && ! in_array($warehouseFilter, $warehouseIds, true)) {
+            abort(403);
+        }
+
+        $filteredWarehouse = null;
+        if ($warehouseFilter !== null) {
+            $filteredWarehouse = \App\Models\Warehouse::query()->find($warehouseFilter);
+        }
+
         // Raw-material stock summary by product and warehouse
         $entries = StockEntry::with(['product', 'warehouse'])
             ->when($warehouseIds !== null, function ($query) use ($warehouseIds) {
                 $query->whereIn('warehouse_id', $warehouseIds);
             })
+            ->when($warehouseFilter !== null, fn ($query) => $query->where('warehouse_id', $warehouseFilter))
             ->where('status', 'available')
             ->whereHas('product', function ($query) {
                 $query->where('product_type', 'raw');
@@ -90,6 +102,7 @@ class InventoryController extends Controller
 
         return view('admin.inventory.materials', [
             'rows' => $rows,
+            'filteredWarehouse' => $filteredWarehouse,
         ]);
     }
 

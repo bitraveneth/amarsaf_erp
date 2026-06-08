@@ -53,4 +53,58 @@ class TallyExportService
 
         return $xml->asXML() ?: '';
     }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function preview(Carbon $from, Carbon $to, int $limit = 50): array
+    {
+        $journals = $this->vouchers($from, $to);
+        $totalDebit = 0.0;
+        $totalCredit = 0.0;
+        $lineCount = 0;
+
+        $vouchers = $journals->map(function (JournalEntry $journal) use (&$totalDebit, &$totalCredit, &$lineCount) {
+            $debit = $journal->totalDebit();
+            $credit = $journal->totalCredit();
+            $totalDebit += $debit;
+            $totalCredit += $credit;
+            $lineCount += $journal->lines->count();
+
+            return [
+                'number' => $journal->number,
+                'date' => $journal->entry_date->format('d M Y'),
+                'type' => str_replace('_', ' ', (string) ($journal->journal_type ?? '')),
+                'description' => (string) ($journal->description ?? ''),
+                'debit' => round($debit, 2),
+                'credit' => round($credit, 2),
+                'lines' => $journal->lines->map(fn ($line) => [
+                    'account' => $line->account?->name ?? 'Unknown',
+                    'debit' => round((float) $line->debit, 2),
+                    'credit' => round((float) $line->credit, 2),
+                ])->values()->all(),
+            ];
+        });
+
+        $count = $vouchers->count();
+
+        return [
+            'title' => 'Tally XML — posted journals',
+            'period' => [
+                'from' => $from->toDateString(),
+                'to' => $to->toDateString(),
+                'label' => $from->format('d M Y') . ' – ' . $to->format('d M Y'),
+            ],
+            'summary' => [
+                'voucher_count' => $count,
+                'line_count' => $lineCount,
+                'total_debit' => round($totalDebit, 2),
+                'total_credit' => round($totalCredit, 2),
+            ],
+            'vouchers' => $vouchers->take($limit)->values()->all(),
+            'total_rows' => $count,
+            'truncated' => $count > $limit,
+            'preview_limit' => $limit,
+        ];
+    }
 }

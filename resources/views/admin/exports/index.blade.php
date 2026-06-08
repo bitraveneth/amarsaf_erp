@@ -5,8 +5,11 @@
     $dateFilteredCount = collect($exportGroups)
         ->flatten(1)
         ->where('supports_date_range', true)
-        ->count();
+        ->count() + count($specialExports ?? []);
     $exportBaseUrl = url('/admin/exports');
+    $tallyPreviewBase = url('/admin/exports/tally/preview');
+    $tallyDownloadBase = url('/admin/exports/tally/download');
+    $monthEndDownloadBase = url('/admin/exports/month-end-pack/download');
 @endphp
 
 <div
@@ -21,6 +24,14 @@
         fromPicker: null,
         toPicker: null,
         exportBase: @js($exportBaseUrl),
+        tallyPreviewBase: @js($tallyPreviewBase),
+        tallyDownloadBase: @js($tallyDownloadBase),
+        monthEndDownloadBase: @js($monthEndDownloadBase),
+        previewLoading: false,
+        previewError: null,
+        previewData: null,
+        previewKind: null,
+        expandedVoucher: null,
         matches(text) {
             if (! this.query.trim()) return true;
             return text.toLowerCase().includes(this.query.trim().toLowerCase());
@@ -102,10 +113,94 @@
             return params.toString();
         },
         exportUrl(format) {
-            if (! this.selectedModule) return '#';
+            if (! this.selectedModule || this.isSpecialExport()) return '#';
 
             const query = this.dateQuery();
             return `${this.exportBase}/${this.selectedModule}/${format}${query ? `?${query}` : ''}`;
+        },
+        previewUrl() {
+            if (! this.selectedModule) return '#';
+
+            const query = this.dateQuery();
+
+            if (this.isTallyExport()) {
+                return `${this.tallyPreviewBase}${query ? `?${query}` : ''}`;
+            }
+
+            return `${this.exportBase}/${this.selectedModule}/preview${query ? `?${query}` : ''}`;
+        },
+        downloadUrl() {
+            if (! this.selectedModule) return '#';
+
+            const query = this.dateQuery();
+
+            if (this.isTallyExport()) {
+                return `${this.tallyDownloadBase}${query ? `?${query}` : ''}`;
+            }
+
+            if (this.isMonthEndPack()) {
+                return `${this.monthEndDownloadBase}${query ? `?${query}` : ''}`;
+            }
+
+            return '#';
+        },
+        isSpecialExport() {
+            return this.isTallyExport() || this.isMonthEndPack();
+        },
+        isTallyExport() {
+            return this.selectedModule === 'tally-xml';
+        },
+        isMonthEndPack() {
+            return this.selectedModule === 'month-end-pack';
+        },
+        rowClass(index) {
+            const style = this.previewData?.row_styles?.[index];
+            return style ? `is-${style}` : '';
+        },
+        isNumericColumn(index) {
+            return (this.previewData?.numeric_columns ?? []).includes(index);
+        },
+        async loadPreview() {
+            if (! this.selectedModule || this.isMonthEndPack()) {
+                this.previewData = null;
+                this.previewKind = this.isMonthEndPack() ? 'pack' : null;
+                this.previewError = null;
+                return;
+            }
+
+            this.previewLoading = true;
+            this.previewError = null;
+            this.expandedVoucher = null;
+
+            try {
+                const response = await fetch(this.previewUrl(), {
+                    headers: {
+                        Accept: 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                });
+
+                if (! response.ok) {
+                    throw new Error('Preview failed');
+                }
+
+                const payload = await response.json();
+                this.previewData = payload;
+                this.previewKind = payload.vouchers ? 'tally' : 'tabular';
+            } catch (error) {
+                this.previewError = 'Could not load preview. Check the date range and try again.';
+                this.previewData = null;
+                this.previewKind = null;
+            } finally {
+                this.previewLoading = false;
+            }
+        },
+        formatMoney(value) {
+            const amount = Number(value ?? 0);
+            return amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        },
+        toggleVoucher(index) {
+            this.expandedVoucher = this.expandedVoucher === index ? null : index;
         },
         formatDisplayDate(value) {
             if (! value) return 'Pick a date on the calendar';
@@ -136,6 +231,18 @@
                 setTimeout(() => initPickers(), 60);
             });
         }
+        if (selectedModule) {
+            $nextTick(() => loadPreview());
+        }
+        $watch('selectedModule', (value) => {
+            if (value) {
+                loadPreview();
+            } else {
+                previewData = null;
+                previewKind = null;
+                previewError = null;
+            }
+        });
     "
 >
     {{-- Hero --}}
@@ -146,7 +253,7 @@
                 <p class="erp-eyebrow text-brand-600 dark:text-brand-400">Reports & analytics</p>
                 <h1 class="erp-dash-h1 mt-2">Export center</h1>
                 <p class="erp-body mt-2 max-w-2xl">
-                    Choose a module and file format, set a time window for transactional data, then download CSV or PDF.
+                    Preview and download financial statements, aging, sales register, open balances, month-end ZIP packs, or Tally XML for your CA.
                 </p>
             </div>
             <div class="export-center-hero__stats">
@@ -171,7 +278,7 @@
         <div class="export-center-panel__head">
             <div>
                 <h2 class="erp-h2">Export file</h2>
-                <p class="erp-caption mt-1">Select module, format, and time range — then download.</p>
+                <p class="erp-caption mt-1">Select module, preview rows, set time range — then download.</p>
             </div>
         </div>
 
@@ -208,26 +315,72 @@
                                     @endforeach
                                 </optgroup>
                             @endforeach
+                            @if(count($specialExports ?? []) > 0)
+                                <optgroup label="Accounting integrations">
+                                    @foreach($specialExports as $special)
+                                        <option
+                                            value="{{ $special['slug'] }}"
+                                            @selected(request('module') === $special['slug'])
+                                        >
+                                            {{ $special['title'] }} (XML · date filter)
+                                        </option>
+                                    @endforeach
+                                </optgroup>
+                            @endif
                         </select>
                     </label>
 
                     <div class="export-center-download-actions">
-                        <a
-                            href="#"
-                            class="export-center-download export-center-download--csv"
-                            x-bind:href="exportUrl('csv')"
-                            x-bind:class="{ 'pointer-events-none opacity-40': ! selectedModule }"
+                        <button
+                            type="button"
+                            class="export-center-download export-center-download--preview"
+                            @click="loadPreview()"
+                            x-bind:disabled="! selectedModule || previewLoading"
+                            x-bind:class="{ 'opacity-40': ! selectedModule || previewLoading }"
                         >
-                            Download CSV
-                        </a>
-                        <a
-                            href="#"
-                            class="export-center-download export-center-download--pdf"
-                            x-bind:href="exportUrl('pdf')"
-                            x-bind:class="{ 'pointer-events-none opacity-40': ! selectedModule }"
-                        >
-                            Download PDF
-                        </a>
+                            <span x-show="! previewLoading">Preview</span>
+                            <span x-show="previewLoading" x-cloak>Loading…</span>
+                        </button>
+                        <template x-if="! isSpecialExport()">
+                            <a
+                                href="#"
+                                class="export-center-download export-center-download--csv"
+                                x-bind:href="exportUrl('csv')"
+                                x-bind:class="{ 'pointer-events-none opacity-40': ! selectedModule }"
+                            >
+                                Download CSV
+                            </a>
+                        </template>
+                        <template x-if="! isSpecialExport()">
+                            <a
+                                href="#"
+                                class="export-center-download export-center-download--pdf"
+                                x-bind:href="exportUrl('pdf')"
+                                x-bind:class="{ 'pointer-events-none opacity-40': ! selectedModule }"
+                            >
+                                Download PDF
+                            </a>
+                        </template>
+                        <template x-if="isMonthEndPack()">
+                            <a
+                                href="#"
+                                class="export-center-download export-center-download--csv"
+                                x-bind:href="downloadUrl()"
+                                x-bind:class="{ 'pointer-events-none opacity-40': ! selectedModule }"
+                            >
+                                Download ZIP pack
+                            </a>
+                        </template>
+                        <template x-if="isTallyExport()">
+                            <a
+                                href="#"
+                                class="export-center-download export-center-download--xml"
+                                x-bind:href="downloadUrl()"
+                                x-bind:class="{ 'pointer-events-none opacity-40': ! selectedModule }"
+                            >
+                                Download Tally XML
+                            </a>
+                        </template>
                     </div>
                 </div>
 
@@ -364,6 +517,197 @@
         </form>
     </section>
 
+    <section class="export-center-panel export-center-preview" x-show="selectedModule" x-cloak>
+        <div class="export-center-preview__head">
+            <div>
+                <h2 class="erp-h2">Preview</h2>
+                <p class="erp-caption mt-1">Review exported rows before downloading.</p>
+            </div>
+            <div class="export-center-preview__actions">
+                <template x-if="previewData && previewKind === 'tabular'">
+                    <div class="export-center-preview__downloads">
+                        <a
+                            class="export-center-download export-center-download--csv"
+                            x-bind:href="previewData.csv_url"
+                        >
+                            CSV
+                        </a>
+                        <a
+                            class="export-center-download export-center-download--pdf"
+                            x-bind:href="previewData.pdf_url"
+                        >
+                            PDF
+                        </a>
+                    </div>
+                </template>
+                <template x-if="isMonthEndPack()">
+                    <a
+                        class="export-center-download export-center-download--csv"
+                        x-bind:href="downloadUrl()"
+                    >
+                        Download ZIP pack
+                    </a>
+                </template>
+                <button type="button" class="erp-btn-secondary" @click="loadPreview()" x-bind:disabled="previewLoading || isMonthEndPack()">
+                    Refresh preview
+                </button>
+            </div>
+        </div>
+
+        <div x-show="previewError" class="export-center-preview__error" x-text="previewError"></div>
+
+        <div x-show="previewLoading" class="export-center-preview__loading">
+            Loading preview…
+        </div>
+
+        <template x-if="isMonthEndPack()">
+            <div class="export-center-preview__pack">
+                <p class="erp-body-strong">Month-end export pack</p>
+                <p class="erp-caption mt-1">
+                    One ZIP with P&amp;L, balance sheet, cash flow, trial balance, general ledger, AR/AP aging, VAT, sales register, outstanding invoices &amp; bills.
+                    Tally XML is included when you have accounting access.
+                </p>
+                <ul class="export-center-preview__pack-list">
+                    <li>Profit &amp; loss, balance sheet, cash flow</li>
+                    <li>Trial balance and general ledger</li>
+                    <li>AR/AP aging and VAT detail</li>
+                    <li>Sales register and open balances</li>
+                </ul>
+                <p class="erp-caption mt-3">
+                    Active period: <span class="erp-body-strong">{{ $periodLabel }}</span>
+                </p>
+            </div>
+        </template>
+
+        <template x-if="previewData && previewKind === 'tabular'">
+            <div>
+                <div class="export-center-preview__meta">
+                    <div class="export-center-preview__meta-top">
+                        <div>
+                            <p class="erp-body-strong" x-text="previewData.title"></p>
+                            <p class="erp-caption mt-1">
+                                Showing <span x-text="previewData.rows.length"></span> of <span x-text="previewData.total_rows"></span> rows
+                                <span x-show="previewData.truncated"> (preview limited)</span>
+                            </p>
+                        </div>
+                        <span class="export-center-preview__badge" x-text="previewData.total_rows + ' rows'"></span>
+                    </div>
+                    <div class="export-center-preview__kpi-grid" x-show="(previewData.highlights ?? []).length">
+                        <template x-for="(item, index) in previewData.highlights ?? []" :key="index">
+                            <div class="export-center-preview__kpi">
+                                <p class="export-center-preview__kpi-label" x-text="item.label"></p>
+                                <p class="export-center-preview__kpi-value" x-text="item.value"></p>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+                <div class="export-center-preview__table-wrap">
+                    <table class="export-center-preview__table">
+                        <thead>
+                            <tr>
+                                <template x-for="(column, columnIndex) in previewData.columns" :key="column">
+                                    <th
+                                        x-text="column"
+                                        x-bind:class="{ 'is-right': isNumericColumn(columnIndex) }"
+                                    ></th>
+                                </template>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template x-for="(row, rowIndex) in previewData.rows" :key="rowIndex">
+                                <tr x-bind:class="rowClass(rowIndex)">
+                                    <template x-for="(cell, cellIndex) in row" :key="cellIndex">
+                                        <td
+                                            x-text="cell"
+                                            x-bind:class="{ 'is-right': isNumericColumn(cellIndex) }"
+                                        ></td>
+                                    </template>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </template>
+
+        <template x-if="previewData && previewKind === 'tally'">
+            <div>
+                <div class="export-center-preview__meta">
+                    <p class="erp-body-strong" x-text="previewData.title"></p>
+                    <p class="erp-caption mt-1" x-text="previewData.period?.label"></p>
+                    <div class="export-center-preview__stats">
+                        <span class="export-center-preview__stat"><strong x-text="previewData.summary?.voucher_count ?? 0"></strong> vouchers</span>
+                        <span class="export-center-preview__stat"><strong x-text="previewData.summary?.line_count ?? 0"></strong> lines</span>
+                        <span class="export-center-preview__stat">Debit <strong x-text="formatMoney(previewData.summary?.total_debit)"></strong></span>
+                        <span class="export-center-preview__stat">Credit <strong x-text="formatMoney(previewData.summary?.total_credit)"></strong></span>
+                    </div>
+                    <p class="erp-caption mt-2">
+                        Showing <span x-text="previewData.vouchers.length"></span> of <span x-text="previewData.total_rows"></span> vouchers
+                        <span x-show="previewData.truncated"> (preview limited)</span>
+                    </p>
+                </div>
+                <div class="export-center-preview__table-wrap">
+                    <table class="export-center-preview__table">
+                        <thead>
+                            <tr>
+                                <th></th>
+                                <th>Number</th>
+                                <th>Date</th>
+                                <th>Type</th>
+                                <th>Description</th>
+                                <th class="is-right">Debit</th>
+                                <th class="is-right">Credit</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template x-for="(voucher, index) in previewData.vouchers" :key="voucher.number + index">
+                                <tr class="export-center-preview__voucher-row" @click="toggleVoucher(index)">
+                                    <td>
+                                        <span class="export-center-preview__expand" x-text="expandedVoucher === index ? '−' : '+'"></span>
+                                    </td>
+                                    <td x-text="voucher.number"></td>
+                                    <td x-text="voucher.date"></td>
+                                    <td x-text="voucher.type"></td>
+                                    <td x-text="voucher.description"></td>
+                                    <td class="is-right" x-text="formatMoney(voucher.debit)"></td>
+                                    <td class="is-right" x-text="formatMoney(voucher.credit)"></td>
+                                </tr>
+                                <template x-if="expandedVoucher === index">
+                                    <tr>
+                                        <td colspan="7" class="export-center-preview__lines-cell">
+                                            <table class="export-center-preview__lines-table">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Account</th>
+                                                        <th class="is-right">Debit</th>
+                                                        <th class="is-right">Credit</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <template x-for="(line, lineIndex) in voucher.lines" :key="lineIndex">
+                                                        <tr>
+                                                            <td x-text="line.account"></td>
+                                                            <td class="is-right" x-text="line.debit > 0 ? formatMoney(line.debit) : '—'"></td>
+                                                            <td class="is-right" x-text="line.credit > 0 ? formatMoney(line.credit) : '—'"></td>
+                                                        </tr>
+                                                    </template>
+                                                </tbody>
+                                            </table>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </template>
+
+        <div x-show="! previewLoading && ! previewError && ! previewData && selectedModule && ! isMonthEndPack()" class="export-center-preview__empty">
+            Click Preview to load data for the selected module and date range.
+        </div>
+    </section>
+
     {{-- Search --}}
     <div class="export-center-panel export-center-panel--compact">
         <label for="export-search" class="erp-label">Browse all modules</label>
@@ -437,6 +781,50 @@
                 </div>
             </section>
         @endforeach
+
+        @if(count($specialExports ?? []) > 0)
+            <section class="export-center-group">
+                <div class="export-center-group__head">
+                    <h2 class="erp-h2">Accounting integrations</h2>
+                    <span class="export-center-group__count">{{ count($specialExports) }} exports</span>
+                </div>
+
+                <div class="export-center-grid">
+                    @foreach($specialExports as $special)
+                        <article
+                            class="export-center-card export-center-card--special"
+                            x-show="matches(@js($special['title'])) || matches('tally') || matches('accounting')"
+                            x-cloak
+                        >
+                            <div class="export-center-card__top">
+                                <div class="export-center-card__icon" aria-hidden="true">
+                                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M17.25 6.75 22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3-4.5 16.5" />
+                                    </svg>
+                                </div>
+                                <span class="export-center-card__badge export-center-card__badge--dated">Tally XML</span>
+                            </div>
+
+                            <h3 class="erp-h3 mt-3">{{ $special['title'] }}</h3>
+                            <p class="erp-caption mt-1">{{ $special['description'] }}</p>
+
+                            <div class="export-center-card__actions">
+                                <a href="{{ $special['download_url'] }}" class="export-center-download export-center-download--xml">
+                                    XML
+                                </a>
+                                <button
+                                    type="button"
+                                    class="export-center-link"
+                                    @click="selectModule(@js($special['slug'])); $el.closest('.export-center')?.querySelector('.export-center-preview')?.scrollIntoView({ behavior: 'smooth', block: 'start' })"
+                                >
+                                    Preview in builder
+                                </button>
+                            </div>
+                        </article>
+                    @endforeach
+                </div>
+            </section>
+        @endif
     @endif
 </div>
 @endsection

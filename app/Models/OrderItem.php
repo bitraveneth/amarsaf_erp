@@ -13,6 +13,8 @@ class OrderItem extends Model
         'order_id',
         'product_id',
         'quantity',
+        'picked_quantity',
+        'packed_quantity',
         'unit_price',
         'order_type',
         'commission_rate',
@@ -21,6 +23,8 @@ class OrderItem extends Model
 
     protected $casts = [
         'quantity' => 'integer',
+        'picked_quantity' => 'decimal:2',
+        'packed_quantity' => 'decimal:2',
         'unit_price' => 'decimal:2',
         'commission_rate' => 'decimal:2',
         'commission_amount' => 'decimal:2',

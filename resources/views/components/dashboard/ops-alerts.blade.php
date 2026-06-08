@@ -25,7 +25,7 @@
     $totalAlerts = collect($alerts)->sum(fn (array $alert) => (int) ($alert['value'] ?? 0));
 @endphp
 
-<div {{ $attributes->merge(['class' => 'dash-activity-widget']) }}>
+<div {{ $attributes->merge(['id' => 'needs-attention', 'class' => 'dash-activity-widget']) }}>
     <div class="dash-performance-widget-header">
         <div class="min-w-0">
             <div class="flex items-center gap-2.5">

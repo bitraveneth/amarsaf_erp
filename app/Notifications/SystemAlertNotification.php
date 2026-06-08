@@ -2,6 +2,7 @@
 
 namespace App\Notifications;
 
+use App\Services\NotificationActionResolver;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
 
@@ -28,7 +29,11 @@ class SystemAlertNotification extends Notification
             'type' => $this->payload['variant'] ?? 'info',
             'source' => $this->payload['source'] ?? 'System',
             'sender_name' => $this->payload['sender_name'] ?? ($this->payload['source'] ?? 'System'),
-            'link' => $this->payload['link'] ?? route('admin.notifications.index'),
+            'link' => $this->payload['link'] ?? NotificationActionResolver::resolve([
+                'dedupe_key' => $this->payload['key'] ?? null,
+                'link' => $this->payload['link'] ?? null,
+                'source' => $this->payload['source'] ?? null,
+            ]),
             'dedupe_key' => $this->payload['key'] ?? null,
             'context' => $this->payload['context'] ?? [],
             'created_by' => auth()->id(),

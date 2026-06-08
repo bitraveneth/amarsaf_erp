@@ -2,21 +2,17 @@
 
 namespace App\Services\Assistant;
 
+use App\Support\Assistant\AssistantDataCatalog;
 use App\Support\Assistant\AssistantFaqCatalog;
 
 class AssistantIntentRouter
 {
-    protected array $synonymMap = [
-        'what_can_you_do' => ['what you can do', 'what can be done', 'what could you do', 'what can i ask', 'what do you do', 'what are your capabilities', 'what can this assistant do'],
-        'who_are_you' => ['who are you', 'what are you', 'your name'],
-        'joke_arif' => ['do you know arif', 'who is arif', 'know arif', 'about arif', 'who is the owner', 'who owns saf', 'saf owner', 'my boyfriend'],
-        'revenue_mtd' => ['money we make', 'how much money', 'how much we earn', 'sales revenue', 'total sales'],
-        'receivables' => ['debt', 'customer debt', 'money owed to us', 'outstanding balance'],
-        'profit_estimate_mtd' => ['are we profitable', 'how much profit', 'net income'],
-        'ops_tasks' => ['what should i do', 'anything pending', 'issues today'],
-        'business_summary' => ['tell me everything', 'full update', 'dashboard summary'],
-        'business_health' => ['are we ok', 'how is business', 'doing good'],
-    ];
+    protected array $synonymMap = [];
+
+    public function __construct()
+    {
+        $this->synonymMap = AssistantDataCatalog::synonymMap();
+    }
 
     public function route(string $message): array
     {
@@ -170,6 +166,101 @@ class AssistantIntentRouter
             'revenue', 'profit', 'order', 'stock', 'production', 'invoice',
             'payroll', 'expense', 'receivable', 'collection', 'delivery', 'target',
         ] as $term) {
+            if (str_contains($normalized, $term)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public static function isBusinessQuestion(string $message): bool
+    {
+        $normalized = (new self)->normalize($message);
+
+        if ($normalized === '') {
+            return false;
+        }
+
+        if (self::looksLikeTrainingOnly($normalized)) {
+            return false;
+        }
+
+        foreach (AssistantDataCatalog::businessSignals() as $signal) {
+            if (strlen($signal) < 5 && ! str_contains($signal, ' ')) {
+                continue;
+            }
+            if (str_contains($normalized, $signal)) {
+                return true;
+            }
+        }
+
+        foreach (['profit', 'revenue', 'task', 'tasks', 'qc', 'mtd', 'grn'] as $short) {
+            if ($short === 'grn') {
+                continue;
+            }
+            if (str_contains($normalized, $short)) {
+                return true;
+            }
+        }
+
+        if (preg_match('/\b(how much|how many)\b/u', $normalized)
+            && preg_match('/\b(revenue|profit|sales|order|stock|receivable|outstanding|collection|production|agent|return|expense|payroll|invoice|task|delivery|target)\b/u', $normalized)) {
+            return true;
+        }
+
+        return false;
+    }
+
+    protected static function looksLikeTrainingOnly(string $normalized): bool
+    {
+        if (preg_match(
+            '/\b(process flow|process of|flow of|workflow|how does|how do|how .+ works|how .+ work|meaning of|define|explain|steps for|procedure|course|erp academy|learning hub)\b/u',
+            $normalized
+        )) {
+            if (! preg_match('/\b(how much|how many|this month|today|mtd|outstanding|receivable|profit|revenue|summary|target progress|collection rate|need attention|pending)\b/u', $normalized)) {
+                return true;
+            }
+        }
+
+        if (preg_match('/\b(what is|what are)\b/u', $normalized)) {
+            foreach (['grn', 'bom', 'pod', 'bill of materials', 'goods receipt', 'proof of delivery'] as $term) {
+                if (str_contains($normalized, $term)) {
+                    return true;
+                }
+            }
+
+            if (! preg_match('/\b(profit|revenue|receivable|outstanding|mtd|collection rate|sales target)\b/u', $normalized)) {
+                if (preg_match('/\b(what is|what are)\b/u', $normalized)
+                    && ! preg_match('/\b(our|my|the|this month|today|outstanding|receivable)\b/u', $normalized)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /** @deprecated Use isBusinessQuestion() */
+    public static function shouldPreferBusiness(string $message): bool
+    {
+        return self::isBusinessQuestion($message);
+    }
+
+    public static function looksLikeTrainingQuestion(string $normalized): bool
+    {
+        if (self::isBusinessQuestion($normalized)) {
+            return false;
+        }
+
+        if (preg_match(
+            '/\b(process flow|process of|flow of|workflow|how does|how do|how .+ works|how .+ work|what is|what are|meaning of|define|explain|steps for|procedure|course|erp academy|learning hub)\b/u',
+            $normalized
+        )) {
+            return true;
+        }
+
+        foreach (['grn', 'bom', 'pod', 'po to grn', 'bill of materials'] as $term) {
             if (str_contains($normalized, $term)) {
                 return true;
             }

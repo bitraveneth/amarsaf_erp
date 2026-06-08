@@ -1,0 +1,108 @@
+<?php
+
+/**
+ * Glossary terms per course + shared terms (_common).
+ * courses on _common entries: slug list or 'all'.
+ */
+return [
+    '_common' => [
+        ['term' => ['en' => 'SKU', 'bn' => 'SKU'], 'def' => ['en' => 'Stock Keeping Unit — unique code for each material or product. Never duplicate.', 'bn' => 'স্টক কিপিং ইউনিট — প্রতিটি কাঁচামাল/পণ্যের অনন্য কোড। দুবার নয়।'], 'courses' => ['all']],
+        ['term' => ['en' => 'UOM', 'bn' => 'UOM'], 'def' => ['en' => 'Unit of measure — how qty is counted (piece, carton, liter, kg).', 'bn' => 'পরিমাপের একক — piece, carton, liter, kg ইত্যাদি।'], 'courses' => ['all']],
+        ['term' => ['en' => 'Active (master data)', 'bn' => 'Active'], 'def' => ['en' => 'Inactive items are hidden from new orders, BOMs, and POs.', 'bn' => 'নিষ্ক্রিয় আইটেম নতুন অর্ডার, BOM, PO-তে আসে না।'], 'courses' => ['all']],
+        ['term' => ['en' => 'GL (General Ledger)', 'bn' => 'GL'], 'def' => ['en' => 'Accounting ledger where invoices, receipts, and journals post debits and credits.', 'bn' => 'হিসাবের লেজার — ইনভয়েস, রসিদ, জার্নাল এখানে পোস্ট হয়।'], 'courses' => ['accounting', 'profit-loss', 'reports', 'overview']],
+        ['term' => ['en' => 'VAT', 'bn' => 'VAT'], 'def' => ['en' => 'Value Added Tax — collected on sales (output) and paid on purchases (input). Reported to NBR.', 'bn' => 'মূল্য সংযোজন কর — বিক্রয়ে আউটপুট, ক্রয়ে ইনপুট। NBR-এ রিপোর্ট।'], 'courses' => ['accounting', 'profit-loss', 'products', 'sales', 'overview']],
+        ['term' => ['en' => 'P&L', 'bn' => 'P&L'], 'def' => ['en' => 'Profit & Loss statement — revenue minus costs for a period.', 'bn' => 'লাভ-ক্ষতি বিবৃতি — সময়কালের আয় minus খরচ।'], 'courses' => ['accounting', 'profit-loss', 'reports', 'overview']],
+    ],
+    'overview' => [
+        ['term' => ['en' => 'GRN', 'bn' => 'GRN'], 'def' => ['en' => 'Goods Receipt Note — document that adds purchased materials to warehouse stock after QC approval.', 'bn' => 'গুডস রিসিপ্ট নোট — QC অনুমোদনের পর কাঁচামাল স্টকে যোগ করে।']],
+        ['term' => ['en' => 'BOM', 'bn' => 'BOM'], 'def' => ['en' => 'Bill of Materials — recipe listing raw materials needed per one finished unit.', 'bn' => 'বিল অফ ম্যাটেরিয়ালস — প্রতি ১ তৈরি ইউনিটে কাঁচামালের তালিকা।']],
+        ['term' => ['en' => 'PO', 'bn' => 'PO'], 'def' => ['en' => 'Purchase Order — formal order to a supplier before goods arrive.', 'bn' => 'ক্রয় অর্ডার — সাপ্লায়ারের কাছে পণ্য আসার আগের অর্ডার।']],
+        ['term' => ['en' => 'POD', 'bn' => 'POD'], 'def' => ['en' => 'Proof of Delivery — field record of qty actually received by the agent.', 'bn' => 'প্রুফ অফ ডেলিভারি — এজেন্ট যা পেয়েছে তার মাঠ রেকর্ড।']],
+        ['term' => ['en' => 'FG', 'bn' => 'FG'], 'def' => ['en' => 'Finished Goods — sellable products in warehouse stock.', 'bn' => 'Finished Goods — বিক্রয়যোগ্য তৈরি পণ্য স্টকে।']],
+        ['term' => ['en' => 'AR / AP', 'bn' => 'AR / AP'], 'def' => ['en' => 'Accounts Receivable (agents owe you) / Accounts Payable (you owe suppliers).', 'bn' => 'Accounts Receivable (এজেন্টের বকেয়া) / Accounts Payable (সাপ্লায়ারের বকেয়া)।']],
+        ['term' => ['en' => 'COGS', 'bn' => 'COGS'], 'def' => ['en' => 'Cost of Goods Sold — expense when sold stock leaves inventory; pairs with revenue on invoice.', 'bn' => 'Cost of Goods Sold — বিক্রিত স্টকের খরচ; ইনভয়েসে আয়ের সাথে যায়।']],
+    ],
+    'products' => [
+        ['term' => ['en' => 'Material', 'bn' => 'কাঁচামাল'], 'def' => ['en' => 'Items you buy and consume in production (raw, service, or in-house types).', 'bn' => 'যা কিনে উৎপাদনে ব্যবহার করেন (raw, service, in-house)।']],
+        ['term' => ['en' => 'Product', 'bn' => 'পণ্য'], 'def' => ['en' => 'Finished goods you sell to agents — output of manufacturing.', 'bn' => 'এজেন্টকে বিক্রয়যোগ্য তৈরি পণ্য।']],
+        ['term' => ['en' => 'Raw material type', 'bn' => 'Raw'], 'def' => ['en' => 'Physical stock-tracked items: bottles, caps, cartons, water.', 'bn' => 'স্টকযুক্ত কাঁচামাল: বোতল, ক্যাপ, কার্টন।']],
+        ['term' => ['en' => 'Service material type', 'bn' => 'Service'], 'def' => ['en' => 'Non-stock costs like factory labour or utilities — expensed, not inventoried.', 'bn' => 'নন-স্টক খরচ — শ্রম, ইউটিলিটি; স্টক নয়।']],
+        ['term' => ['en' => 'Standard cost', 'bn' => 'Standard cost'], 'def' => ['en' => 'Default unit cost on material master — used in BOM and COGS estimates.', 'bn' => 'কাঁচামালের ডিফল্ট ইউনিট খরচ — BOM ও COGS অনুমানে।']],
+        ['term' => ['en' => 'Tax class', 'bn' => 'Tax class'], 'def' => ['en' => 'Links product to VAT rate on customer invoices.', 'bn' => 'পণ্যের VAT হার — গ্রাহক ইনভয়েসে।']],
+        ['term' => ['en' => 'Price list', 'bn' => 'Price list'], 'def' => ['en' => 'Optional special prices per agent or zone.', 'bn' => 'এজেন্ট/জোন অনুযায়ী আলাদা মূল্য।']],
+    ],
+    'agents' => [
+        ['term' => ['en' => 'Agent', 'bn' => 'এজেন্ট'], 'def' => ['en' => 'Distributor or dealer who buys finished goods on credit and sells in their territory.', 'bn' => 'ডিস্ট্রিবিউটর/ডিলার — তৈরি পণ্য ক্রেডিটে কিনে বিক্রি করে।']],
+        ['term' => ['en' => 'Zone', 'bn' => 'জোন'], 'def' => ['en' => 'Geographic area linked to delivery routes and pricing.', 'bn' => 'ভৌগোলিক এলাকা — রুট ও মূল্যের সাথে যুক্ত।']],
+        ['term' => ['en' => 'Credit limit', 'bn' => 'Credit limit'], 'def' => ['en' => 'Maximum outstanding AR allowed before new orders may be blocked.', 'bn' => 'সর্বোচ্চ বকেয়া — এর বেশি হলে অর্ডার ব্লক হতে পারে।']],
+        ['term' => ['en' => 'Commission rule', 'bn' => 'Commission rule'], 'def' => ['en' => 'Formula for agent commission on net sales — posts as expense on settlement.', 'bn' => 'নেট বিক্রয়ে কমিশন সূত্র — নিষ্পত্তিতে খরচ।']],
+        ['term' => ['en' => 'Net price', 'bn' => 'Net price'], 'def' => ['en' => 'Selling price excluding VAT — base for revenue and commission.', 'bn' => 'VAT বাদে বিক্রয় মূল্য — আয় ও কমিশনের ভিত্তি।']],
+    ],
+    'procurement' => [
+        ['term' => ['en' => 'Purchase order (PO)', 'bn' => 'PO'], 'def' => ['en' => 'Approved commitment to buy specific materials from a supplier.', 'bn' => 'সাপ্লায়ার থেকে নির্দিষ্ট কাঁচামাল কেনার অনুমোদিত অর্ডার।']],
+        ['term' => ['en' => 'GRN', 'bn' => 'GRN'], 'def' => ['en' => 'Goods receipt — posts stock when lines are approved and GRN is fully approved.', 'bn' => 'পণ্য গ্রহণ — লাইন ও GRN অনুমোদনে স্টক পোস্ট।']],
+        ['term' => ['en' => 'Partial receipt', 'bn' => 'Partial receipt'], 'def' => ['en' => 'Receiving part of a PO qty now and the rest on a later GRN.', 'bn' => 'PO-র আংশিক এখন, বাকি পরে GRN-এ।']],
+        ['term' => ['en' => 'QC (quality check)', 'bn' => 'QC'], 'def' => ['en' => 'Line-level approval on GRN — rejected lines do not add stock.', 'bn' => 'GRN লাইন অনুমোদন — প্রত্যাখ্যাত লাইনে স্টক নয়।']],
+        ['term' => ['en' => 'GRNI', 'bn' => 'GRNI'], 'def' => ['en' => 'Goods Received Not Invoiced — accrual between GRN and supplier bill.', 'bn' => 'GRN হয়েছে, সাপ্লায়ার বিল হয়নি — accrual অ্যাকাউন্ট।']],
+        ['term' => ['en' => 'Three-way match', 'bn' => 'Three-way match'], 'def' => ['en' => 'PO qty/price vs GRN received qty vs supplier invoice — should align.', 'bn' => 'PO, GRN, সাপ্লায়ার বিল — পরিমাণ ও মূল্য মিলতে হবে।']],
+        ['term' => ['en' => 'Input VAT', 'bn' => 'Input VAT'], 'def' => ['en' => 'VAT on supplier bills — credit against output VAT on VAT report.', 'bn' => 'সাপ্লায়ার বিলের VAT — আউটপুট VAT থেকে ক্রেডিট।']],
+    ],
+    'warehouses' => [
+        ['term' => ['en' => 'Warehouse', 'bn' => 'গুদাম'], 'def' => ['en' => 'Physical location where stock quantities are tracked.', 'bn' => 'যেখানে স্টক পরিমাণ ট্র্যাক হয়।']],
+        ['term' => ['en' => 'Factory warehouse', 'bn' => 'Factory'], 'def' => ['en' => 'Usually receives raw materials and outputs finished goods from production.', 'bn' => 'সাধারণত কাঁচামাল গ্রহণ ও FG উৎপাদন।']],
+        ['term' => ['en' => 'Depot', 'bn' => 'Depot'], 'def' => ['en' => 'Distribution warehouse closer to sales zones.', 'bn' => 'বিক্রয় এলাকার কাছের ডিস্ট্রিবিউশন গুদাম।']],
+        ['term' => ['en' => 'Location', 'bn' => 'Location'], 'def' => ['en' => 'Bin or zone inside a warehouse for finer stock placement.', 'bn' => 'গুদামের ভিতরের বিন বা জোন।']],
+        ['term' => ['en' => 'Delivery route', 'bn' => 'Delivery route'], 'def' => ['en' => 'Planned path linking agent zones to vehicles and dispatch.', 'bn' => 'এজেন্ট জোন, যান ও ডিসপ্যাচের পরিকল্পিত পথ।']],
+    ],
+    'manufacturing' => [
+        ['term' => ['en' => 'BOM', 'bn' => 'BOM'], 'def' => ['en' => 'Active recipe — without it, production may not consume materials correctly.', 'bn' => 'সক্রিয় রেসিপি — ছাড়া কাঁচামাল সঠিক কাটতে নাও পারে।']],
+        ['term' => ['en' => 'Batch / lot', 'bn' => 'Batch'], 'def' => ['en' => 'Traceability code tying production output to QC and sales.', 'bn' => 'ট্রেসেবিলিটি কোড — QC ও বিক্রয়ের সাথে।']],
+        ['term' => ['en' => 'Production run', 'bn' => 'Production run'], 'def' => ['en' => 'Execution record: product, qty, line, shift, materials consumed.', 'bn' => 'উৎপাদন রেকর্ড — পণ্য, পরিমাণ, লাইন, কাঁচামাল।']],
+        ['term' => ['en' => 'material_unit_cost', 'bn' => 'material_unit_cost'], 'def' => ['en' => 'Calculated cost per FG unit after BOM consumption — used for COGS estimate.', 'bn' => 'BOM পর FG প্রতি খরচ — COGS অনুমানে।']],
+        ['term' => ['en' => 'Pending receipts', 'bn' => 'Pending receipts'], 'def' => ['en' => 'Queue where QC-approved production waits for warehouse stock confirm.', 'bn' => 'QC-পাস রান গুদাম নিশ্চিতকরণের অপেক্ষায়।']],
+        ['term' => ['en' => 'Stock confirm', 'bn' => 'Stock confirm'], 'def' => ['en' => 'Final step that adds FG and consumes raw materials per BOM.', 'bn' => 'FG যোগ ও BOM অনুযায়ী কাঁচামাল কাটা।']],
+    ],
+    'inventory' => [
+        ['term' => ['en' => 'On-hand stock', 'bn' => 'On-hand'], 'def' => ['en' => 'Physical qty available in a warehouse right now.', 'bn' => 'গুদামে এখন যে পরিমাণ আছে।']],
+        ['term' => ['en' => 'Reserved stock', 'bn' => 'Reserved'], 'def' => ['en' => 'Qty locked by confirmed sales orders — not free for other orders.', 'bn' => 'নিশ্চিত বিক্রয় অর্ডারে আবদ্ধ — অন্য অর্ডারে নয়।']],
+        ['term' => ['en' => 'Stock transfer', 'bn' => 'Transfer'], 'def' => ['en' => 'Move qty between warehouses without sale.', 'bn' => 'বিক্রয় ছাড়া গুদামের মধ্যে স্থানান্তর।']],
+        ['term' => ['en' => 'Low stock alert', 'bn' => 'Low stock'], 'def' => ['en' => 'Signal to create PO or production before stockout.', 'bn' => 'স্টক শেষ হওয়ার আগে PO/উৎপাদনের সংকেত।']],
+        ['term' => ['en' => 'MRP', 'bn' => 'MRP'], 'def' => ['en' => 'Material Requirements Planning — suggested buys from BOM and demand.', 'bn' => 'BOM ও চাহিদা থেকে কেনার পরামর্শ।']],
+    ],
+    'sales' => [
+        ['term' => ['en' => 'Sales order', 'bn' => 'Sales order'], 'def' => ['en' => 'Agent request for FG qty on a delivery date.', 'bn' => 'এজেন্টের FG চাহিদা — ডেলিভারি তারিখসহ।']],
+        ['term' => ['en' => 'Confirm order', 'bn' => 'Confirm'], 'def' => ['en' => 'Commits order and reserves stock for picking.', 'bn' => 'অর্ডার নিশ্চিত ও স্টক রিজার্ভ।']],
+        ['term' => ['en' => 'Sample order', 'bn' => 'Sample'], 'def' => ['en' => 'Promotional free goods — tracked but not invoiced like normal sales.', 'bn' => 'পromotional ফ্রি পণ্য — ট্র্যাক হয়, সাধারণ বিল নয়।']],
+        ['term' => ['en' => 'Picking list', 'bn' => 'Picking'], 'def' => ['en' => 'Warehouse list of what to pull for confirmed orders.', 'bn' => 'গুদামে কী তুলতে হবে তার তালিকা।']],
+        ['term' => ['en' => 'Sales return', 'bn' => 'Return'], 'def' => ['en' => 'Customer sends goods back — reverses stock and may credit invoice.', 'bn' => 'ফেরত — স্টক ও ইনভয়েস সমন্বয়।']],
+    ],
+    'delivery' => [
+        ['term' => ['en' => 'Delivery note', 'bn' => 'Delivery'], 'def' => ['en' => 'Dispatch document linking order, vehicle, and route.', 'bn' => 'ডিসপ্যাচ ডকুমেন্ট — অর্ডার, যান, রুট।']],
+        ['term' => ['en' => 'POD', 'bn' => 'POD'], 'def' => ['en' => 'Proof of Delivery — delivered qty, shorts, damage, receiver signature.', 'bn' => 'ডেলিভারির প্রমাণ — পরিমাণ, কমতি, ক্ষতি, গ্রহীতা।']],
+        ['term' => ['en' => 'Short delivery', 'bn' => 'Short'], 'def' => ['en' => 'Agent received less than dispatched — adjust before invoice.', 'bn' => 'পাঠানোর চেয়ে কম পৌঁছেছে — ইনভয়েসের আগে ঠিক করুন।']],
+        ['term' => ['en' => 'Vehicle load', 'bn' => 'Vehicle load'], 'def' => ['en' => 'Batch of deliveries assigned to one vehicle trip.', 'bn' => 'এক যানে একাধিক ডেলিভারি।']],
+        ['term' => ['en' => 'Delivered status', 'bn' => 'Delivered'], 'def' => ['en' => 'Order line ready for invoicing after POD.', 'bn' => 'POD-এর পর ইনভয়েসের জন্য প্রস্তুত।']],
+    ],
+    'accounting' => [
+        ['term' => ['en' => 'Sales Revenue', 'bn' => 'Sales Revenue'], 'def' => ['en' => 'Income account credited on customer invoice — net excl. VAT.', 'bn' => 'গ্রাহক ইনভয়েসে ক্রেডিট — VAT বাদে নেট আয়।']],
+        ['term' => ['en' => 'Accounts Receivable (AR)', 'bn' => 'AR'], 'def' => ['en' => 'What agents owe you after invoice — cleared by receipt.', 'bn' => 'ইনভয়েস পর এজেন্টের বকেয়া — রসিদে ক্লিয়ার।']],
+        ['term' => ['en' => 'Accounts Payable (AP)', 'bn' => 'AP'], 'def' => ['en' => 'What you owe suppliers after supplier bill.', 'bn' => 'সাপ্লায়ার বিল পর আপনার বকেয়া।']],
+        ['term' => ['en' => 'Output VAT', 'bn' => 'Output VAT'], 'def' => ['en' => 'VAT charged on sales invoices — liability to NBR.', 'bn' => 'বিক্রয় ইনভয়েসের VAT — NBR-এ দায়।']],
+        ['term' => ['en' => 'Withholding tax', 'bn' => 'Withholding'], 'def' => ['en' => 'Tax deducted at source on payments — tracked in receivable until claimed.', 'bn' => 'উৎসে কর — আদায় পর্যন্ত receivable-এ।']],
+        ['term' => ['en' => 'Journal entry', 'bn' => 'Journal'], 'def' => ['en' => 'Double-entry posting: debits must equal credits.', 'bn' => 'ডাবল-এন্ট্রি — ডেবিট = ক্রেডিট।']],
+        ['term' => ['en' => 'Accounting period', 'bn' => 'Period'], 'def' => ['en' => 'Closed month — prevents backdated changes after lock.', 'bn' => 'বন্ধ মাস — লকের পর পিছনের তারিখে পরিবর্তন নয়।']],
+    ],
+    'profit-loss' => [
+        ['term' => ['en' => 'Net sales', 'bn' => 'Net sales'], 'def' => ['en' => 'Sales Revenue minus returns in the period — excl. VAT.', 'bn' => 'Sales Revenue − returns — VAT বাদে।']],
+        ['term' => ['en' => 'Gross profit', 'bn' => 'Gross profit'], 'def' => ['en' => 'Net sales minus COGS — margin on products before office costs.', 'bn' => 'নেট বিক্রয় − COGS — অফিস খরচের আগে।']],
+        ['term' => ['en' => 'Net profit', 'bn' => 'Net profit'], 'def' => ['en' => 'Gross profit minus commission, expenses, payroll.', 'bn' => 'মোট লাভ − কমিশন, খরচ, বেতন।']],
+        ['term' => ['en' => 'Unit economics', 'bn' => 'Unit economics'], 'def' => ['en' => 'Profit and cost for one SKU qty — sanity-check full P&L.', 'bn' => 'এক SKU-র লাভ/খরচ — P&L যাচাই।']],
+        ['term' => ['en' => 'Estimated COGS', 'bn' => 'Estimated COGS'], 'def' => ['en' => 'P&L uses production cost when no COGS journal posted to GL.', 'bn' => 'GL-এ COGS না থাকলে উৎপাদন খরচ অনুমান।']],
+    ],
+    'reports' => [
+        ['term' => ['en' => 'Trial balance', 'bn' => 'Trial balance'], 'def' => ['en' => 'List of all GL account balances — debits must equal credits.', 'bn' => 'সব GL ব্যালেন্স — ডেবিট = ক্রেডিট।']],
+        ['term' => ['en' => 'AR aging', 'bn' => 'AR aging'], 'def' => ['en' => 'How long invoices have been outstanding by agent.', 'bn' => 'ইনভয়েস কতদিন বকেয়া — এজেন্ট অনুযায়ী।']],
+        ['term' => ['en' => 'Stock valuation', 'bn' => 'Stock valuation'], 'def' => ['en' => 'Monetary value of inventory on hand at period end.', 'bn' => 'মজুদের টাকার মূল্য — সময় শেষে।']],
+        ['term' => ['en' => 'Month-end pack', 'bn' => 'Month-end'], 'def' => ['en' => 'Standard set: P&L, stock, AR aging, VAT for management review.', 'bn' => 'P&L, স্টক, AR aging, VAT — মাস শেষ রিভিউ।']],
+    ],
+];

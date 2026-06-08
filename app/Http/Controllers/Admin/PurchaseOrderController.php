@@ -7,6 +7,8 @@ use App\Models\Product;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderItem;
 use App\Models\Supplier;
+use App\Services\Inventory\GrnWorkflowService;
+use App\Support\ProductUnits;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
@@ -14,15 +16,35 @@ use Illuminate\Validation\ValidationException;
 
 class PurchaseOrderController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $orders = PurchaseOrder::with(['supplier', 'items'])
+        $statusFilter = $request->query('status');
+        $allowedStatuses = ['draft', 'approved', 'partial_received', 'received'];
+
+        $ordersQuery = PurchaseOrder::with(['supplier', 'items'])
             ->withSum('items as total_value', 'line_total')
             ->withCount('goodsReceipts')
-            ->latest('order_date')
-            ->paginate(15);
+            ->latest('order_date');
 
-        return view('admin.purchase_orders.index', compact('orders'));
+        if (in_array($statusFilter, $allowedStatuses, true)) {
+            $ordersQuery->where('status', $statusFilter);
+        } else {
+            $statusFilter = null;
+        }
+
+        $orders = $ordersQuery->paginate(15)->withQueryString();
+
+        $stats = [
+            'total' => PurchaseOrder::count(),
+            'draft' => PurchaseOrder::where('status', 'draft')->count(),
+            'awaiting_grn' => PurchaseOrder::whereIn('status', ['approved', 'partial_received'])->count(),
+            'received' => PurchaseOrder::where('status', 'received')->count(),
+            'pipeline_value' => (float) PurchaseOrderItem::query()
+                ->whereHas('purchaseOrder', fn ($query) => $query->whereIn('status', ['draft', 'approved', 'partial_received']))
+                ->sum('line_total'),
+        ];
+
+        return view('admin.purchase_orders.index', compact('orders', 'statusFilter', 'stats'));
     }
 
     public function create()
@@ -120,7 +142,7 @@ class PurchaseOrderController extends Controller
             ->with('status', 'Purchase order deleted.');
     }
 
-    public function approve(PurchaseOrder $purchaseOrder)
+    public function approve(PurchaseOrder $purchaseOrder, GrnWorkflowService $grnWorkflow)
     {
         if ($purchaseOrder->status !== 'draft') {
             return back()->with('status', 'Only draft purchase orders can be approved.');
@@ -128,7 +150,11 @@ class PurchaseOrderController extends Controller
 
         $purchaseOrder->update(['status' => 'approved']);
 
-        return back()->with('status', 'Purchase order approved. You can now create GRN.');
+        $grnWorkflow->notifyPurchaseOrderApproved($purchaseOrder->fresh(['supplier', 'items']));
+
+        return back()
+            ->with('status', 'Purchase order approved. Next: receive goods when the shipment arrives.')
+            ->with('procurement_highlight', 'receive');
     }
 
     protected function formData(?PurchaseOrder $order = null): array
@@ -152,13 +178,23 @@ class PurchaseOrderController extends Controller
             $initialRows = $order->items->map(fn ($item) => [
                 'product_id' => $item->product_id ? (string) $item->product_id : 'custom',
                 'description' => $item->description,
-                'uom' => $item->uom ?? '',
+                'uom' => $item->uom ?: ($item->product?->uom ?: 'piece'),
                 'quantity' => (float) $item->quantity,
                 'unit_price' => $item->unit_price !== null ? (float) $item->unit_price : '',
+                'discount_percent' => (float) ($item->discount_percent ?? 0),
+                'vat_rate' => (float) ($item->vat_rate ?? 0),
             ])->values()->all();
         }
         if (empty($initialRows)) {
-            $initialRows = [['product_id' => '', 'description' => '', 'quantity' => 1, 'unit_price' => '']];
+            $initialRows = [[
+                'product_id' => '',
+                'description' => '',
+                'uom' => 'piece',
+                'quantity' => 1,
+                'unit_price' => '',
+                'discount_percent' => 0,
+                'vat_rate' => 0,
+            ]];
         }
 
         return [
@@ -181,6 +217,10 @@ class PurchaseOrderController extends Controller
             ])->values()->all(),
             'selectedSupplierId' => (string) old('supplier_id', $order?->supplier_id ?? ''),
             'typeOptions' => $this->productTypeOptions(),
+            'uomOptions' => collect(ProductUnits::forMaterials())
+                ->map(fn ($label, $value) => ['value' => $value, 'label' => $label])
+                ->values()
+                ->all(),
         ];
     }
 
@@ -188,7 +228,7 @@ class PurchaseOrderController extends Controller
     {
         return Product::query()
             ->purchasable()
-            ->with('materialCategory')
+            ->with(['materialCategory', 'taxClass'])
             ->orderByRaw("CASE product_type WHEN 'raw' THEN 1 WHEN 'service' THEN 2 ELSE 3 END")
             ->orderBy('name')
             ->get();
@@ -212,7 +252,9 @@ class PurchaseOrderController extends Controller
                 'category_group' => $category?->group,
                 'group_label' => $typeLabel,
                 'uom' => $product->uom ? ucfirst($product->uom) : '—',
+                'uom_key' => $product->uom ?: 'piece',
                 'standard_cost' => $product->standard_cost !== null ? (float) $product->standard_cost : null,
+                'vat_rate' => (float) (optional($product->taxClass)->rate ?? 0),
                 'label' => trim(($product->sku ? $product->sku . ' · ' : '') . $product->name),
                 'search' => mb_strtolower(collect([
                     $product->sku,
@@ -288,25 +330,14 @@ class PurchaseOrderController extends Controller
                     ->where('is_active', true)
                     ->whereIn('product_type', ['raw', 'service'])),
             ],
-            'items.*.uom' => 'nullable|string|max:20',
+            'items.*.uom' => 'required|string|max:20',
             'items.*.quantity' => 'required|numeric|min:0.01',
             'items.*.unit_price' => 'nullable|numeric|min:0',
+            'items.*.discount_percent' => 'nullable|numeric|min:0|max:100',
+            'items.*.vat_rate' => 'nullable|numeric|min:0|max:100',
         ];
 
         $data = $request->validate($rules);
-
-        foreach ($data['items'] as $index => $item) {
-            $productId = $item['product_id'] ?? null;
-            if ($productId) {
-                continue;
-            }
-
-            if (empty(trim($item['uom'] ?? ''))) {
-                throw ValidationException::withMessages([
-                    "items.{$index}.uom" => 'Unit of measure is required for custom line items.',
-                ]);
-            }
-        }
 
         if (($data['supplier_mode'] ?? 'existing') === 'new') {
             $exists = Supplier::query()
@@ -330,20 +361,33 @@ class PurchaseOrderController extends Controller
             $unitPrice = isset($item['unit_price']) && $item['unit_price'] !== ''
                 ? (float) $item['unit_price']
                 : null;
-
+            $discountPercent = (float) ($item['discount_percent'] ?? 0);
+            $vatRate = (float) ($item['vat_rate'] ?? 0);
             $productId = $item['product_id'] ?? null;
 
             PurchaseOrderItem::create([
                 'purchase_order_id' => $po->id,
                 'product_id' => $productId ?: null,
                 'description' => $item['description'],
-                'uom' => $productId ? null : ($item['uom'] ?? null),
+                'uom' => $item['uom'] ?? null,
                 'quantity' => $qty,
                 'unit_price' => $unitPrice,
-                'line_total' => $unitPrice !== null ? ($qty * $unitPrice) : null,
+                'discount_percent' => $discountPercent,
+                'vat_rate' => $vatRate,
+                'line_total' => $unitPrice !== null
+                    ? $this->calculateLineTotal($qty, $unitPrice, $discountPercent, $vatRate)
+                    : null,
                 'received_quantity' => 0,
             ]);
         }
+    }
+
+    protected function calculateLineTotal(float $qty, float $unitPrice, float $discountPercent, float $vatRate): float
+    {
+        $subtotal = $qty * $unitPrice;
+        $net = $subtotal * (1 - (min(100, max(0, $discountPercent)) / 100));
+
+        return round($net * (1 + (min(100, max(0, $vatRate)) / 100)), 2);
     }
 
     protected function nextPoNumber(): string

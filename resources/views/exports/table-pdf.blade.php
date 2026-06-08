@@ -40,7 +40,7 @@
             letter-spacing: 0.04em;
         }
 
-        tr:nth-child(even) td {
+        tr.row-alt td {
             background: #fcfcfd;
         }
 
@@ -64,8 +64,8 @@
             </tr>
         </thead>
         <tbody>
-            @forelse($rows as $row)
-                <tr>
+            @forelse($rows as $rowIndex => $row)
+                <tr @class(['row-alt' => $rowIndex % 2 === 1])>
                     @foreach((array) $row as $cell)
                         <td>{{ $cell }}</td>
                     @endforeach

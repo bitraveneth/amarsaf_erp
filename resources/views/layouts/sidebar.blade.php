@@ -205,6 +205,42 @@
                                                             ])>
                                                             {{ $subItem['name'] }}
                                                             <span class="flex items-center gap-1 ml-auto">
+                                                                @if (($subItem['path'] ?? '') === '/admin/goods-receipts' && ($procurementInbox['pending_grn'] ?? 0) > 0)
+                                                                    <span @class([
+                                                                        'menu-dropdown-badge',
+                                                                        'menu-dropdown-badge-active' => $subItemIsActive,
+                                                                        'menu-dropdown-badge-inactive' => !$subItemIsActive,
+                                                                    ])>
+                                                                        {{ $procurementInbox['pending_grn'] }}
+                                                                    </span>
+                                                                @endif
+                                                                @if (($subItem['path'] ?? '') === '/admin/orders-picking' && ($fulfillmentInbox['needs_my_pick'] ?? 0) > 0)
+                                                                    <span @class([
+                                                                        'menu-dropdown-badge',
+                                                                        'menu-dropdown-badge-active' => $subItemIsActive,
+                                                                        'menu-dropdown-badge-inactive' => !$subItemIsActive,
+                                                                    ])>
+                                                                        {{ $fulfillmentInbox['needs_my_pick'] }}
+                                                                    </span>
+                                                                @endif
+                                                                @if (($subItem['path'] ?? '') === '/admin/orders' && ($fulfillmentInbox['needs_my_confirm'] ?? 0) > 0)
+                                                                    <span @class([
+                                                                        'menu-dropdown-badge',
+                                                                        'menu-dropdown-badge-active' => $subItemIsActive,
+                                                                        'menu-dropdown-badge-inactive' => !$subItemIsActive,
+                                                                    ])>
+                                                                        {{ $fulfillmentInbox['needs_my_confirm'] }}
+                                                                    </span>
+                                                                @endif
+                                                                @if (($subItem['path'] ?? '') === '/admin/deliveries/pod' && ($fulfillmentInbox['needs_my_delivery'] ?? 0) > 0)
+                                                                    <span @class([
+                                                                        'menu-dropdown-badge',
+                                                                        'menu-dropdown-badge-active' => $subItemIsActive,
+                                                                        'menu-dropdown-badge-inactive' => !$subItemIsActive,
+                                                                    ])>
+                                                                        {{ $fulfillmentInbox['needs_my_delivery'] }}
+                                                                    </span>
+                                                                @endif
                                                                 @if (!empty($subItem['new']))
                                                                     <span
                                                                         @class([

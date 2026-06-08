@@ -402,7 +402,7 @@ class FinanceController extends Controller
         $advancesTotal = $invoice->advanceApplications->sum('amount');
         $outstanding   = $cashTotal - $creditsTotal - $receiptsTotal - $advancesTotal;
 
-        $pdf = Pdf::loadView('admin.finance.invoice_pdf', [
+        $pdf = \App\Support\PdfDocumentBuilder::loadView('admin.finance.invoice_pdf', [
             'invoice'       => $invoice,
             'grossTotal'    => $grossTotal,
             'cashTotal'     => $cashTotal,
@@ -410,7 +410,7 @@ class FinanceController extends Controller
             'receiptsTotal' => $receiptsTotal,
             'advancesTotal' => $advancesTotal,
             'outstanding'   => $outstanding,
-        ]);
+        ])->setPaper('a4');
 
         return $pdf->download('invoice-' . $invoice->number . '.pdf');
     }

@@ -19,9 +19,9 @@
     .doc-header-left, .doc-header-right { display: table-cell; vertical-align: top; }
     .doc-header-right { text-align: right; width: 42%; }
     .doc-logo {
-        width: 44px;
-        height: 44px;
-        border-radius: 10px;
+        width: auto;
+        max-width: 120px;
+        height: 36px;
         object-fit: contain;
         margin-right: 10px;
         vertical-align: middle;
@@ -105,8 +105,8 @@
         border-bottom: 1px solid #e5e7eb;
         vertical-align: top;
     }
-    .doc-lines tr:nth-child(even) td { background: #fcfcfd; }
-    .doc-totals-wrap { display: flex; justify-content: flex-end; margin-bottom: 16px; }
+    .doc-lines tr.doc-lines-row--alt td { background: #fcfcfd; }
+    .doc-totals-wrap { text-align: right; margin-bottom: 16px; }
     .doc-totals { min-width: 260px; border-collapse: collapse; }
     .doc-totals td { padding: 4px 0; font-size: 10px; }
     .doc-totals td:first-child { color: #6b7280; padding-right: 16px; }

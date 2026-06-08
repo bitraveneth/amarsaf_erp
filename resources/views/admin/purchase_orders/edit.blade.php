@@ -1,47 +1,45 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="mx-auto max-w-(--breakpoint-2xl) space-y-4">
-    <div class="flex items-center justify-between gap-4">
+@php
+    $currencyCode = config('app.currency', 'BDT');
+@endphp
+
+<div class="erp-order-page erp-order-page--index screen-po-create">
+    <header class="po-create__page-head">
         <div>
-            <h1 class="text-xl font-semibold text-gray-900 dark:text-white">Edit purchase order</h1>
-            <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{{ $order->number }} · draft only</p>
+            <h1 class="po-create__page-title">Edit {{ $order->number }}</h1>
+            <p class="po-create__page-desc">Update draft purchase order before approval.</p>
         </div>
-        <div class="flex gap-2">
-            <a href="{{ route('admin.purchase-orders.show', $order) }}"
-               class="inline-flex items-center rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">
-                View
-            </a>
-            <a href="{{ route('admin.purchase-orders.index') }}"
-               class="inline-flex items-center rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">
-                ← Back
-            </a>
-        </div>
-    </div>
+        <a href="{{ route('admin.purchase-orders.show', $order) }}" class="po-create__back-btn">
+            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+            </svg>
+            Back to {{ $order->number }}
+        </a>
+    </header>
 
     <form action="{{ route('admin.purchase-orders.update', $order) }}" method="POST"
           x-data="purchaseOrderForm(@js($formState))"
-          class="rounded-xl border border-gray-200 bg-white shadow-theme-xs dark:border-gray-800 dark:bg-gray-900">
+          class="po-create">
         @csrf
         @method('PATCH')
 
-        <div class="p-4">
-            @include('admin.purchase_orders.partials.form', [
-                'order' => $order,
-                'suppliers' => $suppliers,
-            ])
-        </div>
+        <section class="po-create__flow">
+            <x-admin.order-workflow type="purchase" :step="1" variant="procurement" />
+        </section>
 
-        <div class="flex items-center justify-end gap-2 border-t border-gray-100 px-4 py-3 dark:border-gray-800">
-            <a href="{{ route('admin.purchase-orders.show', $order) }}"
-               class="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-700 dark:border-gray-700 dark:text-gray-300">
-                Cancel
-            </a>
-            <button type="submit"
-                    class="rounded-lg bg-brand-500 px-4 py-1.5 text-xs font-semibold text-white hover:bg-brand-600">
-                Save changes
-            </button>
-        </div>
+        @include('admin.purchase_orders.partials.form', [
+            'order' => $order,
+            'suppliers' => $suppliers,
+            'currencyCode' => $currencyCode,
+        ])
+
+        <x-admin.order-footer
+            submit-label="Save changes"
+            :cancel-url="route('admin.purchase-orders.show', $order)"
+            hint="Only draft POs without receipts can be edited"
+        />
     </form>
 </div>
 @endsection

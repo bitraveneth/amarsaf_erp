@@ -17,12 +17,16 @@ class MenuStructureSeeder extends Seeder
     public function run(): void
     {
         $structure = MenuHelper::getFallbackMenu();
+        $activeGroupKeys = [];
+        $activeItemIds = [];
 
         foreach ($structure as $groupIndex => $group) {
             $groupKey = $group['key'] ?? Str::slug($group['title']);
             if ($groupKey === '') {
                 $groupKey = 'dashboard';
             }
+
+            $activeGroupKeys[] = $groupKey;
 
             $menuGroup = MenuGroup::updateOrCreate(
                 ['key' => $groupKey],
@@ -50,9 +54,11 @@ class MenuStructureSeeder extends Seeder
                     ]
                 );
 
+                $activeItemIds[] = $menuItem->id;
+
                 if (!empty($item['subItems'])) {
                     foreach ($item['subItems'] as $subIndex => $subItem) {
-                        MenuItem::updateOrCreate(
+                        $childItem = MenuItem::updateOrCreate(
                             [
                                 'menu_group_id' => $menuGroup->id,
                                 'parent_id'     => $menuItem->id,
@@ -66,6 +72,8 @@ class MenuStructureSeeder extends Seeder
                                 'is_active'  => true,
                             ]
                         );
+
+                        $activeItemIds[] = $childItem->id;
                     }
                 }
             }
@@ -86,6 +94,30 @@ class MenuStructureSeeder extends Seeder
             ->whereIn('key', ['overview'])
             ->orWhereRaw('LOWER(TRIM(title)) = ?', ['overview'])
             ->update(['title' => '', 'key' => 'dashboard']);
+
+        MenuGroup::query()
+            ->whereNotIn('key', $activeGroupKeys)
+            ->update(['is_active' => false]);
+
+        $activeGroupIds = MenuGroup::query()
+            ->whereIn('key', $activeGroupKeys)
+            ->pluck('id');
+
+        MenuItem::query()
+            ->whereIn('menu_group_id', $activeGroupIds)
+            ->whereNotIn('id', $activeItemIds)
+            ->update(['is_active' => false]);
+
+        MenuItem::query()
+            ->whereIn('name', [
+                'Warehouses & logistics setup',
+                'Fulfillment & delivery',
+                'Employees',
+                'Products',
+                'Sales',
+                'GRN inbox',
+            ])
+            ->update(['is_active' => false]);
 
         $this->syncMenuLabelsFromFallback();
     }

@@ -2,6 +2,7 @@ import './bootstrap';
 import './invoice';
 import { registerAssistantBot } from './assistant-bot';
 import { registerSystemTour } from './system-tour';
+import { registerLearningLang, learningHub } from './learning-hub';
 import Alpine from 'alpinejs';
 import ApexCharts from 'apexcharts';
 import flatpickr from 'flatpickr';
@@ -9,7 +10,9 @@ import flatpickr from 'flatpickr';
 window.Alpine = Alpine;
 window.ApexCharts = ApexCharts;
 window.flatpickr = flatpickr;
-window.erpUiFontStack = 'Outfit, Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Ubuntu, Cantarell, "Helvetica Neue", Arial, sans-serif';
+window.erpUiFontStack = document.documentElement.getAttribute('data-locale') === 'bn'
+    ? '"Noto Sans Bengali", Outfit, Inter, system-ui, sans-serif'
+    : 'Outfit, Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Ubuntu, Cantarell, "Helvetica Neue", Arial, sans-serif';
 
 const detectClientPlatform = () => {
     const rawPlatform = (
@@ -39,7 +42,10 @@ window.erpPlatform = detectClientPlatform();
 document.addEventListener('alpine:init', () => {
     registerSystemTour(Alpine, window.erpTourSteps || []);
     registerAssistantBot(Alpine);
+    registerLearningLang(Alpine);
 });
+
+window.learningHub = learningHub;
 
 Alpine.start();
 

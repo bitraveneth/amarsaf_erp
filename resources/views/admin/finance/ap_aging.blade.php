@@ -8,7 +8,10 @@
         subtitle="Open supplier balances by days past due."
     >
         <x-slot:actions>
-            @include('admin.finance.partials.print_button')
+            <div class="flex flex-wrap items-center gap-2">
+                @include('admin.finance.partials.export_center_button', ['module' => 'ap-aging', 'asOf' => $asOf])
+                @include('admin.finance.partials.print_button')
+            </div>
         </x-slot:actions>
     </x-admin.page-header>
 

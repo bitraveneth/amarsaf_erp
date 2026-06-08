@@ -15,6 +15,8 @@ use App\Models\Delivery;
 use App\Models\StockMovement;
 use App\Models\Product;
 use App\Models\StockEntry;
+use App\Services\Sales\SalesFulfillmentGuide;
+use App\Services\Sales\SalesFulfillmentMetrics;
 use App\Support\Documents\PickingListBuilder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -47,7 +49,8 @@ class OrderController extends Controller
 
     public function pickingOverview()
     {
-        $orders = Order::with('agent')
+        $orders = Order::with(['agent', 'items'])
+            ->where('order_type', '!=', 'return')
             ->whereIn('status', ['confirmed', 'picked'])
             ->latest()
             ->paginate(10);
@@ -55,10 +58,21 @@ class OrderController extends Controller
         return view('admin.orders.picking_overview', compact('orders'));
     }
 
-    public function show(Order $order)
+    public function show(Order $order, SalesFulfillmentGuide $fulfillmentGuide)
     {
-        $order->load(['agent', 'items.product.taxClass', 'statusHistory']);
-        return view('admin.orders.show', compact('order'));
+        $order->load([
+            'agent',
+            'items.product.taxClass',
+            'items.deliveryItems',
+            'statusHistory',
+            'deliveries.route',
+            'deliveries.vehicle',
+            'invoice',
+        ]);
+
+        $fulfillment = $fulfillmentGuide->forOrder($order, auth()->user());
+
+        return view('admin.orders.show', compact('order', 'fulfillment'));
     }
 
     public function edit(Order $order)
@@ -67,12 +81,14 @@ class OrderController extends Controller
         return view('admin.orders.edit', compact('order'));
     }
 
-    public function pickingList(Order $order)
+    public function pickingList(Order $order, SalesFulfillmentGuide $fulfillmentGuide)
     {
-        $order->load('agent', 'items.product', 'delivery');
+        $order->load(['agent', 'items.product', 'delivery', 'deliveries']);
         $lines = PickingListBuilder::linesForOrder($order);
+        $fulfillment = $fulfillmentGuide->forOrder($order, auth()->user());
+        $metrics = SalesFulfillmentMetrics::summarize($order);
 
-        return view('admin.orders.picking_list', compact('order', 'lines'));
+        return view('admin.orders.picking_list', compact('order', 'lines', 'fulfillment', 'metrics'));
     }
 
     public function create()
@@ -290,6 +306,16 @@ class OrderController extends Controller
 
         $order->update(['status' => $newStatus]);
 
+        $order->load('items');
+
+        if ($newStatus === 'picked') {
+            SalesFulfillmentMetrics::applyFullPick($order);
+        }
+
+        if ($newStatus === 'packed') {
+            SalesFulfillmentMetrics::applyFullPack($order);
+        }
+
         OrderStatusHistory::create([
             'order_id' => $order->id,
             'status' => $order->status,
@@ -302,6 +328,61 @@ class OrderController extends Controller
         }
 
         return redirect()->route('admin.orders.show', $order)->with('status', 'Order status updated.');
+    }
+
+    public function confirmPick(Request $request, Order $order)
+    {
+        if (($order->order_type ?? null) === 'return') {
+            return back()->with('error', 'Return orders do not use warehouse picking.');
+        }
+
+        if ($order->status !== 'confirmed') {
+            return back()->with('error', 'Only confirmed orders can be picked.');
+        }
+
+        $order->load('items');
+
+        if ($request->has('items')) {
+            $data = $request->validate([
+                'items' => 'required|array|min:1',
+                'items.*.id' => 'required|integer',
+                'items.*.picked_quantity' => 'required|numeric|min:0',
+            ]);
+
+            $itemIds = $order->items->pluck('id')->all();
+
+            foreach ($data['items'] as $row) {
+                if (! in_array((int) $row['id'], $itemIds, true)) {
+                    return back()->with('error', 'Invalid line item on picking confirmation.');
+                }
+
+                $item = $order->items->firstWhere('id', (int) $row['id']);
+                $pickedQty = min((float) $row['picked_quantity'], (float) $item->quantity);
+                $item->update(['picked_quantity' => $pickedQty]);
+            }
+        } else {
+            SalesFulfillmentMetrics::applyFullPick($order);
+        }
+
+        $order->load('items');
+        $summary = SalesFulfillmentMetrics::summarize($order);
+
+        if ($summary['is_fully_picked']) {
+            $order->update(['status' => 'picked']);
+            OrderStatusHistory::create([
+                'order_id' => $order->id,
+                'status' => 'picked',
+                'changed_at' => now(),
+            ]);
+
+            return redirect()
+                ->route('admin.orders.show', $order)
+                ->with('status', 'Picking complete. Next: confirm packing.');
+        }
+
+        return redirect()
+            ->route('admin.orders.picking-list', $order)
+            ->with('status', 'Partial pick saved (' . number_format($summary['picked_percent'], 0) . '% picked). Complete remaining quantities.');
     }
 
     public function update(Request $request, Order $order)

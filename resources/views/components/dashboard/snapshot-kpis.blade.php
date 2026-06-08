@@ -9,10 +9,14 @@
     'pendingDeliveryCount' => 0,
     'todayProductionQty' => 0,
     'lowStockAlertCount' => 0,
+    'cards' => null,
+    'eyebrow' => 'Operations snapshot',
+    'title' => 'Today at a glance',
+    'description' => 'Core sales, finance, delivery, and stock signals in one place.',
 ])
 
 @php
-    $cards = [
+    $cards = $cards ?? [
         [
             'label' => 'Agents',
             'numeric' => number_format($agentCount ?? 0),
@@ -100,11 +104,11 @@
 <div class="dash-snapshot">
     <div class="dash-snapshot-header">
         <div>
-            <p class="dash-snapshot-eyebrow">Operations snapshot</p>
-            <h2 class="dash-snapshot-title">Today at a glance</h2>
+            <p class="dash-snapshot-eyebrow">{{ $eyebrow }}</p>
+            <h2 class="dash-snapshot-title">{{ $title }}</h2>
         </div>
         <p class="dash-snapshot-desc max-w-sm sm:text-right">
-            Core sales, finance, delivery, and stock signals in one place.
+            {{ $description }}
         </p>
     </div>
 

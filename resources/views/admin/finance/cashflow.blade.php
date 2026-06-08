@@ -32,6 +32,7 @@
                     {{ $from->format('M d, Y') }} - {{ $to->format('M d, Y') }}
                 </span>
             </div>
+            @include('admin.finance.partials.export_center_button', ['module' => 'cash-flow', 'from' => $from, 'to' => $to])
             @include('admin.finance.partials.print_button', ['label' => 'Print Report'])
         </div>
     </div>

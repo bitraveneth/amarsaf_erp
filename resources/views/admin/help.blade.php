@@ -14,9 +14,14 @@
             <div>
                 <h1 class="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-3">হেল্প & সিস্টেম গাইড</h1>
                 <p class="text-lg text-gray-600 dark:text-gray-400 max-w-3xl">এই পেইজটা আসলে আপনার <span class="font-semibold text-brand-600 dark:text-brand-400">ERP ম্যানুয়াল</span> – উপরে মেনু অনুযায়ী হেল্প, নিচে পুরো সিস্টেমের ফ্লো।</p>
-                <div class="mt-4">
-                    <a href="{{ route('admin.client-guide') }}" class="inline-flex items-center rounded-lg bg-brand-500 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-600">
-                        Open Client User Guide
+                <div class="mt-4 flex flex-wrap gap-2">
+                    @if(Route::has('admin.learning-hub'))
+                        <a href="{{ route('admin.learning-hub') }}" class="inline-flex items-center rounded-lg bg-brand-500 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-600">
+                            Open Learning Hub
+                        </a>
+                    @endif
+                    <a href="{{ route('admin.client-guide') }}" class="inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200">
+                        Open Client Manual
                     </a>
                 </div>
             </div>

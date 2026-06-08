@@ -1,0 +1,77 @@
+<?php
+
+/**
+ * Saf ERP — shared domain labels (standard Bangladeshi Bangla).
+ */
+return [
+    'abbr' => [
+        'po' => 'পিও',
+        'grn' => 'জিআরএন',
+        'bom' => 'বিওএম',
+        'sku' => 'এসকেইউ',
+        'pod' => 'পিওডি',
+        'cogs' => 'সিওজিএস',
+        'vat' => 'ভ্যাট',
+        'mrp' => 'এমআরপি',
+        'qc' => 'কিউসি',
+    ],
+
+    'terms' => [
+        'agent' => 'এজেন্ট',
+        'agents' => 'এজেন্ট',
+        'purchase_order' => 'ক্রয় অর্ডার',
+        'purchase_orders' => 'ক্রয় অর্ডার',
+        'sales_order' => 'বিক্রয় অর্ডার',
+        'sales_orders' => 'বিক্রয় অর্ডার',
+        'goods_receipt' => 'পণ্য গ্রহণ নোট',
+        'goods_receipts' => 'পণ্য গ্রহণ (জিআরএন)',
+        'net_sales' => 'নিট বিক্রয়',
+        'gross_profit' => 'মোট মুনাফা',
+        'net_profit' => 'নিট মুনাফা',
+        'outstanding' => 'বকেয়া',
+        'collections' => 'আদায়',
+        'export_center' => 'এক্সপোর্ট সেন্টার',
+        'cash_flow' => 'নগদ প্রবাহ',
+        'profit_and_loss' => 'লাভ ও ক্ষতি',
+        'vat_report' => 'ভ্যাট রিপোর্ট',
+        'commission_report' => 'কমিশন রিপোর্ট',
+        'chart_of_accounts' => 'হিসাবের চার্ট',
+        'general_ledger' => 'জেনারেল লেজার',
+        'trial_balance' => 'ট্রায়াল ব্যালেন্স',
+        'balance_sheet' => 'ব্যালেন্স শিট',
+        'bank_reconciliation' => 'ব্যাংক সমন্বয়',
+        'stock_movements' => 'স্টক চলাচল',
+        'inventory_dashboard' => 'ইনভেন্টরি ড্যাশবোর্ড',
+    ],
+
+    'dashboards' => [
+        'home' => 'ড্যাশবোর্ড',
+        'sales' => 'বিক্রয় ড্যাশবোর্ড',
+        'accounting' => 'হিসাব ড্যাশবোর্ড',
+        'manufacturing' => 'উৎপাদন ড্যাশবোর্ড',
+        'reports' => 'রিপোর্ট ড্যাশবোর্ড',
+        'inventory' => 'ইনভেন্টরি ড্যাশবোর্ড',
+    ],
+
+    'actions' => [
+        'new_po' => 'নতুন পিও',
+        'save_po' => 'পিও সংরক্ষণ',
+        'create_po' => 'ক্রয় অর্ডার তৈরি',
+        'new_order' => 'নতুন বিক্রয় অর্ডার',
+        'select_po' => 'ক্রয় অর্ডার নির্বাচন',
+        'save' => 'সংরক্ষণ',
+        'cancel' => 'বাতিল',
+        'edit' => 'সম্পাদনা',
+        'delete' => 'মুছুন',
+        'create' => 'তৈরি',
+        'back' => 'ফিরে যান',
+        'print' => 'প্রিন্ট',
+        'export' => 'এক্সপোর্ট',
+        'search' => 'অনুসন্ধান',
+        'filter' => 'ফিল্টার',
+        'approve' => 'অনুমোদন',
+        'reject' => 'প্রত্যাখ্যান',
+        'submit' => 'জমা দিন',
+        'view' => 'দেখুন',
+    ],
+];

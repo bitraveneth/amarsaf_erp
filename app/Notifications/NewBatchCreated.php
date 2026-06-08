@@ -3,6 +3,7 @@
 namespace App\Notifications;
 
 use App\Models\Batch;
+use App\Services\NotificationActionResolver;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
 
@@ -42,11 +43,13 @@ class NewBatchCreated extends Notification
 
         return [
             'title' => 'New batch recorded',
+            'type' => 'info',
             'message' => sprintf(
                 'Batch %s recorded for %s.',
                 $this->batch->batch_code,
                 $product?->name ?? 'unknown product'
             ),
+            'link' => route('admin.batches.show', $this->batch),
             'batch_id' => $this->batch->id,
             'batch_code' => $this->batch->batch_code,
             'product_id' => $this->batch->product_id,

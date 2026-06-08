@@ -19,6 +19,22 @@ class TabularExport
         };
     }
 
+    public static function csvContent(array $columns, iterable $rows): string
+    {
+        $handle = fopen('php://temp', 'r+');
+        fputcsv($handle, $columns);
+
+        foreach (self::normalizeRows($rows) as $row) {
+            fputcsv($handle, array_map(fn ($value) => self::stringify($value), (array) $row));
+        }
+
+        rewind($handle);
+        $content = stream_get_contents($handle) ?: '';
+        fclose($handle);
+
+        return $content;
+    }
+
     protected static function normalizeRows(iterable $rows): array
     {
         if ($rows instanceof Collection) {
@@ -56,7 +72,7 @@ class TabularExport
             $truncated = true;
         }
 
-        $pdf = Pdf::loadView('exports.table-pdf', [
+        $pdf = \App\Support\PdfDocumentBuilder::loadView('exports.table-pdf', [
             'title' => $title,
             'columns' => $columns,
             'rows' => $rows,

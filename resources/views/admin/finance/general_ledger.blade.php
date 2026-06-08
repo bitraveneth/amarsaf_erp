@@ -8,7 +8,10 @@
         :subtitle="$from->format('d M Y') . ' – ' . $to->format('d M Y')"
     >
         <x-slot:actions>
-            @include('admin.finance.partials.print_button')
+            <div class="flex flex-wrap items-center gap-2">
+                @include('admin.finance.partials.export_center_button', ['module' => 'general-ledger', 'from' => $from, 'to' => $to])
+                @include('admin.finance.partials.print_button')
+            </div>
         </x-slot:actions>
     </x-admin.page-header>
 

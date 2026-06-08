@@ -22,17 +22,57 @@ class AssistantResponseComposer
         protected ErpAssistantInsightsService $insights
     ) {}
 
-    public function bootstrap(User $user): array
+    public function bootstrap(User $user, array $context = []): array
     {
         $firstName = trim(explode(' ', $user->name ?? 'there')[0]) ?: 'there';
+        $locale = ($context['locale'] ?? 'en') === 'bn' ? 'bn' : 'en';
+        $onLearningHub = ($context['source'] ?? '') === 'learning-hub';
+
+        $greeting = $this->timeGreeting($firstName, $locale);
+        $quote = $this->quoteForToday($locale);
+
+        if ($onLearningHub) {
+            $prompt = $locale === 'bn'
+                ? 'ERP শেখা, ধাপ ব্যাখ্যা, GRN/POD/BOM — অথবা আজকের বিক্রয়, স্টক, বকেয়া — যেকোনো কিছু জিজ্ঞেস করুন।'
+                : 'Ask about ERP training, steps and terms (GRN, POD, BOM), or live numbers like sales, stock, and receivables.';
+        } else {
+            $prompt = $locale === 'bn'
+                ? 'ব্যবসার সংখ্যা, ERP-তে কোথায় যাবেন, বা GRN/POD মানে কী — যেকোনো কিছু জিজ্ঞেস করুন।'
+                : 'Ask about live business numbers, where to go in the ERP, or what terms like GRN and POD mean.';
+        }
 
         return [
-            'greeting' => $this->timeGreeting($firstName),
-            'quote' => $this->quoteForToday(),
-            'prompt' => 'What would you like to know about the business today?',
-            'quick_asks' => AssistantFaqCatalog::quickAsks(),
+            'greeting' => $greeting,
+            'quote' => $quote,
+            'prompt' => $prompt,
+            'quick_asks' => $this->mergedQuickAsks($context),
             'agent_name' => 'Saf AI Assistant',
         ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $context
+     * @return array<int, array<string, string>>
+     */
+    protected function mergedQuickAsks(array $context): array
+    {
+        $learning = app(LearningAssistantService::class);
+        $learningAsks = array_slice($learning->quickAsks($context), 0, 2);
+        $businessAsks = AssistantFaqCatalog::quickAsks();
+
+        $seen = [];
+        $merged = [];
+
+        foreach (array_merge($learningAsks, $businessAsks) as $ask) {
+            $key = strtolower(trim($ask['message'] ?? $ask['label'] ?? ''));
+            if ($key === '' || isset($seen[$key])) {
+                continue;
+            }
+            $seen[$key] = true;
+            $merged[] = $ask;
+        }
+
+        return array_slice($merged, 0, 6);
     }
 
     public function compose(User $user, array $route, string $originalMessage): array
@@ -41,8 +81,10 @@ class AssistantResponseComposer
         $entry = $route['entry'] ?? null;
 
         if ($route['type'] === 'greeting') {
+            $boot = $this->bootstrap($user);
+
             return $this->wrap(
-                $this->bootstrap($user)['greeting'] . ' ' . $this->quoteForToday() . ' Ask me about revenue, profit, orders, production, or pending tasks.',
+                $boot['greeting'] . ' ' . $boot['quote'] . ' ' . $boot['prompt'],
                 []
             );
         }
@@ -102,6 +144,7 @@ class AssistantResponseComposer
             'profit_estimate_mtd' => "My management profit estimate for {$period} is {$this->money($finance['profit_estimate_mtd'] ?? 0, $currency)} — revenue minus expenses and payroll. This is not an audited P&L; use Accounting reports for formal statements.",
             'receivables' => "Outstanding receivables right now are {$this->money($finance['receivables'] ?? 0, $currency)} — that's what customers still owe on open invoices.",
             'collections_mtd' => "Collections received in {$period} total {$this->money($finance['collections_mtd'] ?? 0, $currency)} (" . ($finance['collection_rate'] ?? 0) . '% of invoiced sales).',
+            'collection_rate' => "Collection rate for {$period} is " . ($finance['collection_rate'] ?? 0) . "% — {$this->money($finance['collections_mtd'] ?? 0, $currency)} collected against {$this->money($finance['revenue_mtd'] ?? 0, $currency)} invoiced sales.",
             'overdue_invoices' => ($finance['overdue_invoices'] ?? 0) > 0
                 ? "There are {$finance['overdue_invoices']} overdue invoice(s) with an open balance. Worth a follow-up in Finance."
                 : 'Good news — no overdue invoices with an open balance right now.',
@@ -224,7 +267,7 @@ class AssistantResponseComposer
     protected function metricLinks(?string $metric): array
     {
         return match ($metric) {
-            'revenue_mtd', 'revenue_today', 'receivables', 'collections_mtd', 'overdue_invoices', 'profit_estimate_mtd', 'expenses_mtd', 'payroll_mtd' => [
+            'revenue_mtd', 'revenue_today', 'receivables', 'collections_mtd', 'collection_rate', 'overdue_invoices', 'profit_estimate_mtd', 'expenses_mtd', 'payroll_mtd' => [
                 $this->linkFromRoute('admin.finance.index', 'Open Finance'),
                 $this->linkFromRoute('admin.accounting.dashboard', 'Accounting dashboard'),
             ],
@@ -268,9 +311,20 @@ class AssistantResponseComposer
         ];
     }
 
-    protected function timeGreeting(string $firstName): string
+    protected function timeGreeting(string $firstName, string $locale = 'en'): string
     {
         $hour = (int) now()->format('G');
+
+        if ($locale === 'bn') {
+            $salutation = match (true) {
+                $hour < 12 => 'শুভ সকাল',
+                $hour < 17 => 'শুভ দুপুর',
+                default => 'শুভ সন্ধ্যা',
+            };
+
+            return "{$salutation}, {$firstName}!";
+        }
+
         $salutation = match (true) {
             $hour < 12 => 'Good morning',
             $hour < 17 => 'Good afternoon',
@@ -280,7 +334,7 @@ class AssistantResponseComposer
         return "{$salutation}, {$firstName}!";
     }
 
-    protected function quoteForToday(): string
+    protected function quoteForToday(?string $locale = null): string
     {
         $index = (int) now()->format('z') % count($this->quotes);
 

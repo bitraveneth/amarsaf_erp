@@ -1,76 +1,83 @@
-@extends('layouts.guest')
+@extends('layouts.auth')
 
 @section('title', 'Reset password | ' . ($appBrandName ?? config('app.name')))
 
 @section('content')
-<div class="w-full max-w-md">
-    <div class="rounded-xl border border-gray-200 bg-white p-8 shadow-theme-lg dark:border-gray-800 dark:bg-gray-900">
-        <header class="mb-8 text-center">
-            <div class="mb-5 flex justify-center">
-                <x-brand-mark variant="login" class="mx-auto" />
-            </div>
-            <h1 class="text-title-md font-semibold text-gray-900 dark:text-white">Reset password</h1>
-            <p class="mt-2 text-theme-sm text-gray-600 dark:text-gray-400">Choose a new password for your account.</p>
-        </header>
+<div class="auth-form w-full">
+    <header class="auth-form__head">
+        <h1 class="auth-form__title">
+            {{ app()->getLocale() === 'bn' ? 'নতুন পাসওয়ার্ড' : 'Choose a new password' }}
+        </h1>
+        <p class="auth-form__subtitle">
+            {{ app()->getLocale() === 'bn'
+                ? 'আপনার অ্যাকাউন্টের জন্য একটি নতুন পাসওয়ার্ড সেট করুন।'
+                : 'Set a new password for your account.' }}
+        </p>
+    </header>
 
-        <form method="POST" action="{{ route('password.update') }}" class="space-y-5">
-            @csrf
-            <input type="hidden" name="token" value="{{ $token }}">
+    <form method="POST" action="{{ route('password.update') }}" class="auth-form__body">
+        @csrf
+        <input type="hidden" name="token" value="{{ $token }}">
 
-            <div class="flex flex-col gap-1.5">
-                <label for="email" class="text-theme-sm font-medium text-gray-700 dark:text-gray-300">
-                    Email address
-                </label>
-                <input id="email"
-                       type="email"
-                       name="email"
-                       value="{{ old('email', $email) }}"
-                       required
-                       autocomplete="email"
-                       class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-theme-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-700">
-                @error('email')
-                    <p class="text-theme-xs text-error-600 dark:text-error-400">{{ $message }}</p>
-                @enderror
-            </div>
+        <div class="auth-field">
+            <label for="email" class="auth-field__label">Email</label>
+            <input
+                id="email"
+                type="email"
+                name="email"
+                value="{{ old('email', $email) }}"
+                required
+                autocomplete="email"
+                placeholder="you@company.com"
+                class="auth-field__input auth-field__input--plain"
+            />
+            @error('email')
+                <p class="auth-field__error">{{ $message }}</p>
+            @enderror
+        </div>
 
-            <div class="flex flex-col gap-1.5">
-                <label for="password" class="text-theme-sm font-medium text-gray-700 dark:text-gray-300">
-                    New password
-                </label>
-                <input id="password"
-                       type="password"
-                       name="password"
-                       required
-                       autocomplete="new-password"
-                       class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-theme-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-700">
-                @error('password')
-                    <p class="text-theme-xs text-error-600 dark:text-error-400">{{ $message }}</p>
-                @enderror
-            </div>
+        <div class="auth-field">
+            <label for="password" class="auth-field__label">
+                {{ app()->getLocale() === 'bn' ? 'নতুন পাসওয়ার্ড' : 'New password' }}
+            </label>
+            <input
+                id="password"
+                type="password"
+                name="password"
+                required
+                autocomplete="new-password"
+                placeholder="••••••••"
+                class="auth-field__input auth-field__input--plain"
+            />
+            @error('password')
+                <p class="auth-field__error">{{ $message }}</p>
+            @enderror
+        </div>
 
-            <div class="flex flex-col gap-1.5">
-                <label for="password_confirmation" class="text-theme-sm font-medium text-gray-700 dark:text-gray-300">
-                    Confirm new password
-                </label>
-                <input id="password_confirmation"
-                       type="password"
-                       name="password_confirmation"
-                       required
-                       autocomplete="new-password"
-                       class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-theme-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-700">
-            </div>
+        <div class="auth-field">
+            <label for="password_confirmation" class="auth-field__label">
+                {{ app()->getLocale() === 'bn' ? 'পাসওয়ার্ড নিশ্চিত করুন' : 'Confirm password' }}
+            </label>
+            <input
+                id="password_confirmation"
+                type="password"
+                name="password_confirmation"
+                required
+                autocomplete="new-password"
+                placeholder="••••••••"
+                class="auth-field__input auth-field__input--plain"
+            />
+        </div>
 
-            <button type="submit"
-                    class="flex w-full items-center justify-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-theme-sm font-medium text-white shadow-theme-xs transition hover:bg-brand-600 focus:outline-none focus:ring-4 focus:ring-brand-500/20 dark:bg-brand-500 dark:hover:bg-brand-600">
-                Reset password
-            </button>
+        <button type="submit" class="auth-submit auth-submit--solid">
+            {{ app()->getLocale() === 'bn' ? 'পাসওয়ার্ড আপডেট' : 'Update password' }}
+        </button>
 
-            <div class="text-center">
-                <a href="{{ route('login') }}" class="text-theme-sm font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300">
-                    Back to sign in
-                </a>
-            </div>
-        </form>
-    </div>
+        <p class="auth-form__back">
+            <a href="{{ route('login') }}" class="auth-field__link">
+                {{ app()->getLocale() === 'bn' ? 'লগ ইনে ফিরে যান' : 'Back to sign in' }}
+            </a>
+        </p>
+    </form>
 </div>
 @endsection

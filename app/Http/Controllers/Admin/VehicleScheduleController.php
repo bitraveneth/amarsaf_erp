@@ -7,12 +7,17 @@ use App\Models\DeliveryRoute;
 use App\Models\Delivery;
 use App\Models\Vehicle;
 use App\Models\VehicleSchedule;
+use App\Services\Delivery\RouteVehicleValidator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Validation\ValidationException;
 
 class VehicleScheduleController extends Controller
 {
+    public function __construct(
+        protected RouteVehicleValidator $routeVehicleValidator
+    ) {
+    }
     public function index(Request $request)
     {
         $date = $request->query('date')
@@ -55,7 +60,7 @@ class VehicleScheduleController extends Controller
             'driver' => 'nullable|string',
             'notes' => 'nullable|string',
         ]);
-        $data = $this->normalizeRouteVehicleSelection($data);
+        $data = $this->routeVehicleValidator->normalizeScheduleSelection($data);
 
         $exists = VehicleSchedule::where('vehicle_id', $data['vehicle_id'])
             ->whereDate('scheduled_date', $data['scheduled_date'])
@@ -71,34 +76,5 @@ class VehicleScheduleController extends Controller
 
         return redirect()->route('admin.vehicle-schedule.index', ['date' => $data['scheduled_date']])
             ->with('status', 'Vehicle schedule saved.');
-    }
-
-    protected function normalizeRouteVehicleSelection(array $data): array
-    {
-        $vehicleId = $data['vehicle_id'] ?? null;
-
-        if (! empty($data['route_id'])) {
-            $route = DeliveryRoute::findOrFail($data['route_id']);
-
-            if ($route->vehicle_id) {
-                if ($vehicleId && (int) $vehicleId !== (int) $route->vehicle_id) {
-                    throw ValidationException::withMessages([
-                        'vehicle_id' => 'Selected vehicle must match the route default vehicle.',
-                    ]);
-                }
-
-                $vehicleId = (int) $route->vehicle_id;
-            }
-        }
-
-        if (! $vehicleId) {
-            throw ValidationException::withMessages([
-                'vehicle_id' => 'Select a vehicle or choose a route with a default vehicle.',
-            ]);
-        }
-
-        $data['vehicle_id'] = $vehicleId;
-
-        return $data;
     }
 }

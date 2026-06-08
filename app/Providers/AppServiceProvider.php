@@ -3,6 +3,11 @@
 namespace App\Providers;
 
 use App\Helpers\SystemSettings;
+use App\Services\NotificationActionResolver;
+use App\Services\Inventory\ProcurementInboxService;
+use App\Services\Sales\FulfillmentInboxService;
+use App\Support\Learning\LearningHubRepository;
+use App\Support\Learning\LearningRouteMap;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\View;
@@ -59,6 +64,7 @@ class AppServiceProvider extends ServiceProvider
         View::share('appBrandInitials', SystemSettings::initials($brandName));
         View::share('legalCompanyName', $legalCompanyName);
         View::share('legalCompanyInitials', SystemSettings::initials($legalCompanyName));
+        View::share('headerNotice', SystemSettings::headerNotice());
 
         View::composer(['layouts.app-header', 'layouts.partials.admin-header'], function ($view) {
             if (!auth()->check()) {
@@ -83,27 +89,40 @@ class AppServiceProvider extends ServiceProvider
                 ->latest()
                 ->take(10)
                 ->get()
-                ->map(function ($notification) {
-                    $data = $notification->data;
-                    $fallbackSource = class_basename($notification->type) === 'SystemAlertNotification'
-                        ? ($data['source'] ?? 'System')
-                        : 'General';
-
-                    return [
-                        'id' => $notification->id,
-                        'message' => $data['message'] ?? '',
-                        'variant' => $data['type'] ?? 'info',
-                        'source' => $data['source'] ?? $fallbackSource,
-                        'created_at' => $notification->created_at,
-                        'dedupe_key' => $data['dedupe_key'] ?? null,
-                    ];
-                });
+                ->map(fn ($notification) => NotificationActionResolver::present($notification));
 
             $headerUnreadCount = $user->unreadNotifications()->count();
 
             // Use dedicated header-scoped variables to avoid conflicts with page-local `$alerts`.
             $view->with('headerAlerts', $headerUnread);
             $view->with('headerAlertCount', $headerUnreadCount);
+        });
+
+        View::composer(['layouts.app', 'layouts.sidebar', 'layouts.app-header'], function ($view) {
+            if (! auth()->check()) {
+                $view->with('procurementInbox', []);
+                $view->with('fulfillmentInbox', []);
+                $view->with('learningModuleSlug', null);
+                $view->with('learningModule', null);
+                $view->with('learningUi', LearningHubRepository::ui());
+                $view->with('learningHubUrl', route('admin.learning-hub', [], false));
+
+                return;
+            }
+
+            $view->with('procurementInbox', app(ProcurementInboxService::class)->forUser(auth()->user()));
+            $view->with('fulfillmentInbox', app(FulfillmentInboxService::class)->forUser(auth()->user()));
+
+            $slug = LearningRouteMap::slugForRequest();
+            $module = $slug ? LearningHubRepository::module($slug) : null;
+            $hubUrl = $slug
+                ? route('admin.learning-hub', ['module' => $slug])
+                : route('admin.learning-hub');
+
+            $view->with('learningModuleSlug', $slug);
+            $view->with('learningModule', $module);
+            $view->with('learningUi', LearningHubRepository::ui());
+            $view->with('learningHubUrl', $hubUrl);
         });
     }
 }

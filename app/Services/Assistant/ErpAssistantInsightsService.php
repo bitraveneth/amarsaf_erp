@@ -229,8 +229,8 @@ class ErpAssistantInsightsService
         $snapshot = $this->snapshot($user);
 
         return match ($metricKey) {
-            'revenue_mtd', 'revenue_today', 'collections_mtd', 'receivables', 'overdue_invoices',
-            'expenses_mtd', 'payroll_mtd', 'profit_estimate_mtd', 'collection_rate' => $snapshot['permissions']['finance'] ?? false,
+            'revenue_mtd', 'revenue_today', 'collections_mtd', 'collection_rate', 'receivables', 'overdue_invoices',
+            'expenses_mtd', 'payroll_mtd', 'profit_estimate_mtd' => $snapshot['permissions']['finance'] ?? false,
             'orders_today', 'orders_mtd', 'returns_mtd', 'pending_deliveries', 'sales_target' => $snapshot['permissions']['sales'] ?? false,
             'active_agents' => $snapshot['permissions']['agents'] ?? false,
             'production_today', 'pending_qc' => $snapshot['permissions']['production'] ?? false,

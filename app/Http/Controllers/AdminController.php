@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Helpers\Permission;
 use App\Models\Agent;
+use App\Notifications\SystemAlertNotification;
+use App\Services\NotificationActionResolver;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\ProductionRun;
@@ -244,6 +246,24 @@ class AdminController extends Controller
         $monthlyTargetProgress = $monthlySalesTarget > 0
             ? round(min(100, ($monthlyAchieved / $monthlySalesTarget) * 100), 2)
             : 0.0;
+        $monthlyTargetProgressRaw = $monthlySalesTarget > 0
+            ? round(($monthlyAchieved / $monthlySalesTarget) * 100, 2)
+            : 0.0;
+
+        $yesterdayAchieved = 0.0;
+        if ($invoiceReady) {
+            $yesterday = $today->copy()->subDay();
+            $yesterdayAchieved = round(InvoiceRevenueMetrics::sumNetSalesAfterCreditsInRange(
+                $yesterday,
+                $yesterday,
+                $yesterday,
+                $yesterday
+            ), 2);
+        }
+
+        $todayChangePercent = $yesterdayAchieved > 0
+            ? round((($todayAchieved - $yesterdayAchieved) / $yesterdayAchieved) * 100, 1)
+            : null;
         $targetMonthOptions = collect(range(0, 11))
             ->map(function (int $offset) use ($today) {
                 $month = $today->copy()->startOfMonth()->subMonths($offset);
@@ -350,6 +370,8 @@ class AdminController extends Controller
                     'achievedValue' => round($monthlyAchieved, 2),
                     'todayValue' => round($todayAchieved, 2),
                     'progressValue' => round($monthlyTargetProgress, 2),
+                    'progressValueRaw' => round($monthlyTargetProgressRaw, 2),
+                    'todayChangePercent' => $todayChangePercent,
                 ];
             }
 
@@ -377,6 +399,9 @@ class AdminController extends Controller
             'todayProductionQty',
             'lowStockAlertCount',
             'monthlyTargetProgress',
+            'monthlyTargetProgressRaw',
+            'yesterdayAchieved',
+            'todayChangePercent',
             'outstandingReceivables',
             'targetMonthOptions',
             'collectionsThisMonth',
@@ -412,16 +437,18 @@ class AdminController extends Controller
 
             $alerts = $systemNotifications
                 ->map(function ($notification) {
-                    $data = $notification->data;
+                    $presented = NotificationActionResolver::present($notification);
 
                     return [
-                        'id' => $notification->id,
-                        'key' => $data['dedupe_key'] ?? $notification->id,
-                        'message' => $data['message'] ?? '',
-                        'variant' => $data['type'] ?? 'info',
-                        'source' => $data['source'] ?? 'System',
-                        'created_at' => $notification->created_at,
-                        'is_read' => !is_null($notification->read_at),
+                        'id' => $presented['id'],
+                        'key' => $presented['dedupe_key'] ?? $notification->id,
+                        'message' => $presented['message'],
+                        'variant' => $presented['variant'],
+                        'source' => $presented['source'],
+                        'created_at' => $presented['created_at'],
+                        'is_read' => $presented['is_read'],
+                        'action_url' => $presented['action_url'],
+                        'open_url' => $presented['open_url'],
                     ];
                 })
                 ->values();
@@ -456,20 +483,7 @@ class AdminController extends Controller
             ->latest()
             ->take(10)
             ->get()
-            ->map(function ($notification) {
-                $data = $notification->data;
-                $variant = $data['type'] ?? 'info';
-                $source = $data['sender_name'] ?? $data['source'] ?? 'System';
-
-                return [
-                    'id' => $notification->id,
-                    'message' => $data['message'] ?? '',
-                    'variant' => $variant,
-                    'source' => $source,
-                    'time_label' => $notification->created_at?->diffForHumans() ?? 'Now',
-                    'read_url' => route('admin.notifications.mark-read', $notification->id),
-                ];
-            })
+            ->map(fn ($notification) => NotificationActionResolver::present($notification))
             ->values();
 
         return response()->json([
@@ -477,6 +491,23 @@ class AdminController extends Controller
             'unread_count' => $user->unreadNotifications()->count(),
             'alerts' => $alerts,
         ]);
+    }
+
+    public function openNotification(string $notificationId)
+    {
+        $notification = auth()->user()
+            ->notifications()
+            ->whereKey($notificationId)
+            ->firstOrFail();
+
+        if (is_null($notification->read_at)) {
+            $notification->markAsRead();
+        }
+
+        $data = is_array($notification->data) ? $notification->data : [];
+        $url = NotificationActionResolver::resolve($data, $notification->type);
+
+        return redirect($url);
     }
 
     public function markNotificationRead(string $notificationId)

@@ -19,7 +19,11 @@
                         Available Material Stock
                     </h1>
                     <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                        View available raw material quantities by warehouse
+                        @if(isset($filteredWarehouse) && $filteredWarehouse)
+                            Raw materials at {{ $filteredWarehouse->name }}
+                        @else
+                            View available raw material quantities by warehouse
+                        @endif
                     </p>
                 </div>
             </div>

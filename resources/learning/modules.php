@@ -1,0 +1,341 @@
+<?php
+
+/**
+ * Bilingual Learning Hub module catalog.
+ * Each module: slug, order, icon, title, summary, flowchart (mermaid), steps, examples, tips.
+ * Edit here to update in-app Learning Hub + keep docs/ in sync for PDF/export.
+ */
+return [
+    [
+        'slug' => 'overview',
+        'order' => 0,
+        'icon' => 'overview',
+        'title' => [
+            'en' => 'How the whole system works',
+            'bn' => 'পুরো সিস্টেম কীভাবে চলে',
+        ],
+        'summary' => [
+            'en' => 'Saf ERP connects buying, making, storing, selling, delivering, and billing in one flow.',
+            'bn' => 'Saf ERP কেনাকাটা, উৎপাদন, মজুদ, বিক্রয়, ডেলিভারি ও হিসাব এক ধারায় জোড়ে।',
+        ],
+        'flowchart' => [
+            'en' => <<<'MERMAID'
+flowchart LR
+    A["Buy materials"] --> B["Receive GRN"]
+    B --> C["Produce with BOM"]
+    C --> D["QC and stock"]
+    D --> E["Agent order"]
+    E --> F["Deliver POD"]
+    F --> G["Invoice and receipt"]
+MERMAID,
+            'bn' => <<<'MERMAID'
+flowchart LR
+    A["কাঁচামাল কিনুন"] --> B["GRN গ্রহণ"]
+    B --> C["BOM দিয়ে উৎপাদন"]
+    C --> D["QC ও স্টক"]
+    D --> E["এজেন্ট অর্ডার"]
+    E --> F["ডেলিভারি POD"]
+    F --> G["ইনভয়েস ও রসিদ"]
+MERMAID,
+        ],
+        'steps' => [
+            [
+                'title' => ['en' => 'Set up master data', 'bn' => 'মাস্টার ডেটা সেটআপ'],
+                'body' => ['en' => 'Add materials, products, agents, suppliers, and warehouses first.', 'bn' => 'আগে কাঁচামাল, পণ্য, এজেন্ট, সাপ্লায়ার ও গুদাম যোগ করুন।'],
+                'path' => '/admin/products',
+            ],
+            [
+                'title' => ['en' => 'Fill the factory', 'bn' => 'কারখানায় মজুদ করুন'],
+                'body' => ['en' => 'Purchase order → GRN puts raw materials in stock.', 'bn' => 'ক্রয় অর্ডার → GRN দিয়ে কাঁচামাল স্টকে আসে।'],
+                'path' => '/admin/purchase-orders',
+            ],
+            [
+                'title' => ['en' => 'Make finished goods', 'bn' => 'তৈরি পণ্য উৎপাদন'],
+                'body' => ['en' => 'BOM → production run → QC → warehouse confirms stock.', 'bn' => 'BOM → উৎপাদন রান → QC → গুদাম স্টক নিশ্চিত করে।'],
+                'path' => '/admin/production',
+            ],
+            [
+                'title' => ['en' => 'Sell and collect', 'bn' => 'বিক্রি ও আদায়'],
+                'body' => ['en' => 'Sales order → delivery → invoice → receipt from agent.', 'bn' => 'বিক্রয় অর্ডার → ডেলিভারি → ইনভয়েস → এজেন্টের কাছ থেকে টাকা।'],
+                'path' => '/admin/orders',
+            ],
+        ],
+        'examples' => [
+            [
+                'title' => ['en' => 'Example: one carton of water', 'bn' => 'উদাহরণ: এক কার্টন পানি'],
+                'body' => [
+                    'en' => 'You buy bottles and caps (PO + GRN). BOM says 12 bottles + 1 carton per output. Production makes SAF-500ML-CTN. Agent orders 100 cartons. You deliver and invoice.',
+                    'bn' => 'আপনি বোতল ও ক্যাপ কিনেন (PO + GRN)। BOM বলে প্রতি আউটপুটে ১২ বোতল + ১ কার্টন। উৎপাদনে SAF-500ML-CTN তৈরি। এজেন্ট ১০০ কার্টন অর্ডার দেয়। আপনি ডেলিভারি ও ইনভয়েস করেন।',
+                ],
+            ],
+        ],
+        'tips' => [
+            ['en' => 'Every document links to the next: PO → GRN → production → sales → delivery → invoice.', 'bn' => 'প্রতিটি ডকুমেন্ট পরেরটির সাথে যুক্ত: PO → GRN → উৎপাদন → বিক্রয় → ডেলিভারি → ইনভয়েস।'],
+            ['en' => 'If stock is wrong, fix master data or GRN before blaming sales.', 'bn' => 'স্টক ভুল হলে বিক্রয় নয়, আগে মাস্টার ডেটা বা GRN ঠিক করুন।'],
+        ],
+    ],
+    [
+        'slug' => 'products',
+        'order' => 1,
+        'icon' => 'products',
+        'title' => ['en' => 'Products and materials', 'bn' => 'পণ্য ও কাঁচামাল'],
+        'summary' => [
+            'en' => 'Materials are what you buy and use. Products are what you sell.',
+            'bn' => 'কাঁচামাল যা আপনি কিনে ব্যবহার করেন। পণ্য যা আপনি বিক্রি করেন।',
+        ],
+        'flowchart' => [
+            'en' => "flowchart TD\n    A[\"Add materials\"] --> B[\"Add finished products\"]\n    B --> C[\"Ready for BOM and sales\"]",
+            'bn' => "flowchart TD\n    A[\"কাঁচামাল যোগ\"] --> B[\"তৈরি পণ্য যোগ\"]\n    B --> C[\"BOM ও বিক্রয়ের জন্য প্রস্তুত\"]",
+        ],
+        'steps' => [
+            ['title' => ['en' => 'Add a material', 'bn' => 'কাঁচামাল যোগ'], 'body' => ['en' => 'Control → Materials → Add. Set SKU, type (raw/service), UOM, standard cost.', 'bn' => 'Control → Materials → Add। SKU, ধরন (raw/service), UOM, স্ট্যান্ডার্ড কস্ট দিন।'], 'path' => '/admin/materials/create'],
+            ['title' => ['en' => 'Add a product', 'bn' => 'পণ্য যোগ'], 'body' => ['en' => 'Control → Products → Add. Name, SKU, base price, tax class.', 'bn' => 'Control → Products → Add। নাম, SKU, বেস প্রাইস, ট্যাক্স ক্লাস।'], 'path' => '/admin/products/create'],
+        ],
+        'examples' => [
+            ['title' => ['en' => 'SKU example', 'bn' => 'SKU উদাহরণ'], 'body' => ['en' => 'RM-PET-500 = raw bottle. SAF-500ML-CTN = sellable carton of 12.', 'bn' => 'RM-PET-500 = কাঁচা বোতল। SAF-500ML-CTN = বিক্রয়যোগ্য ১২-বোতলের কার্টন।']],
+        ],
+        'tips' => [
+            ['en' => 'Never use the same SKU twice.', 'bn' => 'একই SKU দুবার ব্যবহার করবেন না।'],
+        ],
+    ],
+    [
+        'slug' => 'agents',
+        'order' => 2,
+        'icon' => 'agents',
+        'title' => ['en' => 'Agents and pricing', 'bn' => 'এজেন্ট ও মূল্য'],
+        'summary' => ['en' => 'Register agents, set prices and commission rules.', 'bn' => 'এজেন্ট নিবন্ধন, মূল্য ও কমিশন নিয়ম সেট করুন।'],
+        'flowchart' => [
+            'en' => "flowchart LR\n    A[\"Create agent\"] --> B[\"Price list\"] --> C[\"Sales order\"]",
+            'bn' => "flowchart LR\n    A[\"এজেন্ট তৈরি\"] --> B[\"প্রাইস লিস্ট\"] --> C[\"বিক্রয় অর্ডার\"]",
+        ],
+        'steps' => [
+            ['title' => ['en' => 'Create agent', 'bn' => 'এজেন্ট তৈরি'], 'body' => ['en' => 'Add name, zone, credit limit, phone.', 'bn' => 'নাম, জোন, ক্রেডিট লিমিট, ফোন দিন।'], 'path' => '/admin/agents/create'],
+            ['title' => ['en' => 'Price list', 'bn' => 'প্রাইস লিস্ট'], 'body' => ['en' => 'Set special prices per agent and product if needed.', 'bn' => 'প্রয়োজনে এজেন্ট ও পণ্য অনুযায়ী আলাদা মূল্য দিন।'], 'path' => '/admin/products-price-list'],
+        ],
+        'examples' => [['title' => ['en' => 'Zone pricing', 'bn' => 'জোন ভিত্তিক মূল্য'], 'body' => ['en' => 'Dhaka agent gets base price; rural agent may have +5% on transport.', 'bn' => 'ঢাকার এজেন্ট বেস প্রাইস; গ্রামীণ এজেন্টে পরিবহনে +৫% হতে পারে।']]],
+        'tips' => [['en' => 'Inactive agents cannot be selected on new orders.', 'bn' => 'নিষ্ক্রিয় এজেন্ট নতুন অর্ডারে আসে না।']],
+    ],
+    [
+        'slug' => 'procurement',
+        'order' => 3,
+        'icon' => 'suppliers',
+        'title' => ['en' => 'Procurement — PO and GRN', 'bn' => 'ক্রয় — PO ও GRN'],
+        'summary' => ['en' => 'Buy from suppliers and receive into warehouse stock.', 'bn' => 'সাপ্লায়ার থেকে কিনে গুদামে স্টকে নিন।'],
+        'flowchart' => [
+            'en' => "flowchart LR\n    A[\"Draft PO\"] --> B[\"Approve\"] --> C[\"GRN receive\"] --> D[\"Stock in\"]",
+            'bn' => "flowchart LR\n    A[\"ড্রাফট PO\"] --> B[\"অনুমোদন\"] --> C[\"GRN গ্রহণ\"] --> D[\"স্টকে প্রবেশ\"]",
+        ],
+        'steps' => [
+            ['title' => ['en' => 'Create PO', 'bn' => 'PO তৈরি'], 'body' => ['en' => 'Pick supplier, add material lines, save as draft, then approve.', 'bn' => 'সাপ্লায়ার বেছে লাইন যোগ, ড্রাফটে সেভ, তারপর অনুমোদন।'], 'path' => '/admin/purchase-orders/create'],
+            ['title' => ['en' => 'Post GRN', 'bn' => 'GRN পোস্ট'], 'body' => ['en' => 'Receive from PO. Approved QC lines add stock. Partial qty is OK.', 'bn' => 'PO থেকে গ্রহণ। অনুমোদিত QC লাইন স্টক বাড়ায়। আংশিক পরিমাণ চলে।'], 'path' => '/admin/goods-receipts'],
+        ],
+        'examples' => [['title' => ['en' => 'Partial receipt', 'bn' => 'আংশিক গ্রহণ'], 'body' => ['en' => 'PO 10,000 bottles; first GRN 6,000; second GRN 4,000. PO becomes fully received.', 'bn' => 'PO ১০,০০০ বোতল; প্রথম GRN ৬,০০০; দ্বিতীয় GRN ৪,০০০। PO সম্পূর্ণ গ্রহণ হয়।']]],
+        'tips' => [['en' => 'Service lines (labour) confirm without stock quantity.', 'bn' => 'সার্ভিস লাইন (শ্রম) স্টক ছাড়াই নিশ্চিত হয়।']],
+    ],
+    [
+        'slug' => 'warehouses',
+        'order' => 4,
+        'icon' => 'warehouses',
+        'title' => ['en' => 'Warehouses and routes', 'bn' => 'গুদাম ও রুট'],
+        'summary' => ['en' => 'Define where stock lives and how deliveries travel.', 'bn' => 'স্টক কোথায় ও ডেলিভারি কোন পথে — তা নির্ধারণ করুন।'],
+        'flowchart' => [
+            'en' => "flowchart TD\n    A[\"Warehouse\"] --> B[\"Locations\"]\n    B --> C[\"Vehicles and routes\"]",
+            'bn' => "flowchart TD\n    A[\"গুদাম\"] --> B[\"লোকেশন\"]\n    B --> C[\"যান ও রুট\"]",
+        ],
+        'steps' => [
+            ['title' => ['en' => 'Create warehouse', 'bn' => 'গুদাম তৈরি'], 'body' => ['en' => 'Factory for production; depot for sales area.', 'bn' => 'উৎপাদনের জন্য Factory; বিক্রয় এলাকার জন্য depot।'], 'path' => '/admin/warehouses/create'],
+            ['title' => ['en' => 'Delivery routes', 'bn' => 'ডেলিভারি রুট'], 'body' => ['en' => 'Link zones to routes for dispatch planning.', 'bn' => 'ডিসপ্যাচ পরিকল্পনায় জোন রুটের সাথে যুক্ত করুন।'], 'path' => '/admin/delivery-routes'],
+        ],
+        'examples' => [],
+        'tips' => [['en' => 'Production usually uses a Factory-type warehouse.', 'bn' => 'উৎপাদন সাধারণত Factory টাইপ গুদাম ব্যবহার করে।']],
+    ],
+    [
+        'slug' => 'manufacturing',
+        'order' => 5,
+        'icon' => 'manufacturing',
+        'title' => ['en' => 'Manufacturing', 'bn' => 'উৎপাদন'],
+        'summary' => ['en' => 'BOM recipe → batch → production run → QC → stock confirm.', 'bn' => 'BOM রেসিপি → ব্যাচ → উৎপাদন রান → QC → স্টক নিশ্চিত।'],
+        'flowchart' => [
+            'en' => "flowchart TD\n    A[\"BOM\"] --> B[\"Batch\"]\n    B --> C[\"Production run\"]\n    C --> D[\"QC\"]\n    D --> E[\"Confirm stock\"]",
+            'bn' => "flowchart TD\n    A[\"BOM\"] --> B[\"ব্যাচ\"]\n    B --> C[\"উৎপাদন রান\"]\n    C --> D[\"QC\"]\n    D --> E[\"স্টক নিশ্চিত\"]",
+        ],
+        'steps' => [
+            ['title' => ['en' => 'Create BOM', 'bn' => 'BOM তৈরি'], 'body' => ['en' => 'Finished product + material lines with qty per 1 unit.', 'bn' => 'তৈরি পণ্য + প্রতি ১ ইউনিটে কাঁচামালের পরিমাণ।'], 'path' => '/admin/boms/create'],
+            ['title' => ['en' => 'Production run', 'bn' => 'উৎপাদন রান'], 'body' => ['en' => 'Select product, batch, qty, line, shift.', 'bn' => 'পণ্য, ব্যাচ, পরিমাণ, লাইন, শিফট বেছে নিন।'], 'path' => '/admin/production/create'],
+            ['title' => ['en' => 'QC then stock', 'bn' => 'QC তারপর স্টক'], 'body' => ['en' => 'QC approves → Pending receipts → Confirm stock.', 'bn' => 'QC অনুমোদন → Pending receipts → Confirm stock।'], 'path' => '/admin/production/pending-receipts'],
+        ],
+        'examples' => [['title' => ['en' => '1 carton BOM', 'bn' => '১ কার্টন BOM'], 'body' => ['en' => '12 bottles + 12 caps + 1 carton + 6L water per SAF-500ML-CTN.', 'bn' => 'প্রতি SAF-500ML-CTN-এ ১২ বোতল + ১২ ক্যাপ + ১ কার্টন + ৬L পানি।']]],
+        'tips' => [['en' => 'Without active BOM, materials are not consumed on confirm.', 'bn' => 'সক্রিয় BOM না থাকলে নিশ্চিতকরণে কাঁচামাল কাটে না।']],
+    ],
+    [
+        'slug' => 'inventory',
+        'order' => 6,
+        'icon' => 'inventory',
+        'title' => ['en' => 'Inventory', 'bn' => 'ইনভেন্টরি'],
+        'summary' => ['en' => 'See stock, transfer between warehouses, audit counts.', 'bn' => 'স্টক দেখুন, গুদাম থেকে গুদামে স্থানান্তর, গণনা যাচাই।'],
+        'flowchart' => [
+            'en' => "flowchart LR\n    A[\"Stock in\"] --> B[\"Warehouse\"]\n    B --> C[\"Transfer or sell\"]",
+            'bn' => "flowchart LR\n    A[\"স্টক ইন\"] --> B[\"গুদাম\"]\n    B --> C[\"স্থানান্তর বা বিক্রি\"]",
+        ],
+        'steps' => [
+            ['title' => ['en' => 'Check stock', 'bn' => 'স্টক দেখুন'], 'body' => ['en' => 'Inventory dashboard and material stock views.', 'bn' => 'ইনভেন্টরি ড্যাশবোর্ড ও ম্যাটেরিয়াল স্টক।'], 'path' => '/admin/inventory'],
+            ['title' => ['en' => 'Transfer', 'bn' => 'স্থানান্তর'], 'body' => ['en' => 'Move qty from one warehouse to another.', 'bn' => 'এক গুদাম থেকে অন্যটিতে পরিমাণ সরান।'], 'path' => '/admin/stock/transfers'],
+        ],
+        'examples' => [],
+        'tips' => [['en' => 'Low stock report helps plan POs.', 'bn' => 'লো স্টক রিপোর্ট PO পরিকল্পনায় সাহায্য করে।']],
+    ],
+    [
+        'slug' => 'sales',
+        'order' => 7,
+        'icon' => 'sales',
+        'title' => ['en' => 'Sales orders', 'bn' => 'বিক্রয় অর্ডার'],
+        'summary' => ['en' => 'Agents order finished products; system reserves stock.', 'bn' => 'এজেন্ট তৈরি পণ্য অর্ডার দেয়; সিস্টেম স্টক রিজার্ভ করে।'],
+        'flowchart' => [
+            'en' => "flowchart LR\n    A[\"Draft order\"] --> B[\"Confirm\"] --> C[\"Pick and deliver\"]",
+            'bn' => "flowchart LR\n    A[\"ড্রাফট\"] --> B[\"নিশ্চিত\"] --> C[\"পিক ও ডেলিভার\"]",
+        ],
+        'steps' => [
+            ['title' => ['en' => 'Create order', 'bn' => 'অর্ডার তৈরি'], 'body' => ['en' => 'Agent, products, qty, delivery date.', 'bn' => 'এজেন্ট, পণ্য, পরিমাণ, ডেলিভারি তারিখ।'], 'path' => '/admin/orders/create'],
+            ['title' => ['en' => 'Confirm', 'bn' => 'নিশ্চিত'], 'body' => ['en' => 'Moves order forward and reserves stock.', 'bn' => 'অর্ডার এগিয়ে যায় ও স্টক রিজার্ভ হয়।'], 'path' => '/admin/orders'],
+        ],
+        'examples' => [['title' => ['en' => 'Sample order', 'bn' => 'স্যাম্পল অর্ডার'], 'body' => ['en' => 'Use order type Sample for free promotional goods — not billed.', 'bn' => 'পromotional ফ্রি পণ্যের জন্য Sample টাইপ — বিল হয় না।']]],
+        'tips' => [['en' => 'Check FG stock before promising delivery date.', 'bn' => 'ডেলিভারি তারিখ দেওয়ার আগে FG স্টক দেখুন।']],
+    ],
+    [
+        'slug' => 'delivery',
+        'order' => 8,
+        'icon' => 'inventory',
+        'title' => ['en' => 'Delivery and POD', 'bn' => 'ডেলিভারি ও POD'],
+        'summary' => ['en' => 'Dispatch goods and record proof of delivery.', 'bn' => 'পণ্য পাঠান ও ডেলিভারির প্রমাণ রেকর্ড করুন।'],
+        'flowchart' => [
+            'en' => "flowchart LR\n    A[\"Pick list\"] --> B[\"Delivery\"] --> C[\"POD\"] --> D[\"Delivered\"]",
+            'bn' => "flowchart LR\n    A[\"পিক লিস্ট\"] --> B[\"ডেলিভারি\"] --> C[\"POD\"] --> D[\"ডেলিভার্ড\"]",
+        ],
+        'steps' => [
+            ['title' => ['en' => 'Create delivery', 'bn' => 'ডেলিভারি তৈরি'], 'body' => ['en' => 'Link order, route, vehicle.', 'bn' => 'অর্ডার, রুট, যান যুক্ত করুন।'], 'path' => '/admin/deliveries'],
+            ['title' => ['en' => 'POD', 'bn' => 'POD'], 'body' => ['en' => 'Record delivered qty, short, damage, receiver name.', 'bn' => 'ডেলিভার্ড পরিমাণ, কমতি, ক্ষতি, গ্রহীতার নাম লিখুন।'], 'path' => '/admin/deliveries/pod'],
+        ],
+        'examples' => [],
+        'tips' => [['en' => 'Invoice usually needs status Delivered.', 'bn' => 'ইনভয়েস সাধারণত Delivered স্ট্যাটাস চায়।']],
+    ],
+    [
+        'slug' => 'accounting',
+        'order' => 9,
+        'icon' => 'accounting',
+        'title' => ['en' => 'Accounting & tax ledger', 'bn' => 'হিসাব ও কর লেজার'],
+        'summary' => [
+            'en' => 'Money in (agent invoices, receipts), money out (supplier bills, expenses, payroll), and automatic GL journals — with VAT, withholding, and COGS for tax advisors.',
+            'bn' => 'টাকা ইন (এজেন্ট ইনভয়েস, রসিদ), টাকা আউট (সাপ্লায়ার বিল, খরচ, পে-রোল), স্বয়ংক্রিয় GL জার্নাল — VAT, উৎসে কর ও COGS সহ।',
+        ],
+        'flowchart' => [
+            'en' => "flowchart LR\n    A[\"Delivered order\"] --> B[\"Sales invoice\"]\n    B --> C[\"GL journal\"]\n    C --> D[\"Receipt\"]\n    D --> E[\"Bank\"]",
+            'bn' => "flowchart LR\n    A[\"ডেলিভার্ড অর্ডার\"] --> B[\"বিক্রয় ইনভয়েস\"]\n    B --> C[\"GL জার্নাল\"]\n    C --> D[\"রসিদ\"]\n    D --> E[\"ব্যাংক\"]",
+        ],
+        'steps' => [
+            ['title' => ['en' => 'Issue customer invoice', 'bn' => 'গ্রাহক ইনভয়েস ইস্যু'], 'body' => ['en' => 'Accounting → Customer invoices. Create from a delivered sales order. System posts Dr AR, Cr Sales Revenue, Cr VAT Payable. COGS journal fires if inventory GL is on.', 'bn' => 'Accounting → Customer invoices। ডেলিভার্ড অর্ডার থেকে তৈরি। সিস্টেম Dr AR, Cr Sales Revenue, Cr VAT Payable পোস্ট করে।'], 'path' => '/admin/finance'],
+            ['title' => ['en' => 'Post customer receipt', 'bn' => 'গ্রাহক রসিদ পোস্ট'], 'body' => ['en' => 'Open invoice → add receipt (amount, method, date). Posts Dr Bank, Cr AR. Cannot exceed outstanding.', 'bn' => 'ইনভয়েস খুলে রসিদ যোগ করুন। Dr Bank, Cr AR। বকেয়ার বেশি নয়।'], 'path' => '/admin/finance'],
+            ['title' => ['en' => 'Record supplier bill', 'bn' => 'সাপ্লায়ার বিল রেকর্ড'], 'body' => ['en' => 'Link to PO/GRN. Posts Dr Purchases/Inventory, Dr Input VAT, Cr Accounts Payable.', 'bn' => 'PO/GRN যুক্ত করুন। Dr Purchases/Inventory, Dr Input VAT, Cr AP।'], 'path' => '/admin/bills'],
+            ['title' => ['en' => 'Pay supplier', 'bn' => 'সাপ্লায়ার পরিশোধ'], 'body' => ['en' => 'Post payment on bill or use batch payment. Dr AP, Cr Bank.', 'bn' => 'বিলে পেমেন্ট বা ব্যাচ পেমেন্ট। Dr AP, Cr Bank।'], 'path' => '/admin/bills'],
+            ['title' => ['en' => 'Review journals & periods', 'bn' => 'জার্নাল ও পিরিয়ড দেখুন'], 'body' => ['en' => 'Journal entries for audit trail. Close accounting periods before month-end lock.', 'bn' => 'নিরীক্ষার জন্য জার্নাল এন্ট্রি। মাস শেষে পিরিয়ড বন্ধ করুন।'], 'path' => '/admin/journals'],
+            ['title' => ['en' => 'Run tax reports', 'bn' => 'কর রিপোর্ট চালান'], 'body' => ['en' => 'VAT report (output − input), AR/AP aging, trial balance, P&L. Export Tally XML for external CA.', 'bn' => 'VAT রিপোর্ট, AR/AP aging, ট্রায়াল ব্যালেন্স, P&L। বাহ্যিক CA-র জন্য Tally XML।'], 'path' => '/admin/reports/vat'],
+        ],
+        'examples' => [
+            [
+                'title' => ['en' => 'Invoice with 15% VAT and 3% withholding', 'bn' => '১৫% VAT ও ৩% উৎসে কর সহ ইনভয়েস'],
+                'body' => [
+                    'en' => 'Agent order delivered: 100 cartons × ৳500 net = ৳50,000 net. VAT 15% = ৳7,500. Invoice posts AR ৳57,500. If agent withholding 3% on net = ৳1,500, cash expectation is ৳56,000; withholding sits in Withholding Tax Receivable until claimed.',
+                    'bn' => '১০০ কার্টন × ৳৫০০ নেট = ৳৫০,০০০। VAT ১৫% = ৳৭,৫০০। AR ৳৫৭,৫০০। উৎসে কর ৩% = ৳১,৫০০ হলে নগদ প্রত্যাশা ৳৫৬,০০০।',
+                ],
+            ],
+            [
+                'title' => ['en' => 'Month-end VAT check', 'bn' => 'মাস শেষ VAT যাচাই'],
+                'body' => [
+                    'en' => 'Open VAT report for the month. Output VAT (sales invoices) minus Input VAT (supplier bills) = net payable to NBR for the period. Cross-check VAT Payable (2000) and Input VAT (1150) on trial balance.',
+                    'bn' => 'মাসের VAT রিপোর্ট খুলুন। আউটপুট VAT − ইনপুট VAT = নেট প্রদেয়। ট্রায়াল ব্যালেন্সে 2000 ও 1150 যাচাই করুন।',
+                ],
+            ],
+        ],
+        'tips' => [
+            ['en' => 'Open **How profit & loss is calculated** for a one-unit produce-to-sell example with numbers.', 'bn' => '**লাভ-ক্ষতি কীভাবে হয়** বিষয়ে এক ইউনিট উৎপাদন-থেকে-বিক্রয় উদাহরণ দেখুন।'],
+            ['en' => 'Switch to the **Tax & ledger reference** tab for full journal entries, chart of accounts, and advisor FAQs.', 'bn' => '**কর ও লেজার রেফারেন্স** ট্যাবে সম্পূর্ণ জার্নাল, চার্ট অফ অ্যাকাউন্টস ও FAQ দেখুন।'],
+            ['en' => 'Never invoice before delivery — revenue and VAT should follow POD.', 'bn' => 'ডেলিভারির আগে ইনভয়েস নয় — আয় ও VAT POD-এর পর।'],
+            ['en' => 'Close the accounting period after trial balance matches AR/AP aging.', 'bn' => 'ট্রায়াল ব্যালেন্স AR/AP aging-এর সাথে মিললে পিরিয়ড বন্ধ করুন।'],
+        ],
+    ],
+    [
+        'slug' => 'profit-loss',
+        'order' => 9.5,
+        'icon' => 'accounting',
+        'title' => [
+            'en' => 'How profit & loss is calculated',
+            'bn' => 'লাভ-ক্ষতি কীভাবে হয়',
+        ],
+        'summary' => [
+            'en' => 'Follow one unit from raw materials → production → sale → invoice journals → gross profit and net profit on the P&L report. With BDT worked example.',
+            'bn' => 'এক ইউনিট কাঁচামাল → উৎপাদন → বিক্রয় → ইনভয়েস জার্নাল → মোট ও নিট লাভ পর্যন্ত। BDT উদাহরণসহ।',
+        ],
+        'flowchart' => [
+            'en' => <<<'MERMAID'
+flowchart TD
+    A["Buy materials GRN"] --> B["Produce 1 unit BOM"]
+    B --> C["FG in stock"]
+    C --> D["Deliver to agent"]
+    D --> E["Sales invoice"]
+    E --> F["Net sales 80"]
+    E --> G["COGS 42"]
+    F --> H["Gross profit 38"]
+    G --> H
+    H --> I["Minus commission and costs"]
+    I --> J["Net profit on P&L"]
+MERMAID,
+            'bn' => <<<'MERMAID'
+flowchart TD
+    A["কাঁচামাল GRN"] --> B["BOM দিয়ে ১ ইউনিট"]
+    B --> C["FG স্টকে"]
+    C --> D["এজেন্টকে ডেলিভারি"]
+    D --> E["বিক্রয় ইনভয়েস"]
+    E --> F["নেট বিক্রয় ৮০"]
+    E --> G["COGS ৪২"]
+    F --> H["মোট লাভ ৩৮"]
+    G --> H
+    H --> I["কমিশন ও খরচ বিয়োগ"]
+    I --> J["P&L নিট লাভ"]
+MERMAID,
+        ],
+        'steps' => [
+            ['title' => ['en' => 'Know your unit cost', 'bn' => 'ইউনিট খরচ জানুন'], 'body' => ['en' => 'Run production for 1 SKU. BOM consumes raw materials; finished goods land in stock at **material_unit_cost** (e.g. ৳42 per carton). Balance sheet only — no profit yet.', 'bn' => '১ SKU উৎপাদন করুন। BOM কাঁচামাল কাটে; তৈরি পণ্য **material_unit_cost**-এ স্টকে (যেমন ৳৪২/কার্টন)। ব্যালেন্স শিট — এখনো লাভ নয়।'], 'path' => '/admin/production'],
+            ['title' => ['en' => 'Deliver the order', 'bn' => 'অর্ডার ডেলিভার করুন'], 'body' => ['en' => 'Confirm sales order → picking → POD. Stock leaves warehouse. Still no revenue on P&L until you invoice.', 'bn' => 'বিক্রয় অর্ডার নিশ্চিত → পিকিং → POD। স্টক বের হয়। ইনভয়েস না হলে P&L-এ আয় নয়।'], 'path' => '/admin/orders'],
+            ['title' => ['en' => 'Issue the invoice', 'bn' => 'ইনভয়েস ইস্যু'], 'body' => ['en' => 'Create invoice from delivered qty. Posts **Sales Revenue** (net) + **VAT Payable** + **COGS** + clears **FG inventory**. This is when gross profit appears.', 'bn' => 'ডেলিভার্ড পরিমাণে ইনভয়েস। **Sales Revenue** (নেট) + **VAT Payable** + **COGS** + **FG** ক্লিয়ার। এখন মোট লাভ দেখা যায়।'], 'path' => '/admin/finance'],
+            ['title' => ['en' => 'Read the P&L report', 'bn' => 'P&L রিপোর্ট দেখুন'], 'body' => ['en' => 'Reports → Profit & loss. Net sales − COGS = gross profit. Subtract commission, expenses, payroll = net profit.', 'bn' => 'রিপোর্ট → লাভ ও ক্ষতি। নেট বিক্রয় − COGS = মোট লাভ। কমিশন, খরচ, বেতন বিয়োগ = নিট লাভ।'], 'path' => '/admin/reports/pl'],
+        ],
+        'examples' => [
+            [
+                'title' => ['en' => '1 carton SAF-1L-BTL — full numbers', 'bn' => '১ কার্টন SAF-1L-BTL — সম্পূর্ণ হিসাব'],
+                'body' => [
+                    'en' => 'Cost to make: ৳42. Sell net: ৳80. VAT 15%: ৳12. Invoice AR: ৳92. COGS: ৳42. **Gross profit: ৳38.** Commission 5%: ৳4. **Contribution: ৳34** before rent, payroll, and other monthly costs.',
+                    'bn' => 'তৈরি খরচ: ৳৪২। নেট বিক্রয়: ৳৮০। VAT ১৫%: ৳১২। AR: ৳৯২। COGS: ৳৪২। **মোট লাভ: ৳৩৮।** কমিশন ৫%: ৳৪। **অবদান: ৳৩৪** (ভাড়া/বেতনের আগে)।',
+                ],
+            ],
+        ],
+        'tips' => [
+            ['en' => 'Use the **Ledger entries & P&L math** tab for journals, formulas, and the step-by-step checklist.', 'bn' => '**লেজার এন্ট্রি ও P&L হিসাব** ট্যাবে জার্নাল, সূত্র ও চেকলিস্ট দেখুন।'],
+            ['en' => 'VAT (৳12) is owed to NBR — it is not part of your ৳80 revenue or ৳38 gross profit.', 'bn' => 'VAT (৳১২) NBR-এর — এটি ৳৮০ আয় বা ৳৩৮ মোট লাভের অংশ নয়।'],
+        ],
+    ],
+    [
+        'slug' => 'reports',
+        'order' => 11,
+        'icon' => 'reports',
+        'title' => ['en' => 'Reports', 'bn' => 'রিপোর্ট'],
+        'summary' => ['en' => 'P&L, stock value, aging, production summaries.', 'bn' => 'P&L, স্টক মূল্য, aging, উ৮্পাদন সারাংশ।'],
+        'flowchart' => [
+            'en' => "flowchart TD\n    A[\"Daily posting\"] --> B[\"Reports dashboard\"]\n    B --> C[\"P and L, Stock, Aging\"]",
+            'bn' => "flowchart TD\n    A[\"দৈনিক পোস্টিং\"] --> B[\"রিপোর্ট ড্যাশবোর্ড\"]\n    B --> C[\"P&L, স্টক, Aging\"]",
+        ],
+        'steps' => [
+            ['title' => ['en' => 'Open reports', 'bn' => 'রিপোর্ট খুলুন'], 'body' => ['en' => 'Reports dashboard lists all standard reports.', 'bn' => 'রিপোর্ট ড্যাশবোর্ডে সব স্ট্যান্ডার্ড রিপোর্ট।'], 'path' => '/admin/reports-dashboard'],
+        ],
+        'examples' => [],
+        'tips' => [['en' => 'Run month-end pack: inventory valuation + AR aging + P&L.', 'bn' => 'মাস শেষে: inventory valuation + AR aging + P&L চালান।']],
+    ],
+];

@@ -1,7 +1,7 @@
 <div class="doc-header">
     <div class="doc-header-left">
-        @if(!empty($company['logo_path']))
-            <img src="file://{{ str_replace('\\', '/', $company['logo_path']) }}" alt="" class="doc-logo">
+        @if(($forPdf ?? false) && !empty($company['logo_file_uri']))
+            <img src="{{ $company['logo_file_uri'] }}" alt="" class="doc-logo">
         @elseif(!empty($company['logo_url']))
             <img src="{{ $company['logo_url'] }}" alt="" class="doc-logo">
         @else

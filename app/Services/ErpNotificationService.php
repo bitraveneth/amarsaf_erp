@@ -25,14 +25,14 @@ class ErpNotificationService
                 ->count();
 
             if ($expiringSoonCount > 0) {
-                $alerts[] = [
+                $alerts[] = NotificationActionResolver::attachLink([
                     'key' => 'expiring_batches_' . Carbon::today()->toDateString() . '_' . $expiringSoonCount,
                     'message' => "{$expiringSoonCount} batches expiring within 30 days",
                     'variant' => 'error',
                     'source' => 'Inventory',
                     'title' => 'Inventory alert',
                     'context' => ['expiring_batches' => $expiringSoonCount],
-                ];
+                ]);
             }
         }
 
@@ -53,14 +53,14 @@ class ErpNotificationService
                 ->count();
 
             if ($lowStockCount > 0) {
-                $alerts[] = [
+                $alerts[] = NotificationActionResolver::attachLink([
                     'key' => 'low_stock_' . Carbon::today()->toDateString() . '_' . $lowStockCount,
                     'message' => "{$lowStockCount} products are below reorder level",
                     'variant' => 'warning',
                     'source' => 'Inventory',
                     'title' => 'Low stock alert',
                     'context' => ['low_stock_products' => $lowStockCount],
-                ];
+                ]);
             }
         }
 
@@ -70,14 +70,14 @@ class ErpNotificationService
                 ->count();
 
             if ($exceptionDeliveriesToday > 0) {
-                $alerts[] = [
+                $alerts[] = NotificationActionResolver::attachLink([
                     'key' => 'delivery_exceptions_' . Carbon::today()->toDateString() . '_' . $exceptionDeliveriesToday,
                     'message' => "{$exceptionDeliveriesToday} deliveries marked as exception today",
                     'variant' => 'error',
                     'source' => 'Delivery',
                     'title' => 'Delivery alert',
                     'context' => ['delivery_exceptions_today' => $exceptionDeliveriesToday],
-                ];
+                ]);
             }
         }
 
@@ -85,14 +85,14 @@ class ErpNotificationService
             $todayOrders = Order::whereDate('delivery_date', Carbon::today())->count();
 
             if ($todayOrders > 0) {
-                $alerts[] = [
+                $alerts[] = NotificationActionResolver::attachLink([
                     'key' => 'orders_due_' . Carbon::today()->toDateString() . '_' . $todayOrders,
                     'message' => "{$todayOrders} orders scheduled for delivery today",
                     'variant' => 'success',
                     'source' => 'Sales',
                     'title' => 'Sales update',
                     'context' => ['orders_due_today' => $todayOrders],
-                ];
+                ]);
             }
         }
 
@@ -107,14 +107,14 @@ class ErpNotificationService
 
             if ($outstandingReceivables > 0) {
                 $formatted = number_format($outstandingReceivables, 2);
-                $alerts[] = [
+                $alerts[] = NotificationActionResolver::attachLink([
                     'key' => 'receivables_' . Carbon::today()->toDateString() . '_' . number_format($outstandingReceivables, 2, '.', ''),
                     'message' => 'Outstanding receivables of BDT ' . $formatted,
                     'variant' => 'error',
                     'source' => 'Finance',
                     'title' => 'Finance alert',
                     'context' => ['outstanding_receivables' => $outstandingReceivables],
-                ];
+                ]);
             }
         }
 
@@ -145,6 +145,7 @@ class ErpNotificationService
                     continue;
                 }
 
+                $alert = NotificationActionResolver::attachLink($alert);
                 $source = $alert['source'] ?? 'System';
                 $alert['title'] = $alert['title'] ?? ($source . ' alert');
                 $alert['sender_name'] = $alert['sender_name'] ?? $source;

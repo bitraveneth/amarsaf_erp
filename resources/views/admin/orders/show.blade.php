@@ -4,480 +4,628 @@
 @php
     $isReturnOrder = ($order->order_type ?? null) === 'return';
     $currencyCode = config('app.currency', 'BDT');
-    $salesWorkflowStep = match ($order->status) {
-        'draft' => 2,
-        'confirmed' => 3,
-        'picked', 'packed' => 3,
-        'dispatched' => 4,
-        'delivered' => 5,
-        default => 1,
+    $totalValue = (float) $order->total;
+    $orderedQty = $order->items->sum(fn ($item) => (float) $item->quantity);
+    $agent = $order->agent;
+    $agentInitial = strtoupper(substr(trim($agent->name ?? '—'), 0, 1)) ?: '—';
+    $primaryDelivery = $order->deliveries->sortByDesc('created_at')->first();
+    $canEdit = $order->status === 'draft' && ! $isReturnOrder;
+
+    $guide = $fulfillment ?? [];
+    $guideSteps = $guide['guide_steps'] ?? [];
+    $fulfillmentPercent = $guide['fulfillment_percent'] ?? 0;
+    $lineFulfillmentPercent = $guide['line_fulfillment_percent'] ?? 0;
+    $salesWorkflowStep = $guide['workflow_step'] ?? 1;
+    $salesInProgress = $guide['in_progress'] ?? false;
+    $showYourAction = $guide['show_your_action'] ?? false;
+    $canConfirm = $guide['can_confirm'] ?? false;
+    $canPick = $guide['can_pick'] ?? false;
+    $canPack = $guide['can_pack'] ?? false;
+    $canDispatch = $guide['can_dispatch'] ?? false;
+    $statusLabel = $guide['status_label'] ?? ucfirst($order->status);
+    $statusTone = $guide['status_tone'] ?? 'neutral';
+    $pickedAt = $guide['picked_at'] ?? null;
+    $packedAt = $guide['packed_at'] ?? null;
+    $dispatchedAt = $guide['dispatched_at'] ?? null;
+    $deliveredAt = $guide['delivered_at'] ?? null;
+    $metrics = $guide['metrics'] ?? null;
+    $pickedQty = $metrics['picked_qty'] ?? 0;
+    $packedQty = $metrics['packed_qty'] ?? 0;
+    $deliveredQty = $metrics['delivered_qty'] ?? 0;
+    $pickedPercent = $metrics['picked_percent'] ?? 0;
+    $packedPercent = $metrics['packed_percent'] ?? 0;
+    $deliveredPercent = $metrics['delivered_percent'] ?? 0;
+
+    $confirmDone = ! in_array($order->status, ['draft'], true);
+    $pickDone = in_array($order->status, ['picked', 'packed', 'dispatched', 'delivered'], true);
+    $packDone = in_array($order->status, ['packed', 'dispatched', 'delivered'], true);
+    $deliveryDone = $order->status === 'delivered';
+
+    $salesPhaseCurrent = match ($order->status) {
+        'draft' => 'confirm',
+        'confirmed' => 'pick',
+        'picked' => 'pack',
+        'packed', 'dispatched' => 'delivery',
+        default => null,
     };
-    $salesInProgress = in_array($order->status, ['picked', 'packed', 'dispatched'], true);
-    $statusColors = [
-        'draft' => 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400',
-        'pending' => 'bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-400',
-        'confirmed' => 'bg-success-100 text-success-700 dark:bg-success-500/20 dark:text-success-400',
-        'picked' => 'bg-brand-100 text-brand-700 dark:bg-brand-500/20 dark:text-brand-400',
-        'packed' => 'bg-brand-100 text-brand-700 dark:bg-brand-500/20 dark:text-brand-400',
-        'dispatched' => 'bg-blue-light-100 text-blue-light-700 dark:bg-blue-light-500/20 dark:text-blue-light-400',
-        'processing' => 'bg-brand-100 text-brand-700 dark:bg-brand-500/20 dark:text-brand-400',
-        'shipped' => 'bg-blue-light-100 text-blue-light-700 dark:bg-blue-light-500/20 dark:text-blue-light-400',
-        'delivered' => 'bg-success-100 text-success-700 dark:bg-success-500/20 dark:text-success-400',
-        'cancelled' => 'bg-error-100 text-error-700 dark:bg-error-500/20 dark:text-error-400',
-        'canceled' => 'bg-error-100 text-error-700 dark:bg-error-500/20 dark:text-error-400',
-        'exception' => 'bg-error-100 text-error-700 dark:bg-error-500/20 dark:text-error-400',
-    ];
-    $statusColor = $statusColors[$order->status] ?? 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400';
 @endphp
-<div class="erp-order-page screen-order-view">
+
+<div class="erp-order-page erp-order-page--index erp-po-show screen-order-view">
     <x-admin.order-toolbar
         :title="($isReturnOrder ? 'Return order' : 'Sales order') . ' #' . $order->id"
-        :subtitle="$order->agent->name . ' · ' . ucfirst($order->order_type ?? 'regular')"
+        :subtitle="$agent->name . ' · ' . ucfirst($order->order_type ?? 'regular')"
         :back-url="route('admin.orders.index')"
         back-label="All sales orders"
     >
         <x-slot:actions>
+            @unless($isReturnOrder)
+                <span class="erp-po-status erp-po-status--{{ $statusTone }}">{{ $statusLabel }}</span>
+            @endunless
+            @if($canEdit)
+                <x-admin.action-group>
+                    <x-admin.action-edit :href="route('admin.orders.edit', $order)" />
+                    <x-admin.action-delete
+                        :action="route('admin.orders.destroy', $order)"
+                        :confirm="'Delete sales order #' . $order->id . '?'"
+                    />
+                </x-admin.action-group>
+            @endif
+            <x-admin.document-actions type="sales-order" :id="$order->id" compact />
             @if($isReturnOrder)
                 <a href="{{ route('admin.returns.customer.create') }}?order_id={{ $order->id }}" class="erp-order-btn erp-order-btn--secondary">Record return</a>
             @else
-                <a href="{{ route('admin.orders.picking-list', $order) }}" class="erp-order-btn erp-order-btn--brand">Picking list</a>
+                @if($order->status === 'draft' && $canConfirm)
+                    <form method="POST" action="{{ route('admin.orders.status.update', $order) }}" id="so-confirm">
+                        @csrf
+                        @method('PATCH')
+                        <input type="hidden" name="status" value="confirmed">
+                        <button type="submit" class="erp-order-btn erp-order-btn--success">Confirm order</button>
+                    </form>
+                @endif
+                @if($order->status === 'confirmed')
+                    <a href="{{ route('admin.orders.picking-list', $order) }}" class="erp-order-btn erp-order-btn--brand">Open picking list</a>
+                @endif
+                @if($order->status === 'picked' && $canPack)
+                    <form method="POST" action="{{ route('admin.orders.status.update', $order) }}" id="so-pack">
+                        @csrf
+                        @method('PATCH')
+                        <input type="hidden" name="status" value="packed">
+                        <button type="submit" class="erp-order-btn erp-order-btn--success">Confirm packing</button>
+                    </form>
+                @endif
+                @if($order->status === 'packed')
+                    @if($primaryDelivery)
+                        <a href="{{ route('admin.deliveries.show', $primaryDelivery) }}" class="erp-order-btn erp-order-btn--brand">Open delivery</a>
+                    @elseif($canDispatch)
+                        <a href="{{ route('admin.deliveries.create') }}" class="erp-order-btn erp-order-btn--brand">Schedule delivery</a>
+                    @endif
+                @endif
+                @if($order->status === 'dispatched' && $primaryDelivery)
+                    <a href="{{ route('admin.deliveries.show', $primaryDelivery) }}" class="erp-order-btn erp-order-btn--brand">Complete POD</a>
+                @endif
+                @if($order->status === 'delivered' && ! $order->invoice)
+                    <form action="{{ route('admin.orders.invoice', $order) }}" method="POST">
+                        @csrf
+                        <button type="submit" class="erp-order-btn erp-order-btn--success">Create invoice</button>
+                    </form>
+                @endif
             @endif
-            <x-admin.document-actions type="sales-order" :id="$order->id" />
         </x-slot:actions>
     </x-admin.order-toolbar>
 
-    <div class="erp-order-form mb-6">
-        <div class="erp-order-form__workflow">
-            <x-admin.order-workflow type="sales" :step="$salesWorkflowStep" :in-progress="$salesInProgress" variant="hero" />
+    @include('layouts.partials.fulfillment-inbox-strip')
+
+    @if(session('status'))
+        <div class="mb-5 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200">
+            {{ session('status') }}
         </div>
-    </div>
+    @endif
+
+    @if(session('error'))
+        <div class="mb-5 rounded-2xl border border-error-200 bg-error-50 px-4 py-3 text-sm text-error-700 dark:border-error-500/30 dark:bg-error-500/10 dark:text-error-300">
+            {{ session('error') }}
+        </div>
+    @endif
 
     @if($isReturnOrder)
-        <div class="rounded-2xl border border-error-200 bg-error-50 px-5 py-4 text-sm text-error-800 dark:border-error-900/40 dark:bg-error-950/20 dark:text-error-200">
+        <div class="mb-5 rounded-2xl border border-error-200 bg-error-50 px-5 py-4 text-sm text-error-800 dark:border-error-900/40 dark:bg-error-950/20 dark:text-error-200">
             This is a commercial return order. It reduces sales value, but it does not automatically add stock back. Use
             <a href="{{ route('admin.returns.customer.create') }}?order_id={{ $order->id }}" class="font-semibold underline underline-offset-2 hover:no-underline">
                 Record stock return
             </a>
             after the returned goods are physically received into inventory.
         </div>
-    @endif
+    @else
+        @if(count($guideSteps) > 0)
+            <x-admin.procurement-guide title="Fulfillment progress" :steps="$guideSteps" class="mb-5" />
+        @endif
 
-    <!-- Order Summary Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
-        <!-- Delivery Info Card -->
-        <div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
-            <div class="flex items-center gap-3">
-                <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-100 dark:bg-brand-900/30">
-                    <svg class="h-5 w-5 text-brand-700 dark:text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                </div>
-                <div>
-                    <p class="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{{ $isReturnOrder ? 'Return Date' : 'Delivery Date' }}</p>
-                    <p class="text-lg font-semibold text-gray-900 dark:text-white">
-                        {{ optional($order->delivery_date)->format('d M Y') ?? 'TBD' }}
-                    </p>
-                    @if($order->delivery_date)
-                        <p class="text-xs text-gray-500 dark:text-gray-400">{{ $order->delivery_date->diffForHumans() }}</p>
-                    @endif
-                </div>
-            </div>
-        </div>
+        @if($showYourAction)
+            <section class="erp-grn-approve mb-5">
+                <h2 class="erp-grn-approve__title">Your action</h2>
+                <div class="erp-grn-approve__grid lg:grid-cols-4">
+                    <div @class([
+                        'erp-grn-approve__card',
+                        'is-done' => $confirmDone,
+                        'is-mine' => $salesPhaseCurrent === 'confirm' && $canConfirm,
+                    ])>
+                        <p class="erp-grn-approve__role">Sales</p>
+                        @if($confirmDone)
+                            <p class="erp-grn-approve__status">Order confirmed</p>
+                            <p class="text-xs text-gray-500">Stock reserved for this order</p>
+                        @elseif($canConfirm)
+                            <p class="erp-grn-approve__prompt">Confirm the order so warehouse can pick stock.</p>
+                            <form action="{{ route('admin.orders.status.update', $order) }}" method="POST">
+                                @csrf
+                                @method('PATCH')
+                                <input type="hidden" name="status" value="confirmed">
+                                <button type="submit" class="erp-grn-approve__btn erp-grn-approve__btn--sales">Confirm order</button>
+                            </form>
+                        @else
+                            <p class="erp-grn-approve__waiting">Waiting for sales team</p>
+                        @endif
+                    </div>
 
-        <!-- Payment Info Card -->
-        <div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
-            <div class="flex items-center gap-3">
-                <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-success-100 dark:bg-success-900/30">
-                    <svg class="h-5 w-5 text-success-700 dark:text-success-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v9.25m-1.5-9H5.625m-.75 0H4.5m10.5 6h3.75M4.5 15h9.75" />
-                    </svg>
-                </div>
-                <div>
-                    <p class="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Payment</p>
-                    <p class="text-lg font-semibold text-gray-900 dark:text-white">
-                        {{ $order->payment_mode ? ucfirst(str_replace('_', ' ', $order->payment_mode)) : '—' }}
-                    </p>
-                    <p class="text-xs text-gray-500 dark:text-gray-400">
-                        Total: {{ $currencyCode }} {{ number_format($order->total, 2) }}
-                    </p>
-                </div>
-            </div>
-        </div>
+                    <div @class([
+                        'erp-grn-approve__card',
+                        'is-done' => $pickDone,
+                        'is-mine' => $salesPhaseCurrent === 'pick' && $canPick,
+                    ])>
+                        <p class="erp-grn-approve__role">Warehouse — pick</p>
+                        @if($pickDone)
+                            <p class="erp-grn-approve__status">Picked {{ $pickedAt?->format('d M H:i') ?? '' }}</p>
+                        @elseif($canPick && $order->status === 'confirmed')
+                            <p class="erp-grn-approve__prompt">Pull reserved stock using the picking list.</p>
+                            <a href="{{ route('admin.orders.picking-list', $order) }}" class="erp-grn-approve__btn erp-grn-approve__btn--warehouse inline-flex items-center justify-center">
+                                Open picking list
+                            </a>
+                        @else
+                            <p class="erp-grn-approve__waiting">Waiting for warehouse team</p>
+                        @endif
+                    </div>
 
-        <!-- Commission Card -->
-        <div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
-            <div class="flex items-center gap-3">
-                <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-light-100 dark:bg-blue-light-900/30">
-                    <svg class="h-5 w-5 text-blue-light-700 dark:text-blue-light-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z" />
-                    </svg>
-                </div>
-                <div>
-                    <p class="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Commission</p>
-                    <p class="text-lg font-semibold text-gray-900 dark:text-white">
-                        {{ $currencyCode }} {{ number_format($order->commission_total ?? 0, 2) }}
-                    </p>
-                    <p class="text-xs text-gray-500 dark:text-gray-400">Agent commission</p>
-                </div>
-            </div>
-        </div>
+                    <div @class([
+                        'erp-grn-approve__card',
+                        'is-done' => $packDone,
+                        'is-mine' => $salesPhaseCurrent === 'pack' && $canPack,
+                    ])>
+                        <p class="erp-grn-approve__role">Warehouse — pack</p>
+                        @if($packDone)
+                            <p class="erp-grn-approve__status">Packed {{ $packedAt?->format('d M H:i') ?? '' }}</p>
+                        @elseif($canPack && $order->status === 'picked')
+                            <p class="erp-grn-approve__prompt">Confirm goods are boxed and ready to ship.</p>
+                            <form action="{{ route('admin.orders.status.update', $order) }}" method="POST">
+                                @csrf
+                                @method('PATCH')
+                                <input type="hidden" name="status" value="packed">
+                                <button type="submit" class="erp-grn-approve__btn erp-grn-approve__btn--warehouse">Confirm packing</button>
+                            </form>
+                        @else
+                            <p class="erp-grn-approve__waiting">Waiting for warehouse team</p>
+                        @endif
+                    </div>
 
-        <!-- Order Actions Card -->
-        <div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
-            <div class="flex items-center gap-3">
-                <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-100 dark:bg-purple-900/30">
-                    <svg class="h-5 w-5 text-purple-700 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                    </svg>
-                </div>
-                <div>
-                    <p class="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Order Status</p>
-                    <div class="flex items-center gap-2 mt-1">
-                        <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium {{ $statusColor }}">
-                            {{ ucfirst($order->status) }}
-                        </span>
-                        @if($order->status === 'delivered')
-                            <span class="text-xs text-success-600 dark:text-success-400">Completed</span>
+                    <div @class([
+                        'erp-grn-approve__card',
+                        'is-done' => $deliveryDone,
+                        'is-mine' => $salesPhaseCurrent === 'delivery' && $canDispatch,
+                    ])>
+                        <p class="erp-grn-approve__role">Delivery</p>
+                        @if($deliveryDone)
+                            <p class="erp-grn-approve__status">Delivered {{ $deliveredAt?->format('d M H:i') ?? '' }}</p>
+                        @elseif($order->status === 'dispatched')
+                            <p class="erp-grn-approve__prompt">Vehicle is out — capture POD on the delivery screen.</p>
+                            @if($primaryDelivery && $canDispatch)
+                                <a href="{{ route('admin.deliveries.show', $primaryDelivery) }}" class="erp-grn-approve__btn erp-grn-approve__btn--delivery inline-flex items-center justify-center">
+                                    Complete POD
+                                </a>
+                            @else
+                                <p class="erp-grn-approve__waiting">Waiting for delivery team</p>
+                            @endif
+                        @elseif($order->status === 'packed')
+                            <p class="erp-grn-approve__prompt">Schedule dispatch and assign route / vehicle.</p>
+                            @if($canDispatch)
+                                @if($primaryDelivery)
+                                    <a href="{{ route('admin.deliveries.show', $primaryDelivery) }}" class="erp-grn-approve__btn erp-grn-approve__btn--delivery inline-flex items-center justify-center">
+                                        Open delivery
+                                    </a>
+                                @else
+                                    <a href="{{ route('admin.deliveries.create') }}" class="erp-grn-approve__btn erp-grn-approve__btn--delivery inline-flex items-center justify-center">
+                                        Schedule delivery
+                                    </a>
+                                @endif
+                            @else
+                                <p class="erp-grn-approve__waiting">Waiting for delivery team</p>
+                            @endif
+                        @else
+                            <p class="erp-grn-approve__waiting">Waiting for earlier steps</p>
                         @endif
                     </div>
                 </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Delivery Contact & Address Card (if exists) -->
-    @if(!$isReturnOrder && ($order->delivery_contact_name || $order->delivery_contact_phone || $order->delivery_address))
-    <div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
-        <div class="flex items-start gap-4">
-            <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 dark:bg-gray-800">
-                <svg class="h-5 w-5 text-gray-700 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
-                </svg>
-            </div>
-            <div class="flex-1">
-                <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Delivery Information</h3>
-                <div class="mt-2 grid grid-cols-1 md:grid-cols-2 gap-4">
-                    @if($order->delivery_contact_name || $order->delivery_contact_phone)
-                    <div>
-                        <p class="text-xs text-gray-500 dark:text-gray-400">Contact</p>
-                        <p class="text-sm font-medium text-gray-900 dark:text-white">
-                            {{ $order->delivery_contact_name ?? '—' }}
-                            @if($order->delivery_contact_phone)
-                                <span class="ml-2 text-xs text-gray-500 dark:text-gray-400">{{ $order->delivery_contact_phone }}</span>
-                            @endif
-                        </p>
-                    </div>
-                    @endif
-                    @if($order->delivery_address)
-                    <div class="md:col-span-2">
-                        <p class="text-xs text-gray-500 dark:text-gray-400">Address</p>
-                        <p class="text-sm text-gray-900 dark:text-white">{{ $order->delivery_address }}</p>
-                    </div>
-                    @endif
-                </div>
-            </div>
-        </div>
-    </div>
+                @if(! $canConfirm && ! $canPick && ! $canPack && ! $canDispatch && $salesPhaseCurrent)
+                    <p class="erp-grn-approve__note">You can view this order but cannot action the current step. Open it from your role’s inbox or ask the responsible team.</p>
+                @endif
+            </section>
+        @endif
     @endif
 
-    <!-- Status Update Form -->
-    <div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div class="flex items-center gap-3">
-                <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-100 dark:bg-brand-900/30">
-                    <svg class="h-5 w-5 text-brand-700 dark:text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-5m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                </div>
-                <div>
-                    <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Update Order Status</h3>
-                    <p class="text-xs text-gray-500 dark:text-gray-400">Change the current status of this order</p>
-                </div>
-            </div>
-            
-            <div class="flex flex-wrap items-center gap-3">
-                <form action="{{ route('admin.orders.status.update', $order) }}" method="POST" class="flex flex-wrap items-center gap-3">
-                    @csrf
-                    @method('PATCH')
-                    <div class="relative">
-                        <select name="status" 
-                                class="rounded-xl border border-gray-200 bg-white/50 px-4 py-2.5 pr-10 text-sm text-gray-900 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800/50 dark:text-white appearance-none transition-all">
-                            @php
-                                $statusOptions = ['draft','confirmed','picked','packed','dispatched','delivered'];
-                            @endphp
-                            <?php foreach ($statusOptions as $status): ?>
-                                <?php
-                                    $disabled = false;
-                                    $currentIndex = array_search($order->status, $statusOptions, true);
-                                    $targetIndex = array_search($status, $statusOptions, true);
-                                    if ($targetIndex > $currentIndex + 1) {
-                                        $disabled = true;
-                                    }
-                                    if ($order->status === 'delivered' && $status !== 'delivered') {
-                                        $disabled = true;
-                                    }
-                                ?>
-                                <option value="{{ $status }}"
-                                        {{ $order->status === $status ? ' selected' : '' }}
-                                        {{ $disabled ? 'disabled' : '' }}>
-                                    {{ ucfirst($status) }}
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
-                            <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                            </svg>
-                        </div>
-                    </div>
-                    <button type="submit" 
-                            class="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-brand-500 to-brand-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md hover:from-brand-600 hover:to-brand-700 transition-all duration-200">
-                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-                        </svg>
-                        Update Status
-                    </button>
-                </form>
-
-                @php($canConfirmPacking = auth()->user()?->hasAnyRole(['admin', 'super_admin', 'warehouse_officer']))
-                @if($canConfirmPacking && $order->status === 'picked')
-                    <form action="{{ route('admin.orders.status.update', $order) }}" method="POST">
-                        @csrf
-                        @method('PATCH')
-                        <input type="hidden" name="status" value="packed">
-                        <button type="submit" 
-                                class="inline-flex items-center gap-2 rounded-xl border border-brand-200 bg-brand-50 px-5 py-2.5 text-sm font-medium text-brand-700 shadow-sm hover:bg-brand-100 dark:border-brand-800 dark:bg-brand-900/30 dark:text-brand-400 dark:hover:bg-brand-900/50 transition-all">
-                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                            </svg>
-                            Confirm Packing
-                        </button>
-                    </form>
-                @endif
-
-                @if($order->status === 'delivered')
-                    <form action="{{ route('admin.orders.invoice', $order) }}" method="POST">
-                        @csrf
-                        <button type="submit" 
-                                class="inline-flex items-center gap-2 rounded-xl border border-success-200 bg-success-50 px-5 py-2.5 text-sm font-medium text-success-700 shadow-sm hover:bg-success-100 dark:border-success-800 dark:bg-success-900/30 dark:text-success-400 dark:hover:bg-success-900/50 transition-all">
-                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                            </svg>
-                            Create Invoice
-                        </button>
-                    </form>
-                @endif
-            </div>
+    <div class="erp-order-form erp-po-show__workflow">
+        <div class="erp-order-form__workflow">
+            @if($isReturnOrder)
+                <x-admin.order-workflow type="sales" :step="2" variant="hero" label="Return order flow" />
+            @else
+                <x-admin.order-workflow type="sales" :step="$salesWorkflowStep" :in-progress="$salesInProgress" variant="hero" />
+            @endif
         </div>
     </div>
 
-    <!-- Order Items Table -->
-    <div class="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900 overflow-hidden">
-        <div class="border-b border-gray-100 px-6 py-4 dark:border-gray-800">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center gap-2">
-                    <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-100 dark:bg-brand-900/30">
-                        <svg class="h-4 w-4 text-brand-700 dark:text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                        </svg>
-                    </div>
-                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Order Items</h3>
-                </div>
-                <span class="rounded-full bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-300">
-                    {{ $order->items->count() }} items
+    <div class="erp-po-index-stats">
+        <div class="erp-po-index-stat">
+            <div class="erp-po-index-stat__head">
+                <span class="erp-po-index-stat__label">Order total</span>
+                <span class="erp-po-index-stat__icon erp-po-index-stat__icon--brand">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                 </span>
             </div>
+            <p class="erp-po-index-stat__value">{{ $currencyCode }} {{ number_format($totalValue, 0) }}</p>
+            <p class="erp-po-index-stat__hint">{{ $order->items->count() }} line {{ Str::plural('item', $order->items->count()) }}</p>
         </div>
-        <div class="overflow-x-auto">
-            <table class="w-full">
-                <thead class="bg-gray-50 dark:bg-gray-800/50">
-                    <tr>
-                        <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-400">SKU</th>
-                        <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-400">Product</th>
-                        <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-400">Tax Class</th>
-                        <th class="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-400">Qty</th>
-                        <th class="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-400">Unit Price</th>
-                        <th class="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-400">Line Total</th>
-                        <th class="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-400">Commission</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
-                    <?php foreach ($order->items as $item): ?>
-                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-                            <td class="px-6 py-4">
-                                <span class="font-mono text-sm font-medium text-gray-900 dark:text-white">
-                                    {{ $item->product->sku ?? '—' }}
-                                </span>
-                            </td>
-                            <td class="px-6 py-4">
-                                <div>
-                                    <p class="text-sm font-medium text-gray-900 dark:text-white">{{ $item->product->name ?? '—' }}</p>
-                                    @if($item->product?->size)
-                                        <p class="text-xs text-gray-500 dark:text-gray-400">{{ $item->product->size }}</p>
-                                    @endif
-                                </div>
-                            </td>
-                            <td class="px-6 py-4">
-                                @if($item->product && $item->product->taxClass)
-                                    <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-400">
-                                        {{ $item->product->taxClass->name }} ({{ $item->product->taxClass->rate }}%)
-                                    </span>
-                                @else
-                                    <span class="text-sm text-gray-500 dark:text-gray-400">—</span>
-                                @endif
-                            </td>
-                            <td class="px-6 py-4 text-right">
-                                <span class="text-sm font-semibold text-gray-900 dark:text-white">{{ $item->quantity }}</span>
-                            </td>
-                            <td class="px-6 py-4 text-right">
-                                <span class="text-sm text-gray-700 dark:text-gray-300">{{ $currencyCode }} {{ number_format($item->unit_price, 2) }}</span>
-                            </td>
-                            <td class="px-6 py-4 text-right">
-                                <span class="text-sm font-bold {{ $isReturnOrder ? 'text-error-600 dark:text-error-400' : 'text-gray-900 dark:text-white' }}">{{ $currencyCode }} {{ number_format($item->quantity * $item->unit_price, 2) }}</span>
-                            </td>
-                            <td class="px-6 py-4 text-right">
-                                <div>
-                                    <span class="text-sm font-semibold text-success-600 dark:text-success-400">
-                                        {{ $currencyCode }} {{ number_format($item->commission_amount ?? 0, 2) }}
-                                    </span>
-                                    @if($item->commission_rate)
-                                        <span class="ml-1 text-xs text-gray-500 dark:text-gray-400">
-                                            ({{ number_format($item->commission_rate, 2) }}%)
-                                        </span>
-                                    @endif
-                                </div>
-                            </td>
-                        </tr>
-                    <?php endforeach; ?>
-                </tbody>
-                <tfoot class="bg-gray-50 dark:bg-gray-800/50">
-                    <tr>
-                        <td colspan="5" class="px-6 py-4 text-right text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Subtotal
-                        </td>
-                        <td class="px-6 py-4 text-right text-sm font-bold text-gray-900 dark:text-white">
-                            {{ $currencyCode }} {{ number_format($order->items->sum(function ($item) { return $item->quantity * $item->unit_price; }), 2) }}
-                        </td>
-                        <td></td>
-                    </tr>
-                    @if(($order->tax_total ?? 0) > 0)
-                    <tr>
-                        <td colspan="5" class="px-6 py-4 text-right text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Tax
-                        </td>
-                        <td class="px-6 py-4 text-right text-sm font-bold text-gray-900 dark:text-white">
-                            {{ $currencyCode }} {{ number_format($order->tax_total, 2) }}
-                        </td>
-                        <td></td>
-                    </tr>
-                    @endif
-                    <tr>
-                        <td colspan="5" class="px-6 py-4 text-right text-sm font-bold text-gray-900 dark:text-white">
-                            Total
-                        </td>
-                        <td class="px-6 py-4 text-right text-lg font-bold {{ $isReturnOrder ? 'text-error-600 dark:text-error-400' : 'text-brand-600 dark:text-brand-400' }}">
-                            {{ $currencyCode }} {{ number_format($order->total, 2) }}
-                        </td>
-                        <td></td>
-                    </tr>
-                </tfoot>
-            </table>
-        </div>
-    </div>
 
-    <!-- Status History -->
-    @if($order->statusHistory->isNotEmpty())
-    <div class="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900 overflow-hidden">
-        <div class="border-b border-gray-100 px-6 py-4 dark:border-gray-800">
-            <div class="flex items-center gap-2">
-                <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-800">
-                    <svg class="h-4 w-4 text-gray-700 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
+        <div class="erp-po-index-stat">
+            <div class="erp-po-index-stat__head">
+                <span class="erp-po-index-stat__label">{{ $isReturnOrder ? 'Return date' : 'Delivery date' }}</span>
+                <span class="erp-po-index-stat__icon erp-po-index-stat__icon--neutral">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                </span>
+            </div>
+            <p class="erp-po-index-stat__value !text-xl">{{ optional($order->delivery_date)->format('d M Y') ?? 'TBD' }}</p>
+            <p class="erp-po-index-stat__hint">{{ ucfirst(str_replace('_', ' ', $order->payment_mode ?? '—')) }} · {{ $currencyCode }} {{ number_format($order->commission_total ?? 0, 0) }} commission</p>
+        </div>
+
+        @unless($isReturnOrder)
+            <div class="erp-po-index-stat">
+                <div class="erp-po-index-stat__head">
+                    <span class="erp-po-index-stat__label">Fulfillment</span>
+                    <span class="erp-po-index-stat__icon erp-po-index-stat__icon--warning">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+                    </span>
                 </div>
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Status History</h3>
+                <p class="erp-po-index-stat__value">{{ number_format($fulfillmentPercent, $fulfillmentPercent == floor($fulfillmentPercent) ? 0 : 1) }}%</p>
+                <p class="erp-po-index-stat__hint">{{ $statusLabel }} · {{ number_format($orderedQty, 0) }} units ordered</p>
             </div>
-        </div>
-        <div class="p-6">
-            <div class="flow-root">
-                <?php
-                    $sortedStatusHistory = $order->statusHistory->sortByDesc('changed_at')->values();
-                    $statusHistoryCount = $sortedStatusHistory->count();
-                ?>
-                <ul role="list" class="-mb-8">
-                    <?php foreach ($sortedStatusHistory as $index => $entry): ?>
-                        <?php
-                            $statusColors = [
-                                'draft' => 'bg-gray-500',
-                                'confirmed' => 'bg-success-500',
-                                'picked' => 'bg-brand-500',
-                                'packed' => 'bg-blue-light-500',
-                                'dispatched' => 'bg-purple-500',
-                                'delivered' => 'bg-success-500',
-                            ];
-                            $dotColor = $statusColors[$entry->status] ?? 'bg-gray-500';
-                            $isLast = $index === ($statusHistoryCount - 1);
-                        ?>
-                        <li class="relative pb-8">
-                            @if(!$isLast)
-                                <span class="absolute left-4 top-4 -ml-px h-full w-0.5 bg-gray-200 dark:bg-gray-700" aria-hidden="true"></span>
-                            @endif
-                            <div class="relative flex space-x-3">
-                                <div>
-                                    <span class="flex h-8 w-8 items-center justify-center rounded-full {{ $dotColor }} bg-opacity-20 dark:bg-opacity-30">
-                                        <svg class="h-4 w-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                                        </svg>
-                                    </span>
-                                </div>
-                                <div class="flex min-w-0 flex-1 justify-between space-x-4 pt-1.5">
-                                    <div>
-                                        <p class="text-sm font-medium text-gray-900 dark:text-white">
-                                            {{ ucfirst($entry->status) }}
-                                        </p>
-                                        <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
-                                            Changed by {{ $entry->user->name ?? 'System' }}
-                                        </p>
-                                    </div>
-                                    <div class="whitespace-nowrap text-right text-xs text-gray-500 dark:text-gray-400">
-                                        <time datetime="{{ $entry->changed_at->format('Y-m-d') }}">
-                                            {{ $entry->changed_at->format('d M Y, H:i') }}
-                                        </time>
-                                    </div>
-                                </div>
-                            </div>
-                        </li>
-                    <?php endforeach; ?>
-                </ul>
-            </div>
-        </div>
-    </div>
-    @endif
 
-    <!-- Order Notes -->
-    @if($order->notes)
-    <div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
-        <div class="flex items-start gap-4">
-            <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 dark:bg-gray-800">
-                <svg class="h-5 w-5 text-gray-700 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z" />
-                </svg>
+            <div class="erp-po-index-stat">
+                <div class="erp-po-index-stat__head">
+                    <span class="erp-po-index-stat__label">Linked docs</span>
+                    <span class="erp-po-index-stat__icon erp-po-index-stat__icon--success">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                    </span>
+                </div>
+                <p class="erp-po-index-stat__value">{{ $order->deliveries->count() + 1 }}</p>
+                <p class="erp-po-index-stat__hint">Picking list + {{ $order->deliveries->count() }} {{ Str::plural('delivery', $order->deliveries->count()) }}</p>
             </div>
-            <div>
-                <h3 class="text-sm font-semibold text-gray-900 dark:text-white">{{ $isReturnOrder ? 'Return Notes' : 'Order Notes' }}</h3>
-                <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">{{ $order->notes }}</p>
-            </div>
-        </div>
+        @endunless
     </div>
-    @endif
+
+    <div class="erp-po-show-layout">
+        <div class="erp-po-show-main space-y-5">
+            @if(!$isReturnOrder && ($order->delivery_contact_name || $order->delivery_contact_phone || $order->delivery_address))
+                <div class="erp-po-show-panel">
+                    <h3 class="erp-po-show-panel__title">Delivery information</h3>
+                    <dl class="erp-po-show-meta mt-3">
+                        @if($order->delivery_contact_name || $order->delivery_contact_phone)
+                            <div class="erp-po-show-meta__row">
+                                <dt>Contact</dt>
+                                <dd>
+                                    {{ $order->delivery_contact_name ?? '—' }}
+                                    @if($order->delivery_contact_phone)
+                                        · {{ $order->delivery_contact_phone }}
+                                    @endif
+                                </dd>
+                            </div>
+                        @endif
+                        @if($order->delivery_address)
+                            <div class="erp-po-show-meta__row">
+                                <dt>Address</dt>
+                                <dd>{{ $order->delivery_address }}</dd>
+                            </div>
+                        @endif
+                    </dl>
+                </div>
+            @endif
+
+            <div class="erp-order-list-card erp-po-index-table-card">
+                <div class="erp-po-index-table-card__head">
+                    <div>
+                        <h2 class="erp-po-index-table-card__title">Line items</h2>
+                        <p class="erp-po-index-table-card__desc">Products on this {{ $isReturnOrder ? 'return' : 'sales' }} order.</p>
+                    </div>
+                    <span class="erp-po-index-table-card__badge">
+                        {{ $order->items->count() }} {{ Str::plural('line', $order->items->count()) }}
+                    </span>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="erp-order-list-table erp-po-index-table erp-po-show-table">
+                        <thead>
+                            <tr>
+                                <th>Product</th>
+                                <th>Tax class</th>
+                                <th class="is-right">Ordered</th>
+                                @unless($isReturnOrder)
+                                    <th class="is-right">Picked</th>
+                                    <th class="is-right">Packed</th>
+                                    <th class="is-right">Delivered</th>
+                                @endunless
+                                <th class="is-right">Unit price</th>
+                                <th class="is-right">Line total</th>
+                                <th class="is-right">Commission</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($order->items as $item)
+                                @php
+                                    $lineOrdered = (float) $item->quantity;
+                                    $linePicked = (float) ($item->picked_quantity ?? 0);
+                                    $linePacked = (float) ($item->packed_quantity ?? 0);
+                                    $lineDelivered = \App\Services\Sales\SalesFulfillmentMetrics::deliveredQuantity($item);
+                                    $pickedLinePercent = $lineOrdered > 0 ? min(100, (int) round(($linePicked / $lineOrdered) * 100)) : 0;
+                                    $packedLinePercent = $lineOrdered > 0 ? min(100, (int) round(($linePacked / $lineOrdered) * 100)) : 0;
+                                    $deliveredLinePercent = $lineOrdered > 0 ? min(100, (int) round(($lineDelivered / $lineOrdered) * 100)) : 0;
+                                @endphp
+                                <tr>
+                                    <td>
+                                        <p class="font-semibold text-gray-900 dark:text-white">{{ $item->product->name ?? '—' }}</p>
+                                        @if($item->product?->sku)
+                                            <p class="text-xs text-gray-500">{{ $item->product->sku }}</p>
+                                        @endif
+                                    </td>
+                                    <td class="whitespace-nowrap">
+                                        @if($item->product && $item->product->taxClass)
+                                            {{ $item->product->taxClass->name }} ({{ $item->product->taxClass->rate }}%)
+                                        @else
+                                            —
+                                        @endif
+                                    </td>
+                                    <td class="is-right whitespace-nowrap">
+                                        <span class="font-medium text-gray-900 dark:text-white">{{ number_format($lineOrdered, 0) }}</span>
+                                    </td>
+                                    @unless($isReturnOrder)
+                                        <td class="is-right">
+                                            <div class="erp-po-show-receive">
+                                                <span class="font-medium text-gray-900 dark:text-white">{{ number_format($linePicked, 0) }}</span>
+                                                <div class="erp-po-show-receive__bar" aria-hidden="true">
+                                                    <span @class([
+                                                        'erp-po-show-receive__fill',
+                                                        'is-complete' => $pickedLinePercent >= 100,
+                                                        'is-partial' => $pickedLinePercent > 0 && $pickedLinePercent < 100,
+                                                    ]) style="width: {{ $pickedLinePercent }}%"></span>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="is-right">
+                                            <div class="erp-po-show-receive">
+                                                <span class="font-medium text-gray-900 dark:text-white">{{ number_format($linePacked, 0) }}</span>
+                                                <div class="erp-po-show-receive__bar" aria-hidden="true">
+                                                    <span @class([
+                                                        'erp-po-show-receive__fill',
+                                                        'is-complete' => $packedLinePercent >= 100,
+                                                        'is-partial' => $packedLinePercent > 0 && $packedLinePercent < 100,
+                                                    ]) style="width: {{ $packedLinePercent }}%"></span>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="is-right">
+                                            <div class="erp-po-show-receive">
+                                                <span class="font-medium text-gray-900 dark:text-white">{{ number_format($lineDelivered, 0) }}</span>
+                                                <div class="erp-po-show-receive__bar" aria-hidden="true">
+                                                    <span @class([
+                                                        'erp-po-show-receive__fill',
+                                                        'is-complete' => $deliveredLinePercent >= 100,
+                                                        'is-partial' => $deliveredLinePercent > 0 && $deliveredLinePercent < 100,
+                                                    ]) style="width: {{ $deliveredLinePercent }}%"></span>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    @endunless
+                                    <td class="is-right whitespace-nowrap">
+                                        {{ $currencyCode }} {{ number_format($item->unit_price, 2) }}
+                                    </td>
+                                    <td class="is-right whitespace-nowrap">
+                                        <span class="font-semibold {{ $isReturnOrder ? 'text-error-600 dark:text-error-400' : 'text-gray-900 dark:text-white' }}">
+                                            {{ $currencyCode }} {{ number_format($item->quantity * $item->unit_price, 2) }}
+                                        </span>
+                                    </td>
+                                    <td class="is-right whitespace-nowrap">
+                                        <span class="font-semibold text-success-600 dark:text-success-400">
+                                            {{ $currencyCode }} {{ number_format($item->commission_amount ?? 0, 2) }}
+                                        </span>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                        <tfoot>
+                            @if(($order->tax_total ?? 0) > 0)
+                                <tr>
+                                    <td colspan="{{ $isReturnOrder ? 5 : 8 }}" class="!px-5 !py-3 text-right text-sm font-medium text-gray-600 dark:text-gray-300">Tax</td>
+                                    <td class="!px-5 !py-3 text-right text-sm font-bold text-gray-900 dark:text-white">{{ $currencyCode }} {{ number_format($order->tax_total, 2) }}</td>
+                                </tr>
+                            @endif
+                            <tr class="erp-po-show-table__total">
+                                <td colspan="{{ $isReturnOrder ? 5 : 8 }}" class="!px-5 !py-4 text-right text-sm font-semibold text-gray-600 dark:text-gray-300">Order total</td>
+                                <td class="!px-5 !py-4 text-right">
+                                    <span class="text-lg font-bold {{ $isReturnOrder ? 'text-error-600 dark:text-error-400' : 'text-brand-600 dark:text-brand-400' }}">
+                                        {{ $currencyCode }} {{ number_format($order->total, 2) }}
+                                    </span>
+                                </td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+
+            @if($order->statusHistory->isNotEmpty())
+                <div class="erp-po-show-panel">
+                    <h3 class="erp-po-show-panel__title">Status history</h3>
+                    <ul class="mt-4 space-y-3">
+                        @foreach($order->statusHistory->sortByDesc('changed_at') as $entry)
+                            <li class="flex items-start justify-between gap-4 text-sm">
+                                <div>
+                                    <p class="font-semibold text-gray-900 dark:text-white">{{ ucfirst($entry->status) }}</p>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400">{{ $entry->changed_at->diffForHumans() }}</p>
+                                </div>
+                                <time class="whitespace-nowrap text-xs text-gray-500 dark:text-gray-400" datetime="{{ $entry->changed_at->format('Y-m-d') }}">
+                                    {{ $entry->changed_at->format('d M Y, H:i') }}
+                                </time>
+                            </li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
+
+            @if($order->notes)
+                <div class="erp-po-show-panel">
+                    <h3 class="erp-po-show-panel__title">{{ $isReturnOrder ? 'Return notes' : 'Order notes' }}</h3>
+                    <p class="erp-po-show-panel__body">{{ $order->notes }}</p>
+                </div>
+            @endif
+        </div>
+
+        <aside class="erp-po-show-side space-y-5">
+            <div class="erp-po-show-panel">
+                <h3 class="erp-po-show-panel__title">Agent</h3>
+                <div class="erp-po-index-supplier mt-3">
+                    <span class="erp-po-index-supplier__avatar !h-10 !w-10">{{ $agentInitial }}</span>
+                    <div class="min-w-0">
+                        <p class="erp-po-index-supplier__name !text-base">{{ $agent->name ?? '—' }}</p>
+                        @if($agent?->zone)
+                            <p class="text-xs text-gray-500 dark:text-gray-400">{{ $agent->zone }}</p>
+                        @endif
+                    </div>
+                </div>
+                <dl class="erp-po-show-meta mt-4">
+                    @if($order->agent_reference)
+                        <div class="erp-po-show-meta__row">
+                            <dt>Agent PO ref</dt>
+                            <dd>{{ $order->agent_reference }}</dd>
+                        </div>
+                    @endif
+                    @if($agent?->phone)
+                        <div class="erp-po-show-meta__row">
+                            <dt>Phone</dt>
+                            <dd>{{ $agent->phone }}</dd>
+                        </div>
+                    @endif
+                    @if($order->invoice)
+                        <div class="erp-po-show-meta__row">
+                            <dt>Invoice</dt>
+                            <dd>
+                                <a href="{{ route('admin.finance.show', $order->invoice) }}" class="text-brand-600 hover:underline dark:text-brand-400">
+                                    {{ $order->invoice->number ?? 'View invoice' }}
+                                </a>
+                            </dd>
+                        </div>
+                    @endif
+                </dl>
+            </div>
+
+            @unless($isReturnOrder)
+                <div class="erp-po-show-panel">
+                    <h3 class="erp-po-show-panel__title">Fulfillment progress</h3>
+                    <div class="mt-4">
+                        <div class="flex items-end justify-between gap-3">
+                            <p class="text-3xl font-bold text-gray-900 dark:text-white">{{ number_format($fulfillmentPercent, 0) }}%</p>
+                            <span class="erp-po-status erp-po-status--{{ $statusTone }}">{{ $statusLabel }}</span>
+                        </div>
+                        <div class="erp-po-show-receive__bar mt-3 !h-2.5" aria-hidden="true">
+                            <span @class([
+                                'erp-po-show-receive__fill',
+                                'is-complete' => $fulfillmentPercent >= 100,
+                                'is-partial' => $fulfillmentPercent > 0 && $fulfillmentPercent < 100,
+                            ]) style="width: {{ $fulfillmentPercent }}%"></span>
+                        </div>
+                        <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                            Picked {{ number_format($pickedQty, 0) }} · Packed {{ number_format($packedQty, 0) }} · Delivered {{ number_format($deliveredQty, 0) }} of {{ number_format($orderedQty, 0) }} units
+                        </p>
+                    </div>
+                </div>
+
+                <div class="erp-po-show-panel">
+                    <div class="flex items-center justify-between gap-3">
+                        <h3 class="erp-po-show-panel__title">Linked documents</h3>
+                        @if(in_array($order->status, ['confirmed', 'picked'], true))
+                            <a href="{{ route('admin.orders.picking-list', $order) }}" class="text-xs font-semibold text-brand-600 hover:underline dark:text-brand-400">
+                                Picking list
+                            </a>
+                        @endif
+                    </div>
+
+                    <ul class="erp-po-show-grn-list mt-3">
+                        <li>
+                            <a href="{{ route('admin.orders.picking-list', $order) }}" class="erp-po-show-grn-item">
+                                <span>
+                                    <span class="erp-po-show-grn-item__number">Picking list</span>
+                                    <span class="erp-po-show-grn-item__date">
+                                        Order #{{ $order->id }}
+                                        · {{ in_array($order->status, ['picked', 'packed', 'dispatched', 'delivered'], true) ? 'Picked' : ($order->status === 'confirmed' ? 'Ready to pick' : ucfirst($order->status)) }}
+                                    </span>
+                                </span>
+                                <svg class="h-4 w-4 shrink-0 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.25 4.5l7.5 7.5-7.5 7.5"/></svg>
+                            </a>
+                        </li>
+
+                        @foreach($order->deliveries->sortByDesc('created_at') as $delivery)
+                            <li>
+                                <a href="{{ route('admin.deliveries.show', $delivery) }}" class="erp-po-show-grn-item">
+                                    <span>
+                                        <span class="erp-po-show-grn-item__number">Delivery #{{ $delivery->id }}</span>
+                                        <span class="erp-po-show-grn-item__date">
+                                            {{ ucfirst(str_replace('_', ' ', $delivery->status)) }}
+                                            @if($delivery->route?->name)
+                                                · {{ $delivery->route->name }}
+                                            @endif
+                                        </span>
+                                    </span>
+                                    <svg class="h-4 w-4 shrink-0 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.25 4.5l7.5 7.5-7.5 7.5"/></svg>
+                                </a>
+                            </li>
+                            @if(in_array($order->status, ['packed', 'dispatched', 'delivered'], true))
+                                <li>
+                                    <a href="{{ route('admin.deliveries.packing-slip', $delivery) }}" target="_blank" rel="noopener" class="erp-po-show-grn-item">
+                                        <span>
+                                            <span class="erp-po-show-grn-item__number">Packing slip</span>
+                                            <span class="erp-po-show-grn-item__date">Delivery #{{ $delivery->id }} · Print</span>
+                                        </span>
+                                        <svg class="h-4 w-4 shrink-0 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.25 4.5l7.5 7.5-7.5 7.5"/></svg>
+                                    </a>
+                                </li>
+                            @endif
+                        @endforeach
+                    </ul>
+
+                    @if($order->deliveries->isEmpty() && in_array($order->status, ['packed', 'picked'], true))
+                        <p class="mt-3 text-sm text-gray-500 dark:text-gray-400">
+                            No delivery scheduled yet.
+                            @if($canDispatch)
+                                Use <a href="{{ route('admin.deliveries.create') }}" class="font-semibold text-brand-600 hover:underline dark:text-brand-400">Schedule delivery</a>.
+                            @endif
+                        </p>
+                    @elseif($order->deliveries->isEmpty() && $order->status === 'confirmed')
+                        <p class="mt-3 text-sm text-gray-500 dark:text-gray-400">
+                            Pick stock first — delivery is created after packing.
+                        </p>
+                    @endif
+                </div>
+            @endunless
+        </aside>
+    </div>
 </div>
 
 <div class="print-only mt-6 text-[12px] leading-relaxed text-gray-900">
-        <div class="flex items-start justify-between mb-6">
+    <div class="flex items-start justify-between mb-6">
         <div class="flex items-center gap-3">
             @if(!empty($appLogoUrl))
-                <img src="{{ $appLogoUrl }}" alt="{{ $legalCompanyName }}" class="h-12 w-12 rounded-full object-cover" />
+                <img src="{{ $appLogoUrl }}" alt="{{ $legalCompanyName }}" class="h-10 w-auto max-w-[9rem] object-contain" />
             @else
                 <div class="flex h-12 w-12 items-center justify-center rounded-full bg-brand-500 text-sm font-semibold text-white">
                     {{ $legalCompanyInitials }}

@@ -23,7 +23,8 @@ class ExportCenterController extends Controller
 
         return view('admin.exports.index', [
             'exportGroups' => $groups,
-            'moduleCount' => collect($groups)->sum(fn (array $modules) => count($modules)),
+            'specialExports' => ModuleExportRegistry::specialExportsForUser($request->user(), $queryParams),
+            'moduleCount' => collect($groups)->sum(fn (array $modules) => count($modules)) + count(ModuleExportRegistry::specialExportsForUser($request->user(), $queryParams)),
             'rangePresets' => ExportDateRange::presets(),
             'selectedRange' => ExportDateRange::selectedKey($request),
             'rangeMode' => $rangeMode,

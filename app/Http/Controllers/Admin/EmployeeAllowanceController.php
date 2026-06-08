@@ -26,6 +26,13 @@ class EmployeeAllowanceController extends Controller
         return view('admin.employees.allowances.all', compact('allowances'));
     }
 
+    public function show(EmployeeAllowance $allowance)
+    {
+        $allowance->load('employee');
+
+        return view('admin.employees.allowances.show', compact('allowance'));
+    }
+
     public function createGlobal()
     {
         $employees = Employee::orderBy('name')->get();

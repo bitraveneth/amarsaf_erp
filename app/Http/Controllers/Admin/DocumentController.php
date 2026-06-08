@@ -7,7 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Support\Documents\CompanyDocumentContext;
 use App\Support\Documents\DocumentDataFactory;
 use App\Support\Documents\DocumentRegistry;
-use Barryvdh\DomPDF\Facade\Pdf;
+use App\Support\PdfDocumentBuilder;
 use Illuminate\Http\Request;
 use InvalidArgumentException;
 
@@ -32,7 +32,7 @@ class DocumentController extends Controller
     {
         [$definition, $model, $payload, $company] = $this->resolve($type, $id);
 
-        $pdf = Pdf::loadView('documents.layouts.pdf', [
+        $pdf = PdfDocumentBuilder::loadView('documents.layouts.pdf', [
             'type' => $type,
             'definition' => $definition,
             'payload' => $payload,

@@ -1,8 +1,18 @@
 @auth
+@php
+    $assistantContext = [
+        'source' => request()->routeIs('admin.learning-hub') ? 'learning-hub' : 'erp',
+        'module_slug' => request()->routeIs('admin.learning-hub') ? request()->query('module') : null,
+        'lesson_index' => null,
+        'locale' => app()->getLocale() === 'bn' ? 'bn' : 'en',
+        'role' => 'all',
+    ];
+@endphp
 <div class="erp-assistant-root print-hidden"
      x-data="erpAssistantBot"
      data-bootstrap-url="{{ route('admin.assistant.bootstrap') }}"
-     data-ask-url="{{ route('admin.assistant.ask') }}">
+     data-ask-url="{{ route('admin.assistant.ask') }}"
+     data-initial-context='@json($assistantContext)'>
 
     {{-- Restore chip when dismissed --}}
     <button type="button"
@@ -40,7 +50,7 @@
                 <div class="erp-assistant-panel__title" x-text="agentName">Saf AI Assistant</div>
                 <div class="erp-assistant-panel__status">
                     <span class="erp-assistant-panel__dot" aria-hidden="true"></span>
-                    Online · live data
+                    <span x-text="statusLabel">Online · live data</span>
                 </div>
             </div>
             <button type="button"

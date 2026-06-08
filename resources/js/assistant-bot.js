@@ -7,6 +7,7 @@ export function registerAssistantBot(Alpine) {
         loading: false,
         bootstrapped: false,
         agentName: 'Saf AI Assistant',
+        statusLabel: 'Online · help & live data',
         greeting: '',
         quote: '',
         prompt: '',
@@ -16,6 +17,13 @@ export function registerAssistantBot(Alpine) {
         draft: '',
         bootstrapUrl: '',
         askUrl: '',
+        context: {
+            source: 'erp',
+            module_slug: null,
+            lesson_index: null,
+            locale: 'en',
+            role: 'all',
+        },
 
         init() {
             const root = this.$root;
@@ -23,10 +31,49 @@ export function registerAssistantBot(Alpine) {
             this.askUrl = root.dataset.askUrl || '';
 
             try {
+                const initial = root.dataset.initialContext
+                    ? JSON.parse(root.dataset.initialContext)
+                    : null;
+                if (initial && typeof initial === 'object') {
+                    this.context = { ...this.context, ...initial };
+                }
+            } catch (error) {
+                // Ignore invalid bootstrap context.
+            }
+
+            window.addEventListener('assistant:context', (event) => {
+                const detail = event?.detail;
+                if (! detail || typeof detail !== 'object') {
+                    return;
+                }
+
+                this.context = { ...this.context, ...detail };
+
+                if (this.open) {
+                    this.bootstrapped = false;
+                    this.messages = [];
+                    this.ensureBootstrap();
+                }
+            });
+
+            try {
                 this.dismissed = localStorage.getItem(ASSISTANT_DISMISSED_KEY) === '1';
             } catch (error) {
                 this.dismissed = false;
             }
+        },
+
+        contextQuery() {
+            const params = new URLSearchParams();
+            Object.entries(this.context).forEach(([key, value]) => {
+                if (value !== null && value !== undefined && value !== '') {
+                    params.set(`context[${key}]`, String(value));
+                }
+            });
+
+            const query = params.toString();
+
+            return query ? `?${query}` : '';
         },
 
         toggle() {
@@ -75,7 +122,7 @@ export function registerAssistantBot(Alpine) {
             this.loading = true;
 
             try {
-                const response = await fetch(this.bootstrapUrl, {
+                const response = await fetch(`${this.bootstrapUrl}${this.contextQuery()}`, {
                     headers: {
                         Accept: 'application/json',
                         'X-Requested-With': 'XMLHttpRequest',
@@ -132,7 +179,10 @@ export function registerAssistantBot(Alpine) {
                         'X-Requested-With': 'XMLHttpRequest',
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
                     },
-                    body: JSON.stringify({ message }),
+                    body: JSON.stringify({
+                        message,
+                        context: this.context,
+                    }),
                 });
 
                 if (! response.ok) {

@@ -1,11 +1,30 @@
 @extends('layouts.app')
 
 @php
-    $manualPath = base_path('docs/client-user-guide.md');
-    $manualMarkdown = file_exists($manualPath)
-        ? file_get_contents($manualPath)
-        : '# Client Manual not found';
-    $manualHtml = \Illuminate\Support\Str::markdown($manualMarkdown);
+    $docsRoot = base_path('docs');
+    $manifestPath = $docsRoot . DIRECTORY_SEPARATOR . 'manual-manifest.php';
+    $manualFiles = file_exists($manifestPath) ? require $manifestPath : ['client-user-guide.md'];
+    $manualSections = [];
+    $manualToc = [];
+
+    foreach ($manualFiles as $relativePath) {
+        $path = $docsRoot . DIRECTORY_SEPARATOR . str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $relativePath);
+        if (! file_exists($path)) {
+            continue;
+        }
+        $markdown = file_get_contents($path);
+        $title = 'Section';
+        if (preg_match('/^#\s+(.+)$/m', $markdown, $m)) {
+            $title = trim($m[1]);
+        }
+        $anchor = 'guide-' . md5($relativePath);
+        $manualToc[] = ['title' => $title, 'anchor' => $anchor, 'path' => $relativePath];
+        $manualSections[] = [
+            'path' => $relativePath,
+            'anchor' => $anchor,
+            'html' => \Illuminate\Support\Str::markdown($markdown),
+        ];
+    }
 @endphp
 
 @section('content')
@@ -14,7 +33,10 @@
         <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
                 <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Client Manual</h1>
-                <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">Full workflow + all detailed form fields from your live ERP modules.</p>
+                <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                    Plain-English guides for your team — products, manufacturing, and more.
+                    Detailed module manuals live in the <code class="text-xs">docs/modules/</code> folder for printing or sharing.
+                </p>
             </div>
             <div class="flex items-center gap-2">
                 <a href="{{ route('admin.help') }}" class="inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">
@@ -28,10 +50,26 @@
     </div>
 
     <div class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900">
+        <div class="border-b border-gray-100 px-5 py-4 dark:border-gray-800 sm:px-6">
+            <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Contents</h2>
+            <nav class="mt-3 flex flex-wrap gap-2">
+                @foreach($manualToc as $item)
+                    <a href="#{{ $item['anchor'] }}"
+                       class="inline-flex rounded-lg border border-gray-200 bg-gray-50 px-3 py-1.5 text-xs font-medium text-gray-700 transition hover:border-brand-300 hover:text-brand-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:border-brand-500/40 dark:hover:text-brand-300">
+                        {{ $item['title'] }}
+                    </a>
+                @endforeach
+            </nav>
+        </div>
         <div class="overflow-x-auto p-6 sm:p-8">
-            <article class="guide-prose text-sm leading-7 text-gray-700 dark:text-gray-300">
-                {!! $manualHtml !!}
-            </article>
+            @foreach($manualSections as $section)
+                <article id="{{ $section['anchor'] }}" class="guide-prose text-sm leading-7 text-gray-700 dark:text-gray-300">
+                    {!! $section['html'] !!}
+                </article>
+                @if(! $loop->last)
+                    <hr class="guide-section-break my-10 border-gray-200 dark:border-gray-700">
+                @endif
+            @endforeach
         </div>
     </div>
 </div>
@@ -70,8 +108,19 @@
         background: rgba(51, 65, 85, 0.12);
         font-weight: 700;
     }
-    .dark .guide-prose th {
-        background: rgba(30, 41, 59, 0.55);
+    .guide-prose pre {
+        overflow-x: auto;
+        border-radius: 0.5rem;
+        padding: 0.75rem 1rem;
+        background: rgba(51, 65, 85, 0.08);
+        font-size: 0.78rem;
+        line-height: 1.45;
+    }
+    .dark .guide-prose pre {
+        background: rgba(15, 23, 42, 0.55);
+    }
+    .guide-section-break {
+        border-style: dashed;
     }
 </style>
 @endsection

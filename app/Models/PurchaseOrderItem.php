@@ -16,6 +16,8 @@ class PurchaseOrderItem extends Model
         'uom',
         'quantity',
         'unit_price',
+        'discount_percent',
+        'vat_rate',
         'line_total',
         'received_quantity',
     ];
@@ -23,6 +25,8 @@ class PurchaseOrderItem extends Model
     protected $casts = [
         'quantity' => 'decimal:2',
         'unit_price' => 'decimal:2',
+        'discount_percent' => 'decimal:2',
+        'vat_rate' => 'decimal:2',
         'line_total' => 'decimal:2',
         'received_quantity' => 'decimal:2',
     ];

@@ -16,7 +16,10 @@
         :period="$periodLabel"
     >
         <x-slot:actions>
-            @include('admin.finance.partials.print_button', ['label' => 'Print statement'])
+            <div class="flex flex-wrap items-center gap-2">
+                @include('admin.finance.partials.export_center_button', ['module' => 'profit-loss', 'from' => $from, 'to' => $to])
+                @include('admin.finance.partials.print_button', ['label' => 'Print statement'])
+            </div>
         </x-slot:actions>
     </x-dashboard.hero>
 

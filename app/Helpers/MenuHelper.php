@@ -27,8 +27,10 @@ class MenuHelper
             ->get();
 
         if ($groups->isEmpty()) {
-            return self::normalizeSidebarGroups(
-                self::applyRuntimeMenuLinks(self::getFallbackMenu())
+            return self::translateMenuGroups(
+                self::normalizeSidebarGroups(
+                    self::applyRuntimeMenuLinks(self::getFallbackMenu())
+                )
             );
         }
 
@@ -93,8 +95,10 @@ class MenuHelper
             ];
         })->all();
 
-        return self::normalizeSidebarGroups(
-            self::applyRuntimeMenuLinks($menuGroups)
+        return self::translateMenuGroups(
+            self::normalizeSidebarGroups(
+                self::applyRuntimeMenuLinks($menuGroups)
+            )
         );
     }
 
@@ -176,10 +180,11 @@ class MenuHelper
                 ],
             ],
             [
-                'title' => 'Control (Masters & Settings)',
+                'key' => 'master-data',
+                'title' => 'Master data',
                 'items' => [
                     [
-                        'name' => 'Products',
+                        'name' => 'Products & catalog',
                         'icon' => 'products',
                         'path' => '#',
                         'permission' => 'control.products',
@@ -189,7 +194,6 @@ class MenuHelper
                             ['name' => 'Material categories', 'path' => '/admin/material-categories', 'permission' => 'control.products'],
                             ['name' => 'Packaging types', 'path' => '/admin/packaging', 'permission' => 'control.products'],
                             ['name' => 'Tax & VAT classes', 'path' => '/admin/tax-classes', 'permission' => 'control.products'],
-                            // Product price list (uses dedicated route /admin/products-price-list)
                             ['name' => 'Price lists', 'path' => '/admin/products-price-list', 'permission' => 'control.products'],
                         ],
                     ],
@@ -207,12 +211,8 @@ class MenuHelper
                     [
                         'name' => 'Suppliers',
                         'icon' => 'suppliers',
-                        'path' => '#',
+                        'path' => '/admin/suppliers',
                         'permission' => 'control.suppliers',
-                        'subItems' => [
-                            ['name' => 'Suppliers', 'path' => '/admin/suppliers', 'permission' => 'control.suppliers'],
-                            ['name' => 'Purchase orders', 'path' => '/admin/purchase-orders', 'permission' => 'control.suppliers'],
-                        ],
                     ],
                     [
                         'name' => 'Warehouses',
@@ -220,15 +220,23 @@ class MenuHelper
                         'path' => '#',
                         'permission' => 'control.warehouses',
                         'subItems' => [
+                            ['name' => 'Warehouse dashboard', 'path' => '/admin/warehouses-dashboard', 'permission' => 'control.warehouses'],
                             ['name' => 'Warehouses', 'path' => '/admin/warehouses', 'permission' => 'control.warehouses'],
                             ['name' => 'Warehouse locations', 'path' => '/admin/warehouse-locations', 'permission' => 'control.warehouses'],
+                        ],
+                    ],
+                    [
+                        'name' => 'Logistics',
+                        'icon' => 'suppliers',
+                        'path' => '#',
+                        'permission' => 'control.warehouses',
+                        'subItems' => [
                             ['name' => 'Vehicle registry', 'path' => '/admin/vehicles', 'permission' => 'control.warehouses'],
-                            // Delivery zones & routes configuration
                             ['name' => 'Delivery zones & routes', 'path' => '/admin/delivery-routes', 'permission' => 'control.warehouses'],
                         ],
                     ],
                     [
-                        'name' => 'Employees',
+                        'name' => 'HR & employees',
                         'icon' => 'employees',
                         'path' => '#',
                         'permission' => 'control.employees',
@@ -242,23 +250,48 @@ class MenuHelper
                             ['name' => 'Badges', 'path' => '/admin/badges', 'permission' => 'control.employees'],
                         ],
                     ],
+                ],
+            ],
+            [
+                'key' => 'sales-distribution',
+                'title' => 'Sales & distribution',
+                'items' => [
                     [
-                        'name' => 'System settings',
-                        'icon' => 'settings',
+                        'name' => 'Sales & distribution',
+                        'icon' => 'sales',
                         'path' => '#',
-                        'permission' => 'system.settings',
+                        'permission' => 'sales.manage',
                         'subItems' => [
-                            ['name' => 'Application settings', 'path' => '/admin/settings', 'permission' => 'system.settings'],
-                            ['name' => 'Client manual', 'path' => '/admin/client-guide', 'permission' => 'system.settings'],
-                            ['name' => 'User manager', 'path' => '/admin/users', 'permission' => 'roles.manage'],
-                            ['name' => 'Role manager', 'path' => '/admin/roles', 'permission' => 'roles.manage'],
-                            ['name' => 'Permission manager', 'path' => '/admin/permissions', 'permission' => 'permissions.manage'],
-                            ['name' => 'Menu manager', 'path' => '/admin/menu', 'permission' => 'permissions.manage'],
+                            ['name' => 'Sales dashboard', 'path' => '/admin/sales-dashboard', 'permission' => 'sales.manage'],
+                            ['name' => 'Sales orders', 'path' => '/admin/orders', 'permission' => 'sales.manage'],
+                            ['name' => 'Sales targets', 'path' => '/admin/sales-targets', 'permission' => 'sales.manage'],
+                            ['name' => 'Returns', 'path' => '/admin/returns/customer', 'permission' => 'sales.manage'],
+                            ['name' => 'Customer gifts', 'path' => '/admin/gifts', 'permission' => 'sales.manage'],
+                            ['name' => 'Marketing campaigns', 'path' => '/admin/campaigns', 'permission' => 'sales.manage'],
+                            ['name' => 'Commission report', 'path' => '/admin/commissions', 'permission' => 'sales.manage'],
+                            ['name' => 'Commission settlements', 'path' => '/admin/settlements', 'permission' => 'sales.manage'],
                         ],
                     ],
                 ],
             ],
             [
+                'key' => 'purchase',
+                'title' => 'Purchase',
+                'items' => [
+                    [
+                        'name' => 'Purchase',
+                        'icon' => 'suppliers',
+                        'path' => '#',
+                        'permission' => 'control.suppliers',
+                        'subItems' => [
+                            ['name' => 'Purchase orders', 'path' => '/admin/purchase-orders', 'permission' => 'control.suppliers'],
+                            ['name' => 'Goods receipts (GRN)', 'path' => '/admin/goods-receipts', 'permission' => 'inventory.grn.create'],
+                        ],
+                    ],
+                ],
+            ],
+            [
+                'key' => 'manufacturing',
                 'title' => 'Manufacturing',
                 'items' => [
                     [
@@ -277,7 +310,8 @@ class MenuHelper
                 ],
             ],
             [
-                'title' => 'Inventory (Core operations)',
+                'key' => 'inventory-warehouse',
+                'title' => 'Inventory & warehouse',
                 'items' => [
                     [
                         'name' => 'Inventory',
@@ -289,41 +323,28 @@ class MenuHelper
                             ['name' => 'Material stock', 'path' => '/admin/inventory/materials', 'permission' => 'inventory.manage'],
                             ['name' => 'Low stock', 'path' => '/admin/inventory/low-stock', 'permission' => 'inventory.manage'],
                             ['name' => 'MRP suggestions', 'path' => '/admin/mrp', 'permission' => 'inventory.manage'],
-                            ['name' => 'Goods receipts (GRN)', 'path' => '/admin/goods-receipts', 'permission' => 'inventory.manage'],
                             ['name' => 'Stock movements', 'path' => '/admin/stock/movements', 'permission' => 'inventory.manage'],
                             ['name' => 'Transfers', 'path' => '/admin/stock/transfers', 'permission' => 'inventory.manage'],
+                            ['name' => 'Inventory adjustments', 'path' => '/admin/stock/audit', 'permission' => 'inventory.manage'],
+                        ],
+                    ],
+                    [
+                        'name' => 'Delivery',
+                        'icon' => 'warehouses',
+                        'path' => '#',
+                        'permission' => 'control.warehouses',
+                        'subItems' => [
                             ['name' => 'Deliveries & POD', 'path' => '/admin/deliveries/pod', 'permission' => 'control.warehouses'],
                             ['name' => 'Vehicle loads', 'path' => '/admin/vehicle-load', 'permission' => 'control.warehouses'],
                             ['name' => 'Packing slips', 'path' => '/admin/deliveries/packing-slips', 'permission' => 'control.warehouses'],
                             ['name' => 'Picking lists', 'path' => '/admin/orders-picking', 'permission' => 'sales.manage'],
-                            ['name' => 'Inventory adjustments', 'path' => '/admin/stock/audit', 'permission' => 'inventory.manage'],
                         ],
                     ],
                 ],
             ],
             [
-                'title' => 'Sales',
-                'items' => [
-                    [
-                        'name' => 'Sales',
-                        'icon' => 'sales',
-                        'path' => '#',
-                        'permission' => 'sales.manage',
-                        'subItems' => [
-                            ['name' => 'Sales dashboard', 'path' => '/admin/sales-dashboard', 'permission' => 'sales.manage'],
-                            ['name' => 'Sales orders', 'path' => '/admin/orders', 'permission' => 'sales.manage'],
-                            ['name' => 'Sales targets', 'path' => '/admin/sales-targets', 'permission' => 'sales.manage'],
-                            ['name' => 'Returns', 'path' => '/admin/returns/customer', 'permission' => 'sales.manage'],
-                            ['name' => 'Customer gifts', 'path' => '/admin/gifts', 'permission' => 'sales.manage'],
-                            ['name' => 'Marketing campaigns', 'path' => '/admin/campaigns', 'permission' => 'sales.manage'],
-                            ['name' => 'Commission report', 'path' => '/admin/commissions', 'permission' => 'sales.manage'],
-                            ['name' => 'Commission settlements', 'path' => '/admin/settlements', 'permission' => 'sales.manage'],
-                        ],
-                    ],
-                ],
-            ],
-            [
-                'title' => 'Accounting',
+                'key' => 'accounting-finance',
+                'title' => 'Accounting & finance',
                 'items' => [
                     [
                         'name' => 'Accounting',
@@ -341,12 +362,12 @@ class MenuHelper
                             ['name' => 'Journal entries', 'path' => '/admin/journals', 'permission' => 'accounting.manage'],
                             ['name' => 'Accounting periods', 'path' => '/admin/accounting-periods', 'permission' => 'accounting.manage'],
                             ['name' => 'Bank reconciliation', 'path' => '/admin/finance/reconciliation', 'permission' => 'accounting.manage'],
-                            ['name' => 'Tally export', 'path' => '/admin/exports/tally', 'permission' => 'accounting.manage'],
                         ],
                     ],
                 ],
             ],
             [
+                'key' => 'reports-analytics',
                 'title' => 'Reports & analytics',
                 'items' => [
                     [
@@ -355,6 +376,7 @@ class MenuHelper
                         'path' => '#',
                         'subItems' => [
                             ['name' => 'Export center', 'path' => '/admin/export-center'],
+                            ['name' => 'Tally export', 'path' => '/admin/export-center?module=tally-xml', 'permission' => 'accounting.manage'],
                         ],
                     ],
                     [
@@ -382,6 +404,45 @@ class MenuHelper
                     ],
                 ],
             ],
+            [
+                'key' => 'help-learning',
+                'title' => 'Help & learning',
+                'items' => [
+                    [
+                        'name' => 'Learning Hub',
+                        'icon' => 'system',
+                        'path' => '/admin/learning-hub',
+                    ],
+                    [
+                        'name' => 'Help',
+                        'icon' => 'system',
+                        'path' => '#',
+                        'subItems' => [
+                            ['name' => 'Client manual', 'path' => '/admin/client-guide', 'permission' => 'system.settings'],
+                        ],
+                    ],
+                ],
+            ],
+            [
+                'key' => 'administration',
+                'title' => 'Administration',
+                'items' => [
+                    [
+                        'name' => 'System settings',
+                        'icon' => 'settings',
+                        'path' => '#',
+                        'permission' => 'system.settings',
+                        'subItems' => [
+                            ['name' => 'Application settings', 'path' => '/admin/settings', 'permission' => 'system.settings'],
+                            ['name' => 'User manager', 'path' => '/admin/users', 'permission' => 'roles.manage'],
+                            ['name' => 'Role manager', 'path' => '/admin/roles', 'permission' => 'roles.manage'],
+                            ['name' => 'Permission manager', 'path' => '/admin/permissions', 'permission' => 'permissions.manage'],
+                            ['name' => 'Menu manager', 'path' => '/admin/menu', 'permission' => 'permissions.manage'],
+                            ['name' => 'Webhook endpoints', 'path' => '/admin/webhooks', 'permission' => 'system.settings'],
+                        ],
+                    ],
+                ],
+            ],
         ];
     }
 
@@ -395,17 +456,13 @@ class MenuHelper
 
                 $subItems = collect($item['subItems'] ?? []);
                 $subItems->push([
-                    'name' => 'Application settings',
-                    'path' => '/admin/settings',
-                    'permission' => 'system.settings',
-                ]);
-                $subItems->push([
                     'name' => 'Webhook endpoints',
                     'path' => '/admin/webhooks',
                     'permission' => 'system.settings',
                 ]);
 
                 $item['subItems'] = $subItems
+                    ->reject(fn (array $sub) => mb_strtolower(trim($sub['name'] ?? '')) === 'client manual')
                     ->unique(fn (array $sub) => mb_strtolower(trim(($sub['name'] ?? '') . '|' . ($sub['path'] ?? ''))))
                     ->values()
                     ->all();
@@ -419,11 +476,17 @@ class MenuHelper
     {
         foreach ($groups as &$group) {
             foreach ($group['items'] as &$item) {
-                if (mb_strtolower($item['name'] ?? '') !== 'warehouses') {
+                $itemName = mb_strtolower($item['name'] ?? '');
+                if (! str_contains($itemName, 'warehouse')) {
                     continue;
                 }
 
                 $subItems = collect($item['subItems'] ?? []);
+                $subItems->prepend([
+                    'name' => 'Warehouse dashboard',
+                    'path' => '/admin/warehouses-dashboard',
+                    'permission' => 'control.warehouses',
+                ]);
                 $subItems->push([
                     'name' => 'Warehouse locations',
                     'path' => '/admin/warehouse-locations',
@@ -502,12 +565,12 @@ class MenuHelper
                         ['name' => 'Journal entries', 'path' => '/admin/journals', 'permission' => 'accounting.manage'],
                         ['name' => 'Accounting periods', 'path' => '/admin/accounting-periods', 'permission' => 'accounting.manage'],
                         ['name' => 'Bank reconciliation', 'path' => '/admin/finance/reconciliation', 'permission' => 'accounting.manage'],
-                        ['name' => 'Tally export', 'path' => '/admin/exports/tally', 'permission' => 'accounting.manage'],
                     ] as $link) {
                         $subItems->push($link);
                     }
 
                     $item['subItems'] = $subItems
+                        ->reject(fn (array $sub) => str_contains(trim($sub['path'] ?? ''), 'module=tally-xml'))
                         ->unique(fn (array $sub) => mb_strtolower(trim(($sub['name'] ?? '') . '|' . ($sub['path'] ?? ''))))
                         ->values()
                         ->all();
@@ -560,12 +623,51 @@ class MenuHelper
                 self::ensureAgentAdvanceLinks(
                     self::ensureWarehouseLocationLinks(
                         self::ensureExportCenterLink(
-                            self::ensureSystemSettingsLinks($groups)
+                            self::ensureLearningHubLink(
+                                self::ensureSystemSettingsLinks($groups)
+                            )
                         )
                     )
                 )
             )
         );
+    }
+
+    protected static function ensureLearningHubLink(array $groups): array
+    {
+        $path = '/admin/learning-hub';
+
+        foreach ($groups as $group) {
+            foreach ($group['items'] ?? [] as $item) {
+                if (trim($item['path'] ?? '') === $path) {
+                    return $groups;
+                }
+
+                foreach ($item['subItems'] ?? [] as $subItem) {
+                    if (trim($subItem['path'] ?? '') === $path) {
+                        return $groups;
+                    }
+                }
+            }
+        }
+
+        foreach ($groups as &$group) {
+            if (mb_strtolower(trim($group['title'] ?? '')) !== 'help & learning') {
+                continue;
+            }
+
+            $items = collect($group['items'] ?? []);
+            $items->prepend([
+                'name' => 'Learning Hub',
+                'icon' => 'system',
+                'path' => $path,
+            ]);
+
+            $group['items'] = $items->values()->all();
+            break;
+        }
+
+        return $groups;
     }
 
     protected static function ensureExportCenterLink(array $groups): array
@@ -607,8 +709,26 @@ class MenuHelper
                     'path' => '#',
                     'subItems' => [
                         ['name' => 'Export center', 'path' => $path],
+                        ['name' => 'Tally export', 'path' => '/admin/export-center?module=tally-xml', 'permission' => 'accounting.manage'],
                     ],
                 ]);
+            } else {
+                foreach ($items as &$item) {
+                    if (mb_strtolower(trim($item['name'] ?? '')) !== 'data export') {
+                        continue;
+                    }
+
+                    $item['subItems'] = collect($item['subItems'] ?? [])
+                        ->push([
+                            'name' => 'Tally export',
+                            'path' => '/admin/export-center?module=tally-xml',
+                            'permission' => 'accounting.manage',
+                        ])
+                        ->unique(fn (array $sub) => mb_strtolower(trim(($sub['name'] ?? '') . '|' . ($sub['path'] ?? ''))))
+                        ->values()
+                        ->all();
+                }
+                unset($item);
             }
 
             $group['items'] = $items->values()->all();
@@ -658,6 +778,92 @@ class MenuHelper
         }
 
         return $groups;
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $groups
+     * @return array<int, array<string, mixed>>
+     */
+    protected static function translateMenuGroups(array $groups): array
+    {
+        if (app()->getLocale() === 'en') {
+            return $groups;
+        }
+
+        foreach ($groups as &$group) {
+            $title = trim($group['title'] ?? '');
+            if ($title !== '') {
+                $group['title'] = self::translateMenuGroupTitle($title);
+            }
+
+            foreach ($group['items'] as &$item) {
+                $item['name'] = self::translateMenuLabel($item['name'] ?? '', $item['path'] ?? null);
+
+                if (! empty($item['subItems']) && is_array($item['subItems'])) {
+                    foreach ($item['subItems'] as &$subItem) {
+                        $subItem['name'] = self::translateMenuLabel(
+                            $subItem['name'] ?? '',
+                            $subItem['path'] ?? null
+                        );
+                    }
+                    unset($subItem);
+                }
+            }
+            unset($item);
+        }
+        unset($group);
+
+        return $groups;
+    }
+
+    public static function translateMenuLabel(string $label, ?string $path = null): string
+    {
+        if (app()->getLocale() === 'en' || $label === '') {
+            return $label;
+        }
+
+        $pathKey = self::menuPathKey($path);
+        if ($pathKey) {
+            $translated = trans('menu.paths.' . $pathKey);
+            if ($translated !== 'menu.paths.' . $pathKey) {
+                return $translated;
+            }
+        }
+
+        $translated = trans('menu.items.' . $label);
+        if ($translated !== 'menu.items.' . $label) {
+            return $translated;
+        }
+
+        return $label;
+    }
+
+    protected static function translateMenuGroupTitle(string $title): string
+    {
+        if (app()->getLocale() === 'en' || $title === '') {
+            return $title;
+        }
+
+        $translated = trans('menu.groups.' . $title);
+        if ($translated !== 'menu.groups.' . $title) {
+            return $translated;
+        }
+
+        return $title;
+    }
+
+    public static function menuPathKey(?string $path): ?string
+    {
+        if ($path === null) {
+            return null;
+        }
+
+        $path = trim($path);
+        if ($path === '' || $path === '#') {
+            return null;
+        }
+
+        return str_replace(['/', '-'], '_', ltrim($path, '/'));
     }
 
     public static function getIconSvg(string $key): string

@@ -73,7 +73,7 @@
         2
     ));
     $tabErrorMap = [
-        'brand' => ['brand_name', 'company_name', 'company_email', 'company_phone', 'company_address', 'company_logo', 'remove_logo'],
+        'brand' => ['brand_name', 'company_name', 'company_email', 'company_phone', 'company_address', 'company_logo', 'remove_logo', 'header_notice_enabled', 'header_notice_message', 'header_notice_type', 'header_notice_link'],
         'currency' => ['currency_code', 'currency_symbol'],
         'colors' => ['brand_primary_color', 'brand_secondary_color', 'text_color_light', 'text_color_dark', 'default_theme_mode'],
         'sms' => ['sms_provider', 'sms_base_url', 'sms_api_key', 'sms_api_secret', 'sms_sender_id'],
@@ -218,7 +218,7 @@
                                 <div class="text-sm font-semibold text-gray-900 dark:text-white">
                                     {{ $hasCustomLogo ? 'Custom logo uploaded' : 'Using default SAF logo' }}
                                 </div>
-                                <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">PNG, JPG, or WebP up to 2MB. Recommended: square 512 × 512 px, transparent PNG.</div>
+                                <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">PNG, JPG, or WebP up to 2MB. Recommended: transparent PNG wordmark or square mark.</div>
                             </div>
                         </div>
 
@@ -238,6 +238,78 @@
                             Remove uploaded logo and restore the default SAF logo
                         </label>
                     @endif
+                </div>
+            </section>
+
+            <section
+                class="rounded-2xl border border-gray-200 bg-white p-6 shadow-theme-xs dark:border-gray-800 dark:bg-gray-900"
+                x-data="{
+                    noticeEnabled: @js((bool) old('header_notice_enabled', $settings['header_notice_enabled'])),
+                    noticeMessage: @js((string) old('header_notice_message', $settings['header_notice_message'] ?? '')),
+                    noticeType: @js((string) old('header_notice_type', $settings['header_notice_type'] ?? 'info')),
+                    noticeLabels: { info: 'Notice', warning: 'Heads up', urgent: 'Urgent' },
+                }"
+            >
+                <div class="mb-5">
+                    <h2 class="text-sm font-semibold text-gray-900 dark:text-white">Top bar notice</h2>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                        Show a short message under the header for meetings, month-end reminders, or urgent ops updates. Visible to all logged-in users.
+                    </p>
+                </div>
+
+                <label class="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                    <input type="checkbox" name="header_notice_enabled" value="1"
+                           x-model="noticeEnabled"
+                           class="rounded border-gray-300 text-brand-600 focus:ring-brand-500" />
+                    Show notice in the top bar
+                </label>
+
+                <div class="mt-4 grid gap-4 md:grid-cols-2">
+                    <div class="md:col-span-2">
+                        <label class="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Message</label>
+                        <input type="text" name="header_notice_message"
+                               x-model="noticeMessage"
+                               placeholder="e.g. Management meeting today at 4:00 PM — finance team please attend."
+                               maxlength="280"
+                               class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white" />
+                    </div>
+
+                    <div>
+                        <label class="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Priority</label>
+                        <select name="header_notice_type"
+                                x-model="noticeType"
+                                class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white">
+                            @foreach(['info' => 'Notice', 'warning' => 'Heads up', 'urgent' => 'Urgent'] as $value => $label)
+                                <option value="{{ $value }}">{{ $label }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Optional link</label>
+                        <input type="text" name="header_notice_link"
+                               value="{{ old('header_notice_link', $settings['header_notice_link']) }}"
+                               placeholder="/admin/meetings or https://..."
+                               class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white" />
+                    </div>
+                </div>
+
+                <div class="mt-5">
+                    <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Preview</p>
+                    <div
+                        x-show="noticeEnabled && noticeMessage.trim() !== ''"
+                        x-cloak
+                        class="header-notice header-notice--preview rounded-lg overflow-hidden"
+                        :class="'header-notice--' + noticeType"
+                    >
+                        <div class="header-notice__inner">
+                            <span class="header-notice__badge" x-text="noticeLabels[noticeType] || 'Notice'"></span>
+                            <p class="header-notice__message" x-text="noticeMessage"></p>
+                        </div>
+                    </div>
+                    <p x-show="!noticeEnabled || noticeMessage.trim() === ''" class="rounded-lg border border-dashed border-gray-200 px-4 py-3 text-xs text-gray-500 dark:border-gray-700 dark:text-gray-400">
+                        Enable the notice and enter a message to see the preview.
+                    </p>
                 </div>
             </section>
 

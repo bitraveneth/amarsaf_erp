@@ -2,7 +2,7 @@
     require resource_path('views/layouts/partials/system-tour-steps.php');
 @endphp
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="h-full">
+<html lang="{{ app()->getLocale() === 'bn' ? 'bn' : 'en' }}" class="h-full" @if(app()->getLocale() === 'bn') data-locale="bn" @endif>
 
 <head>
     <meta charset="utf-8">
@@ -12,6 +12,8 @@
     <title>{{ $title ?? (($appBrandName ?? config('app.name')) . ' Admin') }}</title>
 
     <script>
+        window.erpLocale = @json(app()->getLocale());
+        window.erpLocaleUrl = @json(Route::has('locale.update') ? route('locale.update') : null);
         window.erpDefaultThemeMode = @json($defaultThemeMode ?? 'dark');
         window.erpTheme = {
             getStoredTheme() {
@@ -256,6 +258,7 @@
                 ? { width: $store.sidebar.isExpanded ? 'calc(100% - 290px)' : 'calc(100% - 90px)' }
                 : { width: '100%' }">
             @include('layouts.app-header')
+            <x-layout.header-notice />
 
             <div class="erp-page-shell mx-auto w-full min-w-0 max-w-(--breakpoint-2xl) p-4 md:p-6 print:!mx-0 print:!w-full print:!max-w-none print:!p-0" data-tour="page-content">
                 @if(session('status'))
@@ -338,6 +341,8 @@
                     </div>
                 @endif
 
+                @include('layouts.partials.learning-context-bar')
+
                 @yield('content')
             </div>
         </div>
@@ -380,9 +385,15 @@
                 </div>
 
                 <div class="mt-4 space-y-2">
+                    @if(Route::has('admin.learning-hub'))
+                        <a href="{{ route('admin.learning-hub') }}"
+                           class="inline-flex w-full items-center justify-center rounded-xl bg-brand-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-600">
+                            Open Learning Hub
+                        </a>
+                    @endif
                     <button type="button"
                             @click="$store.tour.start()"
-                            class="inline-flex w-full items-center justify-center rounded-xl bg-brand-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-600">
+                            class="inline-flex w-full items-center justify-center rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800">
                         <span x-text="$store.tour.hasSavedProgress ? 'Restart system tour' : 'Start full system tour'"></span>
                     </button>
                     <button type="button"

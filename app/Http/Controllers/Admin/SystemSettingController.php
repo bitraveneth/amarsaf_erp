@@ -40,6 +40,10 @@ class SystemSettingController extends Controller
                 'sms_api_key' => SystemSettings::get('sms_api_key'),
                 'sms_api_secret' => SystemSettings::get('sms_api_secret'),
                 'sms_sender_id' => SystemSettings::get('sms_sender_id'),
+                'header_notice_enabled' => SystemSettings::get('header_notice_enabled') === '1',
+                'header_notice_message' => SystemSettings::get('header_notice_message'),
+                'header_notice_type' => SystemSettings::get('header_notice_type', 'info'),
+                'header_notice_link' => SystemSettings::get('header_notice_link'),
             ],
             'logoUrl' => SystemSettings::logoUrl(),
             'uploadedLogoUrl' => SystemSettings::uploadedLogoUrl(),
@@ -85,6 +89,10 @@ class SystemSettingController extends Controller
             'sms_sender_id' => 'nullable|string|max:120',
             'company_logo' => 'nullable|image|max:2048',
             'remove_logo' => 'nullable|boolean',
+            'header_notice_enabled' => 'nullable|boolean',
+            'header_notice_message' => 'nullable|string|max:280',
+            'header_notice_type' => 'nullable|in:info,warning,urgent',
+            'header_notice_link' => 'nullable|string|max:500',
         ]);
 
         $settings = [];
@@ -139,6 +147,11 @@ class SystemSettingController extends Controller
 
             $settings['company_logo_path'] = $request->file('company_logo')->store('system-settings', 'public');
         }
+
+        $settings['header_notice_enabled'] = $request->boolean('header_notice_enabled') ? '1' : '0';
+        $settings['header_notice_message'] = trim((string) ($data['header_notice_message'] ?? ''));
+        $settings['header_notice_type'] = $data['header_notice_type'] ?? 'info';
+        $settings['header_notice_link'] = trim((string) ($data['header_notice_link'] ?? ''));
 
         SystemSettings::putMany($settings);
 

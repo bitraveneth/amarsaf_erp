@@ -3,6 +3,7 @@
 namespace App\Support\Documents;
 
 use App\Helpers\SystemSettings;
+use App\Support\PdfDocumentBuilder;
 use Illuminate\Support\Facades\Storage;
 
 class CompanyDocumentContext
@@ -10,17 +11,7 @@ class CompanyDocumentContext
     public static function make(): array
     {
         $legalName = SystemSettings::legalCompanyName();
-        $logoSetting = SystemSettings::get('company_logo_path');
-        $logoPath = null;
-
-        if (is_string($logoSetting) && trim($logoSetting) !== '') {
-            $absolute = Storage::disk('public')->path(trim($logoSetting));
-
-            if (is_file($absolute)) {
-                $logoPath = $absolute;
-            }
-        }
-
+        $logoPath = self::resolveLogoPath();
         $primary = SystemSettings::get('brand_primary', SystemSettings::defaultBrandPrimary());
 
         return [
@@ -32,9 +23,27 @@ class CompanyDocumentContext
             'address' => self::stringSetting('company_address'),
             'logo_url' => SystemSettings::logoUrl(),
             'logo_path' => $logoPath,
+            'logo_file_uri' => PdfDocumentBuilder::fileUri($logoPath),
             'primary' => is_string($primary) && $primary !== '' ? $primary : SystemSettings::defaultBrandPrimary(),
             'currency' => config('app.currency', 'BDT'),
         ];
+    }
+
+    protected static function resolveLogoPath(): ?string
+    {
+        $logoSetting = SystemSettings::get('company_logo_path');
+
+        if (is_string($logoSetting) && trim($logoSetting) !== '') {
+            $absolute = Storage::disk('public')->path(trim($logoSetting));
+
+            if (is_file($absolute)) {
+                return $absolute;
+            }
+        }
+
+        $defaultLogo = public_path(SystemSettings::defaultLogoAsset());
+
+        return is_file($defaultLogo) ? $defaultLogo : null;
     }
 
     protected static function stringSetting(string $key): ?string

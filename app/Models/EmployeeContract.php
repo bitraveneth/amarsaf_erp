@@ -40,6 +40,14 @@ class EmployeeContract extends Model
         return $this->belongsTo(Employee::class);
     }
 
+    /** Monthly bill — base salary plus fixed TA and DA. */
+    public function monthlyBill(): float
+    {
+        return (float) ($this->salary_amount ?? 0)
+            + (float) ($this->travel_allowance ?? 0)
+            + (float) ($this->dearness_allowance ?? 0);
+    }
+
     public static function normalizeStatus(?string $status): string
     {
         return match (strtolower((string) $status)) {

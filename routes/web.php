@@ -52,7 +52,10 @@ use App\Http\Controllers\Admin\EmployeeLocationController;
 use App\Http\Controllers\Admin\MenuController;
 use App\Http\Controllers\Admin\ErpAssistantController;
 use App\Http\Controllers\Admin\ExportCenterController;
+use App\Http\Controllers\Admin\LearningHubController;
+use App\Http\Controllers\Admin\LocaleController;
 use App\Http\Controllers\Admin\ModuleExportController;
+use App\Http\Controllers\Admin\MonthEndExportController;
 use App\Http\Controllers\Admin\MrpController;
 use App\Http\Controllers\Admin\SearchController;
 use App\Http\Controllers\Admin\TallyExportController;
@@ -68,6 +71,7 @@ use App\Http\Controllers\Admin\SalesTargetController;
 use App\Http\Controllers\Admin\ManufacturingDashboardController;
 use App\Http\Controllers\Admin\AccountingDashboardController;
 use App\Http\Controllers\Admin\ReportsDashboardController;
+use App\Http\Controllers\Admin\WarehouseDashboardController;
 use App\Http\Controllers\Admin\SystemSettingController;
 use App\Http\Controllers\Admin\AgentAdvanceController;
 use Illuminate\Support\Facades\Route;
@@ -85,13 +89,12 @@ use App\Http\Controllers\Auth\ResetPasswordController;
 |
 */
 
-Route::get('/', function () {
-    return view('welcome');
-});
+Route::post('locale', [LocaleController::class, 'update'])->name('locale.update');
 
 Route::middleware('guest')->group(function () {
-    Route::get('login', [LoginController::class, 'show'])->name('login');
-    Route::post('login', [LoginController::class, 'authenticate'])->middleware('throttle:login');
+    Route::get('/', [LoginController::class, 'show'])->name('login');
+    Route::post('/', [LoginController::class, 'authenticate'])->middleware('throttle:login');
+    Route::get('login', fn () => redirect('/'));
     Route::get('forgot-password', [ForgotPasswordController::class, 'showLinkRequestForm'])->name('password.request');
     Route::post('forgot-password', [ForgotPasswordController::class, 'sendResetLinkEmail'])->middleware('throttle:5,1')->name('password.email');
     Route::get('reset-password/{token}', [ResetPasswordController::class, 'showResetForm'])->name('password.reset');
@@ -112,12 +115,15 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::post('assistant/ask', [ErpAssistantController::class, 'ask'])
         ->middleware('throttle:30,1')
         ->name('assistant.ask');
+    Route::get('exports/{module}/preview', [ModuleExportController::class, 'preview'])
+        ->name('modules.export.preview');
     Route::get('exports/{module}/{format}', ModuleExportController::class)
         ->where('format', 'csv|pdf')
         ->name('modules.export');
     Route::get('documents/{type}/{id}', [DocumentController::class, 'preview'])->name('documents.preview');
     Route::get('documents/{type}/{id}/pdf', [DocumentController::class, 'pdf'])->name('documents.pdf');
     Route::view('help', 'admin.help')->name('help');
+    Route::get('learning-hub', LearningHubController::class)->name('learning-hub');
     Route::view('client-guide', 'admin.client-guide')->name('client-guide');
     Route::get('settings', [SystemSettingController::class, 'index'])->middleware('perm:system.settings')->name('settings.index');
     Route::patch('settings', [SystemSettingController::class, 'update'])->middleware('perm:system.settings')->name('settings.update');
@@ -144,6 +150,11 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::get('manufacturing-dashboard', ManufacturingDashboardController::class)
         ->middleware('perm:manufacturing.manage')
         ->name('manufacturing.dashboard');
+
+    // Warehouse dashboard (Control → Warehouses)
+    Route::get('warehouses-dashboard', WarehouseDashboardController::class)
+        ->middleware('perm:control.warehouses')
+        ->name('warehouses.dashboard');
 
     // My profile
     Route::get('profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -251,6 +262,7 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::get('contracts', [EmployeeContractController::class, 'all'])->middleware('perm:control.employees')->name('contracts.index');
     Route::get('contracts/create', [EmployeeContractController::class, 'createGlobal'])->middleware('perm:control.employees')->name('contracts.create');
     Route::post('contracts', [EmployeeContractController::class, 'storeGlobal'])->middleware('perm:control.employees')->name('contracts.store');
+    Route::get('contracts/{contract}', [EmployeeContractController::class, 'show'])->middleware('perm:control.employees')->name('contracts.show');
     Route::get('employees/{employee}/contracts', [EmployeeContractController::class, 'index'])->middleware('perm:control.employees')->name('employees.contracts.index');
     Route::get('employees/{employee}/contracts/create', [EmployeeContractController::class, 'create'])->middleware('perm:control.employees')->name('employees.contracts.create');
     Route::post('employees/{employee}/contracts', [EmployeeContractController::class, 'store'])->middleware('perm:control.employees')->name('employees.contracts.store');
@@ -261,6 +273,7 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::get('allowances', [EmployeeAllowanceController::class, 'all'])->middleware('perm:control.employees')->name('allowances.index');
     Route::get('allowances/create', [EmployeeAllowanceController::class, 'createGlobal'])->middleware('perm:control.employees')->name('allowances.create');
     Route::post('allowances', [EmployeeAllowanceController::class, 'storeGlobal'])->middleware('perm:control.employees')->name('allowances.store');
+    Route::get('allowances/{allowance}', [EmployeeAllowanceController::class, 'show'])->middleware('perm:control.employees')->name('allowances.show');
     Route::get('employees/{employee}/allowances', [EmployeeAllowanceController::class, 'index'])->middleware('perm:control.employees')->name('employees.allowances.index');
     Route::get('employees/{employee}/allowances/create', [EmployeeAllowanceController::class, 'create'])->middleware('perm:control.employees')->name('employees.allowances.create');
     Route::post('employees/{employee}/allowances', [EmployeeAllowanceController::class, 'store'])->middleware('perm:control.employees')->name('employees.allowances.store');
@@ -271,6 +284,7 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::get('equipment', [EmployeeEquipmentController::class, 'all'])->middleware('perm:control.employees')->name('equipment.index');
     Route::get('equipment/create', [EmployeeEquipmentController::class, 'createGlobal'])->middleware('perm:control.employees')->name('equipment.create');
     Route::post('equipment', [EmployeeEquipmentController::class, 'storeGlobal'])->middleware('perm:control.employees')->name('equipment.store');
+    Route::get('equipment/{equipment}', [EmployeeEquipmentController::class, 'show'])->middleware('perm:control.employees')->name('equipment.show');
     Route::get('employees/{employee}/equipment', [EmployeeEquipmentController::class, 'index'])->middleware('perm:control.employees')->name('employees.equipment.index');
     Route::get('employees/{employee}/equipment/create', [EmployeeEquipmentController::class, 'create'])->middleware('perm:control.employees')->name('employees.equipment.create');
     Route::post('employees/{employee}/equipment', [EmployeeEquipmentController::class, 'store'])->middleware('perm:control.employees')->name('employees.equipment.store');
@@ -346,6 +360,7 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::patch('orders/{order}', [OrderController::class, 'update'])->middleware('perm:sales.manage')->name('orders.update');
     Route::get('orders/{order}/picking-list', [OrderController::class, 'pickingList'])->middleware('perm:sales.manage')->name('orders.picking-list');
     Route::patch('orders/{order}/status', [OrderController::class, 'updateStatus'])->middleware('perm:sales.manage')->name('orders.status.update');
+    Route::post('orders/{order}/confirm-pick', [OrderController::class, 'confirmPick'])->middleware('perm:sales.manage')->name('orders.confirm-pick');
     Route::delete('orders/{order}', [OrderController::class, 'destroy'])->middleware('perm:sales.manage')->name('orders.destroy');
     Route::post('orders/{order}/invoice', [FinanceController::class, 'createFromOrder'])->middleware('perm:sales.manage')->name('orders.invoice');
 
@@ -384,6 +399,7 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
 
     Route::get('notifications', [AdminController::class, 'notifications'])->name('notifications.index');
     Route::get('notifications/header-data', [AdminController::class, 'headerNotifications'])->name('notifications.header-data');
+    Route::get('notifications/{notification}/open', [AdminController::class, 'openNotification'])->name('notifications.open');
     Route::post('notifications/mark-all-read', [AdminController::class, 'markAllNotificationsRead'])->name('notifications.mark-all-read');
     Route::post('notifications/mark-all-unread', [AdminController::class, 'markAllNotificationsUnread'])->name('notifications.mark-all-unread');
     Route::post('notifications/{notification}/mark-read', [AdminController::class, 'markNotificationRead'])->name('notifications.mark-read');
@@ -442,7 +458,10 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::get('reports/production-variance', [ReportController::class, 'productionVariance'])->middleware('perm:reports.view')->name('reports.production-variance');
     Route::get('reports/batch-trace', [ReportController::class, 'batchTraceLookup'])->middleware('perm:reports.view')->name('reports.batch-trace');
     Route::get('reports/batch-trace/{batch}', [ReportController::class, 'batchTrace'])->middleware('perm:reports.view')->name('reports.batch-trace.show');
-    Route::get('exports/tally', [TallyExportController::class, 'download'])->middleware('perm:accounting.manage')->name('exports.tally');
+    Route::get('exports/tally', [TallyExportController::class, 'redirect'])->middleware('perm:accounting.manage')->name('exports.tally');
+    Route::get('exports/tally/preview', [TallyExportController::class, 'preview'])->middleware('perm:accounting.manage')->name('exports.tally.preview');
+    Route::get('exports/tally/download', [TallyExportController::class, 'download'])->middleware('perm:accounting.manage')->name('exports.tally.download');
+    Route::get('exports/month-end-pack/download', [MonthEndExportController::class, 'download'])->middleware('perm:reports.view')->name('exports.month-end-pack.download');
     Route::get('search', [SearchController::class, 'index'])->middleware('perm:reports.view')->name('search.index');
     Route::get('search/suggest', [SearchController::class, 'suggest'])->middleware('perm:reports.view')->name('search.suggest');
     Route::get('webhooks', [WebhookController::class, 'index'])->middleware('perm:system.settings')->name('webhooks.index');
@@ -510,12 +529,16 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::patch('purchase-orders/{purchaseOrder}', [PurchaseOrderController::class, 'update'])->middleware('perm:control.suppliers')->name('purchase-orders.update');
     Route::delete('purchase-orders/{purchaseOrder}', [PurchaseOrderController::class, 'destroy'])->middleware('perm:control.suppliers')->name('purchase-orders.destroy');
     Route::post('purchase-orders/{purchaseOrder}/approve', [PurchaseOrderController::class, 'approve'])->middleware('perm:control.suppliers')->name('purchase-orders.approve');
+    Route::get('purchase-orders/{purchaseOrder}/receive', [GoodsReceiptController::class, 'receiveFromPurchaseOrder'])->name('purchase-orders.receive');
+    Route::post('purchase-orders/{purchaseOrder}/receive', [GoodsReceiptController::class, 'storeFromPurchaseOrder'])->name('purchase-orders.receive.store');
 
-    Route::get('goods-receipts', [GoodsReceiptController::class, 'index'])->middleware('perm:inventory.manage')->name('goods-receipts.index');
-    Route::get('goods-receipts/create', [GoodsReceiptController::class, 'create'])->middleware('perm:inventory.manage')->name('goods-receipts.create');
-    Route::post('goods-receipts', [GoodsReceiptController::class, 'store'])->middleware('perm:inventory.manage')->name('goods-receipts.store');
-    Route::get('goods-receipts/{goodsReceipt}', [GoodsReceiptController::class, 'show'])->middleware('perm:inventory.manage')->name('goods-receipts.show');
-    Route::post('goods-receipts/{goodsReceipt}/reverse', [GoodsReceiptController::class, 'reverse'])->middleware('perm:inventory.manage')->name('goods-receipts.reverse');
+    Route::get('goods-receipts', [GoodsReceiptController::class, 'index'])->middleware('perm:inventory.grn.create')->name('goods-receipts.index');
+    Route::get('goods-receipts/create', [GoodsReceiptController::class, 'create'])->middleware('perm:inventory.grn.create')->name('goods-receipts.create');
+    Route::post('goods-receipts', [GoodsReceiptController::class, 'store'])->middleware('perm:inventory.grn.create')->name('goods-receipts.store');
+    Route::get('goods-receipts/{goodsReceipt}', [GoodsReceiptController::class, 'show'])->middleware('perm:inventory.grn.create')->name('goods-receipts.show');
+    Route::post('goods-receipts/{goodsReceipt}/approve-warehouse', [GoodsReceiptController::class, 'approveWarehouse'])->middleware('perm:inventory.grn.approve.warehouse')->name('goods-receipts.approve-warehouse');
+    Route::post('goods-receipts/{goodsReceipt}/approve-procurement', [GoodsReceiptController::class, 'approveProcurement'])->middleware('perm:purchase.grn.approve')->name('goods-receipts.approve-procurement');
+    Route::post('goods-receipts/{goodsReceipt}/reverse', [GoodsReceiptController::class, 'reverse'])->middleware('perm:inventory.grn.create')->name('goods-receipts.reverse');
 
     Route::get('batches', [BatchController::class, 'index'])->middleware('perm:manufacturing.manage')->name('batches.index');
     Route::post('batches', [BatchController::class, 'store'])->middleware('perm:manufacturing.manage')->name('batches.store');

@@ -25,9 +25,10 @@
             </div>
         </div>
         
-        <div class="flex items-center gap-2">
+        <div class="flex flex-wrap items-center gap-2">
+            @include('admin.finance.partials.export_center_button', ['module' => 'vat-report', 'from' => $from, 'to' => $to])
             <a href="{{ route('admin.reports.vat.export', ['month' => $month->format('Y-m')]) }}" class="inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">Export CSV</a>
-            <a href="{{ route('admin.exports.tally', ['from' => $from->toDateString(), 'to' => $to->toDateString()]) }}" class="inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">Tally XML</a>
+            <a href="{{ route('admin.export-center', ['module' => 'tally-xml', 'from' => $from->toDateString(), 'to' => $to->toDateString()]) }}" class="inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">Tally XML</a>
             <!-- Month Navigation - Only show if route exists -->
             @if(Route::has('admin.vat.summary'))
             <div class="flex items-center gap-1 rounded-lg border border-gray-300 bg-white shadow-theme-xs dark:border-gray-700 dark:bg-gray-800">

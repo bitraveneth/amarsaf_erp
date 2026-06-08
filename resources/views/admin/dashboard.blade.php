@@ -24,6 +24,10 @@
         :low-stock-alert-count="$lowStockAlertCount ?? 0"
     />
 
+    <x-dashboard.procurement-inbox />
+
+    <x-dashboard.fulfillment-inbox />
+
     <section class="dash-performance mt-2">
       <x-dashboard.section-header
           title="Sales performance"
@@ -52,6 +56,8 @@
                 :monthly-achieved="$monthlyAchieved ?? 0"
                 :today-achieved="$todayAchieved ?? 0"
                 :progress-percent="$monthlyTargetProgress ?? 0"
+                :progress-percent-raw="$monthlyTargetProgressRaw ?? 0"
+                :today-change-percent="$todayChangePercent ?? null"
                 :target-month-options="$targetMonthOptions ?? []"
             />
           </div>

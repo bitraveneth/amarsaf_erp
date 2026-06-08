@@ -21,6 +21,7 @@ use Database\Seeders\Control\Warehouses\WarehousesModuleSeeder;
 use Database\Seeders\Inventory\InventoryModuleSeeder;
 use Database\Seeders\Manufacturing\BatchesLotsModuleSeeder;
 use Database\Seeders\Manufacturing\BomsModuleSeeder;
+use Database\Seeders\Manufacturing\ManufacturingBulkDataSeeder;
 use Database\Seeders\Manufacturing\PendingReceiptsModuleSeeder;
 use Database\Seeders\Manufacturing\ProductionAnalysisModuleSeeder;
 use Database\Seeders\Manufacturing\ProductionOrdersModuleSeeder;
@@ -69,6 +70,7 @@ class DatabaseSeeder extends Seeder
             PendingReceiptsModuleSeeder::class,
             ProductionOrdersModuleSeeder::class,
             ProductionAnalysisModuleSeeder::class,
+            ManufacturingBulkDataSeeder::class,
 
             // 3. Inventory (core operations)
             InventoryModuleSeeder::class,

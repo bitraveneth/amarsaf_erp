@@ -1,5 +1,5 @@
 <div class="doc-sheet">
-    @include('documents.partials.company-header', compact('company', 'payload'))
+    @include('documents.partials.company-header', compact('company', 'payload', 'forPdf'))
 
     @if(!empty($payload['parties']))
         <div class="doc-grid">
@@ -38,8 +38,8 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach($payload['rows'] as $row)
-                    <tr>
+                @foreach($payload['rows'] as $rowIndex => $row)
+                    <tr @class(['doc-lines-row--alt' => $rowIndex % 2 === 1])>
                         @foreach($row as $cell)
                             <td>{{ $cell }}</td>
                         @endforeach

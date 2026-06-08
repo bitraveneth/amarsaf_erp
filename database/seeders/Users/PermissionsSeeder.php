@@ -115,6 +115,24 @@ class PermissionsSeeder extends Seeder
                 'roles' => ['purchase_executive', 'accounts_officer'],
             ],
             [
+                'name'  => 'inventory.grn.create',
+                'label' => 'Create goods receipt (GRN)',
+                'group' => 'Inventory & Stock',
+                'roles' => ['warehouse_officer', 'purchase_executive'],
+            ],
+            [
+                'name'  => 'inventory.grn.approve.warehouse',
+                'label' => 'Warehouse approve goods receipt (GRN)',
+                'group' => 'Inventory & Stock',
+                'roles' => ['warehouse_officer'],
+            ],
+            [
+                'name'  => 'purchase.grn.approve',
+                'label' => 'Procurement approve goods receipt (GRN)',
+                'group' => 'Purchasing',
+                'roles' => ['purchase_executive'],
+            ],
+            [
                 'name'  => 'inventory.grn.post',
                 'label' => 'Post goods receipt (GRN)',
                 'group' => 'Inventory & Stock',

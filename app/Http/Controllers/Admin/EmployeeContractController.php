@@ -24,6 +24,13 @@ class EmployeeContractController extends Controller
         return view('admin.employees.contracts.all', compact('contracts'));
     }
 
+    public function show(EmployeeContract $contract)
+    {
+        $contract->load('employee');
+
+        return view('admin.employees.contracts.show', compact('contract'));
+    }
+
     public function createGlobal()
     {
         $employees = Employee::orderBy('name')->get();

@@ -193,8 +193,12 @@
                                     ? \Carbon\Carbon::parse($alertCreatedAt)->format('d M Y, H:i')
                                     : now()->format('d M Y, H:i');
                                 $notificationId = is_array($alert) ? ($alert['id'] ?? null) : null;
+                                $openUrl = is_array($alert)
+                                    ? ($alert['open_url'] ?? ($notificationId && Route::has('admin.notifications.open') ? route('admin.notifications.open', $notificationId) : '#'))
+                                    : '#';
                                         @endphp
-                                        <div class="system-alert-card rounded-xl border px-4 py-3 {{ $systemAlertCardClass }}"
+                                        <a href="{{ $openUrl }}"
+                                            class="system-alert-card group block rounded-xl border px-4 py-3 transition hover:shadow-sm {{ $systemAlertCardClass }}"
                                             data-read="{{ $isUnreadSystemAlert ? 'false' : 'true' }}"
                                             data-unread-class="{{ $alertStyles['ring'] }}"
                                             data-read-class="border-gray-200 bg-white/60 dark:border-gray-700 dark:bg-gray-900/40"
@@ -205,22 +209,15 @@
                                                     <span class="system-alert-dot h-2 w-2 rounded-full {{ $isUnreadSystemAlert ? $alertStyles['dot'] : 'bg-gray-400' }}"></span>
                                                     <span class="system-alert-label text-[11px] font-semibold uppercase tracking-wide {{ $isUnreadSystemAlert ? $alertStyles['labelClass'] : 'text-gray-500 dark:text-gray-400' }}">{{ $sourceLabel }}</span>
                                                 </div>
-                                                <div class="flex items-center gap-2">
+                                                <div class="flex items-center gap-1.5">
                                                     <span class="text-[11px] text-gray-500 dark:text-gray-400">{{ $alertTime }}</span>
-                                                    @if($notificationId && Route::has('admin.notifications.mark-read'))
-                                                        <form action="{{ route('admin.notifications.mark-read', $notificationId) }}" method="POST" class="system-mark-read-form {{ $isUnreadSystemAlert ? '' : 'hidden' }}">
-                                                            @csrf
-                                                            <button type="submit"
-                                                                class="system-mark-read-btn inline-flex items-center rounded-md border border-gray-300/70 px-2 py-1 text-[11px] font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white"
-                                                                title="Mark as read">
-                                                                Mark as read
-                                                            </button>
-                                                        </form>
-                                                    @endif
+                                                    <svg class="h-4 w-4 text-gray-400 transition group-hover:translate-x-0.5 group-hover:text-brand-600 dark:group-hover:text-brand-400" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                                                        <path d="M7.5 5L12.5 10L7.5 15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                                    </svg>
                                                 </div>
                                             </div>
                                             <p class="system-alert-message leading-5 {{ $isUnreadSystemAlert ? 'text-gray-800 dark:text-gray-100' : 'text-gray-600 dark:text-gray-300' }}">{{ $message }}</p>
-                                        </div>
+                                        </a>
                                 @endforeach
                             </div>
                         @endforeach
@@ -265,6 +262,9 @@
                                 $message = $data['message'] ?? '';
                                 $type = $data['type'] ?? 'info';
                                 $link = $data['link'] ?? null;
+                                $openUrl = Route::has('admin.notifications.open')
+                                    ? route('admin.notifications.open', $notification->id)
+                                    : ($link ?? '#');
                                 $isRead = !is_null($notification->read_at);
                                 
                                 $typeConfig = [
@@ -310,7 +310,9 @@
                                     : '<span class="inline-flex items-center rounded-full bg-brand-100 px-2.5 py-0.5 text-xs font-medium text-brand-700 dark:bg-brand-900 dark:text-brand-300">Unread</span>';
                             @endphp
                             
-                            <div class="notification-item group relative overflow-hidden rounded-2xl border {{ $typeBorder }} bg-white p-6 shadow-sm transition-all hover:shadow-lg dark:bg-gray-900 {{ $readClass }}" 
+                            <div class="relative">
+                            <a href="{{ $openUrl }}"
+                                 class="notification-item group relative block overflow-hidden rounded-2xl border {{ $typeBorder }} bg-white p-6 shadow-sm transition-all hover:shadow-lg dark:bg-gray-900 {{ $readClass }}" 
                                  data-read="{{ $isRead ? 'true' : 'false' }}">
                                 <div class="notification-unread-glow pointer-events-none absolute -inset-3 rounded-3xl bg-brand-500/20 blur-2xl {{ $isRead ? 'hidden' : '' }}"></div>
                                 <div class="flex flex-col sm:flex-row sm:items-start gap-4 pl-3">
@@ -331,52 +333,28 @@
                                                 </div>
                                                 <p class="mt-2 text-sm text-gray-600 dark:text-gray-400 leading-relaxed">{{ $message }}</p>
                                             </div>
-                                            <span class="text-xs font-medium text-gray-400 dark:text-gray-500 whitespace-nowrap bg-gray-50 dark:bg-gray-800/50 px-3 py-1.5 rounded-full">
+                                            <span class="flex items-center gap-1.5 text-xs font-medium text-gray-400 dark:text-gray-500 whitespace-nowrap bg-gray-50 dark:bg-gray-800/50 px-3 py-1.5 rounded-full">
                                                 {{ \Carbon\Carbon::parse($notification->created_at)->diffForHumans() }}
+                                                <svg class="h-3.5 w-3.5 text-gray-400 transition group-hover:translate-x-0.5 group-hover:text-brand-600 dark:group-hover:text-brand-400" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                                                    <path d="M7.5 5L12.5 10L7.5 15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                                </svg>
                                             </span>
                                         </div>
-                                        
-                                        @if($link)
-                                            <div class="mt-4 flex items-center gap-4">
-                                                <a href="{{ $link }}" class="inline-flex items-center gap-1.5 text-sm font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300 transition-colors">
-                                                    View Details
-                                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"/>
-                                                    </svg>
-                                                </a>
-                                            </div>
-                                        @endif
-                                    </div>
-                                    
-                                    <!-- Actions -->
-                                    <div class="flex flex-shrink-0 items-start gap-2">
-                                        @if(Route::has('admin.notifications.mark-read'))
-                                        <form action="{{ route('admin.notifications.mark-read', $notification->id) }}" method="POST" class="mark-read-form {{ $isRead ? 'hidden' : '' }}">
-                                            @csrf
-                                            <button type="submit" 
-                                                    class="inline-flex items-center justify-center rounded-xl border border-gray-200 bg-white/80 backdrop-blur-sm p-2.5 text-gray-500 shadow-xs hover:bg-white hover:text-brand-600 dark:border-gray-700 dark:bg-gray-800/80 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-brand-400 transition-all group"
-                                                    title="Mark as read">
-                                                <svg class="h-4 w-4 transition-transform group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-                                                </svg>
-                                            </button>
-                                        </form>
-                                        @endif
-                                        
-                                        @if(Route::has('admin.notifications.mark-unread'))
-                                        <form action="{{ route('admin.notifications.mark-unread', $notification->id) }}" method="POST" class="mark-unread-form {{ $isRead ? '' : 'hidden' }}">
-                                            @csrf
-                                            <button type="submit" 
-                                                    class="inline-flex items-center justify-center rounded-xl border border-gray-200 bg-white/80 backdrop-blur-sm p-2.5 text-gray-500 shadow-xs hover:bg-white hover:text-gray-700 dark:border-gray-700 dark:bg-gray-800/80 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-300 transition-all group"
-                                                    title="Mark as unread">
-                                                <svg class="h-4 w-4 transition-transform group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h18v18H3V3z"/>
-                                                </svg>
-                                            </button>
-                                        </form>
-                                        @endif
                                     </div>
                                 </div>
+                            </a>
+                            @if($isRead && Route::has('admin.notifications.mark-unread'))
+                                <form action="{{ route('admin.notifications.mark-unread', $notification->id) }}" method="POST" class="mark-unread-form absolute right-4 top-4 z-10">
+                                    @csrf
+                                    <button type="submit" 
+                                            class="inline-flex items-center justify-center rounded-xl border border-gray-200 bg-white/80 backdrop-blur-sm p-2.5 text-gray-500 shadow-xs hover:bg-white hover:text-gray-700 dark:border-gray-700 dark:bg-gray-800/80 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-300 transition-all group"
+                                            title="Mark as unread">
+                                        <svg class="h-4 w-4 transition-transform group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h18v18H3V3z"/>
+                                        </svg>
+                                    </button>
+                                </form>
+                            @endif
                             </div>
                         @endforeach
                                 </div>
@@ -451,7 +429,6 @@ function initNotificationsPage() {
         const dot = card.querySelector('.system-alert-dot');
         const label = card.querySelector('.system-alert-label');
         const message = card.querySelector('.system-alert-message');
-        const readForm = card.querySelector('.system-mark-read-form');
         const unreadDot = card.dataset.unreadDot || '';
         const unreadLabelClass = card.dataset.unreadLabelClass || '';
 
@@ -479,9 +456,6 @@ function initNotificationsPage() {
             message.classList.toggle('text-gray-600', isRead);
             message.classList.toggle('dark:text-gray-300', isRead);
         }
-        if (readForm) {
-            readForm.classList.toggle('hidden', isRead);
-        }
     }
 
     function setUserNotificationState(item, isRead) {
@@ -496,11 +470,7 @@ function initNotificationsPage() {
             unreadGlow.classList.toggle('hidden', isRead);
         }
 
-        const markReadForm = item.querySelector('.mark-read-form');
-        const markUnreadForm = item.querySelector('.mark-unread-form');
-        if (markReadForm) {
-            markReadForm.classList.toggle('hidden', isRead);
-        }
+        const markUnreadForm = item.closest('.relative')?.querySelector('.mark-unread-form') ?? item.parentElement?.querySelector('.mark-unread-form');
         if (markUnreadForm) {
             markUnreadForm.classList.toggle('hidden', !isRead);
         }
@@ -591,21 +561,9 @@ function initNotificationsPage() {
         });
     }
 
-    document.querySelectorAll('.mark-read-form').forEach(form => {
-        handleFormSubmit(form, function(currentForm) {
-            setUserNotificationState(currentForm.closest('.notification-item'), true);
-        });
-    });
-
     document.querySelectorAll('.mark-unread-form').forEach(form => {
         handleFormSubmit(form, function(currentForm) {
-            setUserNotificationState(currentForm.closest('.notification-item'), false);
-        });
-    });
-
-    document.querySelectorAll('.system-mark-read-form').forEach(form => {
-        handleFormSubmit(form, function(currentForm) {
-            setSystemAlertState(currentForm.closest('.system-alert-card'), true);
+            setUserNotificationState(currentForm.closest('.relative')?.querySelector('.notification-item'), false);
         });
     });
 

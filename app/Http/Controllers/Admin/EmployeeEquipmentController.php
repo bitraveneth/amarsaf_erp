@@ -24,6 +24,13 @@ class EmployeeEquipmentController extends Controller
         return view('admin.employees.equipment.all', compact('equipment'));
     }
 
+    public function show(EmployeeEquipment $equipment)
+    {
+        $equipment->load('employee');
+
+        return view('admin.employees.equipment.show', compact('equipment'));
+    }
+
     public function createGlobal()
     {
         $employees = Employee::orderBy('name')->get();

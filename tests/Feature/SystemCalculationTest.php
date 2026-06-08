@@ -2541,7 +2541,7 @@ class SystemCalculationTest extends TestCase
         ]);
     }
 
-    public function test_delivery_creation_rejects_route_vehicle_mismatch_and_duplicate_order_delivery(): void
+    public function test_delivery_creation_allows_any_vehicle_on_route_and_rejects_duplicate_order_delivery(): void
     {
         $admin = User::create([
             'name' => 'Admin',
@@ -2588,8 +2588,12 @@ class SystemCalculationTest extends TestCase
             'status' => 'scheduled',
         ]);
 
-        $mismatchResponse->assertSessionHasErrors('vehicle_id');
-        $this->assertDatabaseCount('deliveries', 0);
+        $mismatchResponse->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('deliveries', [
+            'order_id' => $order->id,
+            'route_id' => $routeId,
+            'vehicle_id' => $otherVehicleId,
+        ]);
 
         $createResponse = $this->actingAs($admin)->post(route('admin.deliveries.store'), [
             'order_id' => $order->id,
@@ -2597,24 +2601,75 @@ class SystemCalculationTest extends TestCase
             'status' => 'scheduled',
         ]);
 
-        $createResponse->assertSessionHasNoErrors();
-        $this->assertDatabaseHas('deliveries', [
-            'order_id' => $order->id,
-            'route_id' => $routeId,
-            'vehicle_id' => $routeVehicleId,
-        ]);
-
-        $duplicateResponse = $this->actingAs($admin)->post(route('admin.deliveries.store'), [
-            'order_id' => $order->id,
-            'route_id' => $routeId,
-            'status' => 'scheduled',
-        ]);
-
-        $duplicateResponse->assertSessionHasErrors('order_id');
+        $createResponse->assertSessionHasErrors('order_id');
         $this->assertDatabaseCount('deliveries', 1);
     }
 
-    public function test_vehicle_schedule_uses_route_default_vehicle_and_rejects_mismatch(): void
+    public function test_delivery_rejects_vehicle_assigned_to_another_active_route(): void
+    {
+        $admin = User::create([
+            'name' => 'Admin',
+            'email' => 'admin-delivery-route@example.test',
+            'password' => 'secret',
+            'role' => 'admin',
+        ]);
+
+        $agent = Agent::create([
+            'name' => 'Delivery Agent',
+            'credit_limit' => 10000,
+            'withholding_rate' => 0,
+            'is_active' => true,
+        ]);
+
+        $vehicleId = DB::table('vehicles')->insertGetId([
+            'name' => 'Shared Truck',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $northRouteId = DB::table('delivery_routes')->insertGetId([
+            'name' => 'North Route',
+            'vehicle_id' => $vehicleId,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $southRouteId = DB::table('delivery_routes')->insertGetId([
+            'name' => 'South Route',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $firstOrder = Order::create([
+            'agent_id' => $agent->id,
+            'order_type' => 'regular',
+            'status' => 'picked',
+            'total' => 0,
+        ]);
+        $secondOrder = Order::create([
+            'agent_id' => $agent->id,
+            'order_type' => 'regular',
+            'status' => 'picked',
+            'total' => 0,
+        ]);
+
+        $this->actingAs($admin)->post(route('admin.deliveries.store'), [
+            'order_id' => $firstOrder->id,
+            'route_id' => $northRouteId,
+            'vehicle_id' => $vehicleId,
+            'status' => 'scheduled',
+        ])->assertSessionHasNoErrors();
+
+        $conflictResponse = $this->actingAs($admin)->post(route('admin.deliveries.store'), [
+            'order_id' => $secondOrder->id,
+            'route_id' => $southRouteId,
+            'vehicle_id' => $vehicleId,
+            'status' => 'scheduled',
+        ]);
+
+        $conflictResponse->assertSessionHasErrors('vehicle_id');
+        $this->assertDatabaseCount('deliveries', 1);
+    }
+
+    public function test_vehicle_schedule_allows_any_vehicle_and_falls_back_to_route_default(): void
     {
         $admin = User::create([
             'name' => 'Admin',
@@ -2646,8 +2701,12 @@ class SystemCalculationTest extends TestCase
             'scheduled_date' => '2026-03-20',
         ]);
 
-        $mismatchResponse->assertSessionHasErrors('vehicle_id');
-        $this->assertDatabaseCount('vehicle_schedules', 0);
+        $mismatchResponse->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('vehicle_schedules', [
+            'route_id' => $routeId,
+            'vehicle_id' => $otherVehicleId,
+            'scheduled_date' => '2026-03-20 00:00:00',
+        ]);
 
         $createResponse = $this->actingAs($admin)->post(route('admin.vehicle-schedule.store'), [
             'route_id' => $routeId,
@@ -2797,7 +2856,8 @@ class SystemCalculationTest extends TestCase
 
         $this->actingAs($admin);
 
-        app(\App\Http\Controllers\Admin\GoodsReceiptController::class)->store(new Request([
+        $controller = app(\App\Http\Controllers\Admin\GoodsReceiptController::class);
+        $controller->store(new Request([
             'supplier_id' => $supplier->id,
             'warehouse_id' => $warehouseId,
             'received_at' => now()->toDateTimeString(),
@@ -2809,6 +2869,10 @@ class SystemCalculationTest extends TestCase
                 'qc_status' => 'approved',
             ]],
         ]));
+
+        $receipt = \App\Models\GoodsReceipt::firstOrFail();
+        $controller->approveWarehouse($receipt);
+        $controller->approveProcurement($receipt->fresh());
 
         $entry = StockEntry::firstOrFail();
 

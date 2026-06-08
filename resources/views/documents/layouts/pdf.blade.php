@@ -6,6 +6,10 @@
     @include('documents.partials.styles', compact('company'))
 </head>
 <body>
-    @include('documents.partials.body', compact('company', 'payload'))
+    @include('documents.partials.body', [
+        'company' => $company,
+        'payload' => $payload,
+        'forPdf' => true,
+    ])
 </body>
 </html>

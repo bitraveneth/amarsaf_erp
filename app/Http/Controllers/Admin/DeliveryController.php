@@ -15,10 +15,15 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
+use App\Services\Delivery\RouteVehicleValidator;
 use Barryvdh\DomPDF\Facade\Pdf;
 
 class DeliveryController extends Controller
 {
+    public function __construct(
+        protected RouteVehicleValidator $routeVehicleValidator
+    ) {
+    }
     public function index()
     {
         $deliveries = Delivery::with(['order.agent', 'route', 'vehicle', 'pod'])
@@ -95,7 +100,7 @@ class DeliveryController extends Controller
             'exception_notes' => 'nullable|string',
             'pod_photo' => 'nullable|image',
         ]);
-        $data = $this->normalizeRouteVehicleSelection($data);
+        $data = $this->routeVehicleValidator->normalizeDeliverySelection($data);
 
         if ($request->hasFile('pod_photo')) {
             $data['pod_photo'] = $request->file('pod_photo')->store('deliveries', 'public');
@@ -158,7 +163,7 @@ class DeliveryController extends Controller
             'items.*.qty_damaged' => 'nullable|numeric|min:0',
             'items.*.notes' => 'nullable|string',
         ]);
-        $data = $this->normalizeRouteVehicleSelection($data, $delivery);
+        $data = $this->routeVehicleValidator->normalizeDeliverySelection($data, $delivery);
 
         $originalStatus = $delivery->status;
 
@@ -278,35 +283,6 @@ class DeliveryController extends Controller
         return back()->with('status', 'Delivery updated.');
     }
 
-    protected function normalizeRouteVehicleSelection(array $data, ?Delivery $delivery = null): array
-    {
-        $routeId = array_key_exists('route_id', $data)
-            ? $data['route_id']
-            : $delivery?->route_id;
-        $vehicleId = array_key_exists('vehicle_id', $data)
-            ? $data['vehicle_id']
-            : $delivery?->vehicle_id;
-
-        if ($routeId) {
-            $route = DeliveryRoute::findOrFail($routeId);
-
-            if ($route->vehicle_id) {
-                if ($vehicleId && (int) $vehicleId !== (int) $route->vehicle_id) {
-                    throw ValidationException::withMessages([
-                        'vehicle_id' => 'Selected vehicle must match the route default vehicle.',
-                    ]);
-                }
-
-                $vehicleId = (int) $route->vehicle_id;
-            }
-        }
-
-        $data['route_id'] = $routeId ?: null;
-        $data['vehicle_id'] = $vehicleId ?: null;
-
-        return $data;
-    }
-
     public function optimize(Request $request)
     {
         $data = $request->validate([
@@ -366,7 +342,8 @@ class DeliveryController extends Controller
     {
         $delivery->load(['order.agent', 'order.items.product', 'route', 'vehicle', 'pod', 'items.product']);
 
-        $pdf = Pdf::loadView('admin.deliveries.pod_pdf', compact('delivery'));
+        $pdf = \App\Support\PdfDocumentBuilder::loadView('admin.deliveries.pod_pdf', compact('delivery'))
+            ->setPaper('a4');
 
         return $pdf->download('pod-delivery-' . $delivery->id . '.pdf');
     }
