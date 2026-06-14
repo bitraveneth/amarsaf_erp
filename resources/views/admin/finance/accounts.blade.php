@@ -2,12 +2,6 @@
 
 @section('content')
 @php
-    $summaryAccounts = $allAccounts ?? $accounts;
-    $totalAccounts = $summaryAccounts->count();
-    $activeAccounts = $summaryAccounts->where('is_active', true)->count();
-    $inactiveAccounts = $totalAccounts - $activeAccounts;
-    $visibleAccountsCount = $accounts->count();
-    $accountTypes = $summaryAccounts->groupBy('type')->map->count();
     $typeLabels = [
         'asset' => 'Assets',
         'liability' => 'Liabilities',
@@ -15,335 +9,193 @@
         'income' => 'Income',
         'expense' => 'Expenses',
     ];
-    $typeBadgeClasses = [
-        'asset' => 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300',
-        'liability' => 'bg-orange-50 text-orange-700 dark:bg-orange-500/10 dark:text-orange-300',
-        'equity' => 'bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-300',
-        'income' => 'bg-sky-50 text-sky-700 dark:bg-sky-500/10 dark:text-sky-300',
-        'expense' => 'bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-300',
-    ];
-    $typeCardStyles = [
-        'asset' => 'from-emerald-500/15 to-emerald-500/5 border-emerald-200/80 hover:border-emerald-300 dark:border-emerald-500/20 dark:hover:border-emerald-500/40',
-        'liability' => 'from-orange-500/15 to-orange-500/5 border-orange-200/80 hover:border-orange-300 dark:border-orange-500/20 dark:hover:border-orange-500/40',
-        'equity' => 'from-blue-500/15 to-blue-500/5 border-blue-200/80 hover:border-blue-300 dark:border-blue-500/20 dark:hover:border-blue-500/40',
-        'income' => 'from-sky-500/15 to-sky-500/5 border-sky-200/80 hover:border-sky-300 dark:border-sky-500/20 dark:hover:border-sky-500/40',
-        'expense' => 'from-rose-500/15 to-rose-500/5 border-rose-200/80 hover:border-rose-300 dark:border-rose-500/20 dark:hover:border-rose-500/40',
-    ];
-    $selectedTypeLabel = $selectedType ? ($typeLabels[$selectedType] ?? ucfirst($selectedType)) : null;
+
+    $isBalanceView = $viewMode === 'balance';
+    $structureQuery = array_filter(['view' => 'structure', 'type' => $selectedType, 'root' => $selectedRoot]);
+    $balanceQuery = array_filter(array_merge(['view' => 'balance', 'type' => $selectedType, 'root' => $selectedRoot], [
+        'range' => $range,
+        'from' => $from->toDateString(),
+        'to' => $to->toDateString(),
+    ]));
 @endphp
 
-<div class="space-y-6"
-     x-data="{
-        showAccount: false,
-        selectedAccount: null,
-     }">
+<div class="space-y-6">
     <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
             <h1 class="text-2xl font-semibold text-gray-900 dark:text-white">Chart of accounts</h1>
             <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                Review account codes, types, and status in one simple list.
+                @if($isBalanceView)
+                    Ledger balances for the selected period. Only <strong>ledger</strong> rows accept postings.
+                @else
+                    Account hierarchy by type, parent, and child. Only <strong>ledger</strong> rows accept postings.
+                @endif
             </p>
         </div>
-
         <a href="{{ route('admin.accounts.create') }}"
-           class="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-semibold text-white shadow-theme-xs hover:bg-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500/40">
-            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-            </svg>
-            Add account
+           class="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-600">
+            + Add account
         </a>
     </div>
 
-
-    @if($totalAccounts > 0)
-        <div class="grid gap-4 xl:grid-cols-[1.2fr_3fr]">
-            <a href="{{ route('admin.accounts.index') }}"
-               class="group rounded-2xl border border-gray-200 bg-white p-5 shadow-theme-xs transition-all hover:-translate-y-0.5 hover:shadow-sm dark:border-gray-800 dark:bg-gray-900 {{ $selectedType === null ? 'ring-2 ring-brand-500/40 dark:ring-brand-500/30' : '' }}">
-                <div class="flex items-start justify-between gap-4">
-                    <div>
-                        <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">All accounts</p>
-                        <div class="mt-3 text-3xl font-semibold text-gray-900 dark:text-white">{{ $totalAccounts }}</div>
-                    </div>
-                    <div class="rounded-xl bg-brand-50 p-3 text-brand-600 transition group-hover:bg-brand-100 dark:bg-brand-500/10 dark:text-brand-300 dark:group-hover:bg-brand-500/20">
-                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 7h16M7 12h10m-7 5h4" />
-                        </svg>
-                    </div>
-                </div>
-                <div class="mt-4 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-                    <div><span class="font-semibold text-emerald-600 dark:text-emerald-400">{{ $activeAccounts }}</span> active</div>
-                    <div><span class="font-semibold text-gray-700 dark:text-gray-300">{{ $inactiveAccounts }}</span> inactive</div>
-                </div>
+    <div class="flex flex-wrap items-center justify-between gap-3">
+        <div class="flex flex-wrap gap-2">
+            <a href="{{ route('admin.accounts.index', $structureQuery) }}"
+               class="rounded-lg px-4 py-2 text-sm font-semibold {{ !$isBalanceView ? 'bg-brand-500 text-white' : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300' }}">
+                Structure
             </a>
-
-            <div class="rounded-2xl border border-gray-200 bg-white p-5 shadow-theme-xs dark:border-gray-800 dark:bg-gray-900">
-                <div class="flex items-center justify-between gap-3">
-                    <div>
-                        <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Browse by type</p>
-                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Click a card to focus the table on one account family.</p>
-                    </div>
-                    @if($selectedTypeLabel)
-                        <span class="rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700 dark:bg-brand-500/10 dark:text-brand-300">
-                            Filtering: {{ $selectedTypeLabel }}
-                        </span>
-                    @endif
-                </div>
-                <div class="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-                    @foreach($typeLabels as $typeKey => $typeLabel)
-                        <a href="{{ route('admin.accounts.index', ['type' => $typeKey]) }}"
-                           class="group rounded-2xl border bg-gradient-to-br p-4 transition-all hover:-translate-y-0.5 hover:shadow-sm dark:bg-gray-800/60 {{ $typeCardStyles[$typeKey] ?? 'from-gray-100 to-gray-50 border-gray-200 dark:border-gray-700' }} {{ $selectedType === $typeKey ? 'ring-2 ring-brand-500/35 dark:ring-brand-500/25' : '' }}">
-                            <div class="flex items-start justify-between gap-3">
-                                <div>
-                                    <div class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ $typeLabel }}</div>
-                                    <div class="mt-2 text-3xl font-semibold text-gray-900 dark:text-white">{{ $accountTypes[$typeKey] ?? 0 }}</div>
-                                </div>
-                                <span class="inline-flex rounded-full px-2.5 py-1 text-[11px] font-medium {{ $typeBadgeClasses[$typeKey] ?? 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300' }}">
-                                    View
-                                </span>
-                            </div>
-                            <div class="mt-4 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-                                <span>{{ $selectedType === $typeKey ? 'Showing rows below' : 'Open filtered list' }}</span>
-                                <svg class="h-4 w-4 transition-transform group-hover:translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 5l7 7-7 7" />
-                                </svg>
-                            </div>
-                        </a>
-                    @endforeach
-                </div>
-            </div>
+            <a href="{{ route('admin.accounts.index', $balanceQuery) }}"
+               class="rounded-lg px-4 py-2 text-sm font-semibold {{ $isBalanceView ? 'bg-brand-500 text-white' : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300' }}">
+                Balances
+            </a>
         </div>
+        @if($isBalanceView)
+            @include('admin.finance.partials.accounts-page-export', [
+                'module' => 'coa-balance',
+                'label' => 'Export balances',
+                'exportQuery' => $filterQuery,
+            ])
+        @else
+            @include('admin.finance.partials.accounts-page-export', [
+                'module' => 'coa-structure',
+                'label' => 'Export structure',
+                'exportQuery' => $filterQuery,
+            ])
+        @endif
+    </div>
 
-        <div class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-theme-xs dark:border-gray-800 dark:bg-gray-900">
-            <div class="flex items-center justify-between border-b border-gray-200 px-5 py-4 dark:border-gray-800">
-                <div>
-                    <h2 class="text-sm font-semibold text-gray-900 dark:text-white">Accounts</h2>
-                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                        @if($selectedTypeLabel)
-                            Showing {{ strtolower($selectedTypeLabel) }} accounts only.
-                        @else
-                            Code-first list for faster scanning and maintenance.
-                        @endif
-                    </p>
-                </div>
-                <div class="flex items-center gap-2">
-                    @if($selectedTypeLabel)
-                        <a href="{{ route('admin.accounts.index') }}"
-                           class="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700">
-                            Clear filter
-                        </a>
-                    @endif
-                    <span class="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-300">
-                        {{ $visibleAccountsCount }} shown
-                    </span>
-                </div>
-            </div>
-
-            @if($accounts->isNotEmpty())
-                <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-800">
-                        <thead class="bg-gray-50 dark:bg-gray-800/60">
-                            <tr>
-                                <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Code</th>
-                                <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Account</th>
-                                <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Type</th>
-                                <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Status</th>
-                                <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Updated</th>
-                                <th class="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
-                            @foreach($accounts as $account)
-                                <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/40">
-                                    <td class="px-5 py-4 align-top">
-                                        <button type="button"
-                                                class="font-mono text-sm font-semibold text-gray-900 hover:text-brand-600 dark:text-white dark:hover:text-brand-300"
-                                                @click="selectedAccount = @js([
-                                                    'id' => $account->id,
-                                                    'code' => $account->code,
-                                                    'name' => $account->name,
-                                                    'type' => $account->type,
-                                                    'type_label' => $typeLabels[$account->type] ?? ucfirst($account->type),
-                                                    'type_badge' => $typeBadgeClasses[$account->type] ?? 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
-                                                    'is_active' => (bool) $account->is_active,
-                                                    'status_label' => $account->is_active ? 'Active' : 'Inactive',
-                                                    'status_badge' => $account->is_active
-                                                        ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300'
-                                                        : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
-                                                    'created' => optional($account->created_at)->format('d M Y'),
-                                                    'updated' => optional($account->updated_at)->diffForHumans(),
-                                                    'edit_url' => route('admin.accounts.edit', $account),
-                                                    'delete_url' => route('admin.accounts.destroy', $account),
-                                                ]); showAccount = true">
-                                            {{ $account->code }}
-                                        </button>
-                                    </td>
-                                    <td class="px-5 py-4 align-top">
-                                        <div class="text-sm font-medium text-gray-900 dark:text-white">{{ $account->name }}</div>
-                                    </td>
-                                    <td class="px-5 py-4 align-top">
-                                        <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium {{ $typeBadgeClasses[$account->type] ?? 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300' }}">
-                                            {{ $typeLabels[$account->type] ?? ucfirst($account->type) }}
-                                        </span>
-                                    </td>
-                                    <td class="px-5 py-4 align-top">
-                                        <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium {{ $account->is_active ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300' : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300' }}">
-                                            {{ $account->is_active ? 'Active' : 'Inactive' }}
-                                        </span>
-                                    </td>
-                                    <td class="px-5 py-4 align-top text-sm text-gray-500 dark:text-gray-400">
-                                        {{ optional($account->updated_at)->diffForHumans() }}
-                                    </td>
-                                    <td class="px-5 py-4 align-top">
-                                        <div class="erp-action-group">
-                                            <button type="button"
-                                                    class="erp-btn-action"
-                                                    @click="selectedAccount = @js([
-                                                        'id' => $account->id,
-                                                        'code' => $account->code,
-                                                        'name' => $account->name,
-                                                        'type' => $account->type,
-                                                        'type_label' => $typeLabels[$account->type] ?? ucfirst($account->type),
-                                                        'type_badge' => $typeBadgeClasses[$account->type] ?? 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
-                                                        'is_active' => (bool) $account->is_active,
-                                                        'status_label' => $account->is_active ? 'Active' : 'Inactive',
-                                                        'status_badge' => $account->is_active
-                                                            ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300'
-                                                            : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
-                                                        'created' => optional($account->created_at)->format('d M Y'),
-                                                        'updated' => optional($account->updated_at)->diffForHumans(),
-                                                        'edit_url' => route('admin.accounts.edit', $account),
-                                                        'delete_url' => route('admin.accounts.destroy', $account),
-                                                    ]); showAccount = true">
-                                                <svg class="h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                                </svg>
-                                                View
-                                            </button>
-                                            <x-admin.action-edit :href="route('admin.accounts.edit', $account)" />
-                                        </div>
-                                    </td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
-            @else
-                <div class="px-6 py-14 text-center">
-                    <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400">
-                        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2" />
-                        </svg>
-                    </div>
-                    <h3 class="mt-4 text-base font-semibold text-gray-900 dark:text-white">No {{ strtolower($selectedTypeLabel ?? 'account') }} records found</h3>
-                    <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                        Try another account type or clear the current filter to see the full chart.
-                    </p>
-                </div>
+    @if($isBalanceView)
+        <form method="GET" action="{{ route('admin.accounts.index') }}" class="rounded-2xl border border-gray-200 bg-white p-4 shadow-theme-xs dark:border-gray-800 dark:bg-gray-900">
+            <input type="hidden" name="view" value="balance">
+            @if($selectedType)
+                <input type="hidden" name="type" value="{{ $selectedType }}">
             @endif
-        </div>
-
-        <div x-show="showAccount && selectedAccount"
-             x-cloak
-             class="fixed inset-0 z-[9999] flex items-center justify-center bg-gray-900/60 px-4 py-6"
-             @keydown.escape.window="showAccount = false">
-            <div x-show="showAccount && selectedAccount"
-                 x-transition:enter="transition ease-out duration-200"
-                 x-transition:enter-start="opacity-0 translate-y-4"
-                 x-transition:enter-end="opacity-100 translate-y-0"
-                 x-transition:leave="transition ease-in duration-150"
-                 x-transition:leave-start="opacity-100 translate-y-0"
-                 x-transition:leave-end="opacity-0 translate-y-4"
-                 class="w-full max-w-2xl rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-900"
-                 @click.outside="showAccount = false">
-                <div class="flex items-start justify-between gap-4 border-b border-gray-200 px-6 py-5 dark:border-gray-800">
-                    <div>
-                        <div class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Account details</div>
-                        <h2 class="mt-1 text-xl font-semibold text-gray-900 dark:text-white" x-text="selectedAccount.name"></h2>
-                        <p class="mt-1 font-mono text-sm text-gray-500 dark:text-gray-400" x-text="selectedAccount.code"></p>
-                    </div>
-                    <button type="button"
-                            class="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-medium text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-                            @click="showAccount = false">
-                        Close
-                    </button>
+            @if($selectedRoot)
+                <input type="hidden" name="root" value="{{ $selectedRoot }}">
+            @endif
+            <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <div>
+                    <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Reporting period</p>
+                    <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">{{ $periodLabel }}</p>
                 </div>
-
-                <div class="space-y-5 px-6 py-6">
-                    <div class="grid gap-4 sm:grid-cols-2">
-                        <div class="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 dark:border-gray-700 dark:bg-gray-800/60">
-                            <div class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Type</div>
-                            <div class="mt-2">
-                                <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium" :class="selectedAccount.type_badge" x-text="selectedAccount.type_label"></span>
-                            </div>
-                        </div>
-                        <div class="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 dark:border-gray-700 dark:bg-gray-800/60">
-                            <div class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Status</div>
-                            <div class="mt-2">
-                                <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium" :class="selectedAccount.status_badge" x-text="selectedAccount.status_label"></span>
-                            </div>
-                        </div>
-                        <div class="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 dark:border-gray-700 dark:bg-gray-800/60">
-                            <div class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Created</div>
-                            <div class="mt-2 text-sm font-medium text-gray-900 dark:text-white" x-text="selectedAccount.created"></div>
-                        </div>
-                        <div class="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 dark:border-gray-700 dark:bg-gray-800/60">
-                            <div class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Updated</div>
-                            <div class="mt-2 text-sm font-medium text-gray-900 dark:text-white" x-text="selectedAccount.updated"></div>
-                        </div>
-                    </div>
-
-                    <div class="rounded-xl border border-dashed border-gray-300 px-4 py-4 text-sm text-gray-600 dark:border-gray-700 dark:text-gray-300">
-                        This screen keeps account maintenance simple. Use the edit page for changes, and use finance reports for transaction analysis.
-                    </div>
+                <span class="rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700 dark:bg-brand-500/10 dark:text-brand-300">
+                    {{ $rangeOptions[$range] ?? 'Custom range' }}
+                </span>
+            </div>
+            <div class="grid gap-3 md:grid-cols-4">
+                <div class="erp-field">
+                    <label class="erp-label" for="coa-range">Range</label>
+                    <select id="coa-range" name="range" class="erp-input">
+                        @foreach($rangeOptions as $value => $label)
+                            <option value="{{ $value }}" @selected($range === $value)>{{ $label }}</option>
+                        @endforeach
+                    </select>
                 </div>
-
-                <div class="flex items-center justify-between gap-3 border-t border-gray-200 px-6 py-4 dark:border-gray-800">
-                    <form :action="selectedAccount.delete_url" method="POST" onsubmit="return confirm('Delete this account?');">
-                        @csrf
-                        @method('DELETE')
-                        <button type="submit"
-                                class="rounded-lg border border-error-200 bg-error-50 px-4 py-2.5 text-sm font-medium text-error-700 hover:bg-error-100 dark:border-error-500/30 dark:bg-error-500/10 dark:text-error-300">
-                            Delete
-                        </button>
-                    </form>
-
-                    <div class="flex items-center gap-2">
-                        <button type="button"
-                                class="rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
-                                @click="showAccount = false">
-                            Close
-                        </button>
-                        <a :href="selectedAccount.edit_url"
-                           class="rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-600">
-                            Edit account
-                        </a>
-                    </div>
+                <div class="erp-field">
+                    <label class="erp-label" for="coa-from">From</label>
+                    <input id="coa-from" type="date" name="from" value="{{ $from->toDateString() }}" class="erp-input">
+                </div>
+                <div class="erp-field">
+                    <label class="erp-label" for="coa-to">To</label>
+                    <input id="coa-to" type="date" name="to" value="{{ $to->toDateString() }}" class="erp-input">
+                </div>
+                <div class="flex items-end gap-2">
+                    <a href="{{ route('admin.accounts.index', array_filter(['view' => 'balance', 'type' => $selectedType, 'root' => $selectedRoot])) }}" class="erp-btn-secondary">Reset</a>
+                    <button type="submit" class="erp-btn-primary">Apply</button>
                 </div>
             </div>
-        </div>
+        </form>
     @else
-        <div class="rounded-3xl border border-gray-200 bg-white px-6 py-16 text-center shadow-theme-xs dark:border-gray-800 dark:bg-gray-900">
-            <h2 class="text-xl font-semibold text-gray-900 dark:text-white">No accounts yet</h2>
-            <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">Create your first chart-of-accounts entry to start organizing ledger categories.</p>
-            <div class="mt-6">
-                <a href="{{ route('admin.accounts.create') }}"
-                   class="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-600">
-                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                    </svg>
-                    Add first account
-                </a>
+        <div class="grid gap-4 sm:grid-cols-3">
+            <div class="rounded-2xl border border-gray-200 bg-white p-4 shadow-theme-xs dark:border-gray-800 dark:bg-gray-900">
+                <p class="text-xs font-semibold uppercase text-gray-500">Total accounts</p>
+                <p class="mt-2 text-3xl font-bold text-gray-900 dark:text-white">{{ $stats['total'] }}</p>
+            </div>
+            <div class="rounded-2xl border border-gray-200 bg-white p-4 shadow-theme-xs dark:border-gray-800 dark:bg-gray-900">
+                <p class="text-xs font-semibold uppercase text-gray-500">Groups</p>
+                <p class="mt-2 text-3xl font-bold text-brand-600">{{ $stats['groups'] }}</p>
+            </div>
+            <div class="rounded-2xl border border-gray-200 bg-white p-4 shadow-theme-xs dark:border-gray-800 dark:bg-gray-900">
+                <p class="text-xs font-semibold uppercase text-gray-500">Ledgers</p>
+                <p class="mt-2 text-3xl font-bold text-emerald-600">{{ $stats['ledgers'] }}</p>
             </div>
         </div>
     @endif
+
+    @include('admin.finance.partials.accounts-type-cards')
+
+    @if($isBalanceView)
+        <div class="rounded-2xl border border-gray-200 bg-white px-5 py-4 shadow-theme-xs dark:border-gray-800 dark:bg-gray-900">
+            <p class="text-xs font-semibold uppercase text-gray-500">Net assets</p>
+            <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-white">{{ $currencyCode }} {{ number_format($netAssets, 0) }}</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400">Assets minus liabilities · closing as of {{ $to->format('d M Y') }}</p>
+        </div>
+    @endif
+
+    <div
+        class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-theme-xs dark:border-gray-800 dark:bg-gray-900"
+        x-data="{
+            expanded: {},
+            groupIds: @js($groupIds ?? []),
+            toggle(id) { this.expanded[id] = !this.expanded[id]; },
+            isExpanded(id) { return !!this.expanded[id]; },
+            isVisible(ancestorIds) {
+                return !ancestorIds?.length || ancestorIds.every(id => this.expanded[id]);
+            },
+            expandAll() { this.groupIds.forEach(id => { this.expanded[id] = true; }); },
+            collapseAll() { this.expanded = {}; },
+        }"
+    >
+        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 px-4 py-3 dark:border-gray-800">
+            <p class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                @if($isBalanceView)
+                    Account tree · {{ $periodLabel }}
+                @else
+                    Account tree · parent / child hierarchy
+                @endif
+                @if($selectedType)
+                    · {{ $typeLabels[$selectedType] ?? ucfirst($selectedType) }}
+                @endif
+            </p>
+            <div class="flex flex-wrap gap-2">
+                <button type="button" class="erp-btn-action" @click="expandAll()">Expand all</button>
+                <button type="button" class="erp-btn-action" @click="collapseAll()">Collapse all</button>
+            </div>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-800">
+                <thead class="bg-gray-50 dark:bg-gray-800/60">
+                    <tr>
+                        <th class="px-5 py-3 text-left text-xs font-semibold uppercase text-gray-500">Code</th>
+                        <th class="px-5 py-3 text-left text-xs font-semibold uppercase text-gray-500">Account</th>
+                        @if(!$isBalanceView)
+                            <th class="px-5 py-3 text-left text-xs font-semibold uppercase text-gray-500">Parent</th>
+                        @endif
+                        <th class="px-5 py-3 text-left text-xs font-semibold uppercase text-gray-500">Type</th>
+                        <th class="px-5 py-3 text-left text-xs font-semibold uppercase text-gray-500">Kind</th>
+                        <th class="px-5 py-3 text-left text-xs font-semibold uppercase text-gray-500">Slug</th>
+                        @if($isBalanceView)
+                            <th class="px-5 py-3 text-right text-xs font-semibold uppercase text-gray-500">Balance</th>
+                        @endif
+                        <th class="px-5 py-3 text-right text-xs font-semibold uppercase text-gray-500">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
+                    @forelse($roots as $root)
+                        @include('admin.finance.partials.accounts-tree', [
+                            'nodes' => collect([$root]),
+                            'showBalance' => $isBalanceView,
+                            'showParent' => !$isBalanceView,
+                        ])
+                    @empty
+                        <tr>
+                            <td colspan="{{ $isBalanceView ? 7 : 7 }}" class="px-6 py-12 text-center text-sm text-gray-500">
+                                No accounts match this filter.
+                            </td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
 @endsection
-
-@push('styles')
-<style>
-    [x-cloak] {
-        display: none !important;
-    }
-</style>
-@endpush

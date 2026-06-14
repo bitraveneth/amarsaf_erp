@@ -48,6 +48,7 @@ class AgentAdvanceController extends Controller
             'payment_method' => 'nullable|in:cash,bkash,bank_transfer,cheque',
             'reference' => 'nullable|string|max:255',
             'notes' => 'nullable|string',
+            'redirect' => 'nullable|string|in:commission,commercial',
         ]);
 
         DB::transaction(function () use ($data) {
@@ -70,7 +71,7 @@ class AgentAdvanceController extends Controller
                 'agent_advance',
                 $entryDate,
                 [
-                    ['account' => 'Bank', 'debit' => $advance->amount, 'credit' => 0],
+                    ['account_key' => 'bank_default', 'debit' => $advance->amount, 'credit' => 0],
                     ['account' => 'Agent Advances', 'debit' => 0, 'credit' => $advance->amount],
                 ],
                 [
@@ -81,6 +82,12 @@ class AgentAdvanceController extends Controller
                 ]
             );
         });
+
+        if (in_array($request->input('redirect'), ['commission', 'commercial'], true)) {
+            return redirect()
+                ->route('admin.agents.show', ['agent' => $data['agent_id'], 'tab' => 'commission'])
+                ->with('status', 'Advance recorded.');
+        }
 
         return redirect()->route('admin.agent-advances.index')->with('status', 'Agent advance recorded.');
     }

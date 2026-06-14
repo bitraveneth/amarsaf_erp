@@ -1535,6 +1535,10 @@ pre[class*='language-'] {
     @apply inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 hover:text-gray-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-white/[0.03];
   }
 
+  .erp-btn-cancel {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg border border-error-200 bg-white px-4 py-2.5 text-theme-sm font-medium text-error-600 shadow-theme-xs transition hover:border-error-300 hover:bg-error-50 hover:text-error-700 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-error-500/20 dark:border-error-500/30 dark:bg-gray-900 dark:text-error-400 dark:hover:border-error-500/40 dark:hover:bg-error-500/10 dark:hover:text-error-300;
+  }
+
   .erp-btn-danger {
     @apply inline-flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-error-600 transition hover:bg-error-50 dark:text-error-400 dark:hover:bg-error-500/10;
   }
@@ -1580,6 +1584,18 @@ pre[class*='language-'] {
     @apply transition hover:bg-gray-50/80 dark:hover:bg-gray-800/40;
   }
 
+  .erp-table--agents {
+    @apply w-full;
+  }
+
+  .erp-table--agents-compact {
+    @apply w-full table-fixed;
+  }
+
+  .erp-table--agents th {
+    @apply text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400;
+  }
+
   .erp-link {
     @apply font-medium text-brand-600 transition hover:text-brand-700 hover:underline dark:text-brand-400 dark:hover:text-brand-300;
   }
@@ -1613,7 +1629,11 @@ pre[class*='language-'] {
   }
 
   .erp-action-group {
-    @apply flex flex-wrap items-center justify-end gap-2;
+    @apply flex flex-wrap items-center justify-end gap-1.5;
+  }
+
+  .erp-action-group.flex-nowrap {
+    flex-wrap: nowrap;
   }
 
   .erp-action-column {
@@ -2234,7 +2254,39 @@ pre[class*='language-'] {
   }
 
   .dash-snapshot-grid {
-    @apply grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4;
+    @apply grid grid-cols-1 gap-4;
+  }
+
+  .dash-snapshot-grid--cols-1 {
+    @apply sm:grid-cols-1 xl:grid-cols-1;
+  }
+
+  .dash-snapshot-grid--cols-2 {
+    @apply sm:grid-cols-2 xl:grid-cols-2;
+  }
+
+  .dash-snapshot-grid--cols-3 {
+    @apply sm:grid-cols-2 lg:grid-cols-3;
+  }
+
+  .dash-snapshot-grid--cols-4 {
+    @apply sm:grid-cols-2 xl:grid-cols-4;
+  }
+
+  .dash-snapshot--lg .dash-snapshot-metric {
+    @apply min-h-[13.5rem] p-6;
+  }
+
+  .dash-snapshot--lg .dash-snapshot-icon {
+    @apply h-14 w-14;
+  }
+
+  .dash-snapshot--lg .dash-snapshot-metric-label {
+    @apply text-sm;
+  }
+
+  .dash-snapshot--lg .dash-snapshot-metric-caption {
+    @apply text-sm;
   }
 
   .dash-snapshot-metric {
@@ -4248,6 +4300,186 @@ pre[class*='language-'] {
 
 .po-create__summary-row--total dd {
   @apply text-lg font-bold text-brand-600 dark:text-brand-400;
+}
+
+/* ─── BOM create / edit ─── */
+.screen-bom-create .po-create,
+.screen-bom-edit .po-create {
+  @apply space-y-6;
+}
+
+.screen-bom-create .po-create__flow,
+.screen-bom-edit .po-create__flow {
+  @apply overflow-hidden rounded-2xl border border-gray-200/80 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900;
+}
+
+.screen-bom-create .po-create .erp-order-footer,
+.screen-bom-edit .po-create .erp-order-footer {
+  @apply overflow-hidden rounded-2xl border border-gray-200/80 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-950;
+}
+
+.bom-form__notice {
+  @apply mb-6 rounded-2xl border border-brand-200/90 bg-brand-50/70 px-5 py-4 dark:border-brand-500/25 dark:bg-brand-500/10 sm:px-6;
+}
+
+.bom-form__notice-inner {
+  @apply flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between;
+}
+
+.bom-form__notice-title {
+  @apply text-sm font-semibold text-brand-900 dark:text-brand-100;
+}
+
+.bom-form__notice-text {
+  @apply mt-1 max-w-2xl text-sm leading-relaxed text-brand-800/90 dark:text-brand-200/90;
+}
+
+.bom-form__notice-link {
+  @apply shrink-0 text-sm font-semibold text-brand-700 underline-offset-2 hover:text-brand-900 hover:underline dark:text-brand-300 dark:hover:text-brand-100;
+}
+
+.bom-form__active-toggle {
+  @apply inline-flex cursor-pointer items-center gap-2 rounded-xl border border-gray-200 bg-gray-50/80 px-3 py-2 text-sm text-gray-700 dark:border-gray-700 dark:bg-gray-800/60 dark:text-gray-200;
+}
+
+.bom-form__product-layout {
+  @apply grid grid-cols-1 gap-5 border-b border-gray-100 px-5 pb-5 dark:border-gray-800 sm:px-6 lg:grid-cols-2 lg:items-stretch lg:gap-6;
+}
+
+.bom-form__product-main {
+  @apply flex min-h-0 flex-col gap-4;
+}
+
+.bom-form__draft-panel {
+  @apply mt-auto flex flex-1 flex-col rounded-xl border border-gray-200 bg-gray-50/70 p-4 dark:border-gray-800 dark:bg-gray-900/40;
+}
+
+.bom-form__draft-label {
+  @apply text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400;
+}
+
+.bom-form__draft-product {
+  @apply mt-3 flex items-start gap-3;
+}
+
+.bom-form__draft-name {
+  @apply truncate text-sm font-semibold text-gray-900 dark:text-white;
+}
+
+.bom-form__draft-recipe {
+  @apply mt-0.5 truncate text-xs text-gray-500 dark:text-gray-400;
+}
+
+.bom-form__draft-hint {
+  @apply mt-3 text-sm leading-relaxed text-gray-500 dark:text-gray-400;
+}
+
+.bom-form__draft-stats {
+  @apply mt-4 grid gap-2.5 border-t border-gray-200/80 pt-4 dark:border-gray-700;
+}
+
+.bom-form__draft-stat {
+  @apply grid grid-cols-[1fr_auto] gap-3 text-sm;
+}
+
+.bom-form__draft-stat dt {
+  @apply text-gray-500 dark:text-gray-400;
+}
+
+.bom-form__draft-stat dd {
+  @apply text-right font-semibold tabular-nums text-gray-900 dark:text-white;
+}
+
+.bom-form__recipe-preview {
+  @apply flex h-full flex-col rounded-xl border border-gray-200 bg-gray-50/70 p-4 dark:border-gray-800 dark:bg-gray-900/50 sm:p-5;
+}
+
+.bom-form__preview-placeholder {
+  @apply hidden items-center justify-center rounded-xl border border-dashed border-gray-200 bg-gray-50/40 px-5 py-10 text-center dark:border-gray-800 dark:bg-gray-900/30 lg:flex;
+}
+
+.bom-form__preview-select {
+  @apply text-sm;
+}
+
+.bom-form__preview-body {
+  @apply mt-4 flex flex-1 flex-col space-y-4;
+}
+
+.bom-form__preview-meta {
+  @apply rounded-lg border border-gray-200 bg-white px-3.5 py-3 dark:border-gray-700 dark:bg-gray-900;
+}
+
+.bom-form__preview-table-wrap {
+  @apply max-h-52 overflow-y-auto overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700;
+}
+
+.bom-form__preview-table {
+  @apply min-w-full text-xs;
+}
+
+.bom-form__preview-table thead {
+  @apply sticky top-0 bg-gray-50 text-left uppercase tracking-wide text-gray-500 dark:bg-gray-800/90 dark:text-gray-400;
+}
+
+.bom-form__preview-table th {
+  @apply px-3 py-2 font-semibold;
+}
+
+.bom-form__preview-table td {
+  @apply border-t border-gray-100 px-3 py-2 text-gray-700 dark:border-gray-800 dark:text-gray-300;
+}
+
+.bom-form__preview-foot {
+  @apply flex items-center justify-between gap-3 rounded-lg border border-brand-100 bg-brand-50/50 px-3.5 py-2.5 dark:border-brand-500/20 dark:bg-brand-500/10;
+}
+
+.bom-form__preview-empty {
+  @apply mt-4 rounded-lg border border-dashed border-gray-200 bg-white/60 px-4 py-4 dark:border-gray-700 dark:bg-gray-900/40;
+}
+
+.bom-form__preview-use-btn {
+  @apply mt-auto inline-flex w-full items-center justify-center rounded-xl bg-brand-500 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-600 focus:outline-none focus:ring-4 focus:ring-brand-500/20 disabled:cursor-default disabled:opacity-60;
+}
+
+.bom-form__preview-use-btn.is-applied {
+  @apply bg-emerald-600 hover:bg-emerald-600;
+}
+
+.bom-form__material-pick {
+  @apply flex min-h-[2.5rem] items-center justify-between gap-2 rounded-lg border border-gray-200 bg-white px-2.5 py-2 dark:border-gray-700 dark:bg-gray-900;
+}
+
+.bom-form__material-name {
+  @apply min-w-0 flex-1 truncate text-sm font-medium text-gray-900 dark:text-white;
+}
+
+.bom-form__material-change {
+  @apply shrink-0 text-xs font-semibold text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300;
+}
+
+.bom-form__search-bar {
+  @apply flex flex-col gap-3 border-b border-gray-100 px-5 py-3.5 dark:border-gray-800 sm:flex-row sm:items-end sm:justify-between sm:px-6;
+}
+
+.bom-form__search-field {
+  @apply w-full sm:max-w-sm;
+}
+
+.bom-form__summary-foot {
+  @apply border-t border-gray-100 bg-gray-50/70 px-5 py-4 dark:border-gray-800 dark:bg-gray-900/40 sm:px-6;
+}
+
+.bom-form__summary-layout {
+  @apply flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between;
+}
+
+.bom-form__cost-override {
+  @apply w-full sm:max-w-xs;
+}
+
+.bom-form__summary-note {
+  @apply mt-3 text-xs leading-relaxed text-gray-500 dark:text-gray-400;
 }
 
 /* ─── Sales order create (mirrors PO create layout) ─── */
@@ -6540,4 +6772,245 @@ html[data-locale='bn'] body {
 .auth-demo__chip:hover {
   background: color-mix(in srgb, var(--color-brand-500, #5f4bff) 12%, white);
   color: var(--color-brand-700, #4338ca);
+}
+
+/* Product form — name/SKU left, image right (plain CSS so layout never stacks) */
+.product-details-top {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 1rem;
+}
+
+.product-details-top__fields {
+  flex: 1 1 0%;
+  min-width: 0;
+}
+
+.product-details-top__image {
+  flex: 0 0 7rem;
+  width: 7rem;
+}
+
+@media (min-width: 640px) {
+  .product-details-top {
+    gap: 1.25rem;
+  }
+
+  .product-details-top__image {
+    flex-basis: 9.5rem;
+    width: 9.5rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .product-details-top__image {
+    flex-basis: 11rem;
+    width: 11rem;
+  }
+}
+
+.product-details-top__image-drop {
+  display: flex;
+  height: 100%;
+  min-height: 8.5rem;
+  cursor: pointer;
+  overflow: hidden;
+  border-radius: 0.75rem;
+  border: 2px dashed #d1d5db;
+  background: #f9fafb;
+}
+
+.dark .product-details-top__image-drop {
+  border-color: #4b5563;
+  background: rgb(31 41 55 / 0.6);
+}
+
+.product-details-top__image-drop:hover {
+  border-color: var(--color-brand-400, #818cf8);
+  background: color-mix(in srgb, var(--color-brand-500, #5f4bff) 6%, #f9fafb);
+}
+
+.product-status-toggle {
+  display: flex;
+  cursor: pointer;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 3.25rem;
+  padding: 0.625rem 0.875rem;
+  border-radius: 0.75rem;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.04);
+  transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.product-status-toggle:hover {
+  border-color: #d1d5db;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.06);
+}
+
+.dark .product-status-toggle {
+  border-color: #374151;
+  background: rgb(31 41 55 / 0.85);
+}
+
+.dark .product-status-toggle:hover {
+  border-color: #4b5563;
+}
+
+.product-status-toggle--active {
+  border-color: #bbf7d0;
+  background: linear-gradient(135deg, #f0fdf4 0%, #fff 100%);
+}
+
+.dark .product-status-toggle--active {
+  border-color: rgb(34 197 94 / 0.35);
+  background: linear-gradient(135deg, rgb(34 197 94 / 0.12) 0%, rgb(31 41 55 / 0.85) 100%);
+}
+
+.product-status-toggle--inactive {
+  border-color: #e5e7eb;
+  background: #f9fafb;
+}
+
+.dark .product-status-toggle--inactive {
+  border-color: #374151;
+  background: rgb(17 24 39 / 0.5);
+}
+
+.product-status-toggle__leading {
+  display: flex;
+  height: 2rem;
+  width: 2rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+}
+
+.product-status-toggle--active .product-status-toggle__leading {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.dark .product-status-toggle--active .product-status-toggle__leading {
+  background: rgb(34 197 94 / 0.2);
+  color: #4ade80;
+}
+
+.product-status-toggle--inactive .product-status-toggle__leading {
+  background: #f3f4f6;
+  color: #9ca3af;
+}
+
+.dark .product-status-toggle--inactive .product-status-toggle__leading {
+  background: rgb(75 85 99 / 0.35);
+  color: #9ca3af;
+}
+
+.product-status-toggle__icon {
+  height: 1.125rem;
+  width: 1.125rem;
+}
+
+.product-status-toggle__icon--on {
+  display: none;
+}
+
+.product-status-toggle__icon--off {
+  display: block;
+}
+
+.product-status-toggle--active .product-status-toggle__icon--on {
+  display: block;
+}
+
+.product-status-toggle--active .product-status-toggle__icon--off {
+  display: none;
+}
+
+.product-status-toggle__body {
+  min-width: 0;
+  flex: 1 1 0%;
+}
+
+.product-status-toggle__badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 9999px;
+  padding: 0.125rem 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.product-status-toggle--active .product-status-toggle__badge {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.dark .product-status-toggle--active .product-status-toggle__badge {
+  background: rgb(34 197 94 / 0.2);
+  color: #86efac;
+}
+
+.product-status-toggle--inactive .product-status-toggle__badge {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+.dark .product-status-toggle--inactive .product-status-toggle__badge {
+  background: rgb(75 85 99 / 0.45);
+  color: #d1d5db;
+}
+
+.product-status-toggle__hint {
+  display: block;
+  margin-top: 0.125rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.6875rem;
+  color: #6b7280;
+}
+
+.dark .product-status-toggle__hint {
+  color: #9ca3af;
+}
+
+.product-status-toggle__track {
+  position: relative;
+  display: inline-flex;
+  height: 1.625rem;
+  width: 2.875rem;
+  flex-shrink: 0;
+  align-items: center;
+  border-radius: 9999px;
+  background: #d1d5db;
+  transition: background-color 0.2s ease;
+}
+
+.dark .product-status-toggle__track {
+  background: #4b5563;
+}
+
+.product-status-toggle__thumb {
+  position: absolute;
+  left: 0.1875rem;
+  height: 1.25rem;
+  width: 1.25rem;
+  border-radius: 9999px;
+  background: #fff;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.18);
+  transition: transform 0.2s ease;
+}
+
+.product-status-toggle--active .product-status-toggle__track {
+  background: #22c55e;
+}
+
+.product-status-toggle--active .product-status-toggle__thumb {
+  transform: translateX(1.25rem);
 }

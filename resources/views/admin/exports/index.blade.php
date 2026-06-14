@@ -16,7 +16,7 @@
     class="export-center space-y-6"
     x-data="{
         query: '',
-        selectedModule: @js((string) request('module', '')),
+        selectedModule: @js($selectedModule ?? ''),
         mode: @js($rangeMode),
         selectedPreset: @js($rangeMode === 'preset' ? $selectedRange : 'month'),
         from: @js($fromValue),
@@ -303,7 +303,7 @@
                                     @foreach($modules as $module)
                                         <option
                                             value="{{ $module['slug'] }}"
-                                            @selected(request('module') === $module['slug'])
+                                            @selected(($selectedModule ?? '') === $module['slug'])
                                         >
                                             {{ $module['title'] }}
                                             @if($module['supports_date_range'])

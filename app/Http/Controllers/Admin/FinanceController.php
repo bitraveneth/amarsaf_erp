@@ -16,6 +16,7 @@ use App\Models\Order;
 use App\Models\Receipt;
 use App\Services\Accounting\AccountingService;
 use App\Services\Accounting\InventoryAccountingService;
+use App\Services\Accounting\ProductLedgerResolver;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -27,7 +28,8 @@ class FinanceController extends Controller
 {
     public function __construct(
         protected AccountingService $accounting,
-        protected InventoryAccountingService $inventoryAccounting
+        protected InventoryAccountingService $inventoryAccounting,
+        protected ProductLedgerResolver $productLedgers
     ) {
     }
 
@@ -203,14 +205,18 @@ class FinanceController extends Controller
 
             $invoiceDescription = 'Invoice ' . $invoice->number;
             $entryDate = Carbon::parse($invoice->issued_at);
+            $invoice->load(['items.product.materialCategory']);
 
             $lines = [
-                ['account' => 'Accounts Receivable', 'debit' => $invoice->net_total + $invoice->vat_amount, 'credit' => 0],
-                ['account' => 'Sales Revenue', 'debit' => 0, 'credit' => $invoice->net_total],
+                ['account_key' => 'trade_debtors', 'debit' => $invoice->net_total + $invoice->vat_amount, 'credit' => 0],
             ];
 
+            foreach ($this->groupedIncomeLines($invoice) as $accountKey => $amount) {
+                $lines[] = ['account_key' => $accountKey, 'debit' => 0, 'credit' => $amount];
+            }
+
             if ((float) $invoice->vat_amount > 0) {
-                $lines[] = ['account' => 'VAT Payable', 'debit' => 0, 'credit' => $invoice->vat_amount, 'description' => 'VAT on ' . $invoice->number];
+                $lines[] = ['account_key' => 'vat_payable', 'debit' => 0, 'credit' => $invoice->vat_amount, 'description' => 'VAT on ' . $invoice->number];
             }
 
             $this->accounting->post('sales_invoice', $entryDate, $lines, [
@@ -267,8 +273,8 @@ class FinanceController extends Controller
                 'customer_receipt',
                 Carbon::parse($receipt->received_at),
                 [
-                    ['account' => 'Bank', 'debit' => $receipt->amount, 'credit' => 0],
-                    ['account' => 'Accounts Receivable', 'debit' => 0, 'credit' => $receipt->amount],
+                    ['account_key' => 'bank_default', 'debit' => $receipt->amount, 'credit' => 0],
+                    ['account_key' => 'trade_debtors', 'debit' => 0, 'credit' => $receipt->amount],
                 ],
                 [
                     'description' => $description,
@@ -353,14 +359,14 @@ class FinanceController extends Controller
             ]);
 
             $lines = [
-                ['account' => 'Sales Returns', 'debit' => $creditBreakdown['net'], 'credit' => 0],
+                ['account_key' => 'sales_returns', 'debit' => $creditBreakdown['net'], 'credit' => 0],
             ];
 
             if ($creditBreakdown['vat'] > 0) {
-                $lines[] = ['account' => 'VAT Payable', 'debit' => $creditBreakdown['vat'], 'credit' => 0, 'description' => 'VAT reversal on ' . $credit->number];
+                $lines[] = ['account_key' => 'vat_payable', 'debit' => $creditBreakdown['vat'], 'credit' => 0, 'description' => 'VAT reversal on ' . $credit->number];
             }
 
-            $lines[] = ['account' => 'Accounts Receivable', 'debit' => 0, 'credit' => $credit->amount];
+            $lines[] = ['account_key' => 'trade_debtors', 'debit' => 0, 'credit' => $credit->amount];
 
             $this->accounting->post(
                 'credit_note',
@@ -546,8 +552,8 @@ class FinanceController extends Controller
                 'agent_advance_application',
                 Carbon::parse($invoice->issued_at),
                 [
-                    ['account' => 'Agent Advances', 'debit' => $applyAmount, 'credit' => 0],
-                    ['account' => 'Accounts Receivable', 'debit' => 0, 'credit' => $applyAmount],
+                    ['account_key' => 'agent_advances', 'debit' => $applyAmount, 'credit' => 0],
+                    ['account_key' => 'trade_debtors', 'debit' => 0, 'credit' => $applyAmount],
                 ],
                 [
                     'description' => $description,
@@ -575,8 +581,8 @@ class FinanceController extends Controller
                 'withholding_adjustment',
                 Carbon::parse($invoice->issued_at),
                 [
-                    ['account' => 'Withholding Tax Receivable', 'debit' => $delta, 'credit' => 0],
-                    ['account' => 'Accounts Receivable', 'debit' => 0, 'credit' => $delta],
+                    ['account_key' => 'wht_receivable', 'debit' => $delta, 'credit' => 0],
+                    ['account_key' => 'trade_debtors', 'debit' => 0, 'credit' => $delta],
                 ],
                 [
                     'description' => $description,
@@ -596,8 +602,8 @@ class FinanceController extends Controller
             'withholding_adjustment',
             Carbon::parse($invoice->issued_at),
             [
-                ['account' => 'Accounts Receivable', 'debit' => $amount, 'credit' => 0],
-                ['account' => 'Withholding Tax Receivable', 'debit' => 0, 'credit' => $amount],
+                ['account_key' => 'trade_debtors', 'debit' => $amount, 'credit' => 0],
+                ['account_key' => 'wht_receivable', 'debit' => 0, 'credit' => $amount],
             ],
             [
                 'description' => $description,
@@ -655,5 +661,24 @@ class FinanceController extends Controller
                 ];
             })->values(),
         ]);
+    }
+
+    /**
+     * @return array<string, float>
+     */
+    protected function groupedIncomeLines(Invoice $invoice): array
+    {
+        $groups = [];
+
+        foreach ($invoice->items as $item) {
+            $key = $this->productLedgers->incomeAccountKey($item->product);
+            $groups[$key] = round(($groups[$key] ?? 0) + (float) $item->line_total, 2);
+        }
+
+        if ($groups === []) {
+            $groups['product_sales'] = round((float) $invoice->net_total, 2);
+        }
+
+        return $groups;
     }
 }

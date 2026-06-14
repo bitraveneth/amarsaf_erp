@@ -236,6 +236,9 @@ MERMAID,
             ['title' => ['en' => 'Post customer receipt', 'bn' => 'গ্রাহক রসিদ পোস্ট'], 'body' => ['en' => 'Open invoice → add receipt (amount, method, date). Posts Dr Bank, Cr AR. Cannot exceed outstanding.', 'bn' => 'ইনভয়েস খুলে রসিদ যোগ করুন। Dr Bank, Cr AR। বকেয়ার বেশি নয়।'], 'path' => '/admin/finance'],
             ['title' => ['en' => 'Record supplier bill', 'bn' => 'সাপ্লায়ার বিল রেকর্ড'], 'body' => ['en' => 'Link to PO/GRN. Posts Dr Purchases/Inventory, Dr Input VAT, Cr Accounts Payable.', 'bn' => 'PO/GRN যুক্ত করুন। Dr Purchases/Inventory, Dr Input VAT, Cr AP।'], 'path' => '/admin/bills'],
             ['title' => ['en' => 'Pay supplier', 'bn' => 'সাপ্লায়ার পরিশোধ'], 'body' => ['en' => 'Post payment on bill or use batch payment. Dr AP, Cr Bank.', 'bn' => 'বিলে পেমেন্ট বা ব্যাচ পেমেন্ট। Dr AP, Cr Bank।'], 'path' => '/admin/bills'],
+            ['title' => ['en' => 'Record expenses', 'bn' => 'খরচ রেকর্ড'], 'body' => ['en' => 'Pick expense category (maps to expense ledger), amount, and payment: bank, cash, or accrued payable. Posts Dr expense, Cr bank/payable.', 'bn' => 'Expense category (expense ledger), পরিমাণ, payment: bank/cash/payable। Dr expense, Cr bank/payable।'], 'path' => '/admin/expenses'],
+            ['title' => ['en' => 'Map expense categories', 'bn' => 'Expense category ম্যাপ'], 'body' => ['en' => 'Accounting → Expense category mapping. Link Utilities, Rent, Marketing, etc. to chart of accounts leaves.', 'bn' => 'Expense category mapping। Utilities, Rent, Marketing COA leaf-এর সাথে যুক্ত করুন।'], 'path' => '/admin/expense-categories'],
+            ['title' => ['en' => 'Post payroll', 'bn' => 'পে-রোল পোস্ট'], 'body' => ['en' => 'Salary distributions — not duplicate salary in Expenses. Dr Salaries & wages, Cr bank/cash/salary payable.', 'bn' => 'Salary distributions — Expenses-এ বেতন দ্বিগুণ করবেন না। Dr Salaries & wages, Cr bank/payable।'], 'path' => '/admin/salary-distributions'],
             ['title' => ['en' => 'Review journals & periods', 'bn' => 'জার্নাল ও পিরিয়ড দেখুন'], 'body' => ['en' => 'Journal entries for audit trail. Close accounting periods before month-end lock.', 'bn' => 'নিরীক্ষার জন্য জার্নাল এন্ট্রি। মাস শেষে পিরিয়ড বন্ধ করুন।'], 'path' => '/admin/journals'],
             ['title' => ['en' => 'Run tax reports', 'bn' => 'কর রিপোর্ট চালান'], 'body' => ['en' => 'VAT report (output − input), AR/AP aging, trial balance, P&L. Export Tally XML for external CA.', 'bn' => 'VAT রিপোর্ট, AR/AP aging, ট্রায়াল ব্যালেন্স, P&L। বাহ্যিক CA-র জন্য Tally XML।'], 'path' => '/admin/reports/vat'],
         ],
@@ -257,6 +260,7 @@ MERMAID,
         ],
         'tips' => [
             ['en' => 'Open **How profit & loss is calculated** for a one-unit produce-to-sell example with numbers.', 'bn' => '**লাভ-ক্ষতি কীভাবে হয়** বিষয়ে এক ইউনিট উৎপাদন-থেকে-বিক্রয় উদাহরণ দেখুন।'],
+            ['en' => 'Open **Transaction → ledger map** for a client-ready cheat sheet of every posting.', 'bn' => '**Transaction → ledger map** কোর্সে প্রতিটি পোস্টিংয়ের cheat sheet দেখুন।'],
             ['en' => 'Switch to the **Tax & ledger reference** tab for full journal entries, chart of accounts, and advisor FAQs.', 'bn' => '**কর ও লেজার রেফারেন্স** ট্যাবে সম্পূর্ণ জার্নাল, চার্ট অফ অ্যাকাউন্টস ও FAQ দেখুন।'],
             ['en' => 'Never invoice before delivery — revenue and VAT should follow POD.', 'bn' => 'ডেলিভারির আগে ইনভয়েস নয় — আয় ও VAT POD-এর পর।'],
             ['en' => 'Close the accounting period after trial balance matches AR/AP aging.', 'bn' => 'ট্রায়াল ব্যালেন্স AR/AP aging-এর সাথে মিললে পিরিয়ড বন্ধ করুন।'],
@@ -320,6 +324,69 @@ MERMAID,
         'tips' => [
             ['en' => 'Use the **Ledger entries & P&L math** tab for journals, formulas, and the step-by-step checklist.', 'bn' => '**লেজার এন্ট্রি ও P&L হিসাব** ট্যাবে জার্নাল, সূত্র ও চেকলিস্ট দেখুন।'],
             ['en' => 'VAT (৳12) is owed to NBR — it is not part of your ৳80 revenue or ৳38 gross profit.', 'bn' => 'VAT (৳১২) NBR-এর — এটি ৳৮০ আয় বা ৳৩৮ মোট লাভের অংশ নয়।'],
+        ],
+    ],
+    [
+        'slug' => 'ledger-mapping',
+        'order' => 9.75,
+        'icon' => 'accounting',
+        'title' => [
+            'en' => 'Transaction → ledger map',
+            'bn' => 'লেনদেন → লেজার মানচিত্র',
+        ],
+        'summary' => [
+            'en' => 'Simple cheat sheet: every business action (invoice, bill, expense, payroll, GRN, commission) and which ledger it debits and credits. Use in client demos and CA handover.',
+            'bn' => 'সহজ cheat sheet: প্রতিটি ব্যবসায়িক কাজ (ইনভয়েস, বিল, খরচ, পে-রোল, GRN, কমিশন) কোন ledger-এ Dr/Cr হয়। ক্লায়েন্ট ডেমো ও CA হ্যান্ডওভারে ব্যবহার করুন।',
+        ],
+        'flowchart' => [
+            'en' => "flowchart TD\n    A[\"Business document saved\"] --> B{\"Posts to GL?\"}\n    B -->|Yes| C[\"Balanced journal entry\"]\n    B -->|No| D[\"Operational only\"]\n    C --> E[\"Chart of accounts Balances\"]",
+            'bn' => "flowchart TD\n    A[\"ডকুমেন্ট সেভ\"] --> B{\"GL পোস্ট?\"}\n    B -->|হ্যাঁ| C[\"ভারসাম্যপূর্ণ জার্নাল\"]\n    B -->|না| D[\"অপারেশনাল মাত্র\"]\n    C --> E[\"COA Balances\"]",
+        ],
+        'steps' => [
+            ['title' => ['en' => 'Explain the three layers', 'bn' => 'তিন স্তর ব্যাখ্যা'], 'body' => ['en' => 'Sub-ledgers (invoices, bills) → General ledger (journals) → Reports (P&L, trial balance, Tally export).', 'bn' => 'সাব-লেজার (ইনভয়েস, বিল) → GL (জার্নাল) → রিপোর্ট (P&L, trial balance, Tally)।'], 'path' => '/admin/journals'],
+            ['title' => ['en' => 'Open the master map', 'bn' => 'মাস্টার মানচিত্র'], 'body' => ['en' => 'Use the **Full transaction map** tab in this course — or Chart of accounts Balances to verify totals.', 'bn' => 'এই কোর্সের **Full transaction map** ট্যাব — বা COA Balances-এ মোট যাচাই।'], 'path' => '/admin/accounts'],
+            ['title' => ['en' => 'Configure expense routing', 'bn' => 'Expense routing'], 'body' => ['en' => 'Expense category mapping links Utilities, Rent, Marketing to COA leaves. User picks bank/cash/payable on each expense.', 'bn' => 'Expense category mapping Utilities, Rent, Marketing COA-তে। প্রতি expense-এ bank/cash/payable।'], 'path' => '/admin/expense-categories'],
+            ['title' => ['en' => 'Trace one invoice to GL', 'bn' => 'ইনভয়েস GL-এ ট্রেস'], 'body' => ['en' => 'Find invoice → search journals by date/description → drill General ledger on Trade debtors.', 'bn' => 'ইনভয়েস → জার্নাল খুঁজুন → Trade debtors GL-এ ড্রিল।'], 'path' => '/admin/reports/general-ledger'],
+        ],
+        'examples' => [
+            [
+                'title' => ['en' => '30-second client pitch', 'bn' => '৩০ সেকেন্ড ক্লায়েন্ট পিচ'],
+                'body' => [
+                    'en' => '“When you save invoice, bill, or expense, the system creates a balanced journal entry to your Tally-style chart. You see it in Balances, trial balance, and Tally export.”',
+                    'bn' => '“ইনভয়েস, বিল বা expense সেভ করলে Tally-style chart-এ balanced journal তৈরি হয়। Balances, trial balance ও Tally export-এ দেখেন।”',
+                ],
+            ],
+        ],
+        'tips' => [
+            ['en' => 'Orders and POs do not post — invoice and GRN/bill do.', 'bn' => 'অর্ডার ও PO পোস্ট করে না — ইনভয়েস ও GRN/বিল করে।'],
+            ['en' => 'Use Salary distributions for payroll, not Expenses + payroll both.', 'bn' => 'পে-রোলের জন্য Salary distributions — Expenses-এ দ্বিগুণ নয়।'],
+        ],
+    ],
+    [
+        'slug' => 'hr-payroll',
+        'order' => 10.5,
+        'icon' => 'employees',
+        'title' => ['en' => 'HR & payroll', 'bn' => 'HR ও পে-রোল'],
+        'summary' => [
+            'en' => 'Employees, contracts, leaves, and allowances are HR records. Only salary distributions post to the general ledger.',
+            'bn' => 'কর্মী, চুক্তি, ছুটি, ভাতা HR রেকর্ড। শুধু salary distributions GL-এ পোস্ট হয়।',
+        ],
+        'flowchart' => [
+            'en' => "flowchart LR\n    A[\"Employee master\"] --> B[\"Contract / leave\"]\n    B --> C[\"Salary distribution\"]\n    C --> D[\"GL: Salaries & wages\"]",
+            'bn' => "flowchart LR\n    A[\"Employee master\"] --> B[\"Contract / leave\"]\n    B --> C[\"Salary distribution\"]\n    C --> D[\"GL: Salaries & wages\"]",
+        ],
+        'steps' => [
+            ['title' => ['en' => 'Add employees', 'bn' => 'কর্মী যোগ'], 'body' => ['en' => 'Control → HR → Employees. Name, department, join date. No GL impact.', 'bn' => 'Control → HR → Employees। নাম, department, join date। GL প্রভাব নেই।'], 'path' => '/admin/employees'],
+            ['title' => ['en' => 'Manage contracts & leaves', 'bn' => 'চুক্তি ও ছুটি'], 'body' => ['en' => 'Contracts and leave requests track HR compliance. Operational only.', 'bn' => 'চুক্তি ও ছুটি HR compliance। অপারেশনাল মাত্র।'], 'path' => '/admin/contracts'],
+            ['title' => ['en' => 'Post salary distribution', 'bn' => 'বেতন বিতরণ'], 'body' => ['en' => 'Accounting → Salary distributions. Base + bonus + allowances. Dr Salaries & wages, Cr bank/cash/salary payable.', 'bn' => 'Salary distributions। Base + bonus + allowances। Dr Salaries & wages, Cr bank/payable।'], 'path' => '/admin/salary-distributions'],
+            ['title' => ['en' => 'Review payroll report', 'bn' => 'পে-রোল রিপোর্ট'], 'body' => ['en' => 'Reports → Payroll summary compares distributions to GL when journals are posted.', 'bn' => 'Payroll summary — distributions ও GL তুলনা।'], 'path' => '/admin/reports/payroll'],
+        ],
+        'examples' => [
+            ['title' => ['en' => 'Monthly payroll', 'bn' => 'মাসিক পে-রোল'], 'body' => ['en' => '10 employees × avg ৳25,000 = ৳250,000. One distribution per employee or batch entry. Journal: Dr Salaries & wages 250,000 | Cr Bank 250,000.', 'bn' => '১০ কর্মী × ৳২৫,০০০ = ৳২,৫০,০০০। Dr Salaries & wages | Cr Bank।']],
+        ],
+        'tips' => [
+            ['en' => 'Do not duplicate payroll in Expenses — P&L would double-count.', 'bn' => 'Expenses-এ পে-রোল দ্বিগুণ করবেন না — P&L ভুল হবে।'],
+            ['en' => 'Department on employee can tag payroll journal lines for cost centre reporting.', 'bn' => 'Employee department payroll line-এ cost centre tag হতে পারে।'],
         ],
     ],
     [

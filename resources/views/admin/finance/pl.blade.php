@@ -115,6 +115,41 @@
         <x-dashboard.kpi label="COGS source" tone="brand" :value="($cogsSource ?? 'estimated') === 'gl' ? 'General ledger' : 'Estimated'" hint="How COGS was calculated" />
     </div>
 
+    <x-dashboard.panel title="Chart breakdown" subtitle="Hierarchical ledger roll-up for this period">
+        <div class="grid gap-6 lg:grid-cols-3">
+            <div>
+                <h3 class="mb-2 text-sm font-semibold text-gray-900 dark:text-white">Revenue</h3>
+                <div class="erp-table-wrap">
+                    <table class="erp-table">
+                        <tbody>@include('admin.finance.partials.hierarchical-rows', ['rows' => $revenue['rows'] ?? []])</tbody>
+                        <tfoot><tr class="font-semibold"><td>Total</td><td class="is-right">{{ number_format($revenue['total'] ?? 0, 2) }}</td></tr></tfoot>
+                    </table>
+                </div>
+            </div>
+            <div>
+                <h3 class="mb-2 text-sm font-semibold text-gray-900 dark:text-white">Manufacturing account</h3>
+                <div class="erp-table-wrap">
+                    <table class="erp-table">
+                        <tbody>@include('admin.finance.partials.hierarchical-rows', ['rows' => $manufacturing['rows'] ?? []])</tbody>
+                        <tfoot><tr class="font-semibold"><td>Total</td><td class="is-right">{{ number_format($manufacturing['total'] ?? 0, 2) }}</td></tr></tfoot>
+                    </table>
+                </div>
+            </div>
+            <div>
+                <h3 class="mb-2 text-sm font-semibold text-gray-900 dark:text-white">Operating expenses</h3>
+                <div class="erp-table-wrap">
+                    <table class="erp-table">
+                        <tbody>@include('admin.finance.partials.hierarchical-rows', ['rows' => $operating['rows'] ?? []])</tbody>
+                        <tfoot><tr class="font-semibold"><td>Total</td><td class="is-right">{{ number_format($operating['total'] ?? 0, 2) }}</td></tr></tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <p class="mt-4 text-sm">
+            <a href="{{ route('admin.reports.manufacturing-schedule', ['from' => $from->toDateString(), 'to' => $to->toDateString()]) }}" class="erp-link">View manufacturing schedule</a>
+        </p>
+    </x-dashboard.panel>
+
     <x-dashboard.panel title="Ledger detail" subtitle="Account activity for this period">
         @if(isset($accountRows) && $accountRows->isNotEmpty())
             <div class="erp-table-wrap">

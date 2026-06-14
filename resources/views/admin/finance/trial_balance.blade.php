@@ -42,11 +42,15 @@
             </thead>
             <tbody>
                 @foreach($rows as $row)
-                    <tr>
-                        <td>
-                            <a href="{{ route('admin.reports.general-ledger', ['account_id' => $row['account']->id, 'from' => $from->toDateString(), 'to' => $to->toDateString()]) }}" class="erp-link">
-                                {{ $row['account']->code }} — {{ $row['account']->name }}
-                            </a>
+                    <tr class="{{ !empty($row['is_subtotal']) ? 'font-semibold bg-gray-50/80 dark:bg-gray-800/40' : '' }}">
+                        <td style="padding-left: {{ 1 + (($row['level'] ?? 0) * 1.25) }}rem">
+                            @if(empty($row['is_group']))
+                                <a href="{{ route('admin.reports.general-ledger', ['account_id' => $row['id'], 'from' => $from->toDateString(), 'to' => $to->toDateString()]) }}" class="erp-link">
+                                    {{ $row['code'] }} — {{ $row['name'] }}
+                                </a>
+                            @else
+                                {{ $row['code'] }} — {{ $row['name'] }}
+                            @endif
                         </td>
                         <td class="is-right">{{ number_format($row['opening_debit'], 2) }}</td>
                         <td class="is-right">{{ number_format($row['opening_credit'], 2) }}</td>

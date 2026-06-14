@@ -2,47 +2,78 @@
 
 namespace Database\Seeders\Control\Products;
 
+use App\Models\PackagingConversion;
 use App\Models\PackagingType;
+use App\Models\Product;
+use App\Support\WaterProductLineCatalog;
 use Illuminate\Database\Seeder;
 
 /**
- * Seed data for:
- * - Packaging types (bottles, cartons, etc.).
+ * Seed SAF standard packaging types (bottles, cartons, jar).
  */
 class PackagingTypesSeeder extends Seeder
 {
     public function run(): void
     {
-        PackagingType::firstOrCreate(
-            ['name' => 'Bottle 500ml'],
-            [
-                'unit'        => 'bottle',
-                'description' => 'Single 500ml PET bottle',
-            ]
-        );
+        foreach (WaterProductLineCatalog::packagingTypes() as $type) {
+            PackagingType::updateOrCreate(
+                ['code' => $type['code']],
+                [
+                    'name' => $type['name'],
+                    'unit' => $type['unit'],
+                    'description' => $type['description'],
+                    'units_per_pack' => $type['units_per_pack'],
+                    'size_key' => $type['size_key'],
+                    'is_system' => $type['is_system'],
+                ]
+            );
+        }
 
-        PackagingType::firstOrCreate(
-            ['name' => 'Carton 12 x 500ml'],
-            [
-                'unit'        => 'carton',
-                'description' => 'Carton containing 12 x 500ml bottles',
-            ]
-        );
+        foreach (WaterProductLineCatalog::legacyPackagingRenames() as $oldName => $newName) {
+            $oldType = PackagingType::where('name', $oldName)->first();
+            $newType = PackagingType::where('name', $newName)->first();
 
-        PackagingType::firstOrCreate(
-            ['name' => 'Carton 12 x 1L'],
-            [
-                'unit'        => 'carton',
-                'description' => 'Carton containing 12 x 1L bottles',
-            ]
-        );
+            if (! $oldType) {
+                continue;
+            }
 
-        PackagingType::firstOrCreate(
-            ['name' => 'Jar 20L'],
-            [
-                'unit'        => 'jar',
-                'description' => 'Refillable 20L water jar',
-            ]
-        );
+            if (! $newType) {
+                $oldType->update(['name' => $newName]);
+
+                continue;
+            }
+
+            if ($oldType->id === $newType->id) {
+                continue;
+            }
+
+            Product::where('packaging_type_id', $oldType->id)
+                ->update(['packaging_type_id' => $newType->id]);
+
+            PackagingConversion::where('from_packaging_type_id', $oldType->id)
+                ->update(['from_packaging_type_id' => $newType->id]);
+            PackagingConversion::where('to_packaging_type_id', $oldType->id)
+                ->update(['to_packaging_type_id' => $newType->id]);
+
+            $oldType->delete();
+        }
+
+        $this->pruneRemovedTypes();
+    }
+
+    protected function pruneRemovedTypes(): void
+    {
+        $validNames = collect(WaterProductLineCatalog::packagingTypes())->pluck('name')->all();
+
+        PackagingType::whereNotIn('name', $validNames)->each(function (PackagingType $type) {
+            Product::where('packaging_type_id', $type->id)->update(['packaging_type_id' => null]);
+
+            PackagingConversion::query()
+                ->where('from_packaging_type_id', $type->id)
+                ->orWhere('to_packaging_type_id', $type->id)
+                ->delete();
+
+            $type->delete();
+        });
     }
 }

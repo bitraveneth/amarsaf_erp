@@ -28,7 +28,8 @@ class PurchaseBillsSeeder extends Seeder
 
         $petBottle   = Product::where('sku', 'RM-PET-500')->first();
         $cap         = Product::where('sku', 'RM-CAP-STD')->first();
-        $carton      = Product::where('sku', 'RM-CARTON-12X500')->first();
+        $carton      = Product::where('sku', 'RM-CARTON-24X500')->first()
+            ?? Product::where('sku', 'RM-CARTON-12X500')->first();
         $label       = Product::where('sku', 'RM-LABEL-500')->first();
         $shrink      = Product::where('sku', 'RM-SHRINK-CTN')->first();
         $water       = Product::where('sku', 'RM-RO-WATER')->first();
@@ -91,7 +92,7 @@ class PurchaseBillsSeeder extends Seeder
                 PurchaseBillItem::create([
                     'purchase_bill_id' => $bill2->id,
                     'product_id'       => $carton->id,
-                    'description'      => 'Carton Box – 12 x 500ml',
+                    'description'      => 'Carton Box – 24 x 500ml',
                     'quantity'         => 6000,
                     'unit_price'       => 0.80,
                     'line_total'       => 6000 * 0.80,

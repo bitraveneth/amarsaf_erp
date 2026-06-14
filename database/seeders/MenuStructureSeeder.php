@@ -90,6 +90,20 @@ class MenuStructureSeeder extends Seeder
             ->where('path', '/admin/expenses')
             ->delete();
 
+        // Vehicle loads belongs under Logistics only (not Delivery).
+        $deliveryParentId = MenuItem::query()
+            ->whereNull('parent_id')
+            ->where('name', 'Delivery')
+            ->value('id');
+
+        if ($deliveryParentId) {
+            MenuItem::query()
+                ->where('parent_id', $deliveryParentId)
+                ->where('name', 'Vehicle loads')
+                ->where('path', '/admin/vehicle-load')
+                ->delete();
+        }
+
         MenuGroup::query()
             ->whereIn('key', ['overview'])
             ->orWhereRaw('LOWER(TRIM(title)) = ?', ['overview'])
@@ -108,7 +122,9 @@ class MenuStructureSeeder extends Seeder
             ->whereNotIn('id', $activeItemIds)
             ->update(['is_active' => false]);
 
+        // Deactivate deprecated top-level menu entries only (not submenu links like Products under Products & catalog).
         MenuItem::query()
+            ->whereNull('parent_id')
             ->whereIn('name', [
                 'Warehouses & logistics setup',
                 'Fulfillment & delivery',

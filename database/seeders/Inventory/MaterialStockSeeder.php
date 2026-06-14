@@ -26,7 +26,7 @@ class MaterialStockSeeder extends Seeder
             'RM-PET-500'        => 60000, // PET Bottle 500ml
             'RM-CAP-STD'        => 60000, // Standard caps
             'RM-LABEL-500'      => 60000, // 500ml labels
-            'RM-CARTON-12X500'  => 6000,  // cartons for 12x500ml
+            'RM-CARTON-24X500'  => 6000,  // cartons for 24x500ml
             'RM-SHRINK-CTN'     => 6000,  // shrink film wraps
             'RM-RO-WATER'       => 200000, // litres of treated water
         ];

@@ -99,4 +99,6 @@ return [
     'glossary_empty' => ['en' => 'No terms match your search.', 'bn' => 'আপনার অনুসন্ধানে কোনো শব্দ নেই।'],
     'pipeline_title' => ['en' => 'Process at a glance', 'bn' => 'এক নজরে প্রক্রিয়া'],
     'walkthrough' => ['en' => 'Step-by-step walkthrough', 'bn' => 'ধাপে ধাপে গাইড'],
+    'mapping_action' => ['en' => 'Business action', 'bn' => 'ব্যবসায়িক কাজ'],
+    'mapping_when' => ['en' => 'When it posts', 'bn' => 'কখন পোস্ট'],
 ];

@@ -4,7 +4,7 @@
 <div class="space-y-6">
     <x-admin.page-header
         title="Agents"
-        subtitle="List, search, and manage your agent network."
+        subtitle="Credit limit, commission rate, and unapplied advance per agent."
     >
         <x-slot:actions>
             <!-- Search Form -->
@@ -45,75 +45,69 @@
         </x-slot:actions>
     </x-admin.page-header>
 
-    <!-- Status Message -->
-
-    <!-- Agents Table -->
     @if($agents->isNotEmpty())
         <div class="erp-table-card">
             <div class="erp-table-wrap">
-                <table class="erp-table">
+                <table class="erp-table erp-table--agents w-full min-w-[68rem]">
                     <thead>
                         <tr>
-                            <th>Agent</th>
-                            <th>Zone</th>
-                            <th>Parent</th>
-                            <th class="is-right">Credit Limit</th>
-                            <th>Status</th>
-                            <th>Commission</th>
-                            <th>Account</th>
-                            <th class="is-right">Actions</th>
+                            <th class="w-[22%]">Agent</th>
+                            <th class="w-[14%]">Zone</th>
+                            <th class="is-right w-[10%]">Advance</th>
+                            <th class="is-right w-[11%]">Credit limit</th>
+                            <th class="w-[9%]">Status</th>
+                            <th class="w-[10%]">Commission</th>
+                            <th class="is-right w-[24%]">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach($agents as $agent)
                             <tr>
                                 <td>
-                                    <div class="flex items-center">
-                                        <div class="flex-shrink-0 h-8 w-8 rounded-full bg-brand-100 dark:bg-brand-500/20 flex items-center justify-center">
+                                    <div class="flex min-w-0 items-center gap-3">
+                                        <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-100 dark:bg-brand-500/20">
                                             <span class="text-xs font-medium text-brand-700 dark:text-brand-400">
                                                 {{ substr($agent->name, 0, 1) }}
                                             </span>
                                         </div>
-                                        <div class="ml-3">
-                                            <p class="erp-body-strong">
+                                        <div class="min-w-0">
+                                            <p class="erp-body-strong truncate" title="{{ $agent->name }}">
                                                 {{ $agent->name }}
                                             </p>
                                             @if($agent->code)
-                                                <p class="erp-caption">
+                                                <p class="erp-caption truncate" title="{{ $agent->code }}">
                                                     {{ $agent->code }}
                                                 </p>
                                             @endif
                                         </div>
                                     </div>
                                 </td>
-                                <td class="px-4 py-3">
-                                    <div class="text-sm">
-                                        @if($agent->area || $agent->zone)
-                                            <p class="font-medium text-gray-900 dark:text-white">{{ $agent->area ?? '—' }}</p>
-                                            <p class="text-xs text-gray-500 dark:text-gray-400">{{ $agent->zone ?? '—' }}</p>
-                                        @else
-                                            <span class="text-sm text-gray-500 dark:text-gray-400">—</span>
-                                        @endif
-                                    </div>
-                                </td>
-                                <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
-                                    @if($agent->parent)
-                                        <div class="flex items-center gap-1">
-                                            <svg class="h-3.5 w-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
-                                            </svg>
-                                            {{ $agent->parent->name }}
-                                        </div>
+                                <td>
+                                    @if($agent->area || $agent->zone)
+                                        <p class="truncate text-sm font-medium text-gray-900 dark:text-white" title="{{ $agent->area }}">{{ $agent->area ?? '—' }}</p>
+                                        <p class="truncate text-xs text-gray-500 dark:text-gray-400" title="{{ $agent->zone }}">{{ $agent->zone ?? '—' }}</p>
                                     @else
                                         <span class="text-sm text-gray-500 dark:text-gray-400">—</span>
                                     @endif
                                 </td>
-                                <td class="is-right">
+                                <td class="is-right whitespace-nowrap">
+                                    @php $advanceBalance = (float) ($agent->open_advance_balance ?? 0); @endphp
+                                    @if($advanceBalance > 0)
+                                        <a href="{{ route('admin.agents.ledger.show', $agent) }}"
+                                           class="erp-table-num text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300"
+                                           title="View ledger">
+                                            BDT {{ number_format($advanceBalance, 0) }}
+                                        </a>
+                                    @else
+                                        <span class="erp-table-num text-gray-400 dark:text-gray-500">—</span>
+                                    @endif
+                                </td>
+                                <td class="is-right whitespace-nowrap">
                                     <span class="erp-table-num">
-                                        BDT {{ number_format($agent->credit_limit, 2) }}
+                                        BDT {{ number_format($agent->credit_limit ?? 0, 0) }}
                                     </span>
                                 </td>
-                                <td class="px-4 py-3">
+                                <td>
                                     @if($agent->is_active)
                                         <span class="inline-flex items-center gap-1 rounded-full bg-success-100 px-2.5 py-0.5 text-xs font-medium text-success-700 dark:bg-success-500/20 dark:text-success-400">
                                             <svg class="h-1.5 w-1.5 fill-current" viewBox="0 0 6 6">
@@ -130,81 +124,36 @@
                                         </span>
                                     @endif
                                 </td>
-                                <td class="px-4 py-3">
-                                    @php
-                                        $rules = $agent->commissions ?? collect();
-                                    @endphp
+                                <td>
+                                    @php $rules = $agent->commissions ?? collect(); @endphp
                                     @if($rules->isEmpty())
-                                        <span class="text-[11px] text-gray-400 dark:text-gray-500">—</span>
+                                        <a href="{{ route('admin.agents.show', ['agent' => $agent, 'tab' => 'commission']) }}"
+                                           class="text-xs font-medium text-amber-600 hover:text-amber-700 dark:text-amber-400">
+                                            Not set
+                                        </a>
                                     @else
                                         @php $primaryRule = $rules->first(); @endphp
-                                        <span class="inline-flex items-center gap-1 rounded-full bg-brand-50 px-2.5 py-0.5 text-[11px] font-medium text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">
+                                        <a href="{{ route('admin.agents.show', ['agent' => $agent, 'tab' => 'commission']) }}"
+                                           class="inline-flex items-center gap-1 rounded-full bg-brand-50 px-2.5 py-0.5 text-[11px] font-medium text-brand-700 hover:bg-brand-100 dark:bg-brand-900/30 dark:text-brand-300">
                                             @if($primaryRule->type === 'percentage')
                                                 {{ rtrim(rtrim(number_format($primaryRule->value, 2), '0'), '.') }}%
                                             @else
-                                                BDT {{ number_format($primaryRule->value, 2) }}
+                                                BDT {{ number_format($primaryRule->value, 0) }}
                                             @endif
-                                            @if($primaryRule->order_type)
-                                                <span class="text-[10px] text-brand-600/80 dark:text-brand-200/80">
-                                                    {{ $primaryRule->order_type }}
-                                                </span>
+                                            @if($rules->count() > 1)
+                                                <span class="opacity-70">+{{ $rules->count() - 1 }}</span>
                                             @endif
-                                        </span>
-                                        @if($rules->count() > 1)
-                                            <span class="ml-1 text-[10px] text-gray-500 dark:text-gray-400">
-                                                +{{ $rules->count() - 1 }} more
-                                            </span>
-                                        @endif
+                                        </a>
                                     @endif
                                 </td>
-                                <td class="px-4 py-3" x-data="{ open:false }" @keydown.escape.window="open=false">
-                                    <div class="relative inline-block text-left">
-                                        <button
-                                            type="button"
-                                            @click="open = !open"
-                                            class="erp-btn-action"
-                                        >
-                                            Account
-                                            <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                                            </svg>
-                                        </button>
-                                        <div
-                                            x-show="open"
-                                            x-transition
-                                            @click.outside="open = false"
-                                            class="absolute z-30 mt-1 w-40 origin-top-left rounded-lg border border-gray-200 bg-white py-1 text-xs shadow-lg dark:border-gray-700 dark:bg-gray-900"
-                                        >
-                                            <a href="{{ route('admin.agents.pricing.edit', $agent) }}"
-                                               class="flex items-center gap-1 px-3 py-1.5 text-gray-700 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-gray-800">
-                                                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                          d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                                </svg>
-                                                Pricing
-                                            </a>
-                                            <a href="{{ route('admin.agents.ledger.show', $agent) }}"
-                                               class="flex items-center gap-1 px-3 py-1.5 text-gray-700 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-gray-800">
-                                                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                          d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
-                                                </svg>
-                                                Ledger
-                                            </a>
-                                            <a href="{{ route('admin.gifts.index', ['agent_id' => $agent->id]) }}"
-                                               class="flex items-center gap-1 px-3 py-1.5 text-gray-700 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-gray-800">
-                                                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                          d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/>
-                                                </svg>
-                                                Gifts
-                                            </a>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td class="is-right">
-                                    <x-admin.action-group class="justify-end">
+                                <td class="is-right whitespace-nowrap py-3">
+                                    <x-admin.action-group class="flex-nowrap justify-end">
                                         <x-admin.action-view :href="route('admin.agents.show', $agent)" />
+                                        <a href="{{ route('admin.agents.show', ['agent' => $agent, 'tab' => 'commission']) }}"
+                                           class="erp-btn-primary !px-2.5 !py-1.5 !text-xs"
+                                           title="Commission &amp; credit for this agent">
+                                            Commission
+                                        </a>
                                         <x-admin.action-edit :href="route('admin.agents.edit', $agent)" />
                                         <x-admin.action-delete
                                             :action="route('admin.agents.destroy', $agent)"

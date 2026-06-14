@@ -9,6 +9,11 @@ use Illuminate\Support\Collection;
 
 class InventoryCostingService
 {
+    public function __construct(
+        protected ProductLedgerResolver $productLedgers
+    ) {
+    }
+
     public function receive(int $productId, int $warehouseId, float $quantity, float $unitCost): InventoryValuation
     {
         if ($quantity <= 0 || $unitCost < 0) {
@@ -114,13 +119,12 @@ class InventoryCostingService
 
     public function inventoryAccountFor(?Product $product): string
     {
-        $type = $product?->product_type;
+        return $this->inventoryAccountKey($product);
+    }
 
-        if (in_array($type, ['raw', 'inhouse', 'service'], true)) {
-            return config('accounting.accounts.raw_materials_inventory');
-        }
-
-        return config('accounting.accounts.finished_goods_inventory');
+    public function inventoryAccountKey(?Product $product): string
+    {
+        return $this->productLedgers->inventoryAccountKey($product);
     }
 
     public function valuationReport(): Collection
@@ -149,13 +153,11 @@ class InventoryCostingService
 
     public function ledgerInventoryBalance(): float
     {
-        $accounts = [
-            config('accounting.accounts.raw_materials_inventory'),
-            config('accounting.accounts.finished_goods_inventory'),
-            config('accounting.accounts.work_in_progress'),
-        ];
+        $accounts = ['raw_materials', 'finished_goods', 'wip'];
 
-        $accountIds = \App\Models\Account::whereIn('name', $accounts)->pluck('id');
+        $accountIds = \App\Models\Account::query()
+            ->whereIn('slug', array_map(fn ($key) => config("accounting.accounts.{$key}"), $accounts))
+            ->pluck('id');
 
         $debits = (float) JournalEntryLine::whereIn('account_id', $accountIds)
             ->whereHas('journalEntry', fn ($q) => $q->where('status', 'posted'))

@@ -31,13 +31,7 @@ class FinancialReportExportService
         $returns = (float) $entries->where('account', 'Sales Returns')->sum('debit');
         $commissions = (float) $entries->where('account', 'Commission Expense')->sum('debit');
         $otherExpenses = $this->operatingExpensesTotal($from, $to);
-        $payroll = (float) SalaryDistribution::whereBetween('period_start', [$from, $to])
-            ->get()
-            ->sum(fn (SalaryDistribution $distribution) => (float) $distribution->base_salary
-                + (float) $distribution->bonus
-                + (float) $distribution->ta_allowances
-                + (float) $distribution->da_allowances
-                + (float) $distribution->commission);
+        $payroll = $this->payrollTotal($from, $to);
 
         $netSales = $sales - $returns;
 
@@ -521,6 +515,27 @@ class FinancialReportExportService
         ])->sum('cost');
 
         return $expenses + $giftExpenses + $campaignExpenses;
+    }
+
+    protected function payrollTotal(Carbon $from, Carbon $to): float
+    {
+        $salariesAccount = Account::query()->where('slug', 'salaries_wages')->value('id');
+
+        if ($salariesAccount) {
+            $posted = $this->accountDebitTotal((int) $salariesAccount, $from, $to);
+
+            if ($posted > 0) {
+                return $posted;
+            }
+        }
+
+        return (float) SalaryDistribution::whereBetween('period_start', [$from, $to])
+            ->get()
+            ->sum(fn (SalaryDistribution $distribution) => (float) $distribution->base_salary
+                + (float) $distribution->bonus
+                + (float) $distribution->ta_allowances
+                + (float) $distribution->da_allowances
+                + (float) $distribution->commission);
     }
 
     protected function accountDebitTotal(int $accountId, ?Carbon $from, Carbon $to): float

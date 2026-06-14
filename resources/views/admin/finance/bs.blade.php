@@ -71,22 +71,13 @@
                     <div class="bg-gray-50 dark:bg-gray-800/30 rounded-xl overflow-hidden">
                         <table class="w-full">
                             <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-                                @foreach($assets as $account => $amount)
-                                    <tr class="hover:bg-white dark:hover:bg-gray-800/50 transition-colors">
-                                        <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
-                                            {{ $account }}
-                                        </td>
-                                        <td class="px-4 py-3 text-right text-sm font-medium text-gray-900 dark:text-white">
-                                            {{ number_format($amount, 2) }}
-                                        </td>
-                                    </tr>
-                                @endforeach
+                                @include('admin.finance.partials.hierarchical-rows', ['rows' => $sections['assets']['rows'] ?? []])
                                 <tr class="bg-success-50/50 dark:bg-success-500/5 border-t-2 border-gray-300 dark:border-gray-700">
                                     <td class="px-4 py-4 text-sm font-bold text-gray-900 dark:text-white">
                                         Total Assets
                                     </td>
                                     <td class="px-4 py-4 text-right text-lg font-bold text-success-600 dark:text-success-400">
-                                        {{ number_format($totalAssets, 2) }}
+                                        {{ number_format($total_assets, 2) }}
                                     </td>
                                 </tr>
                             </tbody>
@@ -110,22 +101,13 @@
                         <div class="bg-gray-50 dark:bg-gray-800/30 rounded-xl overflow-hidden">
                             <table class="w-full">
                                 <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-                                    @foreach($liabilities as $account => $amount)
-                                        <tr class="hover:bg-white dark:hover:bg-gray-800/50 transition-colors">
-                                            <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
-                                                {{ $account }}
-                                            </td>
-                                            <td class="px-4 py-3 text-right text-sm font-medium text-gray-900 dark:text-white">
-                                                {{ number_format($amount, 2) }}
-                                            </td>
-                                        </tr>
-                                    @endforeach
+                                    @include('admin.finance.partials.hierarchical-rows', ['rows' => $sections['liabilities']['rows'] ?? []])
                                     <tr class="bg-orange-50/50 dark:bg-orange-500/5">
                                         <td class="px-4 py-4 text-sm font-bold text-gray-900 dark:text-white">
                                             Total Liabilities
                                         </td>
                                         <td class="px-4 py-4 text-right text-lg font-bold text-orange-600 dark:text-orange-400">
-                                            {{ number_format($totalLiabilities, 2) }}
+                                            {{ number_format($total_liabilities, 2) }}
                                         </td>
                                     </tr>
                                 </tbody>
@@ -147,20 +129,13 @@
                         <div class="bg-gray-50 dark:bg-gray-800/30 rounded-xl overflow-hidden">
                             <table class="w-full">
                                 <tbody>
-                                    <tr class="hover:bg-white dark:hover:bg-gray-800/50 transition-colors">
-                                        <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
-                                            Retained Earnings
-                                        </td>
-                                        <td class="px-4 py-3 text-right text-sm font-medium text-gray-900 dark:text-white">
-                                            {{ number_format($equity, 2) }}
-                                        </td>
-                                    </tr>
+                                    @include('admin.finance.partials.hierarchical-rows', ['rows' => $sections['equity']['rows'] ?? []])
                                     <tr class="bg-brand-50/50 dark:bg-brand-500/5 border-t-2 border-gray-300 dark:border-gray-700">
                                         <td class="px-4 py-4 text-sm font-bold text-gray-900 dark:text-white">
                                             Total Equity
                                         </td>
                                         <td class="px-4 py-4 text-right text-lg font-bold text-brand-600 dark:text-brand-400">
-                                            {{ number_format($equity, 2) }}
+                                            {{ number_format($total_equity, 2) }}
                                         </td>
                                     </tr>
                                 </tbody>
@@ -176,17 +151,17 @@
                     <div class="flex flex-wrap items-center justify-center gap-6 text-sm">
                         <div class="flex items-center gap-3">
                             <span class="font-medium text-gray-700 dark:text-gray-300">Assets</span>
-                            <span class="text-lg font-bold text-success-600 dark:text-success-400">{{ number_format($totalAssets, 2) }}</span>
+                            <span class="text-lg font-bold text-success-600 dark:text-success-400">{{ number_format($total_assets, 2) }}</span>
                         </div>
                         <div class="text-gray-400 dark:text-gray-600">=</div>
                         <div class="flex items-center gap-3">
                             <span class="font-medium text-gray-700 dark:text-gray-300">Liabilities</span>
-                            <span class="text-lg font-bold text-orange-600 dark:text-orange-400">{{ number_format($totalLiabilities, 2) }}</span>
+                            <span class="text-lg font-bold text-orange-600 dark:text-orange-400">{{ number_format($total_liabilities, 2) }}</span>
                         </div>
                         <div class="text-gray-400 dark:text-gray-600">+</div>
                         <div class="flex items-center gap-3">
                             <span class="font-medium text-gray-700 dark:text-gray-300">Equity</span>
-                            <span class="text-lg font-bold text-brand-600 dark:text-brand-400">{{ number_format($equity, 2) }}</span>
+                            <span class="text-lg font-bold text-brand-600 dark:text-brand-400">{{ number_format($total_equity, 2) }}</span>
                         </div>
                     </div>
                     <p class="mt-3 text-center text-xs text-gray-500 dark:text-gray-400">

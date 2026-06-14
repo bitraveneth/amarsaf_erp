@@ -21,7 +21,9 @@ class ProductsModuleSeeder extends Seeder
         $this->call([
             TaxVatClassesSeeder::class,
             PackagingTypesSeeder::class,
+            PackagingConversionsSeeder::class,
             \Database\Seeders\MaterialCategorySeeder::class,
+            \Database\Seeders\UnitOfMeasureSeeder::class,
             MaterialsSeeder::class,
             ProductsSeeder::class,
             PriceListsSeeder::class,

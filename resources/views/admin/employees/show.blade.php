@@ -422,6 +422,13 @@
                             </svg>
                             <span class="text-xs font-medium text-gray-700 dark:text-gray-300">Leave</span>
                         </a>
+                        <a href="{{ route('admin.employees.overtime.index', $employee) }}" 
+                           class="flex flex-col items-center gap-1.5 rounded-lg border border-gray-100 bg-gray-50 p-3 text-center hover:bg-gray-100 dark:border-gray-800 dark:bg-gray-800/50 dark:hover:bg-gray-800 transition-all">
+                            <svg class="h-5 w-5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <span class="text-xs font-medium text-gray-700 dark:text-gray-300">Overtime</span>
+                        </a>
                         <a href="{{ route('admin.employees.locations.index', $employee) }}" 
                            class="flex flex-col items-center gap-1.5 rounded-lg border border-gray-100 bg-gray-50 p-3 text-center hover:bg-gray-100 dark:border-gray-800 dark:bg-gray-800/50 dark:hover:bg-gray-800 transition-all">
                             <svg class="h-5 w-5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">

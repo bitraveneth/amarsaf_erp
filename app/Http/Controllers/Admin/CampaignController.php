@@ -137,8 +137,8 @@ class CampaignController extends Controller
             'campaign',
             $entryDate,
             [
-                ['account' => 'Marketing Expense', 'debit' => $campaign->cost, 'credit' => 0],
-                ['account' => 'Bank', 'debit' => 0, 'credit' => $campaign->cost],
+                ['account_key' => 'marketing_expense', 'debit' => $campaign->cost, 'credit' => 0],
+                ['account_key' => 'bank_default', 'debit' => 0, 'credit' => $campaign->cost],
             ],
             [
                 'description' => $description,

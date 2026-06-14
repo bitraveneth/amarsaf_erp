@@ -22,7 +22,9 @@ return [
                 ['num' => '07', 'name' => ['en' => 'Sales', 'bn' => 'বিক্রয়'], 'output' => ['en' => 'Confirmed orders', 'bn' => 'নিশ্চিত অর্ডার']],
                 ['num' => '08', 'name' => ['en' => 'Delivery & POD', 'bn' => 'ডেলিভারি ও POD'], 'output' => ['en' => 'Goods delivered', 'bn' => 'পণ্য পৌঁছেছে']],
                 ['num' => '09', 'name' => ['en' => 'Accounting', 'bn' => 'হিসাব'], 'output' => ['en' => 'Ledger updated', 'bn' => 'লেজার আপডেট']],
-                ['num' => '10', 'name' => ['en' => 'Reports', 'bn' => 'রিপোর্ট'], 'output' => ['en' => 'P&L, stock, aging', 'bn' => 'P&L, স্টক, aging']],
+                ['num' => '10', 'name' => ['en' => 'Transaction → ledger map', 'bn' => 'লেনদেন → লেজার'], 'output' => ['en' => 'Client cheat sheet', 'bn' => 'ক্লায়েন্ট cheat sheet']],
+                ['num' => '11', 'name' => ['en' => 'HR & payroll', 'bn' => 'HR ও পে-রোল'], 'output' => ['en' => 'Payroll to GL', 'bn' => 'GL-এ পে-রোল']],
+                ['num' => '12', 'name' => ['en' => 'Reports', 'bn' => 'রিপোর্ট'], 'output' => ['en' => 'P&L, stock, aging', 'bn' => 'P&L, স্টক, aging']],
             ],
         ],
         [

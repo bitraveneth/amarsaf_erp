@@ -140,6 +140,48 @@
                         @enderror
                     </div>
 
+                    <!-- Parent group -->
+                    <div class="space-y-2 md:col-span-2">
+                        <label for="parent_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Parent group</label>
+                        <select id="parent_id" name="parent_id" class="w-full rounded-xl border border-gray-200 bg-white/50 px-4 py-3 text-sm dark:border-gray-700 dark:bg-gray-800/50 dark:text-white">
+                            <option value="">— Root level —</option>
+                            @foreach(($groupAccounts ?? collect()) as $group)
+                                <option value="{{ $group->id }}" @selected(old('parent_id', $account->parent_id ?? $parent?->id ?? null) == $group->id)>
+                                    {{ str_repeat('— ', $group->level) }}{{ $group->code }} · {{ $group->name }}
+                                </option>
+                            @endforeach
+                        </select>
+                        @error('parent_id')<p class="text-sm text-error-600">{{ $message }}</p>@enderror
+                    </div>
+
+                    <!-- Slug -->
+                    <div class="space-y-2">
+                        <label for="slug" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Slug (ledgers only)</label>
+                        <input type="text" id="slug" name="slug" value="{{ old('slug', $account->slug) }}" placeholder="e.g. bank_brac"
+                               class="w-full rounded-xl border border-gray-200 bg-white/50 px-4 py-3 text-sm dark:border-gray-700 dark:bg-gray-800/50 dark:text-white" />
+                        @error('slug')<p class="text-sm text-error-600">{{ $message }}</p>@enderror
+                    </div>
+
+                    <!-- Report root -->
+                    <div class="space-y-2">
+                        <label for="report_root" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Report section</label>
+                        <select id="report_root" name="report_root" class="w-full rounded-xl border border-gray-200 bg-white/50 px-4 py-3 text-sm dark:border-gray-700 dark:bg-gray-800/50 dark:text-white">
+                            <option value="">Inherit from parent</option>
+                            @foreach(\App\Models\Account::REPORT_ROOTS as $root)
+                                <option value="{{ $root }}" @selected(old('report_root', $account->report_root) === $root)>{{ ucfirst($root) }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <!-- Group vs ledger -->
+                    <div class="space-y-2">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Account kind</label>
+                        <label class="inline-flex items-center gap-2 text-sm">
+                            <input type="checkbox" name="is_group" value="1" class="rounded border-gray-300" {{ old('is_group', $account->is_group) ? 'checked' : '' }} />
+                            Non-posting group (cannot receive journal lines)
+                        </label>
+                    </div>
+
                     <!-- Account Type -->
                     <div class="space-y-2">
                         <label for="type" class="block text-sm font-medium text-gray-700 dark:text-gray-300">

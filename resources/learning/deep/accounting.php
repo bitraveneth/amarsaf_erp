@@ -257,6 +257,57 @@ MERMAID,
             ],
         ],
         [
+            'id' => 'expense',
+            'icon' => 'journal',
+            'title' => [
+                'en' => 'Journal: expense (category routing)',
+                'bn' => 'জার্নাল: expense (category routing)',
+            ],
+            'type' => 'journal',
+            'intro' => [
+                'en' => 'Posted when expense is saved (`journal_type: expense`). Debit ledger comes from **expense category mapping** or manual account override. Credit = bank, cash, or payable per payment type.',
+                'bn' => 'Expense সেভে (`expense`)। ডেবিট **expense category mapping** থেকে। ক্রেডিট = bank, cash, বা payable।',
+            ],
+            'rows' => [
+                ['account' => ['en' => 'Category expense (e.g. Utilities)', 'bn' => 'Category expense'], 'debit' => ['en' => 'Expense amount', 'bn' => 'পরিমাণ'], 'credit' => ['en' => '—', 'bn' => '—']],
+                ['account' => ['en' => 'Bank / Cash / Payable', 'bn' => 'Bank / Cash / Payable'], 'debit' => ['en' => '—', 'bn' => '—'], 'credit' => ['en' => 'Expense amount', 'bn' => 'পরিমাণ']],
+            ],
+        ],
+        [
+            'id' => 'payroll',
+            'icon' => 'journal',
+            'title' => [
+                'en' => 'Journal: salary distribution (payroll)',
+                'bn' => 'জার্নাল: salary distribution (payroll)',
+            ],
+            'type' => 'journal',
+            'intro' => [
+                'en' => 'Posted from Accounting → Salary distributions (`journal_type: payroll`). Total = base + bonus + TA + DA + commission on distribution.',
+                'bn' => 'Salary distributions থেকে (`payroll`)। মোট = base + bonus + allowances।',
+            ],
+            'rows' => [
+                ['account' => ['en' => 'Salaries & wages', 'bn' => 'Salaries & wages'], 'debit' => ['en' => 'Total payroll', 'bn' => 'মোট পে-রোল'], 'credit' => ['en' => '—', 'bn' => '—']],
+                ['account' => ['en' => 'Bank / Cash / Salary payable', 'bn' => 'Bank / Cash / Payable'], 'debit' => ['en' => '—', 'bn' => '—'], 'credit' => ['en' => 'Total payroll', 'bn' => 'মোট পে-রোল']],
+            ],
+        ],
+        [
+            'id' => 'commission',
+            'icon' => 'journal',
+            'title' => [
+                'en' => 'Journal: agent commission',
+                'bn' => 'জার্নাল: এজেন্ট কমিশন',
+            ],
+            'type' => 'journal',
+            'intro' => [
+                'en' => 'Accrual on settlement: Dr Commission expense, Cr Commission payable. Payment reverses payable to bank.',
+                'bn' => 'Settlement accrual: Dr Commission expense, Cr Commission payable। পেমেন্টে payable → bank।',
+            ],
+            'rows' => [
+                ['account' => ['en' => 'Commission expense', 'bn' => 'Commission expense'], 'debit' => ['en' => 'Accrued amount', 'bn' => 'Accrued'], 'credit' => ['en' => '—', 'bn' => '—']],
+                ['account' => ['en' => 'Commission payable', 'bn' => 'Commission payable'], 'debit' => ['en' => '—', 'bn' => '—'], 'credit' => ['en' => 'Accrued amount', 'bn' => 'Accrued']],
+            ],
+        ],
+        [
             'id' => 'controls',
             'icon' => 'shield',
             'title' => [

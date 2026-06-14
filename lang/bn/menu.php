@@ -55,7 +55,7 @@ return [
         'admin_products_price_list' => 'মূল্য তালিকা',
         'admin_agents' => 'এজেন্ট',
         'admin_kyc_document_types' => 'কেওয়াইসি ডকুমেন্টের ধরন',
-        'admin_commission_rules' => 'কমিশন নিয়ম',
+        'admin_commission_rules' => 'কমিশন',
         'admin_suppliers' => 'সাপ্লায়ার',
         'admin_purchase_orders' => 'ক্রয় অর্ডার',
         'admin_goods_receipts' => 'পণ্য গ্রহণ (জিআরএন)',

@@ -51,7 +51,14 @@
                 <span>Updated {{ \Carbon\Carbon::parse($run->updated_at)->diffForHumans() }}</span>
             </div>
         </div>
-        <div class="flex items-center gap-3">
+        <div class="flex flex-wrap items-center gap-2">
+            <a href="{{ $run->repeatCreateUrl() }}"
+               class="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-semibold text-white shadow-theme-sm hover:bg-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500/50">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                </svg>
+                Run again
+            </a>
             <x-admin.document-actions type="production-order" :id="$run->id" compact />
             <a href="{{ route('admin.production.index') }}" 
                class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-white/[0.03]">
@@ -85,6 +92,25 @@
             @endif
         </div>
     </div>
+
+    <section class="rounded-2xl border border-gray-200 bg-white p-5 shadow-theme-sm dark:border-gray-800 dark:bg-gray-900 sm:p-6">
+        <x-admin.order-workflow
+            type="manufacturing"
+            :step="$run->manufacturingWorkflowStep()"
+            :in-progress="$run->manufacturingWorkflowInProgress()"
+            variant="procurement"
+            label="Manufacturing process"
+        />
+        @if($run->batch)
+            <p class="mt-4 text-sm text-gray-600 dark:text-gray-400">
+                Batch lot:
+                <a href="{{ route('admin.batches.show', $run->batch) }}" class="font-semibold text-brand-600 hover:text-brand-700 dark:text-brand-400">{{ $run->batch->batch_code }}</a>
+                @if($run->batch->expiry_date)
+                    · expires {{ $run->batch->expiry_date->format('d M Y') }}
+                @endif
+            </p>
+        @endif
+    </section>
 
     <!-- Status Message -->
 

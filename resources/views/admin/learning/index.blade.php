@@ -316,6 +316,42 @@
                                             </tbody>
                                         </table>
                                     </template>
+                                    <template x-if="section.type === 'coa_table'">
+                                        <table class="learning-course__table">
+                                            <thead><tr><th x-text="t(ui.code)"></th><th x-text="t(ui.account)"></th><th x-text="t(ui.type)"></th></tr></thead>
+                                            <tbody>
+                                                <template x-for="(row, rIndex) in (section.rows ?? [])" :key="rIndex">
+                                                    <tr>
+                                                        <td x-text="row.code ?? ''"></td>
+                                                        <td x-text="t(row.name)"></td>
+                                                        <td x-text="row.type ?? ''"></td>
+                                                    </tr>
+                                                </template>
+                                            </tbody>
+                                        </table>
+                                    </template>
+                                    <template x-if="section.type === 'mapping_table'">
+                                        <table class="learning-course__table learning-course__table--mapping">
+                                            <thead>
+                                                <tr>
+                                                    <th x-text="t(ui.mapping_action ?? { en: 'Business action', bn: 'ব্যবসায়িক কাজ' })"></th>
+                                                    <th x-text="t(ui.mapping_when ?? { en: 'When it posts', bn: 'কখন পোস্ট' })"></th>
+                                                    <th x-text="t(ui.debit)"></th>
+                                                    <th x-text="t(ui.credit)"></th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <template x-for="(row, rIndex) in (section.rows ?? [])" :key="rIndex">
+                                                    <tr>
+                                                        <td x-text="t(row.action)"></td>
+                                                        <td x-text="t(row.when)"></td>
+                                                        <td class="is-debit" x-text="t(row.debit)"></td>
+                                                        <td class="is-credit" x-text="t(row.credit)"></td>
+                                                    </tr>
+                                                </template>
+                                            </tbody>
+                                        </table>
+                                    </template>
                                     <template x-if="section.type === 'formula'">
                                         <template x-for="(item, fIndex) in (section.items ?? [])" :key="fIndex">
                                             <div class="learning-course__formula">

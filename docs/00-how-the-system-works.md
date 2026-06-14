@@ -89,6 +89,8 @@ flowchart LR
 | 08 | Delivery & POD | Dispatch, proof of delivery, exceptions | Goods delivered, stock consumed |
 | 09 | Accounting | Invoices, receipts, expenses, payroll | Ledger and receivables updated |
 | 10 | Reports | P&L, stock valuation, aging, production | Management decisions |
+| 11 | Transaction → ledger map | Which action hits which ledger | Client / CA cheat sheet |
+| 12 | HR & payroll | Employees, salary distributions | Payroll to GL (not HR screens) |
 
 Each module has its **own guide** in `docs/modules/` with step-by-step instructions and flowcharts.
 

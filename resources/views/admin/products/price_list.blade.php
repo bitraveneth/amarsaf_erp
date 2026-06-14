@@ -1,209 +1,216 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="space-y-6">
-    <!-- Header -->
-    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+@php
+    $snapshotCards = [
+        [
+            'label' => 'All SKUs',
+            'numeric' => number_format($stats['total']),
+            'caption' => 'Active sellable products',
+            'href' => route('admin.products.prices.index'),
+            'tone' => 'brand',
+            'valueTone' => 'neutral',
+            'icon' => 'production',
+        ],
+        [
+            'label' => 'MRP set',
+            'numeric' => number_format($stats['with_mrp']),
+            'caption' => 'Label price defined',
+            'href' => route('admin.products.prices.index'),
+            'tone' => 'success',
+            'valueTone' => 'neutral',
+            'icon' => 'orders',
+        ],
+        [
+            'label' => 'Missing MRP',
+            'numeric' => number_format($stats['missing_mrp']),
+            'caption' => 'Needs label price',
+            'href' => route('admin.products.prices.index', ['filter' => 'missing_mrp']),
+            'tone' => 'error',
+            'valueTone' => ($stats['missing_mrp'] ?? 0) > 0 ? 'danger' : 'neutral',
+            'icon' => 'alert',
+        ],
+        [
+            'label' => 'Special prices',
+            'numeric' => number_format($stats['with_special_prices']),
+            'caption' => $stats['special_price_rows'] . ' agent SKU prices',
+            'href' => route('admin.products.prices.index', ['filter' => 'special_prices']),
+            'tone' => 'purple',
+            'valueTone' => 'neutral',
+            'icon' => 'users',
+        ],
+    ];
+
+    $filterLabels = [
+        'missing_mrp' => 'Missing MRP',
+        'special_prices' => 'Special agent prices',
+        'base_above_mrp' => 'Trade above MRP',
+    ];
+
+    $priceListQuery = array_filter(request()->only(['q', 'filter']));
+@endphp
+
+<div class="dash-page space-y-5">
+    <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
-            <h1 class="text-2xl font-semibold text-gray-900 dark:text-white">
-                Price Lists
-            </h1>
-            <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                See base prices and which agents have negotiated overrides for each SKU.
+            <h1 class="erp-dash-h1">Price lists</h1>
+            <p class="mt-1 max-w-xl text-sm text-gray-500 dark:text-gray-400">
+                Set MRP and trade prices per SKU. Special agent prices override trade price on sales orders.
             </p>
         </div>
-        <div class="flex items-center gap-3">
-            <a href="{{ route('admin.products.index') }}" 
-               class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-white/[0.03]">
-                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
-                </svg>
-                Manage Products
+        <div class="flex flex-wrap gap-2">
+            <a href="{{ route('admin.products.index') }}"
+               class="inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">
+                Product catalog
+            </a>
+            <a href="{{ route('admin.agents.index') }}"
+               class="inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">
+                Agent pricing
             </a>
         </div>
     </div>
 
-    @if($products->isNotEmpty())
-        <!-- Summary Stats -->
-        <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <div class="rounded-xl bg-white p-5 border border-gray-200 shadow-theme-xs dark:border-gray-800 dark:bg-gray-900">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Total SKUs</p>
-                        <p class="mt-1 text-2xl font-semibold text-gray-900 dark:text-white">{{ $products->total() }}</p>
-                    </div>
-                    <div class="rounded-lg bg-brand-50 p-2.5 dark:bg-brand-500/10">
-                        <svg class="h-5 w-5 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
-                        </svg>
-                    </div>
+    @if(session('status'))
+        <div class="rounded-xl border border-success-200 bg-success-50 px-4 py-3 text-sm text-success-800 dark:border-success-500/30 dark:bg-success-500/10 dark:text-success-300">
+            {{ session('status') }}
+        </div>
+    @endif
+
+    <x-dashboard.snapshot-kpis size="lg" :show-header="false" :cards="$snapshotCards" />
+
+    <div class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-theme-sm dark:border-gray-800 dark:bg-gray-900">
+        <div class="border-b border-gray-100 px-5 py-4 dark:border-gray-800 sm:px-6">
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                    <h2 class="text-sm font-semibold text-gray-900 dark:text-white">Product prices</h2>
+                    <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                        @if($hasActiveFilters)
+                            Filtered view
+                            @if(isset($filterLabels[$filter ?? '']))
+                                · {{ $filterLabels[$filter] }}
+                            @endif
+                        @else
+                            Fixed product price list · click Edit to update MRP and trade price
+                        @endif
+                    </p>
                 </div>
             </div>
-            
-            <div class="rounded-xl bg-white p-5 border border-gray-200 shadow-theme-xs dark:border-gray-800 dark:bg-gray-900">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">With Overrides</p>
-                        <p class="mt-1 text-2xl font-semibold text-gray-900 dark:text-white">
-                            {{ $products->where('agent_price_lists_count', '>', 0)->count() }}
-                        </p>
-                    </div>
-                    <div class="rounded-lg bg-success-50 p-2.5 dark:bg-success-500/10">
-                        <svg class="h-5 w-5 text-success-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-5m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                        </svg>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="rounded-xl bg-white p-5 border border-gray-200 shadow-theme-xs dark:border-gray-800 dark:bg-gray-900">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Total Overrides</p>
-                        <p class="mt-1 text-2xl font-semibold text-gray-900 dark:text-white">
-                            {{ $products->sum('agent_price_lists_count') }}
-                        </p>
-                    </div>
-                    <div class="rounded-lg bg-orange-50 p-2.5 dark:bg-orange-500/10">
-                        <svg class="h-5 w-5 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/>
-                        </svg>
-                    </div>
-                </div>
-            </div>
+
+            <form method="GET" action="{{ route('admin.products.prices.index') }}" class="mt-4 flex flex-wrap items-center gap-2">
+                <input type="search" name="q" value="{{ request('q') }}" placeholder="Search SKU or name…"
+                       class="w-full min-w-[12rem] flex-1 rounded-lg border border-gray-300 bg-white px-3.5 py-2 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-white sm:max-w-xs">
+                <select name="filter" onchange="this.form.submit()"
+                        class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-white">
+                    <option value="">All products</option>
+                    @foreach($filterLabels as $value => $label)
+                        <option value="{{ $value }}" @selected(request('filter') === $value)>{{ $label }}</option>
+                    @endforeach
+                </select>
+                <button type="submit" class="rounded-lg bg-gray-900 px-3.5 py-2 text-sm font-medium text-white hover:bg-gray-800 dark:bg-gray-700">Apply</button>
+                @if($hasActiveFilters)
+                    <a href="{{ route('admin.products.prices.index') }}" class="text-sm font-medium text-brand-600 dark:text-brand-400">Clear</a>
+                @endif
+            </form>
         </div>
 
-        <!-- Products Table -->
-        <div class="rounded-2xl border border-gray-200 bg-white shadow-theme-sm dark:border-gray-800 dark:bg-gray-900 overflow-hidden">
-            <div class="overflow-x-auto">
-                <table class="w-full">
-                    <thead class="bg-gray-50 dark:bg-gray-800/50">
-                        <tr>
-                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-700 dark:text-gray-300">
-                                SKU
-                            </th>
-                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-700 dark:text-gray-300">
-                                Product
-                            </th>
-                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-700 dark:text-gray-300">
-                                Base Price
-                            </th>
-                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-700 dark:text-gray-300">
-                                Agent Overrides
-                            </th>
-                            <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-700 dark:text-gray-300">
-                                Actions
-                            </th>
+        @if($products->isEmpty())
+            <div class="px-6 py-16 text-center">
+                <p class="text-sm text-gray-500 dark:text-gray-400">No products match your filters.</p>
+            </div>
+        @else
+            <div class="overflow-x-auto custom-scrollbar">
+                <table class="w-full min-w-[960px]">
+                    <thead>
+                        <tr class="border-b border-gray-100 bg-gray-50/50 text-left dark:border-gray-800 dark:bg-gray-800/30">
+                            <th class="px-5 py-2.5 text-xs font-semibold uppercase tracking-wider text-gray-500 sm:px-6">SKU</th>
+                            <th class="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-gray-500">Product</th>
+                            <th class="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-gray-500">MRP</th>
+                            <th class="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-gray-500">Trade</th>
+                            <th class="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-gray-500">Discount</th>
+                            <th class="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-gray-500">Special prices</th>
+                            <th class="px-5 py-2.5 text-right text-xs font-semibold uppercase tracking-wider text-gray-500 sm:px-6"></th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
+                    <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
                         @foreach($products as $product)
-                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                                <td class="px-4 py-3">
-                                    <span class="font-mono text-sm font-medium text-gray-900 dark:text-white">
-                                        {{ $product->sku }}
-                                    </span>
-                                </td>
-                                <td class="px-4 py-3">
-                                    <div class="flex items-center">
-                                        @if($product->image_path)
-                                            <img src="{{ Storage::url($product->image_path) }}" 
-                                                 alt="{{ $product->name }}"
-                                                 class="h-8 w-8 rounded-lg object-cover border border-gray-200 dark:border-gray-700">
-                                        @else
-                                            <div class="h-8 w-8 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center border border-gray-200 dark:border-gray-700">
-                                                <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                                                          d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                                                </svg>
-                                            </div>
-                                        @endif
-                                        <div class="ml-3">
-                                            <p class="text-sm font-medium text-gray-900 dark:text-white">
-                                                {{ $product->name }}
-                                            </p>
-                                            @if($product->size)
-                                                <p class="text-xs text-gray-500 dark:text-gray-400">
-                                                    {{ $product->size }}
-                                                </p>
-                                            @endif
-                                        </div>
-                                    </div>
-                                </td>
-                                <td class="px-4 py-3">
-                                    <span class="text-sm font-semibold text-gray-900 dark:text-white">
-                                        BDT {{ number_format($product->base_price ?? 0, 2) }}
-                                    </span>
-                                </td>
-                                <td class="px-4 py-3">
-                                    @if($product->agent_price_lists_count > 0)
-                                        <div class="flex items-center gap-2">
-                                            <span class="inline-flex items-center rounded-full bg-brand-50 px-2.5 py-0.5 text-xs font-medium text-brand-700 dark:bg-brand-500/20 dark:text-brand-400">
-                                                <svg class="mr-1 h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
-                                                </svg>
-                                                {{ $product->agent_price_lists_count }} {{ Str::plural('agent', $product->agent_price_lists_count) }}
-                                            </span>
-                                            <span class="text-xs text-gray-500 dark:text-gray-400">
-                                                with overrides
-                                            </span>
-                                        </div>
-                                    @else
-                                        <span class="text-sm text-gray-500 dark:text-gray-400">No overrides</span>
+                            @php
+                                $mrp = $product->mrp;
+                                $base = $product->base_price;
+                                $discount = ($mrp && $mrp > 0 && $base !== null)
+                                    ? round((($mrp - $base) / $mrp) * 100, 1)
+                                    : null;
+                                $tradeAboveMrp = $mrp && $base > $mrp;
+                            @endphp
+                            <tr class="hover:bg-gray-50/60 dark:hover:bg-gray-800/30" x-data="{ editing: false }">
+                                <td x-show="!editing" class="px-5 py-3 font-mono text-sm text-gray-900 dark:text-white sm:px-6">{{ $product->sku }}</td>
+                                <td x-show="!editing" class="px-4 py-3">
+                                    <div class="text-sm font-medium text-gray-900 dark:text-white">{{ $product->name }}</div>
+                                    @if($product->size)
+                                        <div class="text-xs text-gray-500 dark:text-gray-400">{{ $product->size }}</div>
                                     @endif
                                 </td>
-                                <td class="px-4 py-3 text-right">
-                                    <a href="{{ route('admin.products.prices.show', $product) }}" 
-                                       class="erp-btn-action">
-                                        <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                                                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                                                  d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-                                        </svg>
-                                        View Details
-                                    </a>
+                                <td x-show="!editing" class="px-4 py-3 text-sm tabular-nums text-gray-900 dark:text-white">
+                                    @if($mrp)
+                                        {{ number_format($mrp, 2) }}
+                                    @else
+                                        <span class="text-amber-600 dark:text-amber-400">—</span>
+                                    @endif
+                                </td>
+                                <td x-show="!editing" class="px-4 py-3 text-sm tabular-nums font-medium text-gray-900 dark:text-white">
+                                    {{ number_format($base ?? 0, 2) }}
+                                    @if($tradeAboveMrp)
+                                        <span class="ml-1 text-xs text-error-600" title="Trade price exceeds MRP">!</span>
+                                    @endif
+                                </td>
+                                <td x-show="!editing" class="px-4 py-3 text-sm tabular-nums text-gray-600 dark:text-gray-300">
+                                    @if($discount !== null)
+                                        {{ $discount }}%
+                                    @else
+                                        —
+                                    @endif
+                                </td>
+                                <td x-show="!editing" class="px-4 py-3">
+                                    @if($product->agent_price_lists_count > 0)
+                                        <a href="{{ route('admin.products.prices.show', $product) }}"
+                                           class="inline-flex rounded-full bg-purple-50 px-2.5 py-0.5 text-xs font-medium text-purple-700 hover:bg-purple-100 dark:bg-purple-500/15 dark:text-purple-300">
+                                            {{ $product->agent_price_lists_count }} {{ Str::plural('agent', $product->agent_price_lists_count) }}
+                                        </a>
+                                    @else
+                                        <span class="text-xs text-gray-400">Uses trade price</span>
+                                    @endif
+                                </td>
+                                <td x-show="!editing" class="px-5 py-3 text-right sm:px-6">
+                                    <div class="flex justify-end gap-1">
+                                        <button type="button" @click="editing = true" class="erp-btn-action">Edit</button>
+                                        @if($product->agent_price_lists_count > 0)
+                                            <a href="{{ route('admin.products.prices.show', $product) }}" class="erp-btn-action">Agents</a>
+                                        @endif
+                                    </div>
+                                </td>
+                                <td x-show="editing" x-cloak colspan="7" class="px-5 py-3 sm:px-6">
+                                    <form method="POST" action="{{ route('admin.products.prices.update', $product) . ($priceListQuery ? '?' . http_build_query($priceListQuery) : '') }}" class="flex flex-wrap items-end gap-3">
+                                        @csrf
+                                        @method('PATCH')
+                                        <div>
+                                            <label class="mb-1 block text-[10px] font-medium uppercase text-gray-500">MRP (BDT)</label>
+                                            <input type="number" step="0.01" min="0" name="mrp" value="{{ $product->mrp }}"
+                                                   class="w-32 rounded-lg border border-gray-300 px-2.5 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-white">
+                                        </div>
+                                        <div>
+                                            <label class="mb-1 block text-[10px] font-medium uppercase text-gray-500">Trade price (BDT)</label>
+                                            <input type="number" step="0.01" min="0" name="base_price" value="{{ $product->base_price }}" required
+                                                   class="w-32 rounded-lg border border-gray-300 px-2.5 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-white">
+                                        </div>
+                                        <button type="submit" class="rounded-lg bg-brand-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-600">Save</button>
+                                        <button type="button" @click="editing = false" class="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-600 dark:border-gray-700 dark:text-gray-300">Cancel</button>
+                                    </form>
                                 </td>
                             </tr>
                         @endforeach
                     </tbody>
                 </table>
             </div>
-        </div>
-
-        <!-- Pagination -->
-        <div class="mt-6">
-            {{ $products->links() }}
-        </div>
-    @else
-        <!-- Empty State -->
-        <div class="rounded-2xl border border-gray-200 bg-white p-12 text-center shadow-theme-sm dark:border-gray-800 dark:bg-gray-900">
-            <div class="mx-auto w-24 h-24 mb-4 text-gray-300 dark:text-gray-700">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" 
-                          d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" 
-                          d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
-                </svg>
-            </div>
-            <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">No products found</h3>
-            <p class="text-gray-600 dark:text-gray-400 mb-6 max-w-md mx-auto">
-                No products found. Add products first, then maintain price lists.
-            </p>
-            <div class="flex items-center justify-center gap-3">
-                <a href="{{ route('admin.products.create') }}" 
-                   class="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-semibold text-white shadow-theme-xs hover:bg-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500/50">
-                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                    </svg>
-                    Add Product
-                </a>
-                <a href="{{ route('admin.products.index') }}" 
-                   class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-white/[0.03]">
-                    Manage Products
-                </a>
-            </div>
-        </div>
-    @endif
+        @endif
+    </div>
 </div>
 @endsection

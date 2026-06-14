@@ -3,16 +3,19 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Account;
 use App\Models\Expense;
-use App\Models\LedgerEntry;
-use App\Services\Accounting\AccountingService;
+use App\Models\ExpenseCategory;
+use App\Models\JournalEntry;
+use App\Services\Accounting\ExpensePostingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class ExpenseController extends Controller
 {
-    public function __construct(protected AccountingService $accounting)
+    public function __construct(protected ExpensePostingService $posting)
     {
     }
 
@@ -30,20 +33,19 @@ class ExpenseController extends Controller
             ? Carbon::parse($request->query('to'))
             : Carbon::now()->endOfMonth();
 
-        $query = Expense::whereBetween('date', [$from, $to]);
+        $query = Expense::with('expenseCategory')->whereBetween('date', [$from, $to]);
 
         if ($category = $request->query('category')) {
-            $query->where('category', $category);
+            $query->where(function ($q) use ($category) {
+                $q->where('category', $category)
+                    ->orWhereHas('expenseCategory', fn ($cq) => $cq->where('code', $category));
+            });
         }
 
         $expenses = $query->orderByDesc('date')->paginate(20)->withQueryString();
-
         $total = (clone $query)->sum('amount');
 
-        $categories = Expense::select('category')
-            ->distinct()
-            ->orderBy('category')
-            ->pluck('category');
+        $categories = ExpenseCategory::active()->ordered()->get();
 
         return view('admin.finance.expenses.index', compact('expenses', 'from', 'to', 'total', 'categories'));
     }
@@ -51,7 +53,11 @@ class ExpenseController extends Controller
     public function create()
     {
         return view('admin.finance.expenses.create', [
-            'expense' => new Expense(),
+            'expense' => new Expense([
+                'payment_type' => ExpenseCategory::PAYMENT_BANK,
+                'payment_account_key' => 'bank_default',
+            ]),
+            ...$this->formOptions(),
         ]);
     }
 
@@ -61,7 +67,7 @@ class ExpenseController extends Controller
 
         DB::transaction(function () use ($data) {
             $expense = Expense::create($data);
-            $this->syncLedgerEntries($expense);
+            $this->posting->sync($expense);
         });
 
         return redirect()->route('admin.expenses.index')->with('status', 'Expense recorded.');
@@ -69,7 +75,12 @@ class ExpenseController extends Controller
 
     public function edit(Expense $expense)
     {
-        return view('admin.finance.expenses.edit', compact('expense'));
+        $expense->load('expenseCategory');
+
+        return view('admin.finance.expenses.edit', [
+            'expense' => $expense,
+            ...$this->formOptions(),
+        ]);
     }
 
     public function update(Request $request, Expense $expense)
@@ -78,7 +89,7 @@ class ExpenseController extends Controller
 
         DB::transaction(function () use ($expense, $data) {
             $expense->update($data);
-            $this->syncLedgerEntries($expense);
+            $this->posting->sync($expense->fresh());
         });
 
         return redirect()->route('admin.expenses.index')->with('status', 'Expense updated.');
@@ -86,7 +97,7 @@ class ExpenseController extends Controller
 
     public function destroy(Expense $expense)
     {
-        if ($this->hasPostedLedgerEntries($expense)) {
+        if ($this->hasPostedJournal($expense)) {
             return redirect()
                 ->route('admin.expenses.index')
                 ->withErrors([
@@ -95,7 +106,8 @@ class ExpenseController extends Controller
         }
 
         DB::transaction(function () use ($expense) {
-            $this->deleteLedgerEntries($expense);
+            app(\App\Services\Accounting\AccountingService::class)
+                ->deleteByJournalTypeAndSource('expense', Expense::class, $expense->id);
             $expense->delete();
         });
 
@@ -104,73 +116,49 @@ class ExpenseController extends Controller
 
     protected function validated(Request $request): array
     {
-        return $request->validate([
+        $data = $request->validate([
             'date' => 'required|date',
-            'category' => 'required|string|max:100',
+            'expense_category_id' => 'required|exists:expense_categories,id',
+            'account_id' => [
+                'nullable',
+                Rule::exists('accounts', 'id')->where(fn ($q) => $q->where('is_group', false)->where('type', 'expense')),
+            ],
             'description' => 'nullable|string|max:255',
             'amount' => 'required|numeric|min:0',
             'reference' => 'nullable|string|max:100',
             'status' => 'required|in:' . implode(',', self::VALID_STATUSES),
+            'payment_type' => 'required|in:bank,cash,payable',
+            'payment_account_key' => 'required|string|max:100',
+            'analytic_label' => 'nullable|string|max:100',
         ]);
+
+        $category = ExpenseCategory::findOrFail($data['expense_category_id']);
+        $data['category'] = $category->code;
+
+        return $data;
     }
 
-    protected function syncLedgerEntries(Expense $expense): void
+    protected function formOptions(): array
     {
-        $this->deleteLedgerEntries($expense);
-
-        if ((float) $expense->amount <= 0 || ! in_array($expense->status, self::VALID_STATUSES, true)) {
-            return;
-        }
-
-        $description = $this->ledgerDescription($expense);
-        $account = $this->expenseAccount($expense);
-
-        $this->accounting->post(
-            'expense',
-            Carbon::parse($expense->date),
-            [
-                ['account' => $account, 'debit' => $expense->amount, 'credit' => 0],
-                ['account' => 'Bank', 'debit' => 0, 'credit' => $expense->amount],
+        return [
+            'expenseCategories' => ExpenseCategory::active()->ordered()->with('account')->get(),
+            'expenseAccounts' => Account::postable()->where('type', 'expense')->orderBy('code')->get(),
+            'paymentAccountKeys' => [
+                'bank_default' => 'Default bank (BRAC)',
+                'bank_brac' => 'BRAC Bank',
+                'bank_scb' => 'SCB Bank',
+                'cash_in_hand' => 'Cash in hand',
+                'petty_cash' => 'Petty cash',
             ],
-            [
-                'description' => $description,
-                'source_type' => Expense::class,
-                'source_id' => $expense->id,
-            ]
-        );
+        ];
     }
 
-    protected function deleteLedgerEntries(Expense $expense): void
+    protected function hasPostedJournal(Expense $expense): bool
     {
-        $this->accounting->deleteByDescription($this->ledgerDescription($expense));
-    }
-
-    protected function hasPostedLedgerEntries(Expense $expense): bool
-    {
-        return LedgerEntry::where('description', $this->ledgerDescription($expense))->exists();
-    }
-
-    protected function ledgerDescription(Expense $expense): string
-    {
-        return 'Expense #' . $expense->id;
-    }
-
-    protected function expenseAccount(Expense $expense): string
-    {
-        $category = strtolower(trim((string) $expense->category));
-
-        if (str_contains($category, 'marketing')) {
-            return 'Marketing Expense';
-        }
-
-        if (str_contains($category, 'salary') || str_contains($category, 'payroll')) {
-            return 'Payroll Expense';
-        }
-
-        if (str_contains($category, 'utility')) {
-            return 'Utilities Expense';
-        }
-
-        return 'Selling & Distribution Expense';
+        return JournalEntry::query()
+            ->where('journal_type', 'expense')
+            ->where('source_type', Expense::class)
+            ->where('source_id', $expense->id)
+            ->exists();
     }
 }

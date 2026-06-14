@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Employee;
 use App\Models\SalaryDistribution;
+use App\Services\Accounting\PayrollPostingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -13,6 +14,10 @@ use Illuminate\Validation\ValidationException;
 
 class SalaryDistributionController extends Controller
 {
+    public function __construct(protected PayrollPostingService $payrollPosting)
+    {
+    }
+
     public function index(Request $request)
     {
         $month = $request->query('month')
@@ -39,6 +44,7 @@ class SalaryDistributionController extends Controller
             'ta_allowances',
             'da_allowances',
             'commission',
+            'overtime_pay',
             'document_path',
             'payment_method',
         ]);
@@ -48,7 +54,8 @@ class SalaryDistributionController extends Controller
                 + (float) $row->bonus
                 + (float) $row->ta_allowances
                 + (float) $row->da_allowances
-                + (float) $row->commission;
+                + (float) $row->commission
+                + (float) $row->overtime_pay;
         });
 
         $employeeCount = $summaryRows->pluck('employee_id')->filter()->unique()->count();
@@ -80,6 +87,8 @@ class SalaryDistributionController extends Controller
         $distribution = new SalaryDistribution([
             'period_start' => now()->startOfMonth(),
             'period_end' => now()->endOfMonth(),
+            'payment_type' => 'bank',
+            'payment_account_key' => 'bank_default',
         ]);
 
         return view('admin.finance.salary_distributions.create', compact('employees', 'distribution'));
@@ -92,6 +101,7 @@ class SalaryDistributionController extends Controller
 
         DB::transaction(function () use ($data, &$distribution) {
             $distribution = $this->persistDistribution($data);
+            $this->payrollPosting->sync($distribution);
         });
 
         if ($request->hasFile('document')) {
@@ -116,7 +126,8 @@ class SalaryDistributionController extends Controller
     {
         $data = $this->validated($request);
         DB::transaction(function () use ($data, $salaryDistribution) {
-            $this->persistDistribution($data, $salaryDistribution);
+            $distribution = $this->persistDistribution($data, $salaryDistribution);
+            $this->payrollPosting->sync($distribution);
         });
 
         if ($request->hasFile('document')) {
@@ -159,7 +170,10 @@ class SalaryDistributionController extends Controller
             'ta_allowances' => 'nullable|numeric|min:0',
             'da_allowances' => 'nullable|numeric|min:0',
             'commission' => 'nullable|numeric|min:0',
+            'overtime_pay' => 'nullable|numeric|min:0',
             'payment_method' => 'nullable|string|max:50',
+            'payment_type' => 'required|in:bank,cash,payable',
+            'payment_account_key' => 'required|string|max:100',
             'remarks' => 'nullable|string|max:255',
             'document' => 'nullable|file|max:10240',
         ]);

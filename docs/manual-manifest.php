@@ -22,4 +22,6 @@ return [
     'modules/08-delivery-and-pod.md',
     'modules/09-accounting.md',
     'modules/10-reports.md',
+    'modules/11-ledger-mapping.md',
+    'modules/12-hr-payroll.md',
 ];

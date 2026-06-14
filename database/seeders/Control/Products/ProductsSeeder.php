@@ -5,144 +5,66 @@ namespace Database\Seeders\Control\Products;
 use App\Models\PackagingType;
 use App\Models\Product;
 use App\Models\TaxClass;
+use App\Support\WaterProductLineCatalog;
 use Illuminate\Database\Seeder;
 
 /**
- * Seed data for:
- * - Finished Products (sellable SKUs)
+ * Seed finished products for the SAF mineral water line (500ml, 1L, 2L, 20L jar).
  */
 class ProductsSeeder extends Seeder
 {
     public function run(): void
     {
-        $vat15 = TaxClass::where('name', 'Standard VAT 15%')->first();
-        $carton500 = PackagingType::where('name', 'Carton 12 x 500ml')->first();
-        $bottle500 = PackagingType::where('name', 'Bottle 500ml')->first();
-        $carton1L  = PackagingType::where('name', 'Carton 12 x 1L')->first();
-        $jar20L    = PackagingType::where('name', 'Jar 20L')->first();
-
-        // Fallbacks in case other seeders have not run yet
-        if (! $vat15) {
-            $vat15 = TaxClass::create([
-                'name' => 'Standard VAT 15%',
-                'rate' => 15,
-            ]);
-        }
-
-        if (! $carton500) {
-            $carton500 = PackagingType::create([
-                'name'        => 'Carton 12 x 500ml',
-                'unit'        => 'carton',
-                'description' => 'Carton containing 12 x 500ml bottles',
-            ]);
-        }
-
-        if (! $bottle500) {
-            $bottle500 = PackagingType::create([
-                'name'        => 'Bottle 500ml',
-                'unit'        => 'bottle',
-                'description' => 'Single 500ml PET bottle',
-            ]);
-        }
-
-        if (! $carton1L) {
-            $carton1L = PackagingType::create([
-                'name'        => 'Carton 12 x 1L',
-                'unit'        => 'carton',
-                'description' => 'Carton containing 12 x 1L bottles',
-            ]);
-        }
-
-        if (! $jar20L) {
-            $jar20L = PackagingType::create([
-                'name'        => 'Jar 20L',
-                'unit'        => 'jar',
-                'description' => 'Refillable 20L water jar',
-            ]);
-        }
-
-        // One demo finished product: SAF Mineral Water 500ml – Carton (12 bottles)
-        Product::firstOrCreate(
-            ['sku' => 'SAF-500ML-CTN'],
-            [
-                'product_type'      => 'finished',
-                'name'             => 'SAF Mineral Water 500ml – Carton (12 bottles)',
-                'description'      => 'Premium mineral water, 500ml × 12 bottles per carton',
-                'size'             => '500ml carton',
-                'uom'              => 'carton',
-                'volume_ml'        => 500,
-                'packaging_type_id'=> $carton500->id,
-                'tax_class_id'     => $vat15->id,
-                'mineral_source'   => 'SAF Plant',
-                'ph'               => 7.2,
-                'tds'              => 150,
-                'base_price'       => 550, // demo selling price per carton
-                'standard_cost'    => 380,
-                'is_active'        => true,
-            ]
+        $vat15 = TaxClass::firstOrCreate(
+            ['name' => 'Standard VAT 15%'],
+            ['rate' => 15]
         );
 
-        // Single 500ml bottle SKU
-        Product::firstOrCreate(
-            ['sku' => 'SAF-500ML'],
-            [
-                'product_type'      => 'finished',
-                'name'             => 'SAF Mineral Water 500ml – Bottle',
-                'description'      => 'Single 500ml PET bottle',
-                'size'             => '500ml',
-                'uom'              => 'bottle',
-                'volume_ml'        => 500,
-                'packaging_type_id'=> $bottle500->id,
-                'tax_class_id'     => $vat15->id,
-                'mineral_source'   => 'SAF Plant',
-                'ph'               => 7.2,
-                'tds'              => 150,
-                'base_price'       => 45,  // demo retail price per bottle
-                'standard_cost'    => 28,
-                'is_active'        => true,
-            ]
+        // Legacy SKU without pack suffix → standard SAF-500ML-BTL
+        if (Product::where('sku', 'SAF-500ML')->exists()
+            && ! Product::where('sku', 'SAF-500ML-BTL')->exists()) {
+            Product::where('sku', 'SAF-500ML')->update(['sku' => 'SAF-500ML-BTL']);
+        }
+
+        $definitions = array_merge(
+            WaterProductLineCatalog::primaryFinishedProducts(),
+            WaterProductLineCatalog::optionalSingleBottleProducts()
         );
 
-        // 1L carton (12 bottles)
-        Product::firstOrCreate(
-            ['sku' => 'SAF-1L-CTN'],
-            [
-                'product_type'      => 'finished',
-                'name'             => 'SAF Mineral Water 1L – Carton (12 bottles)',
-                'description'      => 'Premium mineral water, 1L × 12 bottles per carton',
-                'size'             => '1L carton',
-                'uom'              => 'carton',
-                'volume_ml'        => 1000,
-                'packaging_type_id'=> $carton1L->id,
-                'tax_class_id'     => $vat15->id,
-                'mineral_source'   => 'SAF Plant',
-                'ph'               => 7.2,
-                'tds'              => 150,
-                'base_price'       => 900, // demo price per 1L carton
-                'standard_cost'    => 620,
-                'is_active'        => true,
-            ]
-        );
+        $validSkus = collect($definitions)->pluck('sku')->all();
 
-        // 20L jar
-        Product::firstOrCreate(
-            ['sku' => 'SAF-20L-JAR'],
-            [
-                'product_type'      => 'finished',
-                'name'             => 'SAF Mineral Water 20L – Jar',
-                'description'      => 'Refillable 20L jar for offices and homes',
-                'size'             => '20L',
-                'uom'              => 'jar',
-                'volume_ml'        => 20000,
-                'packaging_type_id'=> $jar20L->id,
-                'tax_class_id'     => $vat15->id,
-                'mineral_source'   => 'SAF Plant',
-                'ph'               => 7.2,
-                'tds'              => 150,
-                'base_price'       => 250, // demo price per jar
-                'standard_cost'    => 165,
-                'is_active'        => true,
-            ]
-        );
+        foreach ($definitions as $row) {
+            $packaging = PackagingType::where('name', $row['packaging_name'])->first();
+
+            Product::updateOrCreate(
+                ['sku' => $row['sku']],
+                [
+                    'product_type' => 'finished',
+                    'name' => $row['name'],
+                    'brand' => $row['brand'] ?? 'SAF',
+                    'description' => $row['description'],
+                    'size' => $row['size'],
+                    'uom' => $row['uom'],
+                    'volume_ml' => $row['volume_ml'],
+                    'weight_g' => $row['weight_g'] ?? null,
+                    'shelf_life_months' => $row['shelf_life_months'] ?? null,
+                    'packaging_type_id' => $packaging?->id,
+                    'tax_class_id' => $vat15->id,
+                    'mineral_source' => 'SAF Plant',
+                    'ph' => 7.2,
+                    'tds' => 150,
+                    'base_price' => $row['base_price'],
+                    'mrp' => $row['mrp'] ?? null,
+                    'standard_cost' => $row['standard_cost'],
+                    'is_active' => true,
+                ]
+            );
+        }
+
+        Product::query()
+            ->where('product_type', 'finished')
+            ->where('sku', 'like', 'SAF-%')
+            ->whereNotIn('sku', $validSkus)
+            ->update(['is_active' => false]);
     }
 }

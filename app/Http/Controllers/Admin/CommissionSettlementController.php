@@ -157,8 +157,8 @@ class CommissionSettlementController extends Controller
             'commission_accrual',
             Carbon::today(),
             [
-                ['account' => 'Commission Expense', 'debit' => $settlement->commission_total, 'credit' => 0],
-                ['account' => 'Commission Payable', 'debit' => 0, 'credit' => $settlement->commission_total],
+                ['account_key' => 'commission_expense', 'debit' => $settlement->commission_total, 'credit' => 0],
+                ['account_key' => 'commission_payable', 'debit' => 0, 'credit' => $settlement->commission_total],
             ],
             [
                 'description' => $description,
@@ -184,8 +184,8 @@ class CommissionSettlementController extends Controller
             'commission_payment',
             Carbon::today(),
             [
-                ['account' => 'Commission Payable', 'debit' => $settlement->commission_total, 'credit' => 0],
-                ['account' => 'Bank', 'debit' => 0, 'credit' => $settlement->commission_total],
+                ['account_key' => 'commission_payable', 'debit' => $settlement->commission_total, 'credit' => 0],
+                ['account_key' => 'bank_default', 'debit' => 0, 'credit' => $settlement->commission_total],
             ],
             [
                 'description' => $description,

@@ -190,6 +190,26 @@
                         @enderror
                     </div>
 
+                    <!-- Commission Rate -->
+                    <div>
+                        <label for="commission_rate" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Commission (%)
+                        </label>
+                        <div class="relative">
+                            <input type="number" id="commission_rate" name="commission_rate" step="0.01" min="0" max="100"
+                                   value="{{ old('commission_rate') }}"
+                                   placeholder="2"
+                                   class="w-full rounded-lg border border-gray-300 bg-white py-2.5 pl-4 pr-8 text-sm text-gray-900 placeholder-gray-500 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-400">
+                            <span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-500 dark:text-gray-400">%</span>
+                        </div>
+                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                            Paid monthly on sales. Standard catalog prices apply.
+                        </p>
+                        @error('commission_rate')
+                            <p class="mt-1 text-sm text-error-600 dark:text-error-500">{{ $message }}</p>
+                        @enderror
+                    </div>
+
                     <!-- Parent Agent -->
                     <div>
                         <label for="parent_id" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">

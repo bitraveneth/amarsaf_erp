@@ -35,6 +35,25 @@
                 ['label' => 'POD', 'hint' => 'Complete'],
             ],
         ],
+        'bom' => [
+            'label' => 'Recipe setup flow',
+            'steps' => [
+                ['label' => 'Product', 'hint' => 'Finished good'],
+                ['label' => 'Components', 'hint' => 'Materials per unit'],
+                ['label' => 'Review', 'hint' => 'Cost & quantities'],
+                ['label' => 'Activate', 'hint' => 'Ready for production'],
+            ],
+        ],
+        'manufacturing' => [
+            'label' => 'Manufacturing flow',
+            'steps' => [
+                ['label' => 'Recipe', 'hint' => 'Active BOM'],
+                ['label' => 'Batch', 'hint' => 'Lot / trace ID'],
+                ['label' => 'Produce', 'hint' => 'Run quantity'],
+                ['label' => 'QC', 'hint' => 'Approve lot'],
+                ['label' => 'Stock', 'hint' => 'Finished goods in'],
+            ],
+        ],
     ];
 
     $preset = $presets[$type] ?? $presets['purchase'];

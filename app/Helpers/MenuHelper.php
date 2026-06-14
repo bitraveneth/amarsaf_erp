@@ -204,8 +204,8 @@ class MenuHelper
                         'permission' => 'control.agents',
                         'subItems' => [
                             ['name' => 'Agents', 'path' => '/admin/agents', 'permission' => 'control.agents'],
+                            ['name' => 'Commission overview', 'path' => '/admin/commission-rules', 'permission' => 'control.agents'],
                             ['name' => 'KYC document types', 'path' => '/admin/kyc-document-types', 'permission' => 'control.agents'],
-                            ['name' => 'Commission rules', 'path' => '/admin/commission-rules', 'permission' => 'control.agents'],
                         ],
                     ],
                     [
@@ -227,11 +227,16 @@ class MenuHelper
                     ],
                     [
                         'name' => 'Logistics',
-                        'icon' => 'suppliers',
+                        'icon' => 'warehouses',
                         'path' => '#',
                         'permission' => 'control.warehouses',
                         'subItems' => [
+                            ['name' => 'Logistics dashboard', 'path' => '/admin/logistics', 'permission' => 'control.warehouses'],
+                            ['name' => 'Vehicle loads', 'path' => '/admin/vehicle-load', 'permission' => 'control.warehouses'],
+                            ['name' => 'Fleet expenses', 'path' => '/admin/fleet-expenses', 'permission' => 'control.warehouses'],
                             ['name' => 'Vehicle registry', 'path' => '/admin/vehicles', 'permission' => 'control.warehouses'],
+                            ['name' => 'Logistics bills', 'path' => '/admin/logistics-bills', 'permission' => 'control.warehouses'],
+                            ['name' => 'Transport carriers', 'path' => '/admin/logistics/carriers', 'permission' => 'control.warehouses'],
                             ['name' => 'Delivery zones & routes', 'path' => '/admin/delivery-routes', 'permission' => 'control.warehouses'],
                         ],
                     ],
@@ -246,6 +251,7 @@ class MenuHelper
                             ['name' => 'Allowances', 'path' => '/admin/allowances', 'permission' => 'control.employees'],
                             ['name' => 'Equipment', 'path' => '/admin/equipment', 'permission' => 'control.employees'],
                             ['name' => 'Leaves', 'path' => '/admin/leaves', 'permission' => 'control.employees'],
+                            ['name' => 'Overtime', 'path' => '/admin/overtime', 'permission' => 'control.employees'],
                             ['name' => 'Location logs', 'path' => '/admin/locations', 'permission' => 'control.employees'],
                             ['name' => 'Badges', 'path' => '/admin/badges', 'permission' => 'control.employees'],
                         ],
@@ -335,7 +341,6 @@ class MenuHelper
                         'permission' => 'control.warehouses',
                         'subItems' => [
                             ['name' => 'Deliveries & POD', 'path' => '/admin/deliveries/pod', 'permission' => 'control.warehouses'],
-                            ['name' => 'Vehicle loads', 'path' => '/admin/vehicle-load', 'permission' => 'control.warehouses'],
                             ['name' => 'Packing slips', 'path' => '/admin/deliveries/packing-slips', 'permission' => 'control.warehouses'],
                             ['name' => 'Picking lists', 'path' => '/admin/orders-picking', 'permission' => 'sales.manage'],
                         ],

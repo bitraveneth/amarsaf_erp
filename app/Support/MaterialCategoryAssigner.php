@@ -13,21 +13,23 @@ class MaterialCategoryAssigner
     protected static function categoryRules(): array
     {
         return [
-            'Jar-cap sticker' => ['jar-cap sticker', 'jar cap sticker'],
-            'Jar-neck label' => ['jar-neck', 'jar neck label', 'neck label'],
-            'Jar-label' => ['jar-label', 'jar label'],
-            'Jar-cap' => ['jar-cap', 'jar cap'],
-            'BOPP Label' => ['bopp', 'rm-label', 'label print'],
+            'Jar-cap sticker' => ['jar-cap sticker', 'jar cap sticker', 'lbl-jar-cap'],
+            'Jar-neck label' => ['jar-neck', 'jar neck label', 'neck label', 'lbl-jar-neck'],
+            'Jar-label' => ['jar-label', 'jar label', 'lbl-20l'],
+            'BOPP Label' => ['bopp', 'rm-bopp', 'rm-lbl', 'label 500', 'label-500', 'rm-label'],
             'Shrink Wrap' => ['shrink wrap', 'shrink-wrap', 'rm-shrink'],
             'Hot Melt Glue' => ['hot melt', 'glue'],
-            'Potassium' => ['potassium'],
-            'Magnesium' => ['magnesium'],
-            'Calcium' => ['calcium'],
-            'Carton' => ['carton', 'case making', 'case box'],
-            'Preform' => ['preform', 'pet bottle', 'rm-pet'],
-            'Cap-universal' => ['bottle cap', 'rm-cap', ' cap', 'cap-'],
-            'Production Service' => ['labour', 'labor', 'electricity', 'utilities', 'service'],
-            'In-house Step' => ['inhouse', 'in-house', 'ih-'],
+            'Potassium' => ['potassium', 'min-k'],
+            'Magnesium' => ['magnesium', 'min-mg'],
+            'Calcium' => ['calcium', 'min-ca'],
+            'Minerals (Universal)' => ['minerals universal', 'min-univ', 'mineral'],
+            'Carton' => ['carton', 'ctn-', 'case making', 'case box'],
+            'Preform' => ['preform', 'pref-', 'rm-pet', 'pet bottle'],
+            'Cap-universal' => ['bottle cap', 'rm-cap-std', ' cap', 'cap-std', 'cap-universal'],
+            'Jar-cap' => ['jar-cap', 'jar cap', 'cap-jar'],
+            'Treated Water' => ['ro water', 'rm-water', 'treated water'],
+            'Production Service' => ['labour', 'labor', 'sv-svc', 'sv-lab', 'electricity', 'utilities', 'sv-util'],
+            'In-house Step' => ['inhouse', 'in-house', 'ih-step', 'ih-shrink', 'label print'],
         ];
     }
 
@@ -44,19 +46,11 @@ class MaterialCategoryAssigner
         $haystack = strtolower(trim($product->sku . ' ' . $product->name));
 
         foreach (self::categoryRules() as $categoryName => $keywords) {
-            if (in_array($categoryName, ['Production Service', 'In-house Step'], true)) {
-                continue;
-            }
-
             foreach ($keywords as $keyword) {
                 if ($keyword !== '' && str_contains($haystack, strtolower($keyword))) {
                     return $categoryName;
                 }
             }
-        }
-
-        if (str_contains($haystack, 'water') || str_contains($haystack, 'mineral')) {
-            return 'Minerals (Universal)';
         }
 
         return null;

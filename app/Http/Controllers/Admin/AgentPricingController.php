@@ -7,6 +7,7 @@ use App\Models\Agent;
 use App\Models\AgentCommissionRule;
 use App\Models\AgentPriceList;
 use App\Models\Product;
+use App\Support\AgentCommissionSync;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -109,5 +110,18 @@ class AgentPricingController extends Controller
         return redirect()
             ->route('admin.agents.pricing.edit', $agent)
             ->with('status', 'Pricing and commission rules updated.');
+    }
+
+    public function updateCommission(Request $request, Agent $agent)
+    {
+        $data = $request->validate([
+            'commission_rate' => 'nullable|numeric|min:0|max:100',
+        ]);
+
+        AgentCommissionSync::sync($agent, $data['commission_rate'] ?? null);
+
+        return redirect()
+            ->route('admin.agents.show', ['agent' => $agent, 'tab' => 'commission'])
+            ->with('status', 'Commission saved.');
     }
 }

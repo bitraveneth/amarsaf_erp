@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use Database\Seeders\Accounting\BalanceSheetModuleSeeder;
 use Database\Seeders\Accounting\BankReconciliationModuleSeeder;
 use Database\Seeders\Accounting\CashflowModuleSeeder;
+use Database\Seeders\Accounting\ChartOfAccountsDemoJournalSeeder;
 use Database\Seeders\Accounting\ChartOfAccountsModuleSeeder;
 use Database\Seeders\Accounting\CustomerInvoicesModuleSeeder;
 use Database\Seeders\Accounting\ExpensesModuleSeeder;
@@ -88,6 +89,7 @@ class DatabaseSeeder extends Seeder
 
             // 5. Accounting
             ChartOfAccountsModuleSeeder::class,
+            ChartOfAccountsDemoJournalSeeder::class,
             CustomerInvoicesModuleSeeder::class,
             ExpensesModuleSeeder::class,
             SalaryDistributionsModuleSeeder::class,

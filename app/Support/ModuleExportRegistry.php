@@ -43,6 +43,7 @@ class ModuleExportRegistry
         'outstanding-bills' => 'bill_date',
         'sales-register' => 'issued_at',
         'vat-report' => 'issued_at',
+        'coa-balance' => 'entry_date',
     ];
 
     public static function dateColumnFor(string $slug): ?string
@@ -57,7 +58,7 @@ class ModuleExportRegistry
 
         foreach (self::definitions() as $slug => $definition) {
             if (($definition['route'] ?? null) === $routeName) {
-                return $slug;
+                return self::normalizeSlug($slug);
             }
         }
 
@@ -66,6 +67,8 @@ class ModuleExportRegistry
 
     public static function resolve(string $slug, Request $request): array
     {
+        $slug = self::normalizeSlug($slug);
+
         $definition = self::definitions()[$slug] ?? null;
 
         abort_unless($definition, 404);
@@ -261,13 +264,21 @@ class ModuleExportRegistry
                 'columns' => ['Date', 'Category', 'Description', 'Amount', 'Reference', 'Status'],
                 'builder' => [ModuleExportBuilders::class, 'expenses'],
             ],
-            'accounts' => [
+            'coa-structure' => [
                 'route' => 'admin.accounts.index',
-                'title' => 'Chart of Accounts',
-                'filename' => 'accounts',
+                'title' => 'Chart of Accounts — Structure',
+                'filename' => 'chart-of-accounts-structure',
                 'permission' => 'accounting.manage',
-                'columns' => ['Code', 'Account', 'Type', 'Status', 'Updated'],
-                'builder' => [ModuleExportBuilders::class, 'accounts'],
+                'columns' => ['Code', 'Account', 'Parent', 'Kind', 'Slug', 'Type', 'Status', 'Level'],
+                'builder' => [ModuleExportBuilders::class, 'coaStructure'],
+            ],
+            'coa-balance' => [
+                'route' => 'admin.accounts.index',
+                'title' => 'Chart of Accounts — Balances',
+                'filename' => 'chart-of-accounts-balances',
+                'permission' => 'accounting.manage',
+                'columns' => ['Code', 'Account', 'Parent', 'Kind', 'Type', 'Balance', 'Balance basis'],
+                'builder' => [ModuleExportBuilders::class, 'coaBalance'],
             ],
             'journals' => [
                 'route' => 'admin.journals.index',
@@ -565,6 +576,8 @@ class ModuleExportRegistry
     {
         $featured = [
             ['slug' => 'month-end-pack', 'badge' => 'Close', 'hint' => 'ZIP all key finance files'],
+            ['slug' => 'coa-structure', 'badge' => 'COA', 'hint' => 'Account hierarchy, groups & slugs'],
+            ['slug' => 'coa-balance', 'badge' => 'COA', 'hint' => 'Ledger balances for the period'],
             ['slug' => 'profit-loss', 'badge' => 'Finance', 'hint' => 'P&L summary for the period'],
             ['slug' => 'balance-sheet', 'badge' => 'Statements', 'hint' => 'Assets, liabilities, equity'],
             ['slug' => 'sales-register', 'badge' => 'Revenue', 'hint' => 'Invoice audit trail'],
@@ -619,7 +632,7 @@ class ModuleExportRegistry
     public static function exportUrl(string $slug, string $format, array $query = []): string
     {
         return route('admin.modules.export', array_merge([
-            'module' => $slug,
+            'module' => self::normalizeSlug($slug),
             'format' => $format,
         ], $query));
     }
@@ -627,8 +640,16 @@ class ModuleExportRegistry
     public static function previewUrl(string $slug, array $query = []): string
     {
         return route('admin.modules.export.preview', array_merge([
-            'module' => $slug,
+            'module' => self::normalizeSlug($slug),
         ], $query));
+    }
+
+    public static function normalizeSlug(string $slug): string
+    {
+        return match ($slug) {
+            'accounts', 'chart-of-accounts' => 'coa-structure',
+            default => $slug,
+        };
     }
 
     /**

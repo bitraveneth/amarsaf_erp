@@ -65,4 +65,12 @@ class Agent extends Model
     {
         return $this->hasMany(AgentAdvance::class);
     }
+
+    public function openAdvanceBalance(): float
+    {
+        return (float) $this->advances()
+            ->whereIn('status', ['open', 'partial'])
+            ->get()
+            ->sum(fn (AgentAdvance $advance) => $advance->available_amount);
+    }
 }

@@ -27,7 +27,8 @@ class PurchaseOrdersSeeder extends Seeder
         $products = [
             'RM-PET-500' => Product::where('sku', 'RM-PET-500')->first(),
             'RM-CAP-STD' => Product::where('sku', 'RM-CAP-STD')->first(),
-            'RM-CARTON-12X500' => Product::where('sku', 'RM-CARTON-12X500')->first(),
+            'RM-CARTON-24X500' => Product::where('sku', 'RM-CARTON-24X500')->first()
+                ?? Product::where('sku', 'RM-CARTON-12X500')->first(),
             'RM-LABEL-500' => Product::where('sku', 'RM-LABEL-500')->first(),
         ];
 
@@ -35,7 +36,7 @@ class PurchaseOrdersSeeder extends Seeder
             return;
         }
 
-        if (! $products['RM-PET-500'] || ! $products['RM-CAP-STD'] || ! $products['RM-CARTON-12X500'] || ! $products['RM-LABEL-500']) {
+        if (! $products['RM-PET-500'] || ! $products['RM-CAP-STD'] || ! $products['RM-CARTON-24X500'] || ! $products['RM-LABEL-500']) {
             return;
         }
 
@@ -73,8 +74,8 @@ class PurchaseOrdersSeeder extends Seeder
             notes: 'Carton procurement for dispatch planning',
             items: [
                 [
-                    'product_id' => $products['RM-CARTON-12X500']->id,
-                    'description' => 'Carton Box - 12 x 500ml',
+                    'product_id' => $products['RM-CARTON-24X500']->id,
+                    'description' => 'Carton Box - 24 x 500ml',
                     'quantity' => 12000,
                     'unit_price' => 20.00,
                     'received_quantity' => 7000,

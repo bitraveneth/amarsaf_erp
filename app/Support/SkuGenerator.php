@@ -72,7 +72,21 @@ class SkuGenerator
         $brand = self::brandPrefix();
 
         if (in_array($productType, ['raw', 'service', 'inhouse'], true)) {
-            $brand = 'MAT';
+            if (! empty($context['material_category_id'])) {
+                $category = \App\Models\MaterialCategory::find($context['material_category_id']);
+
+                return RawMaterialLineCatalog::suggestSku(
+                    $productType,
+                    $category,
+                    $context['size'] ?? null
+                );
+            }
+
+            return RawMaterialLineCatalog::suggestSku(
+                $productType,
+                null,
+                $context['size'] ?? null
+            );
         }
 
         $size = self::sanitizeSegment($context['size'] ?? 'STD');
@@ -116,6 +130,11 @@ class SkuGenerator
 
     protected static function sizeSegment(?string $size): string
     {
+        return self::normalizeSizeSegment($size);
+    }
+
+    public static function normalizeSizeSegment(?string $size): string
+    {
         if (! is_string($size) || trim($size) === '') {
             return 'STD';
         }
@@ -142,6 +161,11 @@ class SkuGenerator
     }
 
     protected static function ensureUnique(string $base): string
+    {
+        return self::ensureUniquePublic($base);
+    }
+
+    public static function ensureUniquePublic(string $base): string
     {
         if (! Product::where('sku', $base)->exists()) {
             return $base;

@@ -19,6 +19,7 @@ return [
         'delivery_challan' => 'Delivery challan',
         'packing_slip' => 'Packing slip',
         'pod' => 'Proof of delivery',
+        'logistics_bill' => 'Logistics bill',
     ],
 
     'copy' => [
@@ -32,6 +33,7 @@ return [
         'ship_to' => 'Ship to',
         'customer' => 'Customer',
         'supplier' => 'Supplier',
+        'carrier' => 'Transport carrier',
         'warehouse' => 'Warehouse',
         'product' => 'Product',
         'document_no' => 'Document no.',
@@ -44,6 +46,10 @@ return [
         'payment_mode' => 'Payment mode',
         'customer_po' => 'Customer PO: :ref',
         'po_no' => 'PO no.',
+        'bill_no' => 'Bill no.',
+        'bill_date' => 'Bill date',
+        'service_type' => 'Service type',
+        'trip_date' => 'Trip date',
         'expected_date' => 'Expected date',
         'grn_no' => 'GRN no.',
         'received_at' => 'Received at',
@@ -105,6 +111,7 @@ return [
         'order_total' => 'Order total',
         'commission' => 'Commission',
         'po_total' => 'PO total',
+        'paid' => 'Paid to date',
         'material_cost' => 'Material cost',
     ],
 
@@ -117,6 +124,7 @@ return [
         'supervisor' => 'Supervisor',
         'approved' => 'Approved by',
         'supplier' => 'Supplier acknowledgment',
+        'carrier' => 'Carrier acknowledgment',
         'qc' => 'QC inspector',
         'store' => 'Store keeper',
         'production' => 'Production head',
@@ -137,5 +145,6 @@ return [
         'delivery_challan' => 'Goods dispatched in good condition unless noted otherwise.',
         'packing_slip' => 'Check contents against this packing slip on receipt.',
         'pod' => 'Signed proof of delivery for dispatch records.',
+        'logistics_bill' => 'Carrier invoice for hired transport and freight services.',
     ],
 ];

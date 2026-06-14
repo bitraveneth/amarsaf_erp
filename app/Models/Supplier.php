@@ -23,6 +23,14 @@ class Supplier extends Model
         'is_one_time' => 'boolean',
     ];
 
+    public function productCategories()
+    {
+        return $this->belongsToMany(SupplierProductCategory::class, 'supplier_supplier_product_category')
+            ->withTimestamps()
+            ->orderBy('supplier_product_categories.sort_order')
+            ->orderBy('supplier_product_categories.name');
+    }
+
     public function bills()
     {
         return $this->hasMany(PurchaseBill::class);

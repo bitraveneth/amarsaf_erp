@@ -53,6 +53,7 @@ class CommissionCalculator
         }
 
         $monthlyCommission = $this->calculateMonthlyRuleCommission(
+            $agent,
             $agent->commissions()->where('frequency', 'monthly')->get(),
             $items
         );
@@ -89,6 +90,7 @@ class CommissionCalculator
         }
 
         $monthlyCommission = $this->calculateMonthlyRuleCommission(
+            $agent,
             $agent->commissions()->where('frequency', 'monthly')->get(),
             $items
         );
@@ -102,36 +104,17 @@ class CommissionCalculator
         ];
     }
 
-    protected function calculateMonthlyRuleCommission(Collection $rules, Collection $items): float
+    protected function calculateMonthlyRuleCommission(Agent $agent, Collection $rules, Collection $items): float
     {
-        if ($rules->isEmpty() || $items->isEmpty()) {
+        if ($items->isEmpty()) {
             return 0.0;
         }
 
+        $resolver = app(CommissionPolicyResolver::class);
         $commission = 0.0;
 
-        foreach ($rules->groupBy(fn (AgentCommissionRule $rule) => $this->ruleGroupKey($rule)) as $group) {
-            $referenceRule = $group->first();
-            $eligibleSales = $items->sum(function (OrderItem $item) use ($referenceRule) {
-                return $this->ruleMatchesMonthlyItem($referenceRule, $item)
-                    ? $item->realizedSalesTotal()
-                    : 0.0;
-            });
-
-            if ($eligibleSales <= 0) {
-                continue;
-            }
-
-            $matchedRule = $group
-                ->filter(fn (AgentCommissionRule $rule) => $this->thresholdMatches($rule, $eligibleSales))
-                ->sortByDesc(fn (AgentCommissionRule $rule) => (float) ($rule->threshold_min ?? 0))
-                ->first();
-
-            if (! $matchedRule) {
-                continue;
-            }
-
-            $commission += $this->ruleCommissionAmount($matchedRule, $eligibleSales);
+        foreach ($items as $item) {
+            $commission += $resolver->calculateMonthlyAmount($agent, $item, $rules);
         }
 
         return round($commission, 2);

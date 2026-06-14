@@ -50,6 +50,13 @@
             </div>
         </div>
         <div class="flex items-center gap-3">
+            <a href="{{ route('admin.agents.show', ['agent' => $agent, 'tab' => 'commission']) }}"
+               class="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-semibold text-white shadow-theme-xs hover:bg-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500/50">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                Commission
+            </a>
             <a href="{{ route('admin.agents.edit', $agent) }}" 
                class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-white/[0.03]">
                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -67,6 +74,26 @@
         </div>
     </div>
 
+    <nav class="flex gap-6 border-b border-gray-200 dark:border-gray-800">
+        <a href="{{ route('admin.agents.show', $agent) }}"
+           class="-mb-px border-b-2 pb-3 text-sm font-medium transition-colors {{ $tab === 'profile' ? 'border-brand-500 text-brand-600 dark:text-brand-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200' }}">
+            Profile
+        </a>
+        <a href="{{ route('admin.agents.show', ['agent' => $agent, 'tab' => 'commission']) }}"
+           class="-mb-px border-b-2 pb-3 text-sm font-medium transition-colors {{ $tab === 'commission' ? 'border-brand-500 text-brand-600 dark:text-brand-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200' }}">
+            Commission &amp; credit
+        </a>
+    </nav>
+
+    @if(session('status'))
+        <div class="rounded-xl border border-success-200 bg-success-50 px-4 py-3 text-sm text-success-800 dark:border-success-500/30 dark:bg-success-500/10 dark:text-success-300">
+            {{ session('status') }}
+        </div>
+    @endif
+
+    @if($tab === 'commission')
+        @include('admin.agents.partials.commercial_summary')
+    @else
     <!-- Profile Content -->
     <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <!-- Main Content - Left Column (2/3 width) -->
@@ -300,8 +327,15 @@
                             @endif
                         </div>
                         <div class="flex items-center justify-between">
-                            <span class="text-sm text-gray-600 dark:text-gray-400">Parent Agent</span>
-                            <span class="text-sm text-gray-900 dark:text-white">{{ $agent->parent->name ?? '—' }}</span>
+                            <span class="text-sm text-gray-600 dark:text-gray-400">Advance balance</span>
+                            <span class="text-sm font-semibold text-gray-900 dark:text-white">BDT {{ number_format($credit['open_advance'] ?? 0, 0) }}</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm text-gray-600 dark:text-gray-400">Commission</span>
+                            <a href="{{ route('admin.agents.show', ['agent' => $agent, 'tab' => 'commission']) }}"
+                               class="text-sm font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300">
+                                {{ $commercial['commission_label'] ?? 'Not set' }}
+                            </a>
                         </div>
                         <div class="pt-4 border-t border-gray-100 dark:border-gray-800">
                             <a href="{{ route('admin.agents.ledger.show', $agent) }}" 
@@ -333,15 +367,20 @@
                         Jump into detailed views for this agent.
                     </p>
                     <div class="space-y-2">
-                        @if(Route::has('admin.agents.pricing.edit'))
-                        <a href="{{ route('admin.agents.pricing.edit', $agent) }}" 
-                           class="flex w-full items-center justify-between rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-800/50 dark:text-gray-300 dark:hover:bg-gray-800">
-                            <span>Pricing & Commission</span>
+                        <a href="{{ route('admin.agents.show', ['agent' => $agent, 'tab' => 'commission']) }}"
+                           class="flex w-full items-center justify-between rounded-lg border border-brand-200 bg-brand-50 px-4 py-2.5 text-sm font-medium text-brand-700 hover:bg-brand-100 dark:border-brand-500/30 dark:bg-brand-500/10 dark:text-brand-300 dark:hover:bg-brand-500/15">
+                            <span>Commission &amp; credit</span>
                             <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                             </svg>
                         </a>
-                        @endif
+                        <a href="{{ route('admin.agents.pricing.edit', $agent) }}"
+                           class="flex w-full items-center justify-between rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-800/50 dark:text-gray-300 dark:hover:bg-gray-800">
+                            <span>Commercial terms (prices &amp; rules)</span>
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                            </svg>
+                        </a>
                         
                         @if(Route::has('admin.agents.ledger.show'))
                         <a href="{{ route('admin.agents.ledger.show', $agent) }}" 
@@ -409,5 +448,6 @@
             @endif
         </div>
     </div>
+    @endif
 </div>
 @endsection

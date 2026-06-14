@@ -31,6 +31,8 @@ In the app: **System settings → Client manual** shows all guides in one scroll
 | **08** | [Delivery and POD](modules/08-delivery-and-pod.md) | Delivery coordinator |
 | **09** | [Accounting](modules/09-accounting.md) | Accounts, finance |
 | **10** | [Reports and analytics](modules/10-reports.md) | Management, accounts |
+| **11** | [Transaction → ledger map](modules/11-ledger-mapping.md) | Accounts, owners, client demos |
+| **12** | [HR & payroll](modules/12-hr-payroll.md) | HR admin, accounts |
 
 ---
 

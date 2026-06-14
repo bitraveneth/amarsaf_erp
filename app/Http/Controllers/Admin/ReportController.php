@@ -21,6 +21,7 @@ use App\Models\BillOfMaterial;
 use App\Models\SalaryDistribution;
 use App\Models\PurchaseBill;
 use App\Services\Accounting\AgingReportService;
+use App\Services\Accounting\HierarchicalReportService;
 use App\Services\Accounting\InventoryCostingService;
 use App\Services\BatchTraceabilityService;
 use App\Services\ProductionVarianceService;
@@ -34,104 +35,35 @@ class ReportController extends Controller
 {
     use ResolvesDashboardPeriod;
 
-    public function profitAndLoss(Request $request)
+    public function profitAndLoss(Request $request, HierarchicalReportService $reports)
     {
         [$from, $to, $range] = $this->resolveDashboardPeriod($request);
         $currencyCode = config('app.currency', 'BDT');
+        $statement = $reports->profitAndLoss($from, $to);
 
-        $entries = LedgerEntry::whereBetween('created_at', [$from, $to])->get();
-
-        $sales = $entries->where('account', 'Sales Revenue')->sum('credit');
-        $returns = $entries->where('account', 'Sales Returns')->sum('debit');
-        $commissions = $entries->where('account', 'Commission Expense')->sum('debit');
-
-        // Include simple period expenses recorded in the expenses module.
-        $otherExpenses = $this->operatingExpensesTotal($from, $to);
-        $payroll = SalaryDistribution::whereBetween('period_start', [$from, $to])
-            ->get()
-            ->sum(function (SalaryDistribution $distribution) {
-                return (float) $distribution->base_salary
-                    + (float) $distribution->bonus
-                    + (float) $distribution->ta_allowances
-                    + (float) $distribution->da_allowances
-                    + (float) $distribution->commission;
-            });
-
-        $netSales = $sales - $returns;
-
-        // --- Approximate COGS using production material cost snapshot ---
-        $invoiceItems = InvoiceItem::with(['invoice', 'product'])
-            ->whereHas('invoice', function ($q) use ($from, $to) {
-                $q
-                    ->whereDate('issued_at', '>=', $from->toDateString())
-                    ->whereDate('issued_at', '<=', $to->toDateString());
-            })
-            ->get();
-
-        // Average material_unit_cost per product from all runs where it is set
-        $runsWithCost = ProductionRun::whereNotNull('material_unit_cost')->get();
-        $costByProduct = $runsWithCost->groupBy('product_id')->map(
-            fn ($group) => (float) $group->avg('material_unit_cost')
-        );
-
-        $cogsEstimated = 0.0;
-        foreach ($invoiceItems as $item) {
-            if (! $item->product_id) {
-                continue;
-            }
-            $unitCost = $costByProduct->get($item->product_id);
-            if ($unitCost === null) {
-                continue;
-            }
-            $cogsEstimated += $unitCost * (float) $item->quantity;
-        }
-
-        $cogsGl = (float) LedgerEntry::where('account', config('accounting.accounts.cogs', 'Cost of Goods Sold'))
-            ->whereBetween('created_at', [$from, $to])
-            ->sum('debit');
-
-        $cogs = $cogsGl > 0 ? $cogsGl : $cogsEstimated;
-        $cogsSource = $cogsGl > 0 ? 'gl' : 'estimated';
-
-        $grossProfit = $netSales - $cogs;
-        $profit = $grossProfit - $commissions - $otherExpenses - $payroll;
-
-        // Detailed ledger breakdown by account for the period
-        $accountRows = $entries->groupBy('account')->map(function (Collection $rows, string $account) {
-            $debit  = (float) $rows->sum('debit');
-            $credit = (float) $rows->sum('credit');
-            $net    = $credit - $debit; // income-style: positive = income, negative = expense
-
-            return [
-                'account' => $account,
-                'debit'   => $debit,
-                'credit'  => $credit,
-                'net'     => $net,
-            ];
-        })->sortBy('account')->values();
-
-        return view('admin.finance.pl', compact(
-            'from',
-            'to',
-            'range',
-            'currencyCode',
-            'sales',
-            'returns',
-            'commissions',
-            'otherExpenses',
-            'payroll',
-            'netSales',
-            'cogs',
-            'cogsEstimated',
-            'cogsGl',
-            'cogsSource',
-            'grossProfit',
-            'profit',
-            'accountRows'
-        ))->with([
+        return view('admin.finance.pl', array_merge(compact('from', 'to', 'range', 'currencyCode'), $statement, [
+            'sales' => $statement['netRevenue'],
+            'returns' => 0,
+            'commissions' => 0,
+            'otherExpenses' => $statement['operatingExpenses'],
+            'payroll' => 0,
+            'netSales' => $statement['netRevenue'],
+            'cogs' => $statement['manufacturingCost'],
+            'cogsSource' => 'gl',
+            'grossProfit' => $statement['grossProfit'],
+            'profit' => $statement['netProfit'],
+            'accountRows' => collect(),
             'rangeOptions' => $this->dashboardRangeOptions(),
             'periodLabel' => $this->dashboardPeriodLabel($from, $to),
-        ]);
+        ]));
+    }
+
+    public function manufacturingSchedule(Request $request, HierarchicalReportService $reports)
+    {
+        [$from, $to, $range] = $this->resolveDashboardPeriod($request);
+        $schedule = $reports->manufacturingSchedule($from, $to);
+
+        return view('admin.finance.manufacturing_schedule', compact('from', 'to', 'range', 'schedule'));
     }
 
     public function vat(Request $request)
@@ -222,44 +154,15 @@ class ReportController extends Controller
         ]);
     }
 
-    public function balanceSheet(Request $request)
+    public function balanceSheet(Request $request, HierarchicalReportService $reports)
     {
         $asOf = $request->query('date')
             ? Carbon::parse($request->query('date'))
             : Carbon::today();
 
-        $endOfDay = $asOf->copy()->endOfDay();
+        $sheet = $reports->balanceSheet($asOf);
 
-        $entries = LedgerEntry::where('created_at', '<=', $endOfDay)->get();
-
-        $balances = [];
-        foreach ($entries as $entry) {
-            $account = $entry->account;
-            if (!isset($balances[$account])) {
-                $balances[$account] = 0;
-            }
-            $balances[$account] += $entry->debit - $entry->credit;
-        }
-
-        $assetsAccounts = Account::where('type', 'asset')->pluck('name')->all() ?: ['Bank', 'Accounts Receivable', 'Input VAT'];
-        $liabilityAccounts = Account::where('type', 'liability')->pluck('name')->all() ?: ['Accounts Payable', 'VAT Payable', 'Agent Advances', 'Commission Payable'];
-
-        $assets = [];
-        $liabilities = [];
-
-        foreach ($balances as $account => $amount) {
-            if (in_array($account, $assetsAccounts, true)) {
-                $assets[$account] = $amount;
-            } elseif (in_array($account, $liabilityAccounts, true)) {
-                $liabilities[$account] = $amount * -1;
-            }
-        }
-
-        $totalAssets = array_sum($assets);
-        $totalLiabilities = array_sum($liabilities);
-        $equity = $totalAssets - $totalLiabilities;
-
-        return view('admin.finance.bs', compact('asOf', 'assets', 'liabilities', 'totalAssets', 'totalLiabilities', 'equity'));
+        return view('admin.finance.bs', array_merge(compact('asOf'), $sheet));
     }
 
     public function cashflow(Request $request)
@@ -567,7 +470,7 @@ class ReportController extends Controller
         return $expenses + $giftExpenses + $campaignExpenses;
     }
 
-    public function trialBalance(Request $request)
+    public function trialBalance(Request $request, HierarchicalReportService $reports)
     {
         [$from, $to] = $this->resolveDateRange(
             $request,
@@ -575,46 +478,19 @@ class ReportController extends Controller
             Carbon::now()->endOfMonth()
         );
 
-        $accounts = Account::orderBy('code')->get();
-        $rows = [];
-
-        foreach ($accounts as $account) {
-            $openingDebit = $this->accountDebitTotal($account->id, null, $from->copy()->subDay()->endOfDay());
-            $openingCredit = $this->accountCreditTotal($account->id, null, $from->copy()->subDay()->endOfDay());
-            $periodDebit = $this->accountDebitTotal($account->id, $from, $to);
-            $periodCredit = $this->accountCreditTotal($account->id, $from, $to);
-            $closingDebit = $openingDebit + $periodDebit;
-            $closingCredit = $openingCredit + $periodCredit;
-            $balance = round($closingDebit - $closingCredit, 2);
-
-            if (
-                abs($openingDebit) < 0.01 && abs($openingCredit) < 0.01
-                && abs($periodDebit) < 0.01 && abs($periodCredit) < 0.01
-            ) {
-                continue;
-            }
-
-            $rows[] = [
-                'account' => $account,
-                'opening_debit' => round($openingDebit - $openingCredit, 2) > 0 ? round($openingDebit - $openingCredit, 2) : 0,
-                'opening_credit' => round($openingCredit - $openingDebit, 2) > 0 ? round($openingCredit - $openingDebit, 2) : 0,
-                'period_debit' => $periodDebit,
-                'period_credit' => $periodCredit,
-                'closing_debit' => $balance > 0 ? $balance : 0,
-                'closing_credit' => $balance < 0 ? abs($balance) : 0,
-            ];
-        }
+        $expandAll = $request->boolean('expand', true);
+        $rows = $reports->trialBalance($from, $to, $expandAll);
 
         $totals = [
-            'opening_debit' => collect($rows)->sum('opening_debit'),
-            'opening_credit' => collect($rows)->sum('opening_credit'),
-            'period_debit' => collect($rows)->sum('period_debit'),
-            'period_credit' => collect($rows)->sum('period_credit'),
-            'closing_debit' => collect($rows)->sum('closing_debit'),
-            'closing_credit' => collect($rows)->sum('closing_credit'),
+            'opening_debit' => $rows->sum('opening_debit'),
+            'opening_credit' => $rows->sum('opening_credit'),
+            'period_debit' => $rows->sum('period_debit'),
+            'period_credit' => $rows->sum('period_credit'),
+            'closing_debit' => $rows->sum('closing_debit'),
+            'closing_credit' => $rows->sum('closing_credit'),
         ];
 
-        return view('admin.finance.trial_balance', compact('from', 'to', 'rows', 'totals'));
+        return view('admin.finance.trial_balance', compact('from', 'to', 'rows', 'totals', 'expandAll'));
     }
 
     public function generalLedger(Request $request)

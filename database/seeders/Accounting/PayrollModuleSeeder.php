@@ -2,10 +2,9 @@
 
 namespace Database\Seeders\Accounting;
 
-use App\Models\LedgerEntry;
 use App\Models\SalaryDistribution;
+use App\Services\Accounting\PayrollPostingService;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Carbon;
 
 /**
  * Seed data for Accounting → Payroll.
@@ -14,38 +13,16 @@ class PayrollModuleSeeder extends Seeder
 {
     public function run(): void
     {
-        $salary = SalaryDistribution::with('employee')->latest('period_start')->first();
+        $posting = app(PayrollPostingService::class);
 
-        if (! $salary) {
-            return;
-        }
-        if (! $salary->employee) {
-            return;
-        }
+        SalaryDistribution::query()
+            ->with('employee')
+            ->each(function (SalaryDistribution $distribution) use ($posting) {
+                if ((float) $distribution->base_salary <= 0 && (float) $distribution->bonus <= 0) {
+                    return;
+                }
 
-        $gross = $salary->base_salary
-            + $salary->bonus
-            + $salary->ta_allowances
-            + $salary->da_allowances
-            + $salary->commission;
-        $periodLabel = Carbon::parse($salary->period_start)->format('M Y');
-
-        // DR Payroll Expense
-        LedgerEntry::firstOrCreate([
-            'account'     => 'Payroll Expense',
-            'description' => 'Payroll expense for ' . $salary->employee->name . ' (' . $periodLabel . ')',
-        ], [
-            'debit'       => $gross,
-            'credit'      => 0,
-        ]);
-
-        // CR Bank
-        LedgerEntry::firstOrCreate([
-            'account'     => 'Bank',
-            'description' => 'Payroll payment for ' . $salary->employee->name . ' (' . $periodLabel . ')',
-        ], [
-            'debit'       => 0,
-            'credit'      => $gross,
-        ]);
+                $posting->sync($distribution);
+            });
     }
 }

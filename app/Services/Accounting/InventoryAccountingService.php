@@ -63,7 +63,7 @@ class InventoryAccountingService
             $this->costing->receive((int) $item->product_id, (int) $receipt->warehouse_id, $qty, $unitCost);
             $inventoryAccount = $this->costing->inventoryAccountFor($product);
 
-            $lines[] = ['account' => $inventoryAccount, 'debit' => $value, 'credit' => 0, 'description' => $receipt->grn_number . ' · ' . $product->name];
+            $lines[] = ['account_key' => $this->costing->inventoryAccountKey($product), 'debit' => $value, 'credit' => 0, 'description' => $receipt->grn_number . ' · ' . $product->name];
             $total += $value;
         }
 
@@ -72,7 +72,7 @@ class InventoryAccountingService
         }
 
         $lines[] = [
-            'account' => config('accounting.accounts.grni_accrual'),
+            'account_key' => 'grni_accrual',
             'debit' => 0,
             'credit' => $total,
             'description' => 'GRNI for ' . $receipt->grn_number,
@@ -127,7 +127,7 @@ class InventoryAccountingService
             }
 
             $inventoryAccount = $this->costing->inventoryAccountFor($item->product);
-            $lines[] = ['account' => $inventoryAccount, 'debit' => 0, 'credit' => $cost];
+            $lines[] = ['account_key' => $this->costing->inventoryAccountKey($item->product), 'debit' => 0, 'credit' => $cost];
             $total += $cost;
         }
 
@@ -135,7 +135,7 @@ class InventoryAccountingService
             return;
         }
 
-        $lines[] = ['account' => config('accounting.accounts.grni_accrual'), 'debit' => $total, 'credit' => 0];
+        $lines[] = ['account_key' => 'grni_accrual', 'debit' => $total, 'credit' => 0];
 
         $journal = $this->accounting->post('inventory_grn_reversal', $entryDate, $lines, [
             'description' => 'GRN reversal ' . $receipt->grn_number,
@@ -186,8 +186,10 @@ class InventoryAccountingService
 
         $entryDate = Carbon::parse($run->stock_confirmed_at ?? now());
         $journal = $this->accounting->post('inventory_production', $entryDate, [
-            ['account' => config('accounting.accounts.finished_goods_inventory'), 'debit' => $rawCost, 'credit' => 0],
-            ['account' => config('accounting.accounts.raw_materials_inventory'), 'debit' => 0, 'credit' => $rawCost],
+            ['account_key' => 'wip', 'debit' => $rawCost, 'credit' => 0],
+            ['account_key' => 'raw_materials', 'debit' => 0, 'credit' => $rawCost],
+            ['account_key' => 'finished_goods', 'debit' => $rawCost, 'credit' => 0],
+            ['account_key' => 'wip', 'debit' => 0, 'credit' => $rawCost],
         ], [
             'description' => 'Production capitalization ' . ($run->order_number ?? ('#' . $run->id)),
             'source_type' => ProductionRun::class,
@@ -226,8 +228,8 @@ class InventoryAccountingService
         }
 
         $journal = $this->accounting->post('inventory_cogs', $entryDate, [
-            ['account' => config('accounting.accounts.cogs'), 'debit' => $totalCogs, 'credit' => 0],
-            ['account' => config('accounting.accounts.finished_goods_inventory'), 'debit' => 0, 'credit' => $totalCogs],
+            ['account_key' => 'cogs', 'debit' => $totalCogs, 'credit' => 0],
+            ['account_key' => 'finished_goods', 'debit' => 0, 'credit' => $totalCogs],
         ], [
             'description' => 'COGS on ' . $invoice->number,
             'source_type' => Invoice::class,
@@ -258,8 +260,8 @@ class InventoryAccountingService
         $inventoryAccount = $this->costing->inventoryAccountFor($entry->product);
 
         $journal = $this->accounting->post('inventory_write_off', Carbon::today(), [
-            ['account' => config('accounting.accounts.inventory_write_off'), 'debit' => $cost, 'credit' => 0],
-            ['account' => $inventoryAccount, 'debit' => 0, 'credit' => $cost],
+            ['account_key' => 'inventory_write_off', 'debit' => $cost, 'credit' => 0],
+            ['account_key' => $this->costing->inventoryAccountKey($entry->product), 'debit' => 0, 'credit' => $cost],
         ], [
             'description' => $notes ?: 'Inventory write-off',
             'source_type' => StockMovement::class,
@@ -273,12 +275,12 @@ class InventoryAccountingService
     {
         if (! $this->enabled() || ! $this->billHasStockItems($bill)) {
             return [
-                ['account' => config('accounting.accounts.purchases'), 'debit' => $netTotal, 'credit' => 0],
+                ['account_key' => 'purchases', 'debit' => $netTotal, 'credit' => 0],
             ];
         }
 
         return [
-            ['account' => config('accounting.accounts.grni_accrual'), 'debit' => $netTotal, 'credit' => 0],
+            ['account_key' => 'grni_accrual', 'debit' => $netTotal, 'credit' => 0],
         ];
     }
 

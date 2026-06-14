@@ -7,6 +7,7 @@ use App\Models\Delivery;
 use App\Models\PackagingConversion;
 use App\Models\PackagingType;
 use App\Models\Vehicle;
+use App\Support\LogisticsFreightEstimator;
 use Illuminate\Support\Collection;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -58,6 +59,8 @@ class VehicleLoadController extends Controller
 
         $byVehicle = [];
 
+        $estimator = app(LogisticsFreightEstimator::class);
+
         foreach ($deliveries as $delivery) {
             if (!$delivery->vehicle) {
                 continue;
@@ -68,7 +71,13 @@ class VehicleLoadController extends Controller
                     'vehicle' => $delivery->vehicle,
                     'crateLoad' => 0,
                     'deliveries' => [],
+                    'route_id' => $delivery->route_id,
+                    'freight_suggestion' => null,
                 ];
+            }
+
+            if (! $byVehicle[$vid]['route_id'] && $delivery->route_id) {
+                $byVehicle[$vid]['route_id'] = $delivery->route_id;
             }
 
             $crateEstimate = 0;
@@ -82,6 +91,14 @@ class VehicleLoadController extends Controller
                 'crates' => $crateEstimate,
             ];
         }
+
+        foreach ($byVehicle as $vid => &$row) {
+            $row['freight_suggestion'] = $estimator->suggest(
+                $row['route_id'] ? (int) $row['route_id'] : null,
+                (int) $row['crateLoad'],
+            );
+        }
+        unset($row);
 
         return view('admin.deliveries.load', [
             'date' => $date,

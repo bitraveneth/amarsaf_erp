@@ -20,6 +20,10 @@ class NotificationActionResolver
             if (preg_match('/^grn_pending_(\d+)$/', $key, $matches) && Route::has('admin.goods-receipts.show')) {
                 return route('admin.goods-receipts.show', $matches[1]);
             }
+
+            if (preg_match('/^bom_(?:draft|activated)_(\d+)$/', $key, $matches) && Route::has('admin.boms.show')) {
+                return route('admin.boms.show', $matches[1]);
+            }
         }
 
         if (! empty($data['link']) && self::isSafeUrl((string) $data['link'])) {
@@ -49,6 +53,14 @@ class NotificationActionResolver
 
             if (str_starts_with($key, 'receivables_') && Route::has('admin.finance.index')) {
                 return route('admin.finance.index');
+            }
+
+            if (str_starts_with($key, 'missing_bom_') && Route::has('admin.boms.create')) {
+                return route('admin.boms.index');
+            }
+
+            if (str_starts_with($key, 'pending_production_qc_') && Route::has('admin.production.index')) {
+                return route('admin.production.index');
             }
         }
 

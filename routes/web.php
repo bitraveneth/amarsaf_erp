@@ -21,6 +21,7 @@ use App\Http\Controllers\Admin\FiscalPeriodController;
 use App\Http\Controllers\Admin\JournalEntryController;
 use App\Http\Controllers\Admin\SalaryDistributionController;
 use App\Http\Controllers\Admin\SupplierController;
+use App\Http\Controllers\Admin\SupplierProductCategoryController;
 use App\Http\Controllers\Admin\PurchaseBillController;
 use App\Http\Controllers\Admin\PurchaseOrderController;
 use App\Http\Controllers\Admin\GoodsReceiptController;
@@ -35,6 +36,13 @@ use App\Http\Controllers\Admin\StockAuditController;
 use App\Http\Controllers\Admin\BankReconciliationController;
 use App\Http\Controllers\Admin\WarehouseLocationController;
 use App\Http\Controllers\Admin\VehicleController;
+use App\Http\Controllers\Admin\FleetExpenseController;
+use App\Http\Controllers\Admin\LogisticsBillController;
+use App\Http\Controllers\Admin\LogisticsDashboardController;
+use App\Http\Controllers\Admin\LogisticsCarrierController;
+use App\Http\Controllers\Admin\CarrierRateCardController;
+use App\Http\Controllers\Admin\FleetRecurringChargeController;
+use App\Http\Controllers\Admin\LogisticsRouteReportController;
 use App\Http\Controllers\Admin\VehicleScheduleController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\Auth\LoginController;
@@ -44,9 +52,11 @@ use App\Http\Controllers\Admin\EmployeeAllowanceController;
 use App\Http\Controllers\Admin\EmployeeEquipmentController;
 use App\Http\Controllers\Admin\BadgeController;
 use App\Http\Controllers\Admin\EmployeeLeaveController;
+use App\Http\Controllers\Admin\EmployeeOvertimeController;
 use App\Http\Controllers\Admin\CustomerReturnController;
 use App\Http\Controllers\Admin\SupplierReturnController;
 use App\Http\Controllers\Admin\CampaignController;
+use App\Http\Controllers\Admin\ExpenseCategoryController;
 use App\Http\Controllers\Admin\ExpenseController;
 use App\Http\Controllers\Admin\EmployeeLocationController;
 use App\Http\Controllers\Admin\MenuController;
@@ -203,7 +213,10 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::delete('products/{product}', [ProductController::class, 'destroy'])->middleware('perm:control.products')->name('products.destroy');
     Route::get('products-export', [ProductController::class, 'export'])->middleware('perm:control.products')->name('products.export');
     Route::get('products-price-list', [ProductController::class, 'priceList'])->middleware('perm:control.products')->name('products.prices.index');
+    Route::patch('products-price-list/{product}/prices', [ProductController::class, 'updateProductPrices'])->middleware('perm:control.products')->name('products.prices.update');
     Route::get('products-price-list/{product}', [ProductController::class, 'showPriceList'])->middleware('perm:control.products')->name('products.prices.show');
+    Route::patch('products-price-list/overrides/{agentPriceList}', [ProductController::class, 'updatePriceListOverride'])->middleware('perm:control.products')->name('products.prices.overrides.update');
+    Route::delete('products-price-list/overrides/{agentPriceList}', [ProductController::class, 'destroyPriceListOverride'])->middleware('perm:control.products')->name('products.prices.overrides.destroy');
 
     // Materials (raw / service / in‑house) – managed separately but stored in products table
     Route::get('materials', [ProductController::class, 'materialsIndex'])->middleware('perm:control.products')->name('materials.index');
@@ -218,6 +231,11 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::post('material-categories', [MaterialCategoryController::class, 'store'])->middleware('perm:control.products')->name('material-categories.store');
     Route::patch('material-categories/{materialCategory}', [MaterialCategoryController::class, 'update'])->middleware('perm:control.products')->name('material-categories.update');
     Route::delete('material-categories/{materialCategory}', [MaterialCategoryController::class, 'destroy'])->middleware('perm:control.products')->name('material-categories.destroy');
+
+    Route::get('units', [\App\Http\Controllers\Admin\UnitOfMeasureController::class, 'index'])->middleware('perm:control.products')->name('units.index');
+    Route::post('units', [\App\Http\Controllers\Admin\UnitOfMeasureController::class, 'store'])->middleware('perm:control.products')->name('units.store');
+    Route::patch('units/{unit}', [\App\Http\Controllers\Admin\UnitOfMeasureController::class, 'update'])->middleware('perm:control.products')->name('units.update');
+    Route::delete('units/{unit}', [\App\Http\Controllers\Admin\UnitOfMeasureController::class, 'destroy'])->middleware('perm:control.products')->name('units.destroy');
 
     Route::get('packaging', [PackagingTypeController::class, 'index'])->middleware('perm:control.products')->name('packaging.index');
     Route::post('packaging', [PackagingTypeController::class, 'store'])->middleware('perm:control.products')->name('packaging.store');
@@ -246,6 +264,43 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::get('vehicles', [VehicleController::class, 'index'])->middleware('perm:control.warehouses')->name('vehicles.index');
     Route::get('vehicles/create', [VehicleController::class, 'create'])->middleware('perm:control.warehouses')->name('vehicles.create');
     Route::post('vehicles', [VehicleController::class, 'store'])->middleware('perm:control.warehouses')->name('vehicles.store');
+    Route::get('vehicles/{vehicle}', [VehicleController::class, 'show'])->middleware('perm:control.warehouses')->name('vehicles.show');
+
+    Route::get('logistics', [LogisticsDashboardController::class, 'index'])->middleware('perm:control.warehouses')->name('logistics.dashboard');
+    Route::get('logistics/carriers', [LogisticsCarrierController::class, 'index'])->middleware('perm:control.warehouses')->name('logistics.carriers.index');
+    Route::get('logistics/carriers/create', [LogisticsCarrierController::class, 'create'])->middleware('perm:control.warehouses')->name('logistics.carriers.create');
+    Route::post('logistics/carriers', [LogisticsCarrierController::class, 'store'])->middleware('perm:control.warehouses')->name('logistics.carriers.store');
+    Route::get('logistics/carriers/{carrier}/edit', [LogisticsCarrierController::class, 'edit'])->middleware('perm:control.warehouses')->name('logistics.carriers.edit');
+    Route::patch('logistics/carriers/{carrier}', [LogisticsCarrierController::class, 'update'])->middleware('perm:control.warehouses')->name('logistics.carriers.update');
+    Route::delete('logistics/carriers/{carrier}', [LogisticsCarrierController::class, 'destroy'])->middleware('perm:control.warehouses')->name('logistics.carriers.destroy');
+    Route::get('logistics/route-costs', [LogisticsRouteReportController::class, 'index'])->middleware('perm:control.warehouses')->name('logistics.route-costs');
+
+    Route::get('carrier-rate-cards', [CarrierRateCardController::class, 'index'])->middleware('perm:control.warehouses')->name('carrier-rate-cards.index');
+    Route::get('carrier-rate-cards/create', [CarrierRateCardController::class, 'create'])->middleware('perm:control.warehouses')->name('carrier-rate-cards.create');
+    Route::post('carrier-rate-cards', [CarrierRateCardController::class, 'store'])->middleware('perm:control.warehouses')->name('carrier-rate-cards.store');
+    Route::get('carrier-rate-cards/{carrierRateCard}/edit', [CarrierRateCardController::class, 'edit'])->middleware('perm:control.warehouses')->name('carrier-rate-cards.edit');
+    Route::patch('carrier-rate-cards/{carrierRateCard}', [CarrierRateCardController::class, 'update'])->middleware('perm:control.warehouses')->name('carrier-rate-cards.update');
+    Route::delete('carrier-rate-cards/{carrierRateCard}', [CarrierRateCardController::class, 'destroy'])->middleware('perm:control.warehouses')->name('carrier-rate-cards.destroy');
+
+    Route::get('fleet-recurring', [FleetRecurringChargeController::class, 'index'])->middleware('perm:control.warehouses')->name('fleet-recurring.index');
+    Route::get('fleet-recurring/create', [FleetRecurringChargeController::class, 'create'])->middleware('perm:control.warehouses')->name('fleet-recurring.create');
+    Route::post('fleet-recurring', [FleetRecurringChargeController::class, 'store'])->middleware('perm:control.warehouses')->name('fleet-recurring.store');
+    Route::post('fleet-recurring/generate', [FleetRecurringChargeController::class, 'generate'])->middleware('perm:control.warehouses')->name('fleet-recurring.generate');
+    Route::delete('fleet-recurring/{fleetRecurring}', [FleetRecurringChargeController::class, 'destroy'])->middleware('perm:control.warehouses')->name('fleet-recurring.destroy');
+
+    Route::get('fleet-expenses', [FleetExpenseController::class, 'index'])->middleware('perm:control.warehouses')->name('fleet-expenses.index');
+    Route::get('fleet-expenses/create', [FleetExpenseController::class, 'create'])->middleware('perm:control.warehouses')->name('fleet-expenses.create');
+    Route::post('fleet-expenses', [FleetExpenseController::class, 'store'])->middleware('perm:control.warehouses')->name('fleet-expenses.store');
+    Route::get('fleet-expenses/{fleetExpense}/edit', [FleetExpenseController::class, 'edit'])->middleware('perm:control.warehouses')->name('fleet-expenses.edit');
+    Route::patch('fleet-expenses/{fleetExpense}', [FleetExpenseController::class, 'update'])->middleware('perm:control.warehouses')->name('fleet-expenses.update');
+    Route::delete('fleet-expenses/{fleetExpense}', [FleetExpenseController::class, 'destroy'])->middleware('perm:control.warehouses')->name('fleet-expenses.destroy');
+
+    Route::get('logistics-bills', [LogisticsBillController::class, 'index'])->middleware('perm:control.warehouses')->name('logistics-bills.index');
+    Route::get('logistics-bills/create', [LogisticsBillController::class, 'create'])->middleware('perm:control.warehouses')->name('logistics-bills.create');
+    Route::post('logistics-bills', [LogisticsBillController::class, 'store'])->middleware('perm:control.warehouses')->name('logistics-bills.store');
+    Route::get('logistics-bills/{logisticsBill}', [LogisticsBillController::class, 'show'])->middleware('perm:control.warehouses')->name('logistics-bills.show');
+    Route::post('logistics-bills/{logisticsBill}/pay', [LogisticsBillController::class, 'storePayment'])->middleware('perm:control.warehouses')->name('logistics-bills.pay');
+    Route::delete('logistics-bills/{logisticsBill}', [LogisticsBillController::class, 'destroy'])->middleware('perm:control.warehouses')->name('logistics-bills.destroy');
 
     Route::get('employees', [EmployeeController::class, 'index'])->middleware('perm:control.employees')->name('employees.index');
     Route::get('employees/create', [EmployeeController::class, 'create'])->middleware('perm:control.employees')->name('employees.create');
@@ -302,6 +357,16 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::patch('employees/{employee}/leaves/{leave}', [EmployeeLeaveController::class, 'update'])->middleware('perm:control.employees')->name('employees.leaves.update');
     Route::delete('employees/{employee}/leaves/{leave}', [EmployeeLeaveController::class, 'destroy'])->middleware('perm:control.employees')->name('employees.leaves.destroy');
 
+    Route::get('overtime', [EmployeeOvertimeController::class, 'all'])->middleware('perm:control.employees')->name('overtime.index');
+    Route::get('overtime/create', [EmployeeOvertimeController::class, 'createGlobal'])->middleware('perm:control.employees')->name('overtime.create');
+    Route::post('overtime', [EmployeeOvertimeController::class, 'storeGlobal'])->middleware('perm:control.employees')->name('overtime.store');
+    Route::get('employees/{employee}/overtime', [EmployeeOvertimeController::class, 'index'])->middleware('perm:control.employees')->name('employees.overtime.index');
+    Route::get('employees/{employee}/overtime/create', [EmployeeOvertimeController::class, 'create'])->middleware('perm:control.employees')->name('employees.overtime.create');
+    Route::post('employees/{employee}/overtime', [EmployeeOvertimeController::class, 'store'])->middleware('perm:control.employees')->name('employees.overtime.store');
+    Route::get('employees/{employee}/overtime/{overtime}/edit', [EmployeeOvertimeController::class, 'edit'])->middleware('perm:control.employees')->name('employees.overtime.edit');
+    Route::patch('employees/{employee}/overtime/{overtime}', [EmployeeOvertimeController::class, 'update'])->middleware('perm:control.employees')->name('employees.overtime.update');
+    Route::delete('employees/{employee}/overtime/{overtime}', [EmployeeOvertimeController::class, 'destroy'])->middleware('perm:control.employees')->name('employees.overtime.destroy');
+
     Route::get('locations', [EmployeeLocationController::class, 'all'])->middleware('perm:control.employees')->name('locations.index');
     Route::get('locations/create', [EmployeeLocationController::class, 'createGlobal'])->middleware('perm:control.employees')->name('locations.create');
     Route::post('locations', [EmployeeLocationController::class, 'storeGlobal'])->middleware('perm:control.employees')->name('locations.store');
@@ -330,13 +395,17 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::get('agents/{agent}', [AgentController::class, 'show'])->middleware('perm:control.agents')->name('agents.show');
     Route::get('agents/{agent}/edit', [AgentController::class, 'edit'])->middleware('perm:control.agents')->name('agents.edit');
     Route::patch('agents/{agent}', [AgentController::class, 'update'])->middleware('perm:control.agents')->name('agents.update');
+    Route::patch('agents/{agent}/commission', [AgentPricingController::class, 'updateCommission'])->middleware('perm:control.agents')->name('agents.commission.update');
+    Route::patch('agents/{agent}/credit', [AgentController::class, 'updateCredit'])->middleware('perm:control.agents')->name('agents.credit.update');
     Route::delete('agents/{agent}', [AgentController::class, 'destroy'])->middleware('perm:control.agents')->name('agents.destroy');
 
     Route::get('kyc-document-types', [KycDocumentTypeController::class, 'index'])->middleware('perm:control.agents')->name('kyc-document-types.index');
     Route::post('kyc-document-types', [KycDocumentTypeController::class, 'store'])->middleware('perm:control.agents')->name('kyc-document-types.store');
     Route::delete('kyc-document-types/{kycDocumentType}', [KycDocumentTypeController::class, 'destroy'])->middleware('perm:control.agents')->name('kyc-document-types.destroy');
     Route::get('agents/{agent}/pricing', [AgentPricingController::class, 'edit'])->middleware('perm:control.agents')->name('agents.pricing.edit');
+    Route::get('agents/{agent}/terms', [AgentPricingController::class, 'edit'])->middleware('perm:control.agents')->name('agents.terms.edit');
     Route::patch('agents/{agent}/pricing', [AgentPricingController::class, 'update'])->middleware('perm:control.agents')->name('agents.pricing.update');
+    Route::patch('agents/{agent}/terms', [AgentPricingController::class, 'update'])->middleware('perm:control.agents')->name('agents.terms.update');
     Route::get('agents/{agent}/ledger', [AgentLedgerController::class, 'show'])->middleware('perm:control.agents')->name('agents.ledger.show');
     Route::get('sales-targets', [SalesTargetController::class, 'index'])->middleware('perm:sales.manage')->name('sales-targets.index');
     Route::get('sales-targets/create', [SalesTargetController::class, 'create'])->middleware('perm:sales.manage')->name('sales-targets.create');
@@ -424,6 +493,11 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::get('suppliers/{supplier}/edit', [SupplierController::class, 'edit'])->middleware('perm:control.suppliers')->name('suppliers.edit');
     Route::patch('suppliers/{supplier}', [SupplierController::class, 'update'])->middleware('perm:control.suppliers')->name('suppliers.update');
     Route::delete('suppliers/{supplier}', [SupplierController::class, 'destroy'])->middleware('perm:control.suppliers')->name('suppliers.destroy');
+    Route::post('suppliers/{supplier}/categories', [SupplierController::class, 'attachCategory'])->middleware('perm:control.suppliers')->name('suppliers.categories.attach');
+    Route::delete('suppliers/{supplier}/categories/{supplierProductCategory}', [SupplierController::class, 'detachCategory'])->middleware('perm:control.suppliers')->name('suppliers.categories.detach');
+    Route::post('supplier-product-categories', [SupplierProductCategoryController::class, 'store'])->middleware('perm:control.suppliers')->name('supplier-product-categories.store');
+    Route::patch('supplier-product-categories/{supplierProductCategory}', [SupplierProductCategoryController::class, 'update'])->middleware('perm:control.suppliers')->name('supplier-product-categories.update');
+    Route::delete('supplier-product-categories/{supplierProductCategory}', [SupplierProductCategoryController::class, 'destroy'])->middleware('perm:control.suppliers')->name('supplier-product-categories.destroy');
 
     Route::get('production', [ProductionController::class, 'index'])->middleware('perm:manufacturing.manage')->name('production.index');
     Route::get('production/create', [ProductionController::class, 'create'])->middleware('perm:manufacturing.manage')->name('production.create');
@@ -448,6 +522,7 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::post('finance/reconciliation/import', [BankReconciliationController::class, 'import'])->middleware('perm:accounting.manage')->name('finance.reconciliation.import');
     Route::post('finance/reconciliation', [BankReconciliationController::class, 'update'])->middleware('perm:accounting.manage')->name('finance.reconciliation.update');
     Route::get('reports/pl', [ReportController::class, 'profitAndLoss'])->middleware('perm:reports.view')->name('reports.pl');
+    Route::get('reports/manufacturing-schedule', [ReportController::class, 'manufacturingSchedule'])->middleware('perm:reports.view')->name('reports.manufacturing-schedule');
     Route::get('reports/trial-balance', [ReportController::class, 'trialBalance'])->middleware('perm:reports.view')->name('reports.trial-balance');
     Route::get('reports/general-ledger', [ReportController::class, 'generalLedger'])->middleware('perm:reports.view')->name('reports.general-ledger');
     Route::get('reports/inventory-valuation', [ReportController::class, 'inventoryValuation'])->middleware('perm:reports.view')->name('reports.inventory-valuation');
@@ -489,9 +564,12 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::get('expenses/{expense}/edit', [ExpenseController::class, 'edit'])->middleware('perm:accounting.manage')->name('expenses.edit');
     Route::patch('expenses/{expense}', [ExpenseController::class, 'update'])->middleware('perm:accounting.manage')->name('expenses.update');
     Route::delete('expenses/{expense}', [ExpenseController::class, 'destroy'])->middleware('perm:accounting.manage')->name('expenses.destroy');
+    Route::get('expense-categories', [ExpenseCategoryController::class, 'index'])->middleware('perm:accounting.manage')->name('expense-categories.index');
+    Route::patch('expense-categories/{expenseCategory}', [ExpenseCategoryController::class, 'update'])->middleware('perm:accounting.manage')->name('expense-categories.update');
     Route::get('accounts', [AccountController::class, 'index'])->middleware('perm:accounting.manage')->name('accounts.index');
     Route::get('accounts/create', [AccountController::class, 'create'])->middleware('perm:accounting.manage')->name('accounts.create');
     Route::post('accounts', [AccountController::class, 'store'])->middleware('perm:accounting.manage')->name('accounts.store');
+    Route::get('accounts/{account}', [AccountController::class, 'show'])->middleware('perm:accounting.manage')->name('accounts.show');
     Route::get('accounts/{account}/edit', [AccountController::class, 'edit'])->middleware('perm:accounting.manage')->name('accounts.edit');
     Route::patch('accounts/{account}', [AccountController::class, 'update'])->middleware('perm:accounting.manage')->name('accounts.update');
     Route::delete('accounts/{account}', [AccountController::class, 'destroy'])->middleware('perm:accounting.manage')->name('accounts.destroy');

@@ -98,9 +98,30 @@ return [
         'roles' => ['admin', 'accounts_officer'],
         'related_screens' => [
             ['title' => ['en' => 'Customer invoices', 'bn' => 'গ্রাহক ইনভয়েস'], 'path' => '/admin/finance'],
+            ['title' => ['en' => 'Expenses', 'bn' => 'খরচ'], 'path' => '/admin/expenses'],
+            ['title' => ['en' => 'Expense category mapping', 'bn' => 'Expense mapping'], 'path' => '/admin/expense-categories'],
+            ['title' => ['en' => 'Salary distributions', 'bn' => 'বেতন বিতরণ'], 'path' => '/admin/salary-distributions'],
             ['title' => ['en' => 'Journals', 'bn' => 'জার্নাল'], 'path' => '/admin/journals'],
             ['title' => ['en' => 'Chart of accounts', 'bn' => 'চার্ট অফ অ্যাকাউন্টস'], 'path' => '/admin/accounts'],
             ['title' => ['en' => 'Accounting periods', 'bn' => 'অ্যাকাউন্টিং পিরিয়ড'], 'path' => '/admin/accounting-periods'],
+        ],
+    ],
+    'ledger-mapping' => [
+        'roles' => ['all', 'admin', 'accounts_officer'],
+        'related_screens' => [
+            ['title' => ['en' => 'Chart of accounts', 'bn' => 'COA'], 'path' => '/admin/accounts'],
+            ['title' => ['en' => 'Journal entries', 'bn' => 'জার্নাল'], 'path' => '/admin/journals'],
+            ['title' => ['en' => 'Expense category mapping', 'bn' => 'Expense mapping'], 'path' => '/admin/expense-categories'],
+            ['title' => ['en' => 'General ledger report', 'bn' => 'GL রিপোর্ট'], 'path' => '/admin/reports/general-ledger'],
+        ],
+    ],
+    'hr-payroll' => [
+        'roles' => ['admin', 'accounts_officer'],
+        'related_screens' => [
+            ['title' => ['en' => 'Employees', 'bn' => 'কর্মী'], 'path' => '/admin/employees'],
+            ['title' => ['en' => 'Salary distributions', 'bn' => 'বেতন বিতরণ'], 'path' => '/admin/salary-distributions'],
+            ['title' => ['en' => 'Payroll summary', 'bn' => 'পে-রোল সারাংশ'], 'path' => '/admin/reports/payroll'],
+            ['title' => ['en' => 'Contracts', 'bn' => 'চুক্তি'], 'path' => '/admin/contracts'],
         ],
     ],
     'reports' => [

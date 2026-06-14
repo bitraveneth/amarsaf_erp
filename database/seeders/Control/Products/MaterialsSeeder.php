@@ -4,13 +4,11 @@ namespace Database\Seeders\Control\Products;
 
 use App\Models\Product;
 use App\Models\TaxClass;
-use App\Support\MaterialCategoryAssigner;
+use App\Support\RawMaterialLineCatalog;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
-/**
- * Seed data for:
- * - Materials (raw / service / in‑house) used in BOMs.
- */
 class MaterialsSeeder extends Seeder
 {
     public function run(): void
@@ -24,100 +22,100 @@ class MaterialsSeeder extends Seeder
             ]);
         }
 
-        $materials = [
-            [
-                'sku' => 'RM-PET-500',
-                'name' => 'PET Bottle 500ml',
-                'product_type' => 'raw',
-                'uom' => 'piece',
-                'standard_cost' => 5.00,
-                'supplier_name' => 'ABC Plastics',
-            ],
-            [
-                'sku' => 'RM-CAP-STD',
-                'name' => 'Bottle Cap – Standard',
-                'product_type' => 'raw',
-                'uom' => 'piece',
-                'standard_cost' => 0.80,
-                'supplier_name' => 'ABC Plastics',
-            ],
-            [
-                'sku' => 'RM-LABEL-500',
-                'name' => 'BOPP Label – 500ml Bottle',
-                'product_type' => 'raw',
-                'uom' => 'piece',
-                'standard_cost' => 0.60,
-                'supplier_name' => 'XYZ Labels',
-            ],
-            [
-                'sku' => 'RM-CARTON-12X500',
-                'name' => 'Carton Box – 12 x 500ml',
-                'product_type' => 'raw',
-                'uom' => 'piece',
-                'standard_cost' => 20.00,
-                'supplier_name' => 'CartonCo',
-            ],
-            [
-                'sku' => 'RM-SHRINK-CTN',
-                'name' => 'Shrink Wrap Film – Carton',
-                'product_type' => 'raw',
-                'uom' => 'piece',
-                'standard_cost' => 2.50,
-                'supplier_name' => 'Packaging Ltd',
-            ],
-            [
-                'sku' => 'RM-RO-WATER',
-                'name' => 'Treated RO Water',
-                'product_type' => 'raw',
-                'uom' => 'liter',
-                'standard_cost' => 0.30,
-                'supplier_name' => 'Local Water Provider',
-            ],
-            [
-                'sku' => 'SV-LAB-FACT',
-                'name' => 'Labour – Factory Line',
-                'product_type' => 'service',
-                'uom' => 'day',
-                'standard_cost' => 1200.00,
-                'supplier_name' => 'John Contractor',
-            ],
-            [
-                'sku' => 'SV-UTIL-SHIFT',
-                'name' => 'Electricity / Utilities per Shift',
-                'product_type' => 'service',
-                'uom' => 'shift',
-                'standard_cost' => 600.00,
-                'supplier_name' => 'Local Utility',
-            ],
-            [
-                'sku' => 'IH-LABEL-PRINT',
-                'name' => 'Label Printing',
-                'product_type' => 'inhouse',
-                'uom' => 'piece',
-                'standard_cost' => 0.00,
-                'supplier_name' => null,
-            ],
-            [
-                'sku' => 'IH-SHRINK-PROC',
-                'name' => 'Shrink Wrapping / Case Making',
-                'product_type' => 'inhouse',
-                'uom' => 'piece',
-                'standard_cost' => 0.00,
-                'supplier_name' => null,
-            ],
-        ];
+        $this->migrateLegacySkus();
 
-        foreach ($materials as $row) {
-            $attributes = MaterialCategoryAssigner::withCategory(array_merge($row, [
-                'tax_class_id' => $vatExempt->id,
-                'base_price' => 0,
-                'is_active' => true,
-            ]), $row['sku'], $row['name']);
+        foreach (RawMaterialLineCatalog::seedMaterials() as $row) {
+            $categoryId = RawMaterialLineCatalog::resolveCategoryIdByCode($row['category_code']);
 
             Product::updateOrCreate(
                 ['sku' => $row['sku']],
-                $attributes
+                [
+                    'name' => $row['name'],
+                    'product_type' => $row['product_type'],
+                    'material_category_id' => $categoryId,
+                    'uom' => $row['uom'],
+                    'size' => $row['size'] ?? null,
+                    'standard_cost' => $row['standard_cost'],
+                    'supplier_name' => $row['supplier_name'] ?? null,
+                    'chemical_name' => $row['chemical_name'] ?? null,
+                    'sourcing' => $row['sourcing'] ?? 'purchased',
+                    'tax_class_id' => $vatExempt->id,
+                    'base_price' => 0,
+                    'is_active' => true,
+                ]
             );
+        }
+    }
+
+    protected function migrateLegacySkus(): void
+    {
+        $map = [
+            'RM-PET-500' => 'RM-PREF-500',
+            'RM-CAP-STD' => 'RM-CAP-STD',
+            'RM-LABEL-500' => 'RM-LBL-500',
+            'RM-SHRINK-CTN' => 'RM-SHRINK',
+            'RM-RO-WATER' => 'RM-WATER',
+            'SV-LAB-FACT' => 'SV-LAB',
+            'SV-UTIL-SHIFT' => 'SV-UTIL',
+            'IH-LABEL-PRINT' => 'IH-LBL',
+            'IH-SHRINK-PROC' => 'IH-SHRINK',
+        ];
+
+        foreach ($map as $oldSku => $newSku) {
+            $old = Product::where('sku', $oldSku)->first();
+
+            if (! $old) {
+                continue;
+            }
+
+            $existing = Product::where('sku', $newSku)->where('id', '!=', $old->id)->first();
+
+            if ($existing) {
+                foreach ([
+                    'bill_of_material_items' => 'component_product_id',
+                    'purchase_order_items' => 'product_id',
+                    'purchase_bill_items' => 'product_id',
+                    'stock_entries' => 'product_id',
+                    'goods_receipt_items' => 'product_id',
+                ] as $table => $column) {
+                    if (Schema::hasTable($table)) {
+                        DB::table($table)->where($column, $old->id)->update([$column => $existing->id]);
+                    }
+                }
+
+                $old->delete();
+
+                continue;
+            }
+
+            $old->update(['sku' => $newSku]);
+        }
+
+        $cartonOld = Product::where('sku', 'RM-CARTON-12X500')->first();
+
+        if ($cartonOld) {
+            $cartonNew = Product::where('sku', 'RM-CTN-24X500')->first();
+
+            if ($cartonNew && $cartonNew->id !== $cartonOld->id) {
+                foreach ([
+                    'bill_of_material_items' => 'component_product_id',
+                    'purchase_order_items' => 'product_id',
+                    'purchase_bill_items' => 'product_id',
+                    'stock_entries' => 'product_id',
+                    'goods_receipt_items' => 'product_id',
+                ] as $table => $column) {
+                    if (Schema::hasTable($table)) {
+                        DB::table($table)->where($column, $cartonOld->id)->update([$column => $cartonNew->id]);
+                    }
+                }
+
+                $cartonOld->delete();
+            } else {
+                $cartonOld->update([
+                    'sku' => 'RM-CTN-24X500',
+                    'name' => 'Carton Box – 24 x 500ml',
+                ]);
+            }
         }
     }
 }

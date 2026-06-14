@@ -12,6 +12,7 @@ class JournalEntryLine extends Model
         'account_id',
         'line_number',
         'description',
+        'analytic_label',
         'debit',
         'credit',
     ];

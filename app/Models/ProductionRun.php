@@ -100,4 +100,19 @@ class ProductionRun extends Model
         return in_array($this->qc_status, ['approved', 'partial'], true)
             && $this->sellableQuantity() > 0;
     }
+
+    public function repeatCreateUrl(): string
+    {
+        return route('admin.production.create', ['repeat' => $this->id]);
+    }
+
+    public function manufacturingWorkflowStep(): int
+    {
+        return \App\Services\Manufacturing\ManufacturingFlow::stepForRun($this);
+    }
+
+    public function manufacturingWorkflowInProgress(): bool
+    {
+        return \App\Services\Manufacturing\ManufacturingFlow::inProgressForRun($this);
+    }
 }

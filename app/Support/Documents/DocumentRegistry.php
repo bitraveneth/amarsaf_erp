@@ -5,6 +5,7 @@ namespace App\Support\Documents;
 use App\Models\Delivery;
 use App\Models\GoodsReceipt;
 use App\Models\Invoice;
+use App\Models\LogisticsBill;
 use App\Models\Order;
 use App\Models\ProductionRun;
 use App\Models\PurchaseOrder;
@@ -77,6 +78,13 @@ class DocumentRegistry
             'back_route' => 'admin.deliveries.index',
             'filename' => 'proof-of-delivery',
         ],
+        'logistics-bill' => [
+            'model' => LogisticsBill::class,
+            'permission' => 'control.warehouses',
+            'view' => 'documents.types.logistics-bill',
+            'back_route' => 'admin.logistics-bills.show',
+            'filename' => 'logistics-bill',
+        ],
     ];
 
     public static function get(string $type): array
@@ -118,6 +126,7 @@ class DocumentRegistry
             'production-order' => $model->order_number ?? (string) $model->getKey(),
             'sales-order', 'picking-list' => 'order-' . $model->getKey(),
             'delivery-challan', 'packing-slip', 'pod' => 'delivery-' . $model->getKey(),
+            'logistics-bill' => $model->document_number ?? (string) $model->getKey(),
             default => (string) $model->getKey(),
         };
 

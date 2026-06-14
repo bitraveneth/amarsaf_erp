@@ -16,6 +16,11 @@ use InvalidArgumentException;
 
 class AccountingService
 {
+    public function __construct(
+        protected AccountResolver $accounts
+    ) {
+    }
+
     public function post(
         string $journalType,
         Carbon $entryDate,
@@ -69,6 +74,7 @@ class AccountingService
                     'account_id' => $line['account_id'],
                     'line_number' => $index + 1,
                     'description' => $line['description'] ?? $description,
+                    'analytic_label' => $line['analytic_label'] ?? null,
                     'debit' => $line['debit'],
                     'credit' => $line['credit'],
                 ]);
@@ -143,6 +149,7 @@ class AccountingService
                     'account_id' => $line['account_id'],
                     'line_number' => $index + 1,
                     'description' => $line['description'] ?? $journal->description,
+                    'analytic_label' => $line['analytic_label'] ?? null,
                     'debit' => $line['debit'],
                     'credit' => $line['credit'],
                 ]);
@@ -271,15 +278,33 @@ class AccountingService
         });
     }
 
-    public function resolveAccount(string $name): Account
+    public function resolveAccount(string $identifier): Account
     {
-        $account = Account::where('name', $name)->where('is_active', true)->first();
+        $slug = config("accounting.accounts.{$identifier}") ?? $identifier;
+
+        $account = Account::query()
+            ->where('slug', $slug)
+            ->where('is_active', true)
+            ->first();
 
         if (! $account) {
-            throw new InvalidArgumentException("Account not found in chart of accounts: {$name}");
+            $account = Account::where('name', $identifier)->where('is_active', true)->first();
+        }
+
+        if (! $account) {
+            throw new InvalidArgumentException("Account not found in chart of accounts: {$identifier}");
+        }
+
+        if (! $account->isPostable()) {
+            throw new InvalidArgumentException("Account [{$account->name}] is a group and cannot be posted to.");
         }
 
         return $account;
+    }
+
+    public function resolveBySlug(string $slug): Account
+    {
+        return $this->accounts->resolve($slug);
     }
 
     public function resolveAccountId(string $name): int
@@ -305,8 +330,16 @@ class AccountingService
 
             if (isset($line['account_id'])) {
                 $account = Account::findOrFail($line['account_id']);
+            } elseif (isset($line['account_key'])) {
+                $account = $this->accounts->resolve((string) $line['account_key']);
+            } elseif (isset($line['slug'])) {
+                $account = $this->resolveBySlug((string) $line['slug']);
             } else {
                 $account = $this->resolveAccount((string) $line['account']);
+            }
+
+            if (! $account->isPostable()) {
+                throw new InvalidArgumentException("Account [{$account->name}] is a group and cannot be posted to.");
             }
 
             $normalized[] = [
@@ -315,6 +348,7 @@ class AccountingService
                 'debit' => $debit,
                 'credit' => $credit,
                 'description' => $line['description'] ?? null,
+                'analytic_label' => $line['analytic_label'] ?? null,
             ];
         }
 

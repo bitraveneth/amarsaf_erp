@@ -113,4 +113,22 @@ return [
             ['en' => 'Use P&L, stock, and aging together', 'bn' => 'P&L, স্টক ও aging একসাথে ব্যবহার'],
         ],
     ],
+    'ledger-mapping' => [
+        'track' => ['en' => 'Finance', 'bn' => 'অর্থ'],
+        'level' => ['en' => 'Intermediate', 'bn' => 'মধ্যম'],
+        'duration_min' => 20,
+        'outcomes' => [
+            ['en' => 'Answer client questions about which ledger each transaction hits', 'bn' => 'ক্লায়েন্টের “কোন ledger?” প্রশ্নের উত্তর দিন'],
+            ['en' => 'Know which documents post GL vs operational only', 'bn' => 'কোন ডকুমেন্ট GL পোস্ট করে জানুন'],
+        ],
+    ],
+    'hr-payroll' => [
+        'track' => ['en' => 'Finance', 'bn' => 'অর্থ'],
+        'level' => ['en' => 'Beginner', 'bn' => 'প্রাথমিক'],
+        'duration_min' => 12,
+        'outcomes' => [
+            ['en' => 'Separate HR records from payroll GL posting', 'bn' => 'HR রেকর্ড ও payroll GL আলাদা করুন'],
+            ['en' => 'Post salary distributions without double-counting P&L', 'bn' => 'P&L দ্বিগুণ ছাড়া salary distribution পোস্ট'],
+        ],
+    ],
 ];

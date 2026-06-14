@@ -1,29 +1,37 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="space-y-6">
+<div class="space-y-6 screen-production-create">
     <!-- Header -->
     <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
             <div class="flex items-center gap-3">
                 <h1 class="text-2xl font-semibold text-gray-900 dark:text-white">
-                    New Production order
+                    New production run
                 </h1>
                 <span class="inline-flex items-center rounded-full bg-brand-50 px-3 py-1 text-xs font-medium text-brand-700 dark:bg-brand-500/20 dark:text-brand-400">
-                    Manufacturing
+                    Step 3 · Produce
                 </span>
             </div>
             <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                Define the production order number, product, batch, line, shift, and planned quantity for this run.
+                Pick a product, preview a previous run on the right, then load it — a <strong>new batch lot</strong> is still created when you save.
             </p>
         </div>
-        <a href="{{ route('admin.production.index') }}" 
+        <a href="{{ route('admin.manufacturing.dashboard') }}"
            class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-white/[0.03]">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
             </svg>
-            Back to Orders & Runs
+            Manufacturing dashboard
         </a>
+    </div>
+
+    <section class="overflow-hidden rounded-2xl border border-gray-200/80 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900">
+        <x-admin.order-workflow type="manufacturing" :step="3" :in-progress="true" variant="procurement" label="Manufacturing process" />
+    </section>
+
+    <div id="bom-status-banner" class="rounded-2xl border px-5 py-4 text-sm border-gray-200 bg-gray-50 text-gray-600 dark:border-gray-800 dark:bg-gray-900/50 dark:text-gray-400">
+        Select a product to confirm the active recipe (step 1) before recording this run.
     </div>
 
     <!-- Form Card -->
@@ -39,319 +47,286 @@
                     </svg>
                 </div>
                 <div>
-                    <h3 class="text-lg font-medium text-gray-900 dark:text-white">Production Run Details</h3>
-                    <p class="text-xs text-gray-500 dark:text-gray-400">Enter the manufacturing order information</p>
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-white">Run setup</h3>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Choose product and quantity — preview a previous run on the right, then load it into the form</p>
                 </div>
             </div>
         </div>
 
-        <form action="{{ route('admin.production.store') }}" method="POST" class="p-6">
+        <form action="{{ route('admin.production.store') }}" method="POST" class="p-6" id="production-create-form"
+              x-data="productionForm(@js($formState))">
             @csrf
-            
-            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                <!-- Production order Number -->
+            <input type="hidden" name="batch_mode" id="batch_mode" value="{{ old('batch_mode', 'auto') }}">
+
+            <div class="bom-form__product-layout">
+                <div class="bom-form__product-main">
+                    <div class="po-create__field">
+                        <label for="product_id" class="po-create__label">Product <span class="po-create__req">*</span></label>
+                        <select id="product_id" name="product_id" x-model="selectedProductId" required
+                                @change="onProductChange()"
+                                class="po-create__input">
+                            <option value="">Select finished product…</option>
+                            <template x-for="product in products" :key="product.id">
+                                <option :value="String(product.id)" x-text="productLabel(product)"></option>
+                            </template>
+                        </select>
+                        @error('product_id')<p class="po-create__error">{{ $message }}</p>@enderror
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <div class="po-create__field">
+                            <label for="quantity" class="po-create__label">Quantity to produce <span class="po-create__req">*</span></label>
+                            <input type="number" id="quantity" name="quantity" x-model="quantity"
+                                   @input="syncExternalWidgets()"
+                                   step="1" min="1" required placeholder="e.g. 500"
+                                   class="po-create__input">
+                            @error('quantity')<p class="po-create__error">{{ $message }}</p>@enderror
+                        </div>
+
+                        <div class="po-create__field">
+                            <label for="warehouse_id" class="po-create__label">Warehouse</label>
+                            <select id="warehouse_id" name="warehouse_id" x-model="warehouseId"
+                                    @change="syncExternalWidgets()"
+                                    class="po-create__input">
+                                <option value="">Select warehouse</option>
+                                @foreach($warehouses as $warehouse)
+                                    <option value="{{ $warehouse->id }}">{{ $warehouse->name }}</option>
+                                @endforeach
+                            </select>
+                            @error('warehouse_id')<p class="po-create__error">{{ $message }}</p>@enderror
+                        </div>
+
+                        <div class="po-create__field">
+                            <label for="line" class="po-create__label">Production line</label>
+                            <select id="line" name="line" x-model="line" class="po-create__input">
+                                <option value="Line 1">Line 1</option>
+                                <option value="Line 2">Line 2</option>
+                            </select>
+                            @error('line')<p class="po-create__error">{{ $message }}</p>@enderror
+                        </div>
+
+                        <div class="po-create__field">
+                            <label for="shift" class="po-create__label">Shift</label>
+                            <select id="shift" name="shift" x-model="shift" class="po-create__input">
+                                <option value="Morning">Morning</option>
+                                <option value="Evening">Evening</option>
+                                <option value="Night">Night</option>
+                            </select>
+                            @error('shift')<p class="po-create__error">{{ $message }}</p>@enderror
+                        </div>
+                    </div>
+
+                    <div class="bom-form__draft-panel">
+                        <p class="bom-form__draft-label">Run summary</p>
+
+                        <div class="bom-form__draft-product" x-show="selectedProductId" x-cloak>
+                            <span class="erp-po-index-supplier__avatar" x-text="productInitial()"></span>
+                            <div class="min-w-0 flex-1">
+                                <p class="bom-form__draft-name" x-text="selectedProductName()"></p>
+                                <p class="bom-form__draft-recipe">
+                                    <span x-text="quantity || '—'"></span> units · <span x-text="line"></span> · <span x-text="shift"></span>
+                                </p>
+                            </div>
+                        </div>
+
+                        <p class="bom-form__draft-hint" x-show="! selectedProductId">
+                            Select a product to start this production run.
+                        </p>
+
+                        <dl class="bom-form__draft-stats" x-show="selectedProductId" x-cloak>
+                            <div class="bom-form__draft-stat">
+                                <dt>Material cost / unit</dt>
+                                <dd>{{ config('app.currency', 'BDT') }} <span x-text="formatMoney(currentUnitCost())"></span></dd>
+                            </div>
+                            <div class="bom-form__draft-stat">
+                                <dt>Estimated total</dt>
+                                <dd>{{ config('app.currency', 'BDT') }} <span x-text="formatMoney(currentTotalCost())"></span></dd>
+                            </div>
+                            <div class="bom-form__draft-stat" x-show="hasActiveBom() && ! useExistingBatch" x-cloak>
+                                <dt>New batch on save</dt>
+                                <dd class="font-mono text-xs" x-text="previewBatchCode()"></dd>
+                            </div>
+                            <div class="bom-form__draft-stat" x-show="appliedRunId" x-cloak>
+                                <dt>Loaded from</dt>
+                                <dd x-text="selectedRunLabel()"></dd>
+                            </div>
+                            <div class="bom-form__draft-stat">
+                                <dt>On save</dt>
+                                <dd x-text="useExistingBatch ? 'Links existing batch lot' : 'Creates new batch lot automatically'"></dd>
+                            </div>
+                        </dl>
+                    </div>
+                </div>
+
+                <aside class="bom-form__recipe-preview" x-show="selectedProductId" x-cloak>
+                    <div class="bom-form__preview-head">
+                        <label for="preview_run_id" class="po-create__label mb-0">Previous production runs</label>
+                        <p class="mt-1 text-xs leading-relaxed text-gray-500 dark:text-gray-400">
+                            Preview any past run for this product, then load its settings into the form on the left.
+                        </p>
+                    </div>
+
+                    <select id="preview_run_id" x-model="previewRunId"
+                            class="po-create__input bom-form__preview-select mt-3">
+                        <option value="">Start fresh — no previous run</option>
+                        <template x-for="run in runsForProduct()" :key="run.id">
+                            <option :value="String(run.id)" x-text="runOptionLabel(run)"></option>
+                        </template>
+                    </select>
+
+                    <div class="bom-form__preview-body" x-show="previewRun()" x-cloak>
+                        <div class="bom-form__preview-meta">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span class="font-mono text-xs font-semibold text-brand-600 dark:text-brand-400" x-text="previewRun()?.code"></span>
+                                <span x-show="previewRun()?.batch_code"
+                                      class="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-gray-600 dark:bg-gray-800 dark:text-gray-300">
+                                    Batch <span x-text="previewRun()?.batch_code"></span>
+                                </span>
+                            </div>
+                            <p class="mt-1 text-sm font-semibold text-gray-900 dark:text-white">
+                                <span x-text="previewRun()?.quantity"></span> units · <span x-text="previewRun()?.line"></span> · <span x-text="previewRun()?.shift"></span>
+                            </p>
+                            <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                                <span x-text="previewRun()?.warehouse_name || 'No warehouse'"></span>
+                                · recorded <span x-text="previewRun()?.created_at"></span>
+                            </p>
+                        </div>
+
+                        <div class="bom-form__preview-table-wrap">
+                            <table class="bom-form__preview-table">
+                                <thead>
+                                    <tr>
+                                        <th>Material</th>
+                                        <th class="text-right">Required</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <template x-for="line in previewRunLines()" :key="line.id">
+                                        <tr>
+                                            <td x-text="line.label"></td>
+                                            <td class="text-right tabular-nums" x-text="line.qty"></td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="bom-form__preview-foot">
+                            <span class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Est. material cost</span>
+                            <span class="text-sm font-bold tabular-nums text-brand-600 dark:text-brand-400">
+                                {{ config('app.currency', 'BDT') }} <span x-text="formatMoney(previewRunTotalCost())"></span>
+                            </span>
+                        </div>
+
+                        <button type="button"
+                                @click="usePreviewRun()"
+                                :disabled="isPreviewApplied()"
+                                :class="isPreviewApplied()
+                                    ? 'bom-form__preview-use-btn is-applied'
+                                    : 'bom-form__preview-use-btn'"
+                                x-text="isPreviewApplied() ? 'Loaded in form on the left' : 'Use this run'">
+                        </button>
+
+                        <a :href="previewRun()?.show_url"
+                           class="mt-2 block text-center text-xs font-semibold text-brand-600 hover:text-brand-700 dark:text-brand-400">
+                            View full run details →
+                        </a>
+                    </div>
+
+                    <div class="bom-form__preview-empty" x-show="! previewRun() && runsForProduct().length === 0" x-cloak>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">No previous runs for this product yet — enter details on the left.</p>
+                    </div>
+
+                    <div class="bom-form__preview-empty" x-show="! previewRun() && runsForProduct().length > 0" x-cloak>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Select a run above to preview materials and settings before loading.</p>
+                    </div>
+                </aside>
+            </div>
+
+            <div class="mt-8 grid grid-cols-1 gap-4 border-t border-gray-100 pt-8 dark:border-gray-800 sm:grid-cols-2 lg:grid-cols-3">
                 <div class="sm:col-span-2 lg:col-span-1">
                     <label for="order_number" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
                         Production order No.
                     </label>
                     <div class="flex gap-2">
-                        <div class="relative flex-1">
-                            <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                                <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 20l4-16 4 4 4-4 4 16H7z"/>
-                                </svg>
-                            </div>
-                            <input type="text" 
-                                   id="order_number" 
-                                   name="order_number" 
-                                   value="{{ old('order_number') }}"
-                                   placeholder="Auto-generate if blank"
-                                   class="w-full rounded-lg border border-gray-300 bg-white pl-10 pr-4 py-2.5 text-sm text-gray-900 placeholder-gray-500 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-400">
-                        </div>
-                        <button type="button" 
-                                id="btn-generate-order-number"
-                                class="inline-flex items-center rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-white/[0.03]"
-                                title="Generate order number">
+                        <input type="text" id="order_number" name="order_number" x-model="orderNumber"
+                               placeholder="Auto-generate if blank"
+                               class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 placeholder-gray-500 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-400">
+                        <button type="button" id="btn-generate-order-number"
+                                class="inline-flex items-center rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">
                             <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
                             </svg>
                         </button>
                     </div>
-                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Leave blank to auto-generate</p>
-                    @error('order_number')
-                        <p class="mt-1 text-sm text-error-600 dark:text-error-500">{{ $message }}</p>
-                    @enderror
-                </div>
-
-                <!-- Product -->
-                <div>
-                    <label for="product_id" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Product <span class="text-error-500">*</span>
-                    </label>
-                    <div class="relative">
-                        <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                            <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
-                            </svg>
-                        </div>
-                        <select id="product_id" 
-                                name="product_id" 
-                                required
-                                class="w-full rounded-lg border border-gray-300 bg-white pl-10 pr-4 py-2.5 text-sm text-gray-900 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white">
-                            <option value="">Select product</option>
-                            @foreach($products as $product)
-                                <option value="{{ $product->id }}" {{ old('product_id') == $product->id ? 'selected' : '' }}>
-                                    {{ $product->sku ?? '' }} {{ $product->sku ? '—' : '' }}{{ $product->name }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-                    @error('product_id')
-                        <p class="mt-1 text-sm text-error-600 dark:text-error-500">{{ $message }}</p>
-                    @enderror
-                </div>
-
-                <!-- Batch -->
-                <div>
-                    <label for="batch_id" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Batch <span class="text-error-500">*</span>
-                    </label>
-                    <div class="relative">
-                        <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                            <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/>
-                            </svg>
-                        </div>
-                        <select id="batch_id" 
-                                name="batch_id" 
-                                required
-                                class="w-full rounded-lg border border-gray-300 bg-white pl-10 pr-4 py-2.5 text-sm text-gray-900 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white">
-                            <option value="">Select batch</option>
-                            @foreach($batches as $batch)
-                                <option value="{{ $batch->id }}" {{ old('batch_id') == $batch->id ? 'selected' : '' }}>
-                                    {{ $batch->batch_code }} — {{ $batch->product->name ?? '' }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-                    @error('batch_id')
-                        <p class="mt-1 text-sm text-error-600 dark:text-error-500">{{ $message }}</p>
-                    @enderror
-                </div>
-
-                <!-- Warehouse -->
-                <div>
-                    <label for="warehouse_id" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Warehouse
-                    </label>
-                    <div class="relative">
-                        <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                            <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z"/>
-                            </svg>
-                        </div>
-                        <select id="warehouse_id" 
-                                name="warehouse_id"
-                                class="w-full rounded-lg border border-gray-300 bg-white pl-10 pr-4 py-2.5 text-sm text-gray-900 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white">
-                            <option value="">Select warehouse</option>
-                            @foreach($warehouses as $warehouse)
-                                @php
-                                    $selectedWarehouse = old('warehouse_id', $defaultWarehouseId ?? null);
-                                @endphp
-                                <option value="{{ $warehouse->id }}" {{ $selectedWarehouse == $warehouse->id ? 'selected' : '' }}>
-                                    {{ $warehouse->name }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-                    @error('warehouse_id')
-                        <p class="mt-1 text-sm text-error-600 dark:text-error-500">{{ $message }}</p>
-                    @enderror
-                </div>
-
-                <!-- Production Line -->
-                <div>
-                    <label for="line" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Production Line
-                    </label>
-                    <div class="relative">
-                        <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                            <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/>
-                            </svg>
-                        </div>
-                        <select id="line" 
-                                name="line"
-                                class="w-full rounded-lg border border-gray-300 bg-white pl-10 pr-4 py-2.5 text-sm text-gray-900 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white">
-                            @php($line = old('line', 'Line 1'))
-                            <option value="Line 1" {{ $line === 'Line 1' ? 'selected' : '' }}>Line 1</option>
-                            <option value="Line 2" {{ $line === 'Line 2' ? 'selected' : '' }}>Line 2</option>
-                        </select>
-                    </div>
-                    @error('line')
-                        <p class="mt-1 text-sm text-error-600 dark:text-error-500">{{ $message }}</p>
-                    @enderror
-                </div>
-
-                <!-- Shift -->
-                <div>
-                    <label for="shift" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Shift
-                    </label>
-                    <div class="relative">
-                        <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                            <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                            </svg>
-                        </div>
-                        <select id="shift" 
-                                name="shift"
-                                class="w-full rounded-lg border border-gray-300 bg-white pl-10 pr-4 py-2.5 text-sm text-gray-900 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white">
-                            @php($shift = old('shift', 'Morning'))
-                            <option value="Morning" {{ $shift === 'Morning' ? 'selected' : '' }}>Morning</option>
-                            <option value="Evening" {{ $shift === 'Evening' ? 'selected' : '' }}>Evening</option>
-                            <option value="Night" {{ $shift === 'Night' ? 'selected' : '' }}>Night</option>
-                        </select>
-                    </div>
-                    @error('shift')
-                        <p class="mt-1 text-sm text-error-600 dark:text-error-500">{{ $message }}</p>
-                    @enderror
-                </div>
-
-                <!-- Quantity -->
-                <div>
-                    <label for="quantity" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Quantity (cartons) <span class="text-error-500">*</span>
-                    </label>
-                    <div class="relative">
-                        <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                            <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
-                            </svg>
-                        </div>
-                        <input type="number" 
-                               id="quantity" 
-                               name="quantity" 
-                               type="number" 
-                               step="1" 
-                               min="1"
-                               value="{{ old('quantity', 0) }}" 
-                               required
-                               class="w-full rounded-lg border border-gray-300 bg-white pl-10 pr-4 py-2.5 text-sm text-gray-900 placeholder-gray-500 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-400">
-                    </div>
-                    @error('quantity')
-                        <p class="mt-1 text-sm text-error-600 dark:text-error-500">{{ $message }}</p>
-                    @enderror
-                </div>
-
-                <!-- Cost Information -->
-                <div class="rounded-lg bg-gray-50 p-4 dark:bg-gray-800/50">
-                    <div class="space-y-2">
-                        <div class="flex items-center justify-between">
-                            <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Material cost per unit</span>
-                            <span id="production-unit-cost" class="text-sm font-semibold text-gray-900 dark:text-white">—</span>
-                        </div>
-                        <div class="flex items-center justify-between">
-                            <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Estimated total cost</span>
-                            <span id="production-total-cost" class="text-sm font-semibold text-brand-600 dark:text-brand-400">—</span>
-                        </div>
-                    </div>
+                    @error('order_number')<p class="mt-1 text-sm text-error-600 dark:text-error-500">{{ $message }}</p>@enderror
                 </div>
 
                 <!-- Status -->
                 <div>
-                    <label for="status" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Status
-                    </label>
-                    <div class="relative">
-                        <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                            <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-5m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                            </svg>
-                        </div>
-                        <select id="status" 
-                                name="status"
-                                class="w-full rounded-lg border border-gray-300 bg-white pl-10 pr-4 py-2.5 text-sm text-gray-900 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white">
-                            @php($status = old('status', 'confirmed'))
-                            <option value="planned" {{ $status === 'planned' ? 'selected' : '' }}>Planned</option>
-                            <option value="confirmed" {{ $status === 'confirmed' ? 'selected' : '' }}>Confirmed</option>
-                            <option value="cancelled" {{ $status === 'cancelled' ? 'selected' : '' }}>Cancelled</option>
-                        </select>
-                    </div>
-                    @error('status')
-                        <p class="mt-1 text-sm text-error-600 dark:text-error-500">{{ $message }}</p>
-                    @enderror
+                    <label for="status" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Status</label>
+                    <select id="status" name="status" x-model="status"
+                            class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white">
+                        <option value="planned">Planned</option>
+                        <option value="confirmed">Confirmed</option>
+                        <option value="cancelled">Cancelled</option>
+                    </select>
+                    @error('status')<p class="mt-1 text-sm text-error-600 dark:text-error-500">{{ $message }}</p>@enderror
                 </div>
 
                 <!-- Supervisor -->
                 <div>
-                    <label for="supervisor_id" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Supervisor
-                    </label>
-                    <div class="relative">
-                        <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                            <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
-                            </svg>
-                        </div>
-                        <select id="supervisor_id" 
-                                name="supervisor_id"
-                                class="w-full rounded-lg border border-gray-300 bg-white pl-10 pr-4 py-2.5 text-sm text-gray-900 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white">
-                            <option value="">Select supervisor</option>
-                            @foreach($employees as $employee)
-                                <option value="{{ $employee->id }}" {{ old('supervisor_id') == $employee->id ? 'selected' : '' }}>
-                                    {{ $employee->name }}{{ $employee->job_position ? ' – '.$employee->job_position : '' }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-                    @error('supervisor_id')
-                        <p class="mt-1 text-sm text-error-600 dark:text-error-500">{{ $message }}</p>
-                    @enderror
+                    <label for="supervisor_id" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Supervisor</label>
+                    <select id="supervisor_id" name="supervisor_id" x-model="supervisorId"
+                            class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white">
+                        <option value="">Select supervisor</option>
+                        @foreach($employees as $employee)
+                            <option value="{{ $employee->id }}">
+                                {{ $employee->name }}{{ $employee->job_position ? ' – '.$employee->job_position : '' }}
+                            </option>
+                        @endforeach
+                    </select>
+                    @error('supervisor_id')<p class="mt-1 text-sm text-error-600 dark:text-error-500">{{ $message }}</p>@enderror
                 </div>
 
                 <!-- Materials Reserved (Full Width) -->
                 <div class="sm:col-span-2 lg:col-span-3">
-                    <label for="materials_reserved" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Raw Materials Reserved
-                    </label>
-                    <div class="relative">
-                        <div class="pointer-events-none absolute left-3 top-3 flex items-start">
-                            <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
-                            </svg>
-                        </div>
-                        <textarea id="materials_reserved" 
-                                  name="materials_reserved" 
-                                  rows="2"
-                                  class="w-full rounded-lg border border-gray-300 bg-white pl-10 pr-4 py-2.5 text-sm text-gray-900 placeholder-gray-500 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-400"
-                                  placeholder="e.g., 24,000 bottles, 1,000 cartons, caps, labels.">{{ old('materials_reserved') }}</textarea>
-                    </div>
-                    @error('materials_reserved')
-                        <p class="mt-1 text-sm text-error-600 dark:text-error-500">{{ $message }}</p>
-                    @enderror
+                    <label for="materials_reserved" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Raw materials reserved</label>
+                    <textarea id="materials_reserved" name="materials_reserved" x-model="materialsReserved" rows="2"
+                              class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 placeholder-gray-500 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-400"
+                              placeholder="e.g., 24,000 bottles, 1,000 cartons, caps, labels."></textarea>
+                    @error('materials_reserved')<p class="mt-1 text-sm text-error-600 dark:text-error-500">{{ $message }}</p>@enderror
                 </div>
 
                 <!-- Notes (Full Width) -->
                 <div class="sm:col-span-2 lg:col-span-3">
-                    <label for="notes" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Notes
+                    <label for="notes" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Notes</label>
+                    <textarea id="notes" name="notes" x-model="notes" rows="2"
+                              class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 placeholder-gray-500 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-400"
+                              placeholder="Additional information about this production run..."></textarea>
+                    @error('notes')<p class="mt-1 text-sm text-error-600 dark:text-error-500">{{ $message }}</p>@enderror
+                </div>
+
+                <!-- Advanced: existing batch -->
+                <div class="sm:col-span-2 lg:col-span-3 rounded-xl border border-dashed border-gray-200 bg-gray-50/60 p-4 dark:border-gray-700 dark:bg-gray-900/40">
+                    <label class="inline-flex cursor-pointer items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                        <input type="checkbox" id="use_existing_batch" x-model="useExistingBatch"
+                               @change="syncExternalWidgets()"
+                               class="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800">
+                        Link to an existing open batch (advanced)
                     </label>
-                    <div class="relative">
-                        <div class="pointer-events-none absolute left-3 top-3 flex items-start">
-                            <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"/>
-                            </svg>
-                        </div>
-                        <textarea id="notes" 
-                                  name="notes" 
-                                  rows="2"
-                                  class="w-full rounded-lg border border-gray-300 bg-white pl-10 pr-4 py-2.5 text-sm text-gray-900 placeholder-gray-500 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-400"
-                                  placeholder="Additional information about this production run...">{{ old('notes') }}</textarea>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Leave unchecked to auto-create a new batch lot when you save — recommended for most runs.</p>
+                    <div id="existing-batch-field" class="mt-3" x-show="useExistingBatch" x-cloak>
+                        <label for="batch_id" class="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Existing batch</label>
+                        <select id="batch_id"
+                                name="batch_id"
+                                class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white">
+                            <option value="">Select open batch for this product…</option>
+                        </select>
+                        @error('batch_id')
+                            <p class="mt-1 text-sm text-error-600 dark:text-error-500">{{ $message }}</p>
+                        @enderror
                     </div>
-                    @error('notes')
-                        <p class="mt-1 text-sm text-error-600 dark:text-error-500">{{ $message }}</p>
-                    @enderror
                 </div>
             </div>
 
@@ -366,7 +341,7 @@
                     <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                     </svg>
-                    Record Production Run
+                    Record production run
                 </button>
             </div>
         </form>
@@ -428,32 +403,268 @@
 
 @push('scripts')
 <script>
+    document.addEventListener('alpine:init', () => {
+        Alpine.data('productionForm', (config) => ({
+            currencyCode: @js(config('app.currency', 'BDT')),
+            products: config.products || [],
+            previousRunsByProduct: config.previousRunsByProduct || {},
+            materialRequirements: config.materialRequirements || {},
+            productUnitCosts: config.productUnitCosts || {},
+            productSkus: config.productSkus || {},
+            bomCatalog: config.bomCatalog || {},
+            selectedProductId: config.selectedProductId ? String(config.selectedProductId) : '',
+            quantity: config.quantity ?? '',
+            warehouseId: config.warehouseId ? String(config.warehouseId) : '',
+            line: config.line || 'Line 1',
+            shift: config.shift || 'Morning',
+            supervisorId: config.supervisorId ? String(config.supervisorId) : '',
+            status: config.status || 'confirmed',
+            notes: config.notes || '',
+            materialsReserved: config.materialsReserved || '',
+            orderNumber: config.orderNumber || '',
+            previewRunId: config.previewRunId ? String(config.previewRunId) : '',
+            appliedRunId: config.appliedRunId ? String(config.appliedRunId) : '',
+            initialRepeatRunId: config.initialRepeatRunId || null,
+            useExistingBatch: @js(old('batch_mode') === 'existing'),
+            init() {
+                this.$nextTick(() => {
+                    if (this.initialRepeatRunId) {
+                        this.previewRunId = String(this.initialRepeatRunId);
+                        this.usePreviewRun(true);
+                    } else if (this.selectedProductId && ! this.previewRunId) {
+                        this.previewRunId = this.defaultPreviewRunId();
+                    }
+                    this.syncExternalWidgets();
+                });
+            },
+            productLabel(product) {
+                const sku = (product.sku || '').trim();
+                const name = (product.name || '').trim();
+                return sku ? `${sku} – ${name}` : name;
+            },
+            productMap() {
+                return Object.fromEntries(this.products.map((p) => [String(p.id), p]));
+            },
+            selectedProductName() {
+                const match = this.productMap()[String(this.selectedProductId)];
+                return match ? this.productLabel(match) : 'Select finished product';
+            },
+            productInitial() {
+                const name = this.selectedProductName();
+                if (name === 'Select finished product') return '?';
+                return name.charAt(0).toUpperCase();
+            },
+            runsForProduct() {
+                if (! this.selectedProductId) return [];
+                return this.previousRunsByProduct[String(this.selectedProductId)] || [];
+            },
+            runOptionLabel(run) {
+                const batch = run.batch_code ? ` · ${run.batch_code}` : '';
+                return `${run.code} · ${run.quantity} units${batch}`;
+            },
+            defaultPreviewRunId() {
+                const runs = this.runsForProduct();
+                return runs.length ? String(runs[0].id) : '';
+            },
+            previewRun() {
+                if (! this.previewRunId) return null;
+                return this.runsForProduct().find(
+                    (item) => String(item.id) === String(this.previewRunId)
+                ) || null;
+            },
+            previewRunLines() {
+                const run = this.previewRun();
+                if (! run || ! this.selectedProductId) return [];
+
+                const components = this.materialRequirements[String(this.selectedProductId)] || [];
+                const qty = parseFloat(run.quantity) || 0;
+
+                return components.map((comp) => {
+                    const required = (parseFloat(comp.quantity_per_unit) || 0) * qty;
+                    const label = comp.sku ? `${comp.sku} — ${comp.name || ''}` : (comp.name || 'Material');
+
+                    return {
+                        id: comp.product_id,
+                        label,
+                        qty: `${required.toFixed(2)} ${comp.uom || ''}`.trim(),
+                    };
+                });
+            },
+            previewRunTotalCost() {
+                const run = this.previewRun();
+                if (! run) return 0;
+
+                if (run.material_total_cost !== null && run.material_total_cost !== undefined) {
+                    return parseFloat(run.material_total_cost) || 0;
+                }
+
+                const unitCost = this.productUnitCosts[String(this.selectedProductId)] || 0;
+                return unitCost * (parseFloat(run.quantity) || 0);
+            },
+            currentUnitCost() {
+                const cost = this.productUnitCosts[String(this.selectedProductId)];
+                return cost !== undefined && cost !== null ? cost : null;
+            },
+            currentTotalCost() {
+                const unitCost = this.currentUnitCost();
+                const qty = parseFloat(this.quantity) || 0;
+                if (unitCost === null || ! qty) return null;
+                return unitCost * qty;
+            },
+            hasActiveBom() {
+                return !!(this.bomCatalog[String(this.selectedProductId)] ?? null);
+            },
+            previewBatchCode() {
+                if (! this.selectedProductId) return '—';
+                const sku = (this.productSkus[String(this.selectedProductId)] || ('P' + this.selectedProductId))
+                    .replace(/[^A-Z0-9]/gi, '')
+                    .toUpperCase();
+                const dateKey = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+                return `${sku}-${dateKey}-001`;
+            },
+            formatMoney(value) {
+                if (value === null || value === undefined || value === '') return '—';
+                const amount = parseFloat(value);
+                if (Number.isNaN(amount)) return '—';
+                return amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            },
+            selectedRunLabel() {
+                const run = this.runsForProduct().find(
+                    (item) => String(item.id) === String(this.appliedRunId)
+                );
+                return run ? `${run.code} · ${run.quantity} units` : '';
+            },
+            isPreviewApplied() {
+                return !!this.appliedRunId && String(this.appliedRunId) === String(this.previewRunId);
+            },
+            onProductChange() {
+                this.previewRunId = this.defaultPreviewRunId();
+                this.appliedRunId = '';
+                this.syncExternalWidgets();
+            },
+            usePreviewRun(focusQuantity = true) {
+                const run = this.previewRun();
+                if (! run) return;
+
+                this.quantity = String(run.quantity || '');
+                this.line = run.line || 'Line 1';
+                this.shift = run.shift || 'Morning';
+                this.warehouseId = run.warehouse_id ? String(run.warehouse_id) : this.warehouseId;
+                this.supervisorId = run.supervisor_id ? String(run.supervisor_id) : '';
+                this.notes = run.notes || '';
+                this.materialsReserved = run.materials_reserved || '';
+                this.appliedRunId = String(run.id);
+                this.syncExternalWidgets();
+
+                if (focusQuantity) {
+                    this.$nextTick(() => {
+                        const quantityInput = document.getElementById('quantity');
+                        quantityInput?.focus();
+                        quantityInput?.select();
+                    });
+                }
+            },
+            syncExternalWidgets() {
+                window.dispatchEvent(new CustomEvent('production-form-sync'));
+            },
+        }));
+    });
+
     document.addEventListener('DOMContentLoaded', () => {
         const productUnitCosts = @json($productUnitCosts ?? []);
         const materialRequirements = @json($materialRequirements ?? []);
         const warehouseStock = @json($warehouseStock ?? []);
         const warehouseNames = @json($warehouses->pluck('name','id'));
+        const bomCatalog = @json($bomCatalog ?? []);
+        const productSkus = @json($productSkus ?? []);
+        const openBatchesByProduct = @json($openBatchesByProduct ?? []);
         const productSelect = document.getElementById('product_id');
         const quantityInput = document.getElementById('quantity');
         const warehouseSelect = document.getElementById('warehouse_id');
-        const unitCostEl = document.getElementById('production-unit-cost');
-        const totalCostEl = document.getElementById('production-total-cost');
         const materialsBody = document.getElementById('materials-required-body');
         const materialsSummary = document.getElementById('materials-required-summary');
+        const bomStatusBanner = document.getElementById('bom-status-banner');
+        const useExistingBatch = document.getElementById('use_existing_batch');
+        const existingBatchField = document.getElementById('existing-batch-field');
+        const batchModeInput = document.getElementById('batch_mode');
+        const batchSelect = document.getElementById('batch_id');
 
-        function updateProductionCost() {
+        function populateOpenBatches() {
+            if (!batchSelect || !productSelect) return;
+
             const productId = productSelect.value;
-            const quantity = parseFloat(quantityInput.value) || 0;
-            const unitCost = productUnitCosts[productId] ?? null;
+            const batches = openBatchesByProduct[productId] || [];
+            const oldBatchId = @json(old('batch_id'));
 
-            if (!unitCost || !quantity) {
-                unitCostEl.textContent = '—';
-                totalCostEl.textContent = '—';
+            batchSelect.innerHTML = '<option value="">Select open batch for this product…</option>';
+            batches.forEach((batch) => {
+                const option = document.createElement('option');
+                option.value = batch.id;
+                option.textContent = `${batch.code}${batch.production_date ? ' · ' + batch.production_date : ''}`;
+                batchSelect.appendChild(option);
+            });
+
+            if (oldBatchId) {
+                batchSelect.value = String(oldBatchId);
+            }
+        }
+
+        function syncBatchMode() {
+            const useExisting = useExistingBatch?.checked;
+            if (batchModeInput) {
+                batchModeInput.value = useExisting ? 'existing' : 'auto';
+            }
+            if (batchSelect) {
+                batchSelect.disabled = !useExisting;
+                if (!useExisting) {
+                    batchSelect.value = '';
+                }
+            }
+        }
+
+        function updateBomStatusBanner() {
+            if (!bomStatusBanner) return;
+            const productId = productSelect.value;
+            if (!productId) {
+                bomStatusBanner.className = 'rounded-2xl border px-5 py-4 text-sm border-gray-200 bg-gray-50 text-gray-600 dark:border-gray-800 dark:bg-gray-900/50 dark:text-gray-400';
+                bomStatusBanner.innerHTML = 'Select a product to see whether an active manufacturing recipe is loaded.';
                 return;
             }
 
-            unitCostEl.textContent = `BDT ${unitCost.toFixed(2)}`;
-            totalCostEl.textContent = `BDT ${(unitCost * quantity).toFixed(2)}`;
+            const bom = bomCatalog[productId] ?? null;
+            if (bom) {
+                bomStatusBanner.className = 'rounded-2xl border px-5 py-4 text-sm border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-100';
+                bomStatusBanner.innerHTML = `
+                    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                            <p class="font-semibold">Active recipe loaded — no new BOM needed</p>
+                            <p class="mt-1">${bom.name} · ${bom.items_count} component${bom.items_count === 1 ? '' : 's'}. Materials below are calculated from this recipe.</p>
+                        </div>
+                        <div class="flex flex-wrap gap-2 shrink-0">
+                            <a href="${bom.show_url}" class="inline-flex items-center rounded-lg border border-emerald-300 bg-white px-3 py-1.5 text-xs font-semibold text-emerald-800 hover:bg-emerald-100 dark:border-emerald-500/40 dark:bg-emerald-950/40 dark:text-emerald-100">View recipe</a>
+                            <a href="${bom.edit_url}" class="inline-flex items-center rounded-lg border border-emerald-300 bg-white px-3 py-1.5 text-xs font-semibold text-emerald-800 hover:bg-emerald-100 dark:border-emerald-500/40 dark:bg-emerald-950/40 dark:text-emerald-100">Edit recipe</a>
+                        </div>
+                    </div>`;
+                return;
+            }
+
+            const createUrl = @json(route('admin.boms.create')) + '?product_id=' + encodeURIComponent(productId);
+            bomStatusBanner.className = 'rounded-2xl border px-5 py-4 text-sm border-amber-200 bg-amber-50 text-amber-950 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100';
+            bomStatusBanner.innerHTML = `
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        <p class="font-semibold">No active recipe for this product</p>
+                        <p class="mt-1">You can still record production, but materials will not auto-calculate or deduct until a BOM exists.</p>
+                    </div>
+                    <a href="${createUrl}" class="inline-flex shrink-0 items-center rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-700">Create BOM</a>
+                </div>`;
+        }
+
+        function refreshProductionWidgets() {
+            updateBomStatusBanner();
+            populateOpenBatches();
+            syncBatchMode();
+            updateMaterialRequirements();
         }
 
         function updateMaterialRequirements() {
@@ -577,15 +788,10 @@
             }
         }
 
-        if (productSelect) productSelect.addEventListener('change', updateProductionCost);
-        if (quantityInput) quantityInput.addEventListener('input', updateProductionCost);
-        if (productSelect) productSelect.addEventListener('change', updateMaterialRequirements);
-        if (quantityInput) quantityInput.addEventListener('input', updateMaterialRequirements);
-        if (warehouseSelect) warehouseSelect.addEventListener('change', updateMaterialRequirements);
+        window.addEventListener('production-form-sync', refreshProductionWidgets);
+        if (useExistingBatch) useExistingBatch.addEventListener('change', syncBatchMode);
 
-        // Initialize
-        updateProductionCost();
-        updateMaterialRequirements();
+        refreshProductionWidgets();
         
         // Generate order number button
         const generateBtn = document.getElementById('btn-generate-order-number');
@@ -599,6 +805,7 @@
                 const day = String(date.getDate()).padStart(2, '0');
                 const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
                 orderNumberInput.value = `PO-${year}${month}${day}-${random}`;
+                orderNumberInput.dispatchEvent(new Event('input', { bubbles: true }));
             });
         }
     });

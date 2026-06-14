@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Supplier;
+use App\Models\SupplierProductCategory;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -11,21 +12,42 @@ class SupplierController extends Controller
 {
     public function index()
     {
-        $suppliers = Supplier::orderBy('name')->paginate(15);
+        $suppliers = Supplier::with('productCategories')
+            ->orderBy('name')
+            ->paginate(15);
 
-        return view('admin.suppliers.index', compact('suppliers'));
+        $productCategories = SupplierProductCategory::withCount('suppliers')
+            ->ordered()
+            ->get();
+
+        $totalSuppliers = Supplier::count();
+        $categorizedSuppliers = Supplier::whereHas('productCategories')->count();
+        $uncategorizedSuppliers = max(0, $totalSuppliers - $categorizedSuppliers);
+
+        return view('admin.suppliers.index', compact(
+            'suppliers',
+            'productCategories',
+            'totalSuppliers',
+            'categorizedSuppliers',
+            'uncategorizedSuppliers',
+        ));
     }
 
     public function create()
     {
-        return view('admin.suppliers.create');
+        $productCategories = SupplierProductCategory::active()->ordered()->get();
+
+        return view('admin.suppliers.create', compact('productCategories'));
     }
 
     public function store(Request $request)
     {
         $data = $this->validated($request);
+        $categoryIds = $data['product_category_ids'] ?? [];
+        unset($data['product_category_ids']);
 
-        Supplier::create($data);
+        $supplier = Supplier::create($data);
+        $this->syncProductCategories($supplier, $categoryIds);
 
         return redirect()->route('admin.suppliers.index')->with('status', 'Supplier created.');
     }
@@ -33,20 +55,27 @@ class SupplierController extends Controller
     public function show(Supplier $supplier)
     {
         $supplier->loadCount(['purchaseOrders', 'goodsReceipts', 'bills']);
+        $supplier->load('productCategories');
 
         return view('admin.suppliers.show', compact('supplier'));
     }
 
     public function edit(Supplier $supplier)
     {
-        return view('admin.suppliers.edit', compact('supplier'));
+        $supplier->load('productCategories');
+        $productCategories = SupplierProductCategory::active()->ordered()->get();
+
+        return view('admin.suppliers.edit', compact('supplier', 'productCategories'));
     }
 
     public function update(Request $request, Supplier $supplier)
     {
         $data = $this->validated($request, $supplier);
+        $categoryIds = $data['product_category_ids'] ?? [];
+        unset($data['product_category_ids']);
 
         $supplier->update($data);
+        $this->syncProductCategories($supplier, $categoryIds);
 
         return redirect()
             ->route('admin.suppliers.show', $supplier)
@@ -72,6 +101,34 @@ class SupplierController extends Controller
         return redirect()
             ->route('admin.suppliers.index')
             ->with('status', 'Supplier deleted.');
+    }
+
+    public function attachCategory(Request $request, Supplier $supplier)
+    {
+        $data = $request->validate([
+            'supplier_product_category_id' => 'required|exists:supplier_product_categories,id',
+        ]);
+
+        $supplier->productCategories()->syncWithoutDetaching([$data['supplier_product_category_id']]);
+
+        return back()->with('status', 'Category added to supplier.');
+    }
+
+    public function detachCategory(Supplier $supplier, SupplierProductCategory $supplierProductCategory)
+    {
+        $supplier->productCategories()->detach($supplierProductCategory->id);
+
+        return back()->with('status', 'Category removed from supplier.');
+    }
+
+    protected function syncProductCategories(Supplier $supplier, array $categoryIds): void
+    {
+        $ids = SupplierProductCategory::query()
+            ->whereIn('id', $categoryIds)
+            ->pluck('id')
+            ->all();
+
+        $supplier->productCategories()->sync($ids);
     }
 
     protected function validated(Request $request, ?Supplier $supplier = null): array
@@ -106,6 +163,8 @@ class SupplierController extends Controller
                 'max:255',
                 Rule::unique('suppliers', 'tax_id')->ignore($supplierId),
             ],
+            'product_category_ids' => 'nullable|array',
+            'product_category_ids.*' => 'integer|exists:supplier_product_categories,id',
         ]);
     }
 }

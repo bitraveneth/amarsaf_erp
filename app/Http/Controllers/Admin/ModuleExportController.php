@@ -142,7 +142,8 @@ class ModuleExportController extends Controller
                 || str_contains($normalized, 'taxable')
                 || str_contains($normalized, 'withholding')
                 || str_contains($normalized, 'rate')
-                || str_contains($normalized, 'days')) {
+                || str_contains($normalized, 'days')
+                || str_contains($normalized, 'balance')) {
                 $indices[] = $index;
             }
         }

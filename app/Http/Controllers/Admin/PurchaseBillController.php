@@ -285,8 +285,8 @@ class PurchaseBillController extends Controller
             'bill_payment',
             $paidAt,
             [
-                ['account' => 'Accounts Payable', 'debit' => $amount, 'credit' => 0],
-                ['account' => 'Bank', 'debit' => 0, 'credit' => $amount],
+                ['account_key' => 'accounts_payable', 'debit' => $amount, 'credit' => 0],
+                ['account_key' => 'bank_default', 'debit' => 0, 'credit' => $amount],
             ],
             [
                 'description' => $description,
@@ -394,10 +394,10 @@ class PurchaseBillController extends Controller
         $lines = $debitLines;
 
         if ($vatTotal > 0) {
-            $lines[] = ['account' => 'Input VAT', 'debit' => $vatTotal, 'credit' => 0];
+            $lines[] = ['account_key' => 'input_vat', 'debit' => $vatTotal, 'credit' => 0];
         }
 
-        $lines[] = ['account' => 'Accounts Payable', 'debit' => 0, 'credit' => $netTotal + $vatTotal];
+        $lines[] = ['account_key' => 'accounts_payable', 'debit' => 0, 'credit' => $netTotal + $vatTotal];
 
         $this->accounting->post(
             'purchase_bill',

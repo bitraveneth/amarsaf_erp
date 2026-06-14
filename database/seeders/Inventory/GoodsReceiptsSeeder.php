@@ -43,7 +43,8 @@ class GoodsReceiptsSeeder extends Seeder
         $packagingBill = PurchaseBill::where('number', 'PB-20260201-004')->first();
 
         $labelProduct = Product::where('sku', 'RM-LABEL-500')->first();
-        $cartonProduct = Product::where('sku', 'RM-CARTON-12X500')->first();
+        $cartonProduct = Product::where('sku', 'RM-CARTON-24X500')->first()
+            ?? Product::where('sku', 'RM-CARTON-12X500')->first();
         $shrinkProduct = Product::where('sku', 'RM-SHRINK-CTN')->first();
         $packagingSupplier = Supplier::where('name', 'Packaging Ltd')->first();
 

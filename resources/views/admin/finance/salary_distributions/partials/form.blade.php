@@ -189,6 +189,28 @@
             @enderror
         </div>
 
+        {{-- Overtime pay --}}
+        <div class="flex flex-col gap-1.5">
+            <label for="overtime_pay" class="text-theme-sm font-medium text-gray-700 dark:text-gray-300">
+                Overtime pay
+                <span class="text-theme-xs font-normal text-gray-500 dark:text-gray-400 ml-1">(optional)</span>
+            </label>
+            <div class="relative">
+                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400">$</span>
+                <input id="overtime_pay" 
+                       name="overtime_pay" 
+                       type="number" 
+                       step="0.01" 
+                       min="0"
+                       value="{{ old('overtime_pay', $distribution->overtime_pay ?? 0) }}"
+                       placeholder="0.00"
+                       class="h-11 w-full rounded-lg border border-gray-300 bg-transparent pl-7 pr-4 py-2.5 text-theme-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-700">
+            </div>
+            @error('overtime_pay')
+                <p class="text-theme-xs text-error-600 dark:text-error-400">{{ $message }}</p>
+            @enderror
+        </div>
+
         {{-- Total Preview (Read-only) --}}
         <div class="flex flex-col gap-1.5">
             <label class="text-theme-sm font-medium text-gray-700 dark:text-gray-300">
@@ -200,7 +222,8 @@
                     (old('bonus', $distribution->bonus ?? 0)) +
                     (old('ta_allowances', $distribution->ta_allowances ?? 0)) +
                     (old('da_allowances', $distribution->da_allowances ?? 0)) +
-                    (old('commission', $distribution->commission ?? 0)), 2
+                    (old('commission', $distribution->commission ?? 0)) +
+                    (old('overtime_pay', $distribution->overtime_pay ?? 0)), 2
                 ) }}
             </div>
         </div>
@@ -215,6 +238,30 @@
     </div>
     
     <div class="form-grid grid grid-cols-1 gap-5 md:grid-cols-2 lg:gap-6">
+        {{-- GL payment routing --}}
+        <div class="flex flex-col gap-1.5">
+            <label for="payment_type" class="text-theme-sm font-medium text-gray-700 dark:text-gray-300">
+                GL payment type <span class="text-error-500">*</span>
+            </label>
+            @php $paymentType = old('payment_type', $distribution->payment_type ?? 'bank'); @endphp
+            <select id="payment_type" name="payment_type" required class="erp-input">
+                <option value="bank" @selected($paymentType === 'bank')>Paid from bank</option>
+                <option value="cash" @selected($paymentType === 'cash')>Paid from cash</option>
+                <option value="payable" @selected($paymentType === 'payable')>Accrued (salary payable)</option>
+            </select>
+            @error('payment_type')<p class="text-theme-xs text-error-600">{{ $message }}</p>@enderror
+        </div>
+
+        <div class="flex flex-col gap-1.5">
+            <label for="payment_account_key" class="text-theme-sm font-medium text-gray-700 dark:text-gray-300">
+                Bank / cash account key
+            </label>
+            <input id="payment_account_key" name="payment_account_key"
+                   value="{{ old('payment_account_key', $distribution->payment_account_key ?? 'bank_default') }}"
+                   class="erp-input" required>
+            @error('payment_account_key')<p class="text-theme-xs text-error-600">{{ $message }}</p>@enderror
+        </div>
+
         {{-- Payment Method --}}
         <div class="flex flex-col gap-1.5">
             <label for="payment_method" class="text-theme-sm font-medium text-gray-700 dark:text-gray-300">
@@ -309,7 +356,7 @@
 <script>
     // Auto-calculate total compensation
     document.addEventListener('DOMContentLoaded', function() {
-        const inputs = ['base_salary', 'bonus', 'ta_allowances', 'da_allowances', 'commission'];
+        const inputs = ['base_salary', 'bonus', 'ta_allowances', 'da_allowances', 'commission', 'overtime_pay'];
         const totalDisplay = document.querySelector('.total-compensation');
         
         function calculateTotal() {

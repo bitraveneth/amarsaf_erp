@@ -13,6 +13,8 @@
     'eyebrow' => 'Operations snapshot',
     'title' => 'Today at a glance',
     'description' => 'Core sales, finance, delivery, and stock signals in one place.',
+    'showHeader' => true,
+    'size' => 'default',
 ])
 
 @php
@@ -99,20 +101,30 @@
         'warning' => 'dash-snapshot-metric-value--warning',
         'danger' => 'dash-snapshot-metric-value--danger',
     ];
+
+    $gridColsClass = match (count($cards)) {
+        1 => 'dash-snapshot-grid--cols-1',
+        2 => 'dash-snapshot-grid--cols-2',
+        3 => 'dash-snapshot-grid--cols-3',
+        5, 6 => 'dash-snapshot-grid--cols-3',
+        default => 'dash-snapshot-grid--cols-4',
+    };
 @endphp
 
-<div class="dash-snapshot">
-    <div class="dash-snapshot-header">
-        <div>
-            <p class="dash-snapshot-eyebrow">{{ $eyebrow }}</p>
-            <h2 class="dash-snapshot-title">{{ $title }}</h2>
+<div class="dash-snapshot {{ $size === 'lg' ? 'dash-snapshot--lg' : '' }}">
+    @if($showHeader)
+        <div class="dash-snapshot-header">
+            <div>
+                <p class="dash-snapshot-eyebrow">{{ $eyebrow }}</p>
+                <h2 class="dash-snapshot-title">{{ $title }}</h2>
+            </div>
+            <p class="dash-snapshot-desc max-w-sm sm:text-right">
+                {{ $description }}
+            </p>
         </div>
-        <p class="dash-snapshot-desc max-w-sm sm:text-right">
-            {{ $description }}
-        </p>
-    </div>
+    @endif
 
-    <div class="dash-snapshot-grid">
+    <div class="dash-snapshot-grid {{ $gridColsClass }}">
     @foreach($cards as $card)
         @php
             $valueTone = $card['valueTone'] ?? 'neutral';

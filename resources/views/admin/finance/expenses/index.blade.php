@@ -8,7 +8,8 @@
                 <h1 class="text-title-sm font-semibold text-gray-900 dark:text-white">Expenses</h1>
                 <p class="text-theme-sm text-gray-500 dark:text-gray-300">Daily, weekly, or monthly expenses by category.</p>
             </div>
-            <div class="button-group">
+            <div class="button-group flex gap-2">
+                <a href="{{ route('admin.expense-categories.index') }}" class="erp-btn-secondary">Category mapping</a>
                 <a href="{{ route('admin.expenses.create') }}" 
                    class="inline-flex items-center justify-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-theme-sm font-medium text-white shadow-theme-xs transition hover:bg-brand-600 focus:outline-none focus:ring-4 focus:ring-brand-500/20 dark:bg-brand-500 dark:hover:bg-brand-600">
                     <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -40,8 +41,8 @@
                         class="h-11 min-w-[160px] rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-theme-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-none focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:focus:border-brand-700">
                     <option value="" class="dark:bg-gray-900">All</option>
                     @foreach($categories as $category)
-                        <option value="{{ $category }}" {{ request('category') === $category ? 'selected' : '' }} class="dark:bg-gray-900">
-                            {{ ucfirst($category) }}
+                        <option value="{{ $category->code }}" {{ request('category') === $category->code ? 'selected' : '' }} class="dark:bg-gray-900">
+                            {{ $category->name }}
                         </option>
                     @endforeach
                 </select>

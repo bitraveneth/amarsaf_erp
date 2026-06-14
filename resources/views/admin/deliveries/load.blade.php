@@ -174,6 +174,7 @@
                             <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-700 dark:text-gray-300">Capacity (crates)</th>
                             <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-700 dark:text-gray-300">Planned Load (crates)</th>
                             <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-700 dark:text-gray-300">Utilization</th>
+                            <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-700 dark:text-gray-300">Logistics</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
@@ -252,6 +253,20 @@
                                         <span class="text-sm text-gray-500 dark:text-gray-400">No capacity set</span>
                                     @endif
                                 </td>
+                                <td class="px-4 py-3 text-right whitespace-nowrap">
+                                    <div class="flex flex-col items-end gap-1">
+                                        <a href="{{ route('admin.fleet-expenses.create', ['vehicle_id' => $vehicle->id, 'trip_date' => $date->format('Y-m-d')]) }}"
+                                           class="erp-btn-secondary !py-1 !px-2 !text-[11px]">Fuel / cost</a>
+                                        @if(!empty($row['freight_suggestion']))
+                                            @php $s = $row['freight_suggestion']; @endphp
+                                            <a href="{{ route('admin.logistics-bills.create', ['route_id' => $s['route_id'], 'crates' => $s['crates'], 'carrier_id' => $s['carrier_id'], 'trip_date' => $date->format('Y-m-d')]) }}"
+                                               class="text-[11px] font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400"
+                                               title="{{ $s['description'] }}">
+                                                Bill BDT {{ number_format($s['amount'], 0) }}
+                                            </a>
+                                        @endif
+                                    </div>
+                                </td>
                             </tr>
                         @endforeach
                     </tbody>
@@ -265,7 +280,7 @@
                             <td class="px-4 py-3">
                                 <div class="flex items-center gap-3">
                                     <div class="w-24 h-2 bg-gray-200 rounded-full overflow-hidden dark:bg-gray-700">
-                                        <div class="h-full rounded-full {{ $overallUtilization > 90 ? 'bg-error-500' : 'bg-brand-500' }}" 
+                                        <div class="h-full rounded-full {{ $overallUtilization > 90 ? 'bg-error-500' : 'bg-brand-500' }}"
                                              style="width: {{ min($overallUtilization, 100) }}%"></div>
                                     </div>
                                     <span class="text-sm font-medium {{ $overallUtilization > 90 ? 'text-error-600 dark:text-error-500' : 'text-gray-700 dark:text-gray-300' }}">
@@ -273,6 +288,7 @@
                                     </span>
                                 </div>
                             </td>
+                            <td class="px-4 py-3"></td>
                         </tr>
                     </tfoot>
                 </table>

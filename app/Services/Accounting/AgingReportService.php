@@ -2,7 +2,6 @@
 
 namespace App\Services\Accounting;
 
-use App\Models\Account;
 use App\Models\Invoice;
 use App\Models\JournalEntryLine;
 use App\Models\PurchaseBill;
@@ -11,6 +10,10 @@ use Illuminate\Support\Collection;
 
 class AgingReportService
 {
+    public function __construct(
+        protected AccountResolver $accounts,
+    ) {}
+
     public const BUCKET_LABELS = [
         'current' => 'Current',
         '1_30' => '1–30 days',
@@ -49,8 +52,8 @@ class AgingReportService
             'buckets' => $this->summarizeBuckets($rows),
             'byAgent' => $this->groupReceivableByAgent($rows),
             'subledgerTotal' => round((float) $rows->sum('outstanding'), 2),
-            'glBalance' => $this->ledgerBalance('Accounts Receivable', 'asset'),
-            'variance' => round((float) $rows->sum('outstanding') - $this->ledgerBalance('Accounts Receivable', 'asset'), 2),
+            'glBalance' => $this->ledgerBalance('trade_debtors', 'asset'),
+            'variance' => round((float) $rows->sum('outstanding') - $this->ledgerBalance('trade_debtors', 'asset'), 2),
         ];
     }
 
@@ -84,8 +87,8 @@ class AgingReportService
             'buckets' => $this->summarizeBuckets($rows),
             'bySupplier' => $this->groupPayableBySupplier($rows),
             'subledgerTotal' => round((float) $rows->sum('outstanding'), 2),
-            'glBalance' => $this->ledgerBalance('Accounts Payable', 'liability'),
-            'variance' => round((float) $rows->sum('outstanding') - $this->ledgerBalance('Accounts Payable', 'liability'), 2),
+            'glBalance' => $this->ledgerBalance('trade_creditors', 'liability'),
+            'variance' => round((float) $rows->sum('outstanding') - $this->ledgerBalance('trade_creditors', 'liability'), 2),
         ];
     }
 
@@ -178,11 +181,11 @@ class AgingReportService
             ->values();
     }
 
-    protected function ledgerBalance(string $accountName, string $normalBalance): float
+    protected function ledgerBalance(string $accountKey, string $normalBalance): float
     {
-        $accountId = Account::where('name', $accountName)->value('id');
-
-        if (! $accountId) {
+        try {
+            $accountId = $this->accounts->id($accountKey);
+        } catch (\InvalidArgumentException) {
             return 0.0;
         }
 

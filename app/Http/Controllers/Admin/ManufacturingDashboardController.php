@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\Concerns\ResolvesDashboardPeriod;
 use App\Http\Controllers\Controller;
 use App\Models\Batch;
 use App\Models\ProductionRun;
+use App\Services\Manufacturing\ManufacturingFlow;
 use Illuminate\Http\Request;
 
 class ManufacturingDashboardController extends Controller
@@ -56,16 +57,28 @@ class ManufacturingDashboardController extends Controller
             ->groupBy(fn ($run) => (string) ($run->product_id ?? 'unknown'))
             ->map(function ($group) {
                 $product = $group->first()->product;
+                $qty = (float) $group->sum('quantity');
 
                 return [
+                    'product_name' => $product?->name ?? 'Unknown product',
+                    'qty' => $qty,
                     'label' => $product?->name ?? 'Unknown product',
-                    'value' => $group->sum('quantity'),
+                    'value' => $qty,
                     'meta' => $group->count() . ' runs',
                 ];
             })
-            ->sortByDesc('value')
+            ->sortByDesc('qty')
             ->take(5)
             ->values();
+
+        $recentRuns = $runs
+            ->sortByDesc(fn ($run) => $run->created_at?->timestamp ?? 0)
+            ->take(5)
+            ->values();
+
+        $qcApprovalRate = $totalRuns > 0
+            ? min(100, round(($approvedRuns->count() / $totalRuns) * 100, 1))
+            : 0;
 
         $byLine = $runs
             ->groupBy('line')
@@ -79,6 +92,27 @@ class ManufacturingDashboardController extends Controller
 
         $chartLabels = $byLine->keys()->map(fn ($line) => 'Line ' . ($line ?: '—'))->values()->all();
         $chartValues = $byLine->values()->map(fn ($qty) => (float) $qty)->all();
+
+        $productsWithoutActiveBom = ManufacturingFlow::countFinishedProductsWithoutActiveBom();
+        $productsNeedingRecipe = ManufacturingFlow::finishedProductsWithoutActiveBom();
+        $awaitingStockCount = ProductionRun::query()
+            ->whereIn('qc_status', ['approved', 'partial'])
+            ->whereNull('stock_confirmed_at')
+            ->when($warehouseIds !== null, function ($query) use ($warehouseIds) {
+                $query->whereIn('warehouse_id', $warehouseIds);
+            })
+            ->count();
+
+        $flowStep = ManufacturingFlow::dashboardStep(
+            $productsWithoutActiveBom,
+            $pendingQcCount,
+            $awaitingStockCount
+        );
+        $flowInProgress = ManufacturingFlow::dashboardInProgress(
+            $productsWithoutActiveBom,
+            $pendingQcCount,
+            $awaitingStockCount
+        );
 
         return view('admin.manufacturing.dashboard', [
             'from' => $from,
@@ -94,10 +128,17 @@ class ManufacturingDashboardController extends Controller
             'batchCount' => $batchCount,
             'expiringSoon' => $expiringSoon,
             'topProducts' => $topProducts,
+            'recentRuns' => $recentRuns,
+            'qcApprovalRate' => $qcApprovalRate,
             'byLine' => $byLine,
             'byShift' => $byShift,
             'chartLabels' => $chartLabels,
             'chartValues' => $chartValues,
+            'productsWithoutActiveBom' => $productsWithoutActiveBom,
+            'productsNeedingRecipe' => $productsNeedingRecipe,
+            'awaitingStockCount' => $awaitingStockCount,
+            'flowStep' => $flowStep,
+            'flowInProgress' => $flowInProgress,
         ]);
     }
 }

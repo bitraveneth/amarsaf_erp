@@ -1,37 +1,35 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="space-y-6">
-    <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+<div class="erp-order-page erp-order-page--index screen-bom-show space-y-6">
+    <header class="po-create__page-head !mb-0">
         <div>
-            <div class="flex items-center gap-3 flex-wrap">
-                <h1 class="text-2xl font-semibold text-gray-900 dark:text-white">
-                    {{ $bom->name ?: 'Default BOM' }}
-                </h1>
+            <div class="flex flex-wrap items-center gap-3">
+                <h1 class="po-create__page-title">{{ $bom->displayName() }}</h1>
                 @if($bom->is_active)
-                    <span class="inline-flex items-center gap-1 rounded-full bg-success-100 px-2.5 py-0.5 text-xs font-medium text-success-700 dark:bg-success-500/20 dark:text-success-400">
+                    <span class="inline-flex items-center rounded-full bg-success-100 px-2.5 py-0.5 text-xs font-semibold text-success-700 dark:bg-success-500/20 dark:text-success-400">
                         Active
                     </span>
                 @else
-                    <span class="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-400">
+                    <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-semibold text-gray-700 dark:bg-gray-800 dark:text-gray-400">
                         Inactive
                     </span>
                 @endif
             </div>
-            <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                {{ $bom->product?->name ?? 'Unknown product' }}
+            <p class="po-create__page-desc">
+                {{ $bom->recipeCode() }}
+                · {{ $bom->product?->name ?? 'Unknown product' }}
                 @if($bom->product?->sku)
                     · SKU {{ $bom->product->sku }}
                 @endif
             </p>
         </div>
-        <div class="flex flex-wrap items-center gap-3">
-            <a href="{{ route('admin.boms.index') }}"
-               class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">
-                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div class="flex flex-wrap items-center gap-2">
+            <a href="{{ route('admin.boms.index') }}" class="po-create__back-btn">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
                 </svg>
-                Back to BOMs
+                All BOMs
             </a>
             <x-admin.action-group>
                 <x-admin.action-edit :href="route('admin.boms.edit', $bom)" />
@@ -41,7 +39,39 @@
                 />
             </x-admin.action-group>
         </div>
-    </div>
+    </header>
+
+    @if($bom->is_active)
+        <div class="rounded-2xl border border-gray-200 bg-white p-5 shadow-theme-sm dark:border-gray-800 dark:bg-gray-900 sm:p-6">
+            <x-admin.order-workflow type="manufacturing" :step="2" variant="hero" label="Manufacturing flow" />
+            <p class="mt-4 text-sm text-gray-600 dark:text-gray-400">
+                Step 1 complete — this recipe is <strong>active</strong>. Start a production run; a <strong>batch lot</strong> is created automatically, then enter quantity for this run.
+            </p>
+            <div class="mt-4 flex flex-wrap gap-2">
+                <a href="{{ route('admin.production.create', ['product_id' => $bom->product_id]) }}" class="erp-order-btn erp-order-btn--primary">
+                    Start production run
+                </a>
+                <a href="{{ route('admin.boms.edit', $bom) }}" class="erp-order-btn erp-order-btn--secondary">
+                    Edit recipe
+                </a>
+            </div>
+        </div>
+    @else
+        <div class="rounded-2xl border border-gray-200 bg-white p-5 shadow-theme-sm dark:border-gray-800 dark:bg-gray-900 sm:p-6">
+            <x-admin.order-workflow
+                type="bom"
+                :step="$bom->recipeWorkflowStep()"
+                :in-progress="$bom->recipeWorkflowInProgress()"
+                variant="hero"
+            />
+            <p class="mt-4 text-sm text-gray-600 dark:text-gray-400">
+                Complete the recipe and <strong>activate</strong> it before production can auto-load materials from this BOM.
+            </p>
+            <a href="{{ route('admin.boms.edit', $bom) }}" class="erp-order-btn erp-order-btn--brand mt-4 inline-flex">
+                Continue setup
+            </a>
+        </div>
+    @endif
 
     <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div class="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">

@@ -407,6 +407,52 @@ return [
             ],
         ],
     ],
+    'ledger-mapping' => [
+        'pass_percent' => 70,
+        'questions' => [
+            [
+                'id' => 'lm1',
+                'prompt' => ['en' => 'When does sales revenue post to the ledger?', 'bn' => 'বিক্রয় আয় ledger-এ কখন পোস্ট?'],
+                'options' => [
+                    ['id' => 'a', 'text' => ['en' => 'When sales order is confirmed', 'bn' => 'অর্ডার নিশ্চিতে']],
+                    ['id' => 'b', 'text' => ['en' => 'When delivery is dispatched', 'bn' => 'ডিসপ্যাচে']],
+                    ['id' => 'c', 'text' => ['en' => 'When sales invoice is issued', 'bn' => 'বিক্রয় ইনভয়েসে']],
+                    ['id' => 'd', 'text' => ['en' => 'When PO is approved', 'bn' => 'PO অনুমোদনে']],
+                ],
+                'correct' => 'c',
+                'explain' => ['en' => 'Revenue and VAT post on invoice, not on order or delivery.', 'bn' => 'আয় ও VAT ইনভয়েসে — অর্ডার বা ডেলিভারিতে নয়।'],
+            ],
+            [
+                'id' => 'lm2',
+                'prompt' => ['en' => 'A paid utilities expense posts…', 'bn' => 'পরিশোধিত utilities expense পোস্ট…'],
+                'options' => [
+                    ['id' => 'a', 'text' => ['en' => 'Dr Bank, Cr Utilities expense', 'bn' => 'Dr Bank, Cr Utilities']],
+                    ['id' => 'b', 'text' => ['en' => 'Dr Utilities expense, Cr Bank', 'bn' => 'Dr Utilities, Cr Bank']],
+                    ['id' => 'c', 'text' => ['en' => 'Dr Trade debtors, Cr Bank', 'bn' => 'Dr AR, Cr Bank']],
+                    ['id' => 'd', 'text' => ['en' => 'No journal', 'bn' => 'জার্নাল নয়']],
+                ],
+                'correct' => 'b',
+                'explain' => ['en' => 'Expenses debit the category expense account and credit bank (when paid).', 'bn' => 'Expense Dr category expense, Cr bank (paid হলে)।'],
+            ],
+        ],
+    ],
+    'hr-payroll' => [
+        'pass_percent' => 70,
+        'questions' => [
+            [
+                'id' => 'hr1',
+                'prompt' => ['en' => 'Which screen posts payroll to the general ledger?', 'bn' => 'কোন স্ক্রিন payroll GL-এ পোস্ট করে?'],
+                'options' => [
+                    ['id' => 'a', 'text' => ['en' => 'Employee contracts', 'bn' => 'Contracts']],
+                    ['id' => 'b', 'text' => ['en' => 'Leave requests', 'bn' => 'Leaves']],
+                    ['id' => 'c', 'text' => ['en' => 'Salary distributions', 'bn' => 'Salary distributions']],
+                    ['id' => 'd', 'text' => ['en' => 'Badges', 'bn' => 'Badges']],
+                ],
+                'correct' => 'c',
+                'explain' => ['en' => 'Only salary distributions create payroll journals.', 'bn' => 'শুধু salary distributions payroll journal তৈরি করে।'],
+            ],
+        ],
+    ],
     'reports' => [
         'pass_percent' => 70,
         'questions' => [

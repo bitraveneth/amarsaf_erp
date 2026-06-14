@@ -4,27 +4,44 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Expense extends Model
 {
     use HasFactory;
 
     public const STATUS_RECORDED = 'recorded';
+
     public const STATUS_REVIEWED = 'reviewed';
 
     protected $fillable = [
         'date',
         'category',
+        'expense_category_id',
+        'account_id',
         'description',
         'amount',
         'reference',
         'status',
+        'payment_type',
+        'payment_account_key',
+        'analytic_label',
     ];
 
     protected $casts = [
         'date' => 'date',
         'amount' => 'decimal:2',
     ];
+
+    public function expenseCategory(): BelongsTo
+    {
+        return $this->belongsTo(ExpenseCategory::class);
+    }
+
+    public function accountOverride(): BelongsTo
+    {
+        return $this->belongsTo(Account::class, 'account_id');
+    }
 
     public static function normalizeStatus(?string $status): string
     {

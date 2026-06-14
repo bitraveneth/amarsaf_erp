@@ -3,6 +3,7 @@
 namespace App\Support\ModuleExports;
 
 use App\Models\Account;
+use App\Services\Accounting\ChartOfAccountsExportService;
 use App\Models\Agent;
 use App\Models\AgentAdvance;
 use App\Models\AgentCommissionSettlement;
@@ -479,23 +480,17 @@ class ModuleExportBuilders
 
     public static function accounts(Request $request): Collection
     {
-        $selectedType = $request->query('type');
-        $validTypes = ['asset', 'liability', 'equity', 'income', 'expense'];
-        if (! in_array($selectedType, $validTypes, true)) {
-            $selectedType = null;
-        }
+        return app(ChartOfAccountsExportService::class)->structureRows($request);
+    }
 
-        return Account::query()
-            ->when($selectedType, fn ($q) => $q->where('type', $selectedType))
-            ->orderBy('code')
-            ->get()
-            ->map(fn ($account) => [
-                $account->code,
-                $account->name,
-                ucfirst($account->type ?? ''),
-                $account->is_active ? 'Active' : 'Inactive',
-                $account->updated_at?->format('d M Y') ?? '—',
-            ]);
+    public static function coaStructure(Request $request): Collection
+    {
+        return app(ChartOfAccountsExportService::class)->structureRows($request);
+    }
+
+    public static function coaBalance(Request $request): Collection
+    {
+        return app(ChartOfAccountsExportService::class)->balanceRows($request);
     }
 
     public static function journals(Request $request): Collection

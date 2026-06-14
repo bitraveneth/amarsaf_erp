@@ -20,6 +20,7 @@ class ExportCenterController extends Controller
             ->filter(fn (string $key) => $key !== 'all')
             ->mapWithKeys(fn (string $key) => [$key => ExportDateRange::quickFillDates($key)])
             ->all();
+        $selectedModule = ModuleExportRegistry::normalizeSlug((string) $request->query('module', ''));
 
         return view('admin.exports.index', [
             'exportGroups' => $groups,
@@ -34,6 +35,7 @@ class ExportCenterController extends Controller
             'rangeQuery' => $queryParams,
             'quickFillPresets' => $quickFillPresets,
             'featuredModules' => ModuleExportRegistry::featuredModulesForUser($request->user(), $queryParams),
+            'selectedModule' => $selectedModule,
         ]);
     }
 }

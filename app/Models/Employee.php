@@ -62,4 +62,9 @@ class Employee extends Model
     {
         return $this->hasMany(EmployeeLocationLog::class);
     }
+
+    public function overtime()
+    {
+        return $this->hasMany(EmployeeOvertime::class);
+    }
 }

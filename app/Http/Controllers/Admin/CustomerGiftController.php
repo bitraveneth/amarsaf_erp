@@ -144,8 +144,8 @@ class CustomerGiftController extends Controller
             'customer_gift',
             Carbon::parse($gift->date),
             [
-                ['account' => 'Selling & Distribution Expense', 'debit' => $gift->amount, 'credit' => 0],
-                ['account' => 'Bank', 'debit' => 0, 'credit' => $gift->amount],
+                ['account_key' => 'selling_distribution', 'debit' => $gift->amount, 'credit' => 0],
+                ['account_key' => 'bank_default', 'debit' => 0, 'credit' => $gift->amount],
             ],
             [
                 'description' => $description,

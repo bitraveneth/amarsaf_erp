@@ -5,6 +5,7 @@ namespace App\Support\Documents;
 use App\Models\Delivery;
 use App\Models\GoodsReceipt;
 use App\Models\Invoice;
+use App\Models\LogisticsBill;
 use App\Models\Order;
 use App\Models\ProductionRun;
 use App\Models\PurchaseOrder;
@@ -24,6 +25,7 @@ class DocumentDataFactory
             'delivery-challan' => self::deliveryChallan(self::asDelivery($model)),
             'packing-slip' => self::packingSlip(self::asDelivery($model)),
             'pod' => self::pod(self::asDelivery($model)),
+            'logistics-bill' => self::logisticsBill(self::asLogisticsBill($model)),
             default => throw new InvalidArgumentException("Unsupported document type [{$type}]."),
         };
     }
@@ -318,6 +320,82 @@ class DocumentDataFactory
             [__('documents.signatures.supplier'), ''],
         ];
         $payload['footer'] = __('documents.footer.purchase_order');
+
+        return $payload;
+    }
+
+    protected static function logisticsBill(LogisticsBill $bill): array
+    {
+        $bill->load(['transportCarrier', 'deliveryRoute', 'lines', 'payments']);
+
+        $currency = config('app.currency', 'BDT');
+        $grossTotal = (float) $bill->gross_total;
+        $paidTotal = (float) $bill->paid_total;
+        $outstanding = (float) $bill->outstanding;
+
+        $carrier = $bill->transportCarrier;
+        $carrierLines = array_values(array_filter([
+            $carrier?->contact_person,
+            $carrier?->phone,
+            $carrier?->email,
+            $carrier?->tax_id ? 'BIN ' . $carrier->tax_id : null,
+            $carrier?->address,
+        ]));
+
+        $payload = self::base(
+            __('documents.types.logistics_bill'),
+            $bill->document_number,
+            ucfirst(str_replace('_', ' ', $bill->status ?? 'open')),
+            __('documents.copy.office')
+        );
+
+        $payload['parties'] = [[
+            'label' => __('documents.labels.carrier'),
+            'name' => $carrier?->name ?? '—',
+            'lines' => $carrierLines,
+        ]];
+
+        $payload['meta'] = array_values(array_filter([
+            [__('documents.labels.bill_no'), $bill->document_number],
+            [__('documents.labels.bill_date'), optional($bill->bill_date)->format('d M Y') ?? '—'],
+            $bill->due_date ? [__('documents.labels.due_date'), $bill->due_date->format('d M Y')] : null,
+            [__('documents.labels.service_type'), $bill->serviceTypeLabel()],
+            $bill->deliveryRoute ? [__('documents.labels.route'), $bill->deliveryRoute->name] : null,
+            $bill->trip_date ? [__('documents.labels.trip_date'), $bill->trip_date->format('d M Y')] : null,
+            [__('documents.labels.status'), ucfirst(str_replace('_', ' ', $bill->status ?? 'open'))],
+        ]));
+
+        $payload['columns'] = ['#', __('documents.columns.description'), __('documents.columns.amount')];
+
+        foreach ($bill->lines as $index => $line) {
+            $payload['rows'][] = [
+                (string) ($index + 1),
+                $line->description,
+                number_format((float) $line->amount, 2),
+            ];
+        }
+
+        $payload['totals'] = [
+            [__('documents.totals.net'), number_format((float) $bill->net_total, 2) . ' ' . $currency],
+            [__('documents.totals.vat'), number_format((float) $bill->vat_amount, 2) . ' ' . $currency],
+            [__('documents.totals.gross'), number_format($grossTotal, 2) . ' ' . $currency],
+        ];
+
+        if ($paidTotal > 0) {
+            $payload['totals'][] = [__('documents.totals.paid'), '- ' . number_format($paidTotal, 2) . ' ' . $currency];
+        }
+
+        if ($outstanding > 0) {
+            $payload['totals'][] = [__('documents.totals.outstanding'), number_format($outstanding, 2) . ' ' . $currency];
+        }
+
+        $payload['notes'] = $bill->notes;
+        $payload['signatures'] = [
+            [__('documents.signatures.prepared'), ''],
+            [__('documents.signatures.approved'), ''],
+            [__('documents.signatures.carrier'), ''],
+        ];
+        $payload['footer'] = __('documents.footer.logistics_bill');
 
         return $payload;
     }
@@ -706,6 +784,15 @@ class DocumentDataFactory
     {
         if (! $model instanceof Delivery) {
             throw new InvalidArgumentException('Expected Delivery model.');
+        }
+
+        return $model;
+    }
+
+    protected static function asLogisticsBill(object $model): LogisticsBill
+    {
+        if (! $model instanceof LogisticsBill) {
+            throw new InvalidArgumentException('Expected LogisticsBill model.');
         }
 
         return $model;

@@ -25,6 +25,8 @@ flowchart LR
     money_out --> ledger
 ```
 
+Every finance document creates a **balanced journal entry**. See **[Transaction → ledger map](11-ledger-mapping.md)** for the full cheat sheet.
+
 ---
 
 ## Customer invoices (receivables)
@@ -38,19 +40,28 @@ flowchart LR
 - **VAT** comes from product tax class.
 - **Withholding** applied if agent has withholding rate (module 02).
 
+### GL posting
+
+| Line | Account |
+|---|---|
+| Debit | Trade debtors (net + VAT) |
+| Credit | Product sales (net) |
+| Credit | VAT payable |
+| Optional | WHT receivable / AR adjustment |
+
 ### Post a receipt
 
 1. Open invoice.
 2. Enter amount, payment method, date.
-3. Save — outstanding balance reduces.
+3. Save — **Dr Bank, Cr Trade debtors**.
 
-**Outstanding** = (Net + VAT − Withholding) − Receipts
+**Outstanding** = (Net + VAT − Withholding) − Receipts − Credit notes − Advances applied
 
 ---
 
 ## Credit notes
 
-Used for returns or adjustments. Credit amount cannot exceed remaining invoice value.
+Used for returns or adjustments. **Dr Sales returns (+ VAT), Cr Trade debtors.**
 
 ---
 
@@ -59,7 +70,8 @@ Used for returns or adjustments. Credit amount cannot exceed remaining invoice v
 **Menu:** Accounting → **Purchase bills**  
 **Screen:** `/admin/bills`
 
-Record supplier invoices linked to PO/GRN. Post payments to clear payables.
+**Dr Purchases or GRNI + Input VAT | Cr Trade creditors.**  
+Payment: **Dr Trade creditors | Cr Bank.**
 
 ---
 
@@ -68,7 +80,13 @@ Record supplier invoices linked to PO/GRN. Post payments to clear payables.
 **Menu:** Accounting → **Expenses**  
 **Screen:** `/admin/expenses`
 
-Day-to-day costs not tied to a PO (travel, utilities, etc.).
+1. Pick **expense category** (maps to expense ledger).
+2. Enter amount and date.
+3. Choose **payment type:** bank, cash, or accrued (payable).
+
+**Dr category expense | Cr bank/cash/payable**
+
+Configure categories at **Expense category mapping** (`/admin/expense-categories`).
 
 ---
 
@@ -76,10 +94,12 @@ Day-to-day costs not tied to a PO (travel, utilities, etc.).
 
 | Screen | Use |
 |---|---|
-| `/admin/salary-distributions` | Pay employees |
-| `/admin/expenses` | Allowances linked to HR |
+| `/admin/salary-distributions` | **Post payroll to GL** |
+| `/admin/expenses` | One-off costs — not duplicate monthly payroll |
 
-Payroll summary in Reports.
+**Dr Salaries & wages | Cr bank/cash/salary payable**
+
+See [HR & payroll](12-hr-payroll.md).
 
 ---
 
@@ -87,10 +107,11 @@ Payroll summary in Reports.
 
 | Screen | Use |
 |---|---|
-| `/admin/accounts` | Chart of accounts |
+| `/admin/accounts` | Chart of accounts — **Structure** and **Balances** tabs |
 | `/admin/journals` | Manual journal entries |
 | `/admin/accounting-periods` | Open/close periods |
 | `/admin/finance/reconciliation` | Bank reconciliation |
+| `/admin/expense-categories` | Category → ledger mapping |
 
 ---
 
@@ -99,7 +120,15 @@ Payroll summary in Reports.
 **Menu:** Accounting → **Agent advances**  
 **Screen:** `/admin/agent-advances`
 
-Track money advanced to agents; offset against collections.
+Give advance: **Dr Bank | Cr Agent advances.**  
+Applied on invoice: **Dr Agent advances | Cr Trade debtors.**
+
+---
+
+## Commissions
+
+Sales → Commission settlements. Accrual: **Dr Commission expense | Cr Commission payable.**  
+Payment: **Dr Commission payable | Cr Bank.**
 
 ---
 
@@ -108,6 +137,7 @@ Track money advanced to agents; offset against collections.
 - Invoicing before delivery — invoice should follow POD (module 08).
 - Wrong tax class on product — VAT wrong on all invoices for that SKU.
 - Receipt greater than outstanding — system should block overpayment.
+- Payroll in both Expenses and Salary distributions — **double P&L**.
 
 ---
 
@@ -116,3 +146,4 @@ Track money advanced to agents; offset against collections.
 - Module 07 — Sales  
 - Module 03 — Procurement  
 - Module 10 — Reports  
+- Module 11 — Transaction → ledger map

@@ -3,10 +3,13 @@
 namespace App\Services;
 
 use App\Models\Batch;
+use App\Models\BillOfMaterial;
 use App\Models\Delivery;
 use App\Models\Invoice;
 use App\Models\NotificationDispatchLog;
 use App\Models\Order;
+use App\Models\Product;
+use App\Models\ProductionRun;
 use App\Models\User;
 use App\Notifications\SystemAlertNotification;
 use Carbon\Carbon;
@@ -114,6 +117,51 @@ class ErpNotificationService
                     'source' => 'Finance',
                     'title' => 'Finance alert',
                     'context' => ['outstanding_receivables' => $outstandingReceivables],
+                ]);
+            }
+        }
+
+        if (Schema::hasTable('bill_of_materials') && Schema::hasTable('products')) {
+            $finishedProductIds = Product::query()
+                ->where(function ($query) {
+                    $query->whereNull('product_type')->orWhere('product_type', 'finished');
+                })
+                ->where('is_active', true)
+                ->pluck('id');
+
+            $coveredProductIds = BillOfMaterial::query()
+                ->where('is_active', true)
+                ->whereIn('product_id', $finishedProductIds)
+                ->pluck('product_id')
+                ->unique();
+
+            $missingBomCount = $finishedProductIds->diff($coveredProductIds)->count();
+
+            if ($missingBomCount > 0) {
+                $alerts[] = NotificationActionResolver::attachLink([
+                    'key' => 'missing_bom_' . Carbon::today()->toDateString() . '_' . $missingBomCount,
+                    'message' => "{$missingBomCount} finished product(s) have no active manufacturing recipe",
+                    'variant' => 'warning',
+                    'source' => 'Manufacturing',
+                    'title' => 'Missing BOM alert',
+                    'context' => ['missing_bom_products' => $missingBomCount],
+                ]);
+            }
+        }
+
+        if (Schema::hasTable('production_runs')) {
+            $pendingQcCount = ProductionRun::query()
+                ->where('qc_status', '!=', 'approved')
+                ->count();
+
+            if ($pendingQcCount > 0) {
+                $alerts[] = NotificationActionResolver::attachLink([
+                    'key' => 'pending_production_qc_' . Carbon::today()->toDateString() . '_' . $pendingQcCount,
+                    'message' => "{$pendingQcCount} production run(s) awaiting QC approval",
+                    'variant' => 'warning',
+                    'source' => 'Manufacturing',
+                    'title' => 'Production QC alert',
+                    'context' => ['pending_production_qc' => $pendingQcCount],
                 ]);
             }
         }

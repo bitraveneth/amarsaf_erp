@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Account;
 use App\Models\JournalEntry;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -29,6 +30,24 @@ class TallyExportService
         $importData = $body->addChild('IMPORTDATA');
         $requestData = $importData->addChild('REQUESTDATA');
 
+        foreach ($this->groupMasterMessages() as $message) {
+            $node = $requestData->addChild('TALLYMESSAGE')->addChild('GROUP');
+            $node->addAttribute('NAME', htmlspecialchars($message['name']));
+            $node->addAttribute('ACTION', 'Create');
+            if (! empty($message['parent'])) {
+                $node->addChild('PARENT', htmlspecialchars($message['parent']));
+            }
+        }
+
+        foreach ($this->ledgerMasterMessages() as $message) {
+            $node = $requestData->addChild('TALLYMESSAGE')->addChild('LEDGER');
+            $node->addAttribute('NAME', htmlspecialchars($message['name']));
+            $node->addAttribute('ACTION', 'Create');
+            if (! empty($message['parent'])) {
+                $node->addChild('PARENT', htmlspecialchars($message['parent']));
+            }
+        }
+
         foreach ($journals as $journal) {
             $tallyMessage = $requestData->addChild('TALLYMESSAGE');
             $voucher = $tallyMessage->addChild('VOUCHER');
@@ -52,6 +71,41 @@ class TallyExportService
         }
 
         return $xml->asXML() ?: '';
+    }
+
+    /**
+     * @return array<int, array<string, string|null>>
+     */
+    protected function groupMasterMessages(): array
+    {
+        return Account::query()
+            ->groups()
+            ->with('parent')
+            ->orderBy('level')
+            ->orderBy('code')
+            ->get()
+            ->map(fn (Account $account) => [
+                'name' => $account->name,
+                'parent' => $account->parent?->name,
+            ])
+            ->all();
+    }
+
+    /**
+     * @return array<int, array<string, string|null>>
+     */
+    protected function ledgerMasterMessages(): array
+    {
+        return Account::query()
+            ->ledgers()
+            ->with('parent')
+            ->orderBy('code')
+            ->get()
+            ->map(fn (Account $account) => [
+                'name' => $account->name,
+                'parent' => $account->parent?->name,
+            ])
+            ->all();
     }
 
     /**
@@ -100,6 +154,8 @@ class TallyExportService
                 'line_count' => $lineCount,
                 'total_debit' => round($totalDebit, 2),
                 'total_credit' => round($totalCredit, 2),
+                'group_count' => Account::groups()->count(),
+                'ledger_count' => Account::ledgers()->count(),
             ],
             'vouchers' => $vouchers->take($limit)->values()->all(),
             'total_rows' => $count,

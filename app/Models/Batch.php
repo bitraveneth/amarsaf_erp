@@ -18,9 +18,9 @@ class Batch extends Model
         'notes',
     ];
 
-    protected $dates = [
-        'production_date',
-        'expiry_date',
+    protected $casts = [
+        'production_date' => 'date',
+        'expiry_date' => 'date',
     ];
 
     public function product()

@@ -40,7 +40,7 @@ class JournalEntryController extends Controller
 
     public function create()
     {
-        $accounts = Account::where('is_active', true)->orderBy('code')->get();
+        $accounts = Account::postable()->orderBy('code')->get();
         $journal = new JournalEntry([
             'entry_date' => Carbon::today(),
             'status' => 'draft',
@@ -89,7 +89,7 @@ class JournalEntryController extends Controller
         }
 
         $journal->load('lines.account');
-        $accounts = Account::where('is_active', true)->orderBy('code')->get();
+        $accounts = Account::postable()->orderBy('code')->get();
 
         return view('admin.finance.journals.form', compact('journal', 'accounts'));
     }
