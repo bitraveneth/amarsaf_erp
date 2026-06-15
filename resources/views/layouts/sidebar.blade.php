@@ -38,6 +38,7 @@
                     }
 
                     $path = $item['path'] ?? null;
+
                     return ($canSeeItem && $isValidPath($path)) ? $item : null;
                 })
                 ->filter()
@@ -66,33 +67,31 @@
         }
     }"
     :class="{
-        'w-[290px]': isSidebarVisible(),
-        'w-[90px]': !isSidebarVisible(),
+        'w-[290px]': $store.sidebar.isExpanded || $store.sidebar.isMobileOpen,
+        'w-[90px]': !($store.sidebar.isExpanded || $store.sidebar.isMobileOpen),
         'translate-x-0': $store.sidebar.isMobileOpen,
         '-translate-x-full xl:translate-x-0': !$store.sidebar.isMobileOpen
     }">
-    <!-- Logo Section -->
-    <div class="flex w-full justify-center px-5 pt-5 pb-4">
-        <a href="{{ route('admin.dashboard') }}" data-tour="sidebar-brand" class="inline-flex w-full justify-center">
-            <x-brand-mark variant="sidebar" name-mode="none" />
-        </a>
-    </div>
+    <!-- Brand (identity). Dashboard lives in the menu below. -->
+    <x-layout.sidebar-brand />
 
     <!-- Navigation Menu -->
-    <div class="flex-1 min-h-0 flex flex-col overflow-y-auto duration-300 ease-linear custom-scrollbar">
-        <nav class="mb-6 px-5">
-            <div class="flex flex-col gap-4">
+    <div class="app-sidebar__body flex-1 min-h-0 flex flex-col overflow-y-auto duration-300 ease-linear custom-scrollbar">
+        <nav class="app-sidebar__nav mb-6 px-3 pt-2" :class="isSidebarVisible() ? 'xl:px-4' : 'xl:px-2'">
+            <div class="flex flex-col gap-5">
                 @foreach ($menuGroups as $groupIndex => $menuGroup)
                     @php
                         $groupTitle = trim($menuGroup['title'] ?? '');
                         $showGroupTitle = $groupTitle !== '';
                     @endphp
-                    <div class="{{ $groupIndex > 0 ? 'pt-4 mt-2 border-t border-gray-100 dark:border-gray-800' : '' }}">
+                    <div @class([
+                        'app-sidebar__group',
+                        $groupIndex > 0 ? 'app-sidebar__group--bordered' : '',
+                    ])>
                         @if($showGroupTitle)
                         <!-- Menu Group Title -->
-                        <h2 class="mb-4 text-xs uppercase flex leading-[20px] text-gray-400"
-                            :class="!isSidebarVisible() ?
-                            'lg:justify-center' : 'justify-start'">
+                        <h2 class="app-sidebar__group-title"
+                            :class="!isSidebarVisible() ? 'xl:justify-center' : 'justify-start'">
                             <template
                                 x-if="isSidebarVisible()">
                                 <span>{{ $groupTitle }}</span>
@@ -335,6 +334,8 @@
         @endif
 
     </div>
+
+    <x-layout.sidebar-rail-toggle />
 </aside>
 
 <!-- Mobile Overlay -->

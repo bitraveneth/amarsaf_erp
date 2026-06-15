@@ -3,7 +3,7 @@
 export const initChartOne = () => {
     const chartElement = document.querySelector('#chartOne');
     if (!chartElement) return;
-    const uiFontStack = window.erpUiFontStack || 'Outfit, sans-serif';
+    const uiFontStack = window.erpUiFontStack || 'Inter, sans-serif';
 
     const chartOneOptions = {
         series: [{

@@ -3,8 +3,10 @@
 
     $crumbs = MenuHelper::currentBreadcrumb();
     $currentLabel = collect($crumbs)->last()['label'] ?? '';
+    $hideTrail = count($crumbs) === 1 && ($crumbs[0]['path'] ?? null) === '/admin';
 @endphp
 
+@if (! $hideTrail)
 <nav aria-label="Breadcrumb" {{ $attributes->class(['header-breadcrumbs']) }}>
     <span class="header-breadcrumbs__mobile md:hidden">{{ $currentLabel }}</span>
 
@@ -27,3 +29,4 @@
         @endforeach
     </ol>
 </nav>
+@endif

@@ -211,16 +211,16 @@ class MenuHelper
         }
 
         if ($bestMatch !== null) {
-            return $bestMatch['crumbs'];
+            return self::dedupeBreadcrumbLabels($bestMatch['crumbs']);
         }
 
         $routeName = request()->route()?->getName();
 
         if ($routeName === 'admin.reports.dashboard') {
-            return [
+            return self::dedupeBreadcrumbLabels([
                 ['label' => self::reportsGroupLabel(), 'path' => '/admin/reports-dashboard'],
                 ['label' => __('ui.dashboards.reports'), 'path' => null, 'current' => true],
-            ];
+            ]);
         }
 
         if ($routeName) {
@@ -229,10 +229,10 @@ class MenuHelper
             );
 
             if ($hub) {
-                return [
+                return self::dedupeBreadcrumbLabels([
                     ['label' => self::reportsGroupLabel(), 'path' => '/admin/reports-dashboard'],
                     ['label' => $hub['label'], 'path' => null, 'current' => true],
-                ];
+                ]);
             }
 
             $report = ReportsCatalog::findByRoute($routeName);
@@ -257,13 +257,44 @@ class MenuHelper
 
                 $crumbs[] = ['label' => $report['title'], 'path' => null, 'current' => true];
 
-                return $crumbs;
+                return self::dedupeBreadcrumbLabels($crumbs);
             }
         }
 
-        return [
+        return self::dedupeBreadcrumbLabels([
             ['label' => __('ui.dashboards.home'), 'path' => '/admin', 'current' => true],
-        ];
+        ]);
+    }
+
+    /**
+     * @param  list<array{label: string, path: ?string, current?: bool}>  $crumbs
+     * @return list<array{label: string, path: ?string, current?: bool}>
+     */
+    protected static function dedupeBreadcrumbLabels(array $crumbs): array
+    {
+        $deduped = [];
+
+        foreach ($crumbs as $crumb) {
+            $label = trim($crumb['label'] ?? '');
+
+            if ($label === '') {
+                continue;
+            }
+
+            $previous = $deduped[array_key_last($deduped)] ?? null;
+
+            if ($previous !== null && mb_strtolower($previous['label']) === mb_strtolower($label)) {
+                if (! empty($crumb['current'])) {
+                    $deduped[array_key_last($deduped)] = $crumb;
+                }
+
+                continue;
+            }
+
+            $deduped[] = $crumb;
+        }
+
+        return $deduped;
     }
 
     protected static function reportsGroupLabel(): string

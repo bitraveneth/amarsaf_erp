@@ -6,7 +6,9 @@
 ])
 
 <div {{ $attributes->merge(['class' => 'erp-dash-rank']) }}>
-    <h3 class="erp-dash-rank__title">{{ $title }}</h3>
+    @if($title !== '')
+        <h3 class="erp-dash-rank__title">{{ $title }}</h3>
+    @endif
 
     @if(empty($items))
         <p class="erp-body text-gray-500 dark:text-gray-400">{{ $empty }}</p>

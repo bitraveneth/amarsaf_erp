@@ -7,6 +7,14 @@ return [
         'switch_label' => 'Language',
     ],
 
+    'theme' => [
+        'switch_label' => 'Theme',
+        'light' => 'Light mode',
+        'dark' => 'Dark mode',
+        'light_short' => 'Light',
+        'dark_short' => 'Dark',
+    ],
+
     'search_placeholder' => 'Search or type command...',
 
     'notifications' => [

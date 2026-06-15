@@ -9,10 +9,7 @@ use App\Models\Supplier;
 use Illuminate\Database\Seeder;
 
 /**
- * Seed data for:
- * - Purchase order cycle (draft / approved / partial / received)
- *
- * Uses existing suppliers and raw-material SKUs seeded by other modules.
+ * Seed purchase orders across common PO lifecycle states.
  */
 class PurchaseOrdersSeeder extends Seeder
 {
@@ -25,18 +22,17 @@ class PurchaseOrdersSeeder extends Seeder
         ];
 
         $products = [
-            'RM-PET-500' => Product::where('sku', 'RM-PET-500')->first(),
-            'RM-CAP-STD' => Product::where('sku', 'RM-CAP-STD')->first(),
-            'RM-CARTON-24X500' => Product::where('sku', 'RM-CARTON-24X500')->first()
-                ?? Product::where('sku', 'RM-CARTON-12X500')->first(),
-            'RM-LABEL-500' => Product::where('sku', 'RM-LABEL-500')->first(),
+            'preform' => Product::where('sku', 'RM-PREF')->first(),
+            'cap' => Product::where('sku', 'RM-CAP-STD')->first(),
+            'carton' => Product::where('sku', 'RM-CTN-24X500')->first(),
+            'label' => Product::where('sku', 'RM-BOPP')->first(),
         ];
 
         if (! $suppliers['ABC Plastics'] || ! $suppliers['CartonCo'] || ! $suppliers['XYZ Labels']) {
             return;
         }
 
-        if (! $products['RM-PET-500'] || ! $products['RM-CAP-STD'] || ! $products['RM-CARTON-24X500'] || ! $products['RM-LABEL-500']) {
+        if (! $products['preform'] || ! $products['cap'] || ! $products['carton'] || ! $products['label']) {
             return;
         }
 
@@ -49,15 +45,15 @@ class PurchaseOrdersSeeder extends Seeder
             notes: 'Monthly PET + cap replenishment for 500ml line',
             items: [
                 [
-                    'product_id' => $products['RM-PET-500']->id,
-                    'description' => 'PET Bottle 500ml',
+                    'product_id' => $products['preform']->id,
+                    'description' => $products['preform']->name,
                     'quantity' => 80000,
                     'unit_price' => 5.00,
                     'received_quantity' => 0,
                 ],
                 [
-                    'product_id' => $products['RM-CAP-STD']->id,
-                    'description' => 'Bottle Cap - Standard',
+                    'product_id' => $products['cap']->id,
+                    'description' => $products['cap']->name,
                     'quantity' => 80000,
                     'unit_price' => 0.80,
                     'received_quantity' => 0,
@@ -74,8 +70,8 @@ class PurchaseOrdersSeeder extends Seeder
             notes: 'Carton procurement for dispatch planning',
             items: [
                 [
-                    'product_id' => $products['RM-CARTON-24X500']->id,
-                    'description' => 'Carton Box - 24 x 500ml',
+                    'product_id' => $products['carton']->id,
+                    'description' => $products['carton']->name,
                     'quantity' => 12000,
                     'unit_price' => 20.00,
                     'received_quantity' => 7000,
@@ -92,8 +88,8 @@ class PurchaseOrdersSeeder extends Seeder
             notes: 'Label procurement completed',
             items: [
                 [
-                    'product_id' => $products['RM-LABEL-500']->id,
-                    'description' => 'BOPP Label - 500ml Bottle',
+                    'product_id' => $products['label']->id,
+                    'description' => $products['label']->name,
                     'quantity' => 100000,
                     'unit_price' => 0.60,
                     'received_quantity' => 100000,
@@ -107,11 +103,11 @@ class PurchaseOrdersSeeder extends Seeder
             orderDate: '2026-03-01',
             expectedDate: '2026-03-08',
             status: 'draft',
-            notes: 'Upcoming planning PO - waiting approval',
+            notes: 'Upcoming planning PO — waiting approval',
             items: [
                 [
-                    'product_id' => $products['RM-PET-500']->id,
-                    'description' => 'PET Bottle 500ml',
+                    'product_id' => $products['preform']->id,
+                    'description' => $products['preform']->name,
                     'quantity' => 60000,
                     'unit_price' => 5.10,
                     'received_quantity' => 0,
@@ -120,9 +116,6 @@ class PurchaseOrdersSeeder extends Seeder
         );
     }
 
-    /**
-     * Upsert PO header then refresh its items to keep deterministic demo data.
-     */
     protected function seedOrder(
         string $number,
         int $supplierId,
@@ -143,7 +136,6 @@ class PurchaseOrdersSeeder extends Seeder
             ]
         );
 
-        // Keep rows stable across reseeding.
         PurchaseOrderItem::where('purchase_order_id', $order->id)->delete();
 
         foreach ($items as $row) {

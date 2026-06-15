@@ -10,7 +10,8 @@ use App\Models\ProductionRun;
 use App\Models\User;
 use App\Models\Warehouse;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Carbon;
+use App\Support\Seeding\SalesDemoConfig;
+use Carbon\Carbon;
 
 /**
  * Adds 100 demo production runs (and matching batches) so manufacturing
@@ -25,6 +26,10 @@ class ManufacturingBulkDataSeeder extends Seeder
 
     public function run(): void
     {
+        if (SalesDemoConfig::enabled()) {
+            return;
+        }
+
         $existing = ProductionRun::where('order_number', 'like', self::ORDER_PREFIX . '%')->count();
 
         if ($existing >= self::TARGET_COUNT) {

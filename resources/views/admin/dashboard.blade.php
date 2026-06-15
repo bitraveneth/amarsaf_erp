@@ -18,11 +18,11 @@
     ]) }}"
     @endif
   >
-    <x-dashboard.page-header title="Dashboard" />
-
-    <x-dashboard.quick-actions class="mt-1" />
+    <x-dashboard.quick-actions />
 
     <x-dashboard.snapshot-kpis
+        eyebrow=""
+        description=""
         :currency-code="$currencyCode ?? config('app.currency', 'BDT')"
         :current-month-label="$currentMonthLabel ?? now()->format('F Y')"
         :agent-count="$agentCount ?? 0"
@@ -126,5 +126,10 @@
         />
       </div>
     </section>
+
+    <x-dashboard.insights
+        :insights="$dashboardInsights ?? []"
+        :currency-code="$currencyCode ?? config('app.currency', 'BDT')"
+    />
   </div>
 @endsection

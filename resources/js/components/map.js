@@ -4,7 +4,7 @@ import 'jsvectormap/dist/jsvectormap.min.css';
 
 export const initMap = () => {
     const mapSelectorOne = document.querySelectorAll('#mapOne');
-    const uiFontStack = window.erpUiFontStack || 'Outfit, sans-serif';
+    const uiFontStack = window.erpUiFontStack || 'Inter, sans-serif';
 
     if (mapSelectorOne.length) {
         const mapOne = new jsVectorMap({

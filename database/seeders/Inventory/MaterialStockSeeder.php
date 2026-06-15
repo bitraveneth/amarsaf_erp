@@ -8,8 +8,7 @@ use App\Models\Warehouse;
 use Illuminate\Database\Seeder;
 
 /**
- * Seed opening stock for core raw materials in the Factory warehouse so that
- * BOM consumption during production has real material quantities to work with.
+ * Seed opening stock for all active raw materials in the Factory warehouse.
  */
 class MaterialStockSeeder extends Seeder
 {
@@ -21,35 +20,34 @@ class MaterialStockSeeder extends Seeder
             return;
         }
 
-        // Map of material SKU => opening quantity in base UOM
-        $materials = [
-            'RM-PET-500'        => 60000, // PET Bottle 500ml
-            'RM-CAP-STD'        => 60000, // Standard caps
-            'RM-LABEL-500'      => 60000, // 500ml labels
-            'RM-CARTON-24X500'  => 6000,  // cartons for 24x500ml
-            'RM-SHRINK-CTN'     => 6000,  // shrink film wraps
-            'RM-RO-WATER'       => 200000, // litres of treated water
-        ];
+        $materials = Product::query()
+            ->where('product_type', 'raw')
+            ->where('is_active', true)
+            ->orderBy('sku')
+            ->get();
 
-        foreach ($materials as $sku => $qty) {
-            $product = Product::where('sku', $sku)->where('product_type', 'raw')->first();
+        foreach ($materials as $index => $product) {
+            $qty = 5000 + (($index + 1) * 1370);
 
-            if (! $product) {
-                continue;
+            if (str_contains(strtolower($product->uom ?? ''), 'l')) {
+                $qty = 50000 + (($index + 1) * 8000);
             }
 
-            StockEntry::firstOrCreate(
+            StockEntry::updateOrCreate(
                 [
-                    'warehouse_id'          => $factory->id,
-                    'warehouse_location_id' => null,
-                    'product_id'            => $product->id,
-                    'batch_id'              => null,
-                    'status'                => 'available',
+                    'warehouse_id' => $factory->id,
+                    'product_id' => $product->id,
+                    'batch_id' => null,
                 ],
                 [
                     'quantity' => $qty,
+                    'status' => 'available',
                 ]
             );
+
+            if ($product->reorder_level === null) {
+                $product->update(['reorder_level' => max(1000, (int) round($qty * 0.35))]);
+            }
         }
     }
 }

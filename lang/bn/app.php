@@ -10,6 +10,14 @@ return [
         'switch_label' => 'ভাষা',
     ],
 
+    'theme' => [
+        'switch_label' => 'থিম',
+        'light' => 'লাইট মোড',
+        'dark' => 'ডার্ক মোড',
+        'light_short' => 'লাইট',
+        'dark_short' => 'ডার্ক',
+    ],
+
     'search_placeholder' => 'অনুসন্ধান বা কমান্ড লিখুন…',
 
     'notifications' => [

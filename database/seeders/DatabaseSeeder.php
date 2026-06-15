@@ -22,6 +22,7 @@ use Database\Seeders\Control\Warehouses\WarehousesModuleSeeder;
 use Database\Seeders\Inventory\InventoryModuleSeeder;
 use Database\Seeders\Manufacturing\BatchesLotsModuleSeeder;
 use Database\Seeders\Manufacturing\BomsModuleSeeder;
+use Database\Seeders\Manufacturing\DemoBomGeneratorSeeder;
 use Database\Seeders\Manufacturing\ManufacturingBulkDataSeeder;
 use Database\Seeders\Manufacturing\PendingReceiptsModuleSeeder;
 use Database\Seeders\Manufacturing\ProductionAnalysisModuleSeeder;
@@ -40,18 +41,6 @@ use Database\Seeders\MenuStructureSeeder;
 use Database\Seeders\RolesSeeder;
 use Database\Seeders\Users\PermissionsSeeder;
 use Illuminate\Database\Seeder;
-
-/**
- * Master database seeder.
- *
- * Mirrors the sidebar structure:
- * 1. Control (masters & settings)
- * 2. Manufacturing
- * 3. Inventory (core operations)
- * 4. Sales
- * 5. Accounting
- * 6. Users / roles
- */
 class DatabaseSeeder extends Seeder
 {
     public function run(): void
@@ -65,8 +54,11 @@ class DatabaseSeeder extends Seeder
             SuppliersModuleSeeder::class,
             SystemSettingsModuleSeeder::class,
 
+            RichOperationalDemoSeeder::class,
+
             // 2. Manufacturing
             BomsModuleSeeder::class,
+            DemoBomGeneratorSeeder::class,
             BatchesLotsModuleSeeder::class,
             PendingReceiptsModuleSeeder::class,
             ProductionOrdersModuleSeeder::class,
@@ -76,7 +68,7 @@ class DatabaseSeeder extends Seeder
             // 3. Inventory (core operations)
             InventoryModuleSeeder::class,
 
-            // 4. Sales
+            // 4. Sales (thin module samples — timeline adds bulk data)
             SalesOrdersModuleSeeder::class,
             SalesTargetsModuleSeeder::class,
             PickingListsModuleSeeder::class,
@@ -87,27 +79,26 @@ class DatabaseSeeder extends Seeder
             CommissionReportModuleSeeder::class,
             CommissionSettlementsModuleSeeder::class,
 
-            // 5. Accounting
+            // 5. Accounting foundations
             ChartOfAccountsModuleSeeder::class,
             ChartOfAccountsDemoJournalSeeder::class,
             CustomerInvoicesModuleSeeder::class,
+
+            // Legacy comprehensive seeder — skipped when sales demo timeline runs
+            ComprehensiveDummyDataSeeder::class,
+
+            // 1-year sales demo (production, sales, payroll, expenses, logistics, etc.)
+            SafErpSalesDemoTimelineSeeder::class,
+
             ExpensesModuleSeeder::class,
             SalaryDistributionsModuleSeeder::class,
             PayrollModuleSeeder::class,
             BankReconciliationModuleSeeder::class,
 
-            RichOperationalDemoSeeder::class,
-
-            // Rich demo dataset: 12 months of sales, invoices, receipts, P&L ledger, targets.
-            ComprehensiveDummyDataSeeder::class,
-
             TaxReportModuleSeeder::class,
             ProfitAndLossModuleSeeder::class,
             BalanceSheetModuleSeeder::class,
             CashflowModuleSeeder::class,
-
-            // Extra analytics / demo data so charts look alive.
-            //DemoAnalyticsSeeder::class,
 
             // 6. Users / roles / permissions / menu
             RolesSeeder::class,

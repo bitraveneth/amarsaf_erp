@@ -113,15 +113,29 @@
 
 <div class="dash-snapshot {{ $size === 'lg' ? 'dash-snapshot--lg' : '' }}">
     @if($showHeader)
-        <div class="dash-snapshot-header">
-            <div>
-                <p class="dash-snapshot-eyebrow">{{ $eyebrow }}</p>
-                <h2 class="dash-snapshot-title">{{ $title }}</h2>
+        @if(filled($eyebrow) || filled($description))
+            <div class="dash-snapshot-header">
+                <div>
+                    @if(filled($eyebrow))
+                        <p class="dash-snapshot-eyebrow">{{ $eyebrow }}</p>
+                    @endif
+                    <h2 @class(['dash-snapshot-title', 'mt-0' => ! filled($eyebrow)])>{{ $title }}</h2>
+                </div>
+                @if(filled($description))
+                    <p class="dash-snapshot-desc max-w-sm sm:text-right">
+                        {{ $description }}
+                    </p>
+                @endif
             </div>
-            <p class="dash-snapshot-desc max-w-sm sm:text-right">
-                {{ $description }}
-            </p>
-        </div>
+        @else
+            @isset($actions)
+                <x-dashboard.section-header :title="$title" class="mb-5">
+                    <x-slot:actions>{{ $actions }}</x-slot:actions>
+                </x-dashboard.section-header>
+            @else
+                <h2 class="dash-section-title mb-5">{{ $title }}</h2>
+            @endisset
+        @endif
     @endif
 
     <div class="dash-snapshot-grid {{ $gridColsClass }}">

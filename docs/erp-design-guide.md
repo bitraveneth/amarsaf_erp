@@ -2,7 +2,7 @@
 
 Single source of truth for UI typography, spacing, and component patterns.  
 **Implementation:** `resources/css/app.css` (search for `ERP Typography`).  
-**Font family:** Outfit (`--font-outfit`).
+**Font family:** Inter for English UI (`--font-outfit` token / `font-outfit` class); Noto Sans Bengali for `bn` locale.
 
 ---
 
@@ -405,8 +405,8 @@ Saf ERP started from TailAdmin. Some TailAdmin tokens remain in `app.css` for su
 
 | Source | Font | Status |
 |--------|------|--------|
-| `resources/css/app.css` `@theme` | **Outfit** (+ Noto Sans Bengali for `bn`) | **Authoritative** |
-| `tailwind.config.js` | Outfit (aligned with `@theme`) | Fallback for tooling |
+| `resources/css/app.css` `@theme` | **Inter** (+ Noto Sans Bengali for `bn`) | **Authoritative** |
+| `tailwind.config.js` | Inter (aligned with `@theme`) | Fallback for tooling |
 
 Do not reintroduce Inter or other fonts in Blade/CSS.
 

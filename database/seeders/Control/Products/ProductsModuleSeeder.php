@@ -2,17 +2,12 @@
 
 namespace Database\Seeders\Control\Products;
 
+use App\Support\Seeding\LegacyCatalogSupport;
+use Database\Seeders\Legacy\LegacyProductSqlImportSeeder;
 use Illuminate\Database\Seeder;
 
 /**
  * Orchestrator for the Control → Products area.
- *
- * This seeder simply delegates to the more granular seeders:
- * - TaxVatClassesSeeder
- * - PackagingTypesSeeder
- * - MaterialsSeeder
- * - ProductsSeeder
- * - PriceListsSeeder
  */
 class ProductsModuleSeeder extends Seeder
 {
@@ -24,9 +19,17 @@ class ProductsModuleSeeder extends Seeder
             PackagingConversionsSeeder::class,
             \Database\Seeders\MaterialCategorySeeder::class,
             \Database\Seeders\UnitOfMeasureSeeder::class,
-            MaterialsSeeder::class,
-            ProductsSeeder::class,
-            PriceListsSeeder::class,
         ]);
+
+        if (LegacyCatalogSupport::shouldImportLegacyCatalog() && LegacyCatalogSupport::hasLegacyDump()) {
+            $this->call(LegacyProductSqlImportSeeder::class);
+        } else {
+            $this->call([
+                MaterialsSeeder::class,
+                ProductsSeeder::class,
+            ]);
+        }
+
+        $this->call(PriceListsSeeder::class);
     }
 }

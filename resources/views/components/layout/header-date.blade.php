@@ -4,16 +4,26 @@
 ])
 
 @php
-    $now = $date ?? now();
+    $now = ($date ?? now())->locale(app()->getLocale());
     $dateIso = $now->toDateString();
-    $dayName = $now->format('l');
-    $dateLabel = $now->format('j F Y');
-    $monthLabel = $now->format('F Y');
+    $dayName = $now->translatedFormat('l');
+    $dateLabel = $now->translatedFormat('j F Y');
+    $monthLabel = $now->translatedFormat('F Y');
     $dayNumber = $now->format('j');
-    $monthShort = $now->format('M');
+    $monthShort = $now->translatedFormat('M');
 @endphp
 
-@if($compact)
+@if($compact === 'toolbar')
+    <div {{ $attributes->merge(['class' => 'header-date-toolbar']) }}>
+        <span class="header-date-toolbar__badge" aria-hidden="true">
+            <span class="header-date-toolbar__month">{{ $monthShort }}</span>
+            <span class="header-date-toolbar__day">{{ $dayNumber }}</span>
+        </span>
+        <time datetime="{{ $dateIso }}" class="header-date-toolbar__label">
+            {{ $dayName }}
+        </time>
+    </div>
+@elseif($compact)
     <div {{ $attributes->merge(['class' => 'inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white/90 px-2.5 py-1.5 shadow-theme-xs dark:border-gray-800 dark:bg-gray-900/90']) }}>
         <span class="flex h-8 w-8 flex-col items-center justify-center rounded-lg bg-gradient-to-br from-brand-500 to-brand-600 text-white shadow-sm">
             <span class="text-[9px] font-bold uppercase leading-none tracking-wide">{{ $monthShort }}</span>

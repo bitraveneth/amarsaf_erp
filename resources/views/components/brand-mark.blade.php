@@ -23,9 +23,18 @@
 @endphp
 
 <div {{ $attributes->merge(['class' => $variantClasses]) }}>
-    <img src="{{ $logoUrl }}"
-         alt="{{ $display['full'] }}"
-         class="erp-brand-mark__logo shrink-0 object-contain" />
+    @if(! ($appLogoIsCustom ?? false))
+        <img src="{{ asset('images/brand/saf-logo-light.svg') }}"
+             alt="{{ $display['full'] }}"
+             class="erp-brand-mark__logo shrink-0 object-contain dark:hidden" />
+        <img src="{{ asset('images/brand/saf-logo-dark.svg') }}"
+             alt="{{ $display['full'] }}"
+             class="erp-brand-mark__logo hidden shrink-0 object-contain dark:block" />
+    @else
+        <img src="{{ $logoUrl }}"
+             alt="{{ $display['full'] }}"
+             class="erp-brand-mark__logo shrink-0 object-contain" />
+    @endif
 
     @if($nameMode === 'full')
         <div class="erp-brand-mark__text min-w-0">

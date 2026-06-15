@@ -4,6 +4,7 @@ namespace Database\Seeders\Accounting;
 
 use App\Models\Employee;
 use App\Models\SalaryDistribution;
+use App\Support\Seeding\SalesDemoConfig;
 use Illuminate\Database\Seeder;
 
 /**
@@ -13,6 +14,10 @@ class SalaryDistributionsModuleSeeder extends Seeder
 {
     public function run(): void
     {
+        if (SalesDemoConfig::enabled()) {
+            return;
+        }
+
         // Use a small group of demo employees so the Salary
         // distributions screen looks alive after seeding.
         $employees = Employee::orderBy('name')->take(6)->get();

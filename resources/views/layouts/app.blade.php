@@ -72,6 +72,34 @@
         (function () {
             window.erpTheme.applyTheme(window.erpTheme.resolveTheme());
         })();
+
+        window.erpSidebar = {
+            storageKey: 'erp-sidebar-expanded-v2',
+            readExpanded() {
+                if (window.innerWidth < 1280) {
+                    return false;
+                }
+
+                try {
+                    const saved = localStorage.getItem(this.storageKey);
+
+                    if (saved === 'false') {
+                        return false;
+                    }
+                } catch (error) {
+                    // Ignore storage failures.
+                }
+
+                return true;
+            },
+            saveExpanded(isExpanded) {
+                try {
+                    localStorage.setItem(this.storageKey, isExpanded ? 'true' : 'false');
+                } catch (error) {
+                    // Ignore storage failures.
+                }
+            },
+        };
     </script>
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
@@ -101,7 +129,16 @@
                 },
                 theme: 'dark',
                 toggle() {
-                    this.theme = this.theme === 'light' ? 'dark' : 'light';
+                    this.setTheme(this.theme === 'light' ? 'dark' : 'light');
+                },
+                setTheme(theme) {
+                    if (theme !== 'light' && theme !== 'dark') {
+                        return;
+                    }
+                    if (this.theme === theme) {
+                        return;
+                    }
+                    this.theme = theme;
                     window.erpTheme.setStoredTheme(this.theme);
                     this.updateTheme();
                 },
@@ -111,7 +148,7 @@
             });
 
             Alpine.store('sidebar', {
-                isExpanded: window.innerWidth >= 1280,
+                isExpanded: window.erpSidebar?.readExpanded?.() ?? true,
                 isMobileOpen: false,
 
                 notifyChange() {
@@ -126,6 +163,7 @@
                 toggleExpanded() {
                     this.isExpanded = !this.isExpanded;
                     this.isMobileOpen = false;
+                    window.erpSidebar?.saveExpanded?.(this.isExpanded);
                     this.notifyChange();
                 },
 
@@ -137,6 +175,14 @@
                 setMobileOpen(val) {
                     this.isMobileOpen = val;
                     this.notifyChange();
+                },
+
+                toggleSidebar() {
+                    if (window.innerWidth >= 1280) {
+                        this.toggleExpanded();
+                    } else {
+                        this.toggleMobileOpen();
+                    }
                 },
             });
 
@@ -231,17 +277,28 @@
 
 <body x-data
       class="theme-text-scope overflow-x-clip"
-      x-init="$store.sidebar.isExpanded = window.innerWidth >= 1280;
-        const checkMobile = () => {
-            if (window.innerWidth < 1280) {
+      x-init="let sidebarWasDesktop = window.innerWidth >= 1280;
+        const syncSidebarForViewport = () => {
+            const isDesktop = window.innerWidth >= 1280;
+
+            if (!isDesktop) {
                 $store.sidebar.setMobileOpen(false);
-                $store.sidebar.isExpanded = false;
+
+                if (sidebarWasDesktop) {
+                    $store.sidebar.isExpanded = false;
+                }
             } else {
-                $store.sidebar.isMobileOpen = false;
-                $store.sidebar.isExpanded = true;
+                $store.sidebar.setMobileOpen(false);
+
+                if (!sidebarWasDesktop) {
+                    $store.sidebar.isExpanded = window.erpSidebar.readExpanded();
+                }
             }
+
+            sidebarWasDesktop = isDesktop;
         };
-        window.addEventListener('resize', checkMobile);">
+        syncSidebarForViewport();
+        window.addEventListener('resize', syncSidebarForViewport);">
 
     <div class="min-h-screen overflow-x-clip xl:flex">
         
@@ -253,10 +310,7 @@
                 'xl:ml-[290px]': $store.sidebar.isExpanded,
                 'xl:ml-[90px]': !$store.sidebar.isExpanded,
                 'ml-0': $store.sidebar.isMobileOpen
-             }"
-             :style="window.innerWidth >= 1280
-                ? { width: $store.sidebar.isExpanded ? 'calc(100% - 290px)' : 'calc(100% - 90px)' }
-                : { width: '100%' }">
+             }">
             @include('layouts.app-header')
             <x-layout.header-notice />
 
@@ -340,8 +394,6 @@
                         </div>
                     </div>
                 @endif
-
-                @include('layouts.partials.learning-context-bar')
 
                 @yield('content')
             </div>

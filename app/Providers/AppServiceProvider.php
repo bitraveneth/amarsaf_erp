@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Helpers\HeaderMenuSearch;
 use App\Helpers\SystemSettings;
 use App\Services\NotificationActionResolver;
 use App\Services\Inventory\ProcurementInboxService;
@@ -68,8 +69,14 @@ class AppServiceProvider extends ServiceProvider
 
         View::composer(['layouts.app-header', 'layouts.partials.admin-header'], function ($view) {
             if (!auth()->check()) {
+                $view->with('menuSearchItems', collect());
+                $view->with('headerAlerts', collect());
+                $view->with('headerAlertCount', 0);
+
                 return;
             }
+
+            $view->with('menuSearchItems', HeaderMenuSearch::itemsForUser(auth()->user()));
 
             try {
                 $notificationsTableReady = Schema::hasTable('notifications');

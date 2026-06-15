@@ -11,6 +11,7 @@ use App\Models\Product;
 use App\Models\ProductionRun;
 use App\Models\SalesTarget;
 use App\Models\StockEntry;
+use App\Services\Dashboard\DashboardInsightsService;
 use App\Support\InvoiceRevenueMetrics;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -378,6 +379,11 @@ class AdminController extends Controller
             return response()->json($payload);
         }
 
+        $dashboardInsights = app(DashboardInsightsService::class)->build(
+            \Illuminate\Support\Carbon::parse($today),
+            $currencyCode,
+        );
+
         return view('admin.dashboard', compact(
             'metrics',
             'chartDays',
@@ -412,7 +418,8 @@ class AdminController extends Controller
             'monthReturnCount',
             'targetGap',
             'collectionRate',
-            'opsAlerts'
+            'opsAlerts',
+            'dashboardInsights'
         ));
     }
 

@@ -101,5 +101,38 @@ class SuppliersSeeder extends Seeder
                 'tax_id'         => 'BIN-LOG-001',
             ]
         );
+
+        Supplier::firstOrCreate(
+            ['name' => 'Local Utility'],
+            [
+                'contact_person' => 'Billing Desk',
+                'email'          => 'billing@localutility.example.com',
+                'phone'          => '01711-000009',
+                'address'        => 'Regional electricity & gas office',
+                'tax_id'         => 'BIN-UTIL-001',
+            ]
+        );
+
+        Supplier::firstOrCreate(
+            ['name' => 'Catering Plus'],
+            [
+                'contact_person' => 'Operations Manager',
+                'email'          => 'ops@cateringplus.example.com',
+                'phone'          => '01711-000010',
+                'address'        => 'Factory cafeteria & staff meals',
+                'tax_id'         => 'BIN-FOOD-001',
+            ]
+        );
+
+        Supplier::firstOrCreate(
+            ['name' => 'Guest & Honor Committee'],
+            [
+                'contact_person' => 'Protocol Officer',
+                'email'          => 'protocol@saf.example.com',
+                'phone'          => '01711-000011',
+                'address'        => 'Corporate hospitality & guest honor',
+                'tax_id'         => 'BIN-GUEST-001',
+            ]
+        );
     }
 }

@@ -16,6 +16,7 @@ use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\Receipt;
 use App\Models\SalesTarget;
+use App\Support\Seeding\SalesDemoConfig;
 use Carbon\Carbon;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
@@ -46,6 +47,10 @@ class ComprehensiveDummyDataSeeder extends Seeder
 
     public function run(): void
     {
+        if (SalesDemoConfig::enabled()) {
+            return;
+        }
+
         if ($this->shouldSkip()) {
             return;
         }

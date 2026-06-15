@@ -1,7 +1,7 @@
 
 export const initChartTwo = () => {
     const chartElement = document.querySelector('#chartTwo');
-    const uiFontStack = window.erpUiFontStack || 'Outfit, sans-serif';
+    const uiFontStack = window.erpUiFontStack || 'Inter, sans-serif';
 
     if (chartElement) {
         const parsedProgress = Number.parseFloat(chartElement.dataset.progressValue || '0');

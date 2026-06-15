@@ -5,6 +5,7 @@ namespace Database\Seeders\Sales;
 use App\Models\Agent;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Support\Seeding\SalesDemoConfig;
 use Illuminate\Database\Seeder;
 
 /**
@@ -14,6 +15,10 @@ class ReturnsModuleSeeder extends Seeder
 {
     public function run(): void
     {
+        if (SalesDemoConfig::enabled()) {
+            return;
+        }
+
         // Optional tiny demo: mark one order as a return-type order.
 
         $agent = Agent::where('name', 'Dhaka North Dealer 01')->first();

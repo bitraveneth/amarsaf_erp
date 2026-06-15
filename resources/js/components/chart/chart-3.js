@@ -1,7 +1,7 @@
 
 export const initChartThree = () => {
     const chartElement = document.querySelector('#chartThree');
-    const uiFontStack = window.erpUiFontStack || 'Outfit, sans-serif';
+    const uiFontStack = window.erpUiFontStack || 'Inter, sans-serif';
 
     if (chartElement) {
         const chartThreeOptions = {

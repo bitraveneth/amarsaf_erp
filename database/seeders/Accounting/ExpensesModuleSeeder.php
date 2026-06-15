@@ -3,6 +3,7 @@
 namespace Database\Seeders\Accounting;
 
 use App\Models\Expense;
+use App\Support\Seeding\SalesDemoConfig;
 use Illuminate\Database\Seeder;
 
 /**
@@ -12,6 +13,10 @@ class ExpensesModuleSeeder extends Seeder
 {
     public function run(): void
     {
+        if (SalesDemoConfig::enabled()) {
+            return;
+        }
+
         // Marketing expense
         Expense::firstOrCreate(
             [

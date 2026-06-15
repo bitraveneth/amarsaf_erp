@@ -28,5 +28,8 @@
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
+        <env name="SEED_SALES_DEMO" value="true"/>
+        <env name="SEED_DEMO_SCALE" value="medium"/>
+        <env name="SEED_DEMO_YEARS" value="1"/>
     </php>
 </phpunit>
