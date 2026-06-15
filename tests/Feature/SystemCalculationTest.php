@@ -2168,7 +2168,7 @@ class SystemCalculationTest extends TestCase
         $this->assertDatabaseCount('ledger_entries', 2);
 
         $view = app(ReportController::class)->profitAndLoss(
-            Request::create('/admin/reports/profit-and-loss', 'GET', [
+            Request::create('/admin/reports/income-statement', 'GET', [
                 'from' => now()->startOfMonth()->toDateString(),
                 'to' => now()->endOfMonth()->toDateString(),
             ])

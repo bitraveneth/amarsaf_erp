@@ -153,11 +153,112 @@ class InventoryCostingService
 
     public function ledgerInventoryBalance(): float
     {
-        $accounts = ['raw_materials', 'finished_goods', 'wip'];
+        return round(
+            $this->ledgerBalanceForKeys(['raw_materials', 'finished_goods', 'wip']),
+            2
+        );
+    }
+
+    /**
+     * @return array{
+     *     categories: array<string, array{key: string, label: string, operational: float, gl: float, variance: float, rows: Collection}>,
+     *     operationalValue: float,
+     *     ledgerValue: float,
+     *     variance: float,
+     *     rows: Collection
+     * }
+     */
+    public function valuationSummary(): array
+    {
+        $rows = $this->valuationReport();
+        $catalog = $this->inventoryCategoryCatalog();
+
+        foreach ($catalog as $key => $category) {
+            $catalog[$key]['rows'] = collect();
+            $catalog[$key]['operational'] = 0.0;
+        }
+
+        foreach ($rows as $row) {
+            $bucket = $this->normalizeInventoryCategory($row['inventory_account']);
+            $catalog[$bucket]['operational'] = round($catalog[$bucket]['operational'] + $row['total_value'], 2);
+            $catalog[$bucket]['rows']->push($row);
+        }
+
+        foreach ($catalog as $key => $category) {
+            $catalog[$key]['gl'] = $this->ledgerBalanceForKeys([$key]);
+            $catalog[$key]['variance'] = round($category['operational'] - $catalog[$key]['gl'], 2);
+        }
+
+        $operationalValue = $this->operationalStockValue();
+        $ledgerValue = $this->ledgerInventoryBalance();
+
+        return [
+            'categories' => $catalog,
+            'operationalValue' => $operationalValue,
+            'ledgerValue' => $ledgerValue,
+            'variance' => round($operationalValue - $ledgerValue, 2),
+            'rows' => $rows,
+        ];
+    }
+
+    protected function inventoryCategoryCatalog(): array
+    {
+        return [
+            'raw_materials' => [
+                'key' => 'raw_materials',
+                'label' => 'Raw materials',
+                'operational' => 0.0,
+                'gl' => 0.0,
+                'variance' => 0.0,
+                'rows' => collect(),
+            ],
+            'finished_goods' => [
+                'key' => 'finished_goods',
+                'label' => 'Finished goods',
+                'operational' => 0.0,
+                'gl' => 0.0,
+                'variance' => 0.0,
+                'rows' => collect(),
+            ],
+            'wip' => [
+                'key' => 'wip',
+                'label' => 'Work in progress',
+                'operational' => 0.0,
+                'gl' => 0.0,
+                'variance' => 0.0,
+                'rows' => collect(),
+            ],
+        ];
+    }
+
+    protected function normalizeInventoryCategory(string $accountSlug): string
+    {
+        if (in_array($accountSlug, ['raw_materials', 'packing_materials', 'purchases'], true)) {
+            return 'raw_materials';
+        }
+
+        if ($accountSlug === 'wip') {
+            return 'wip';
+        }
+
+        return 'finished_goods';
+    }
+
+    protected function ledgerBalanceForKeys(array $keys): float
+    {
+        $slugs = collect($keys)
+            ->map(fn (string $key) => config("accounting.accounts.{$key}"))
+            ->filter()
+            ->unique()
+            ->values();
 
         $accountIds = \App\Models\Account::query()
-            ->whereIn('slug', array_map(fn ($key) => config("accounting.accounts.{$key}"), $accounts))
+            ->whereIn('slug', $slugs)
             ->pluck('id');
+
+        if ($accountIds->isEmpty()) {
+            return 0.0;
+        }
 
         $debits = (float) JournalEntryLine::whereIn('account_id', $accountIds)
             ->whereHas('journalEntry', fn ($q) => $q->where('status', 'posted'))

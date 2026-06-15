@@ -130,11 +130,23 @@
                                     @if ($hasSubItems)
                                         <!-- Menu Item with Submenu -->
                                         @php
-                                            $parentTarget = (!empty($item['path']) && $item['path'] !== '#')
+                                            $expandOnly = ! empty($item['expandOnly']);
+                                            $parentTarget = (! empty($item['path']) && $item['path'] !== '#')
                                                 ? $item['path']
                                                 : ($item['subItems'][0]['path'] ?? '#');
                                         @endphp
                                         <div class="flex items-center gap-2">
+                                            @if($expandOnly)
+                                                <button type="button"
+                                                    @click="open = !open"
+                                                    @if($tourKey) data-tour="{{ $tourKey }}" @endif
+                                                    @class([
+                                                        'menu-item group min-w-0 flex-1 text-left',
+                                                        'menu-item-active' => $itemIsActive || $subtreeIsActive,
+                                                        'menu-item-inactive' => !$itemIsActive && !$subtreeIsActive,
+                                                    ])
+                                                    :class="!isSidebarVisible() ? 'xl:justify-center' : 'xl:justify-start'">
+                                            @else
                                             <a href="{{ $parentTarget }}"
                                                 @if($tourKey) data-tour="{{ $tourKey }}" @endif
                                                 @class([
@@ -143,6 +155,7 @@
                                                     'menu-item-inactive' => !$itemIsActive && !$subtreeIsActive,
                                                 ])
                                                 :class="!isSidebarVisible() ? 'xl:justify-center' : 'xl:justify-start'">
+                                            @endif
 
                                                 <!-- Icon -->
                                                 <span @class([
@@ -164,7 +177,11 @@
                                                         </span>
                                                     @endif
                                                 </span>
+                                            @if($expandOnly)
+                                                </button>
+                                            @else
                                             </a>
+                                            @endif
 
                                             <button type="button"
                                                 x-show="isSidebarVisible()"

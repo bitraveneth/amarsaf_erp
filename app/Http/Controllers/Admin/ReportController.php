@@ -21,8 +21,12 @@ use App\Models\BillOfMaterial;
 use App\Models\SalaryDistribution;
 use App\Models\PurchaseBill;
 use App\Services\Accounting\AgingReportService;
+use App\Services\Accounting\CashFlowReportService;
 use App\Services\Accounting\HierarchicalReportService;
-use App\Services\Accounting\InventoryCostingService;
+use App\Services\Accounting\IncomeStatementPresenter;
+use App\Services\Accounting\FinancialReportExportService;
+use App\Services\Accounting\OperationalReportService;
+use App\Support\ReportsCatalog;
 use App\Services\BatchTraceabilityService;
 use App\Services\ProductionVarianceService;
 use Illuminate\Support\Collection;
@@ -35,26 +39,55 @@ class ReportController extends Controller
 {
     use ResolvesDashboardPeriod;
 
-    public function profitAndLoss(Request $request, HierarchicalReportService $reports)
-    {
+    public function profitAndLoss(
+        Request $request,
+        HierarchicalReportService $reports,
+        IncomeStatementPresenter $presenter
+    ) {
         [$from, $to, $range] = $this->resolveDashboardPeriod($request);
         $currencyCode = config('app.currency', 'BDT');
+        $compareMode = $request->query('compare', 'prior');
         $statement = $reports->profitAndLoss($from, $to);
+        $periodLabel = $this->dashboardPeriodLabel($from, $to);
 
-        return view('admin.finance.pl', array_merge(compact('from', 'to', 'range', 'currencyCode'), $statement, [
-            'sales' => $statement['netRevenue'],
-            'returns' => 0,
-            'commissions' => 0,
-            'otherExpenses' => $statement['operatingExpenses'],
-            'payroll' => 0,
+        $priorStatement = null;
+        $priorPeriodLabel = null;
+        if ($request->boolean('compare_enabled', true)) {
+            [$priorFrom, $priorTo] = $this->resolvePriorPeriod($from, $to, $range, $compareMode);
+            $priorStatement = $reports->profitAndLoss($priorFrom, $priorTo);
+            $priorPeriodLabel = $this->dashboardPeriodLabel($priorFrom, $priorTo);
+        }
+
+        $incomeStatement = $presenter->present(
+            $statement,
+            $periodLabel,
+            $currencyCode,
+            $from,
+            $to,
+            $priorStatement,
+            $priorPeriodLabel
+        );
+
+        return view('admin.finance.pl', array_merge($statement, [
+            'from' => $from,
+            'to' => $to,
+            'range' => $range,
+            'compareMode' => $compareMode,
+            'currencyCode' => $currencyCode,
+            'rangeOptions' => $this->dashboardRangeOptions(),
+            'periodLabel' => $periodLabel,
+            'priorPeriodLabel' => $priorPeriodLabel,
+            'incomeStatement' => $incomeStatement,
+            'sales' => $statement['grossSales'],
+            'returns' => $statement['salesReturns'],
             'netSales' => $statement['netRevenue'],
+            'commissions' => $statement['commissionExpense'],
+            'payroll' => $statement['payrollExpense'],
+            'otherExpenses' => $statement['operatingExpenses'],
             'cogs' => $statement['manufacturingCost'],
             'cogsSource' => 'gl',
             'grossProfit' => $statement['grossProfit'],
             'profit' => $statement['netProfit'],
-            'accountRows' => collect(),
-            'rangeOptions' => $this->dashboardRangeOptions(),
-            'periodLabel' => $this->dashboardPeriodLabel($from, $to),
         ]));
     }
 
@@ -63,7 +96,14 @@ class ReportController extends Controller
         [$from, $to, $range] = $this->resolveDashboardPeriod($request);
         $schedule = $reports->manufacturingSchedule($from, $to);
 
-        return view('admin.finance.manufacturing_schedule', compact('from', 'to', 'range', 'schedule'));
+        return view('admin.finance.manufacturing_schedule', [
+            'from' => $from,
+            'to' => $to,
+            'range' => $range,
+            'rangeOptions' => $this->dashboardRangeOptions(),
+            'periodLabel' => $this->dashboardPeriodLabel($from, $to),
+            'schedule' => $schedule,
+        ]);
     }
 
     public function vat(Request $request)
@@ -165,42 +205,316 @@ class ReportController extends Controller
         return view('admin.finance.bs', array_merge(compact('asOf'), $sheet));
     }
 
-    public function cashflow(Request $request)
+    public function cashflow(Request $request, CashFlowReportService $cashFlow)
     {
-        [$from, $to] = $this->resolveDateRange(
-            $request,
-            Carbon::now()->startOfMonth(),
-            Carbon::now()->endOfMonth()
-        );
+        [$from, $to, $range] = $this->resolveDashboardPeriod($request);
+        $report = $cashFlow->report($from, $to);
+        $currencyCode = config('app.currency', 'BDT');
+        $rangeOptions = $this->dashboardRangeOptions();
+        $periodLabel = $this->dashboardPeriodLabel($from, $to);
 
-        $bankAccounts = Account::where('type', 'asset')
-            ->where(function ($query) {
-                $query->where('name', 'like', '%Bank%')
-                    ->orWhere('name', 'like', '%Cash%')
-                    ->orWhere('code', 'like', '10%');
-            })
-            ->pluck('name')
-            ->all();
+        return view('admin.finance.cashflow', array_merge($report, compact(
+            'currencyCode',
+            'range',
+            'rangeOptions',
+            'periodLabel'
+        )));
+    }
 
-        $entries = LedgerEntry::whereIn('account', $bankAccounts ?: ['Bank'])
-            ->whereBetween('created_at', [$from, $to])
+    public function operationsHub()
+    {
+        return $this->renderCategoryHub('operations');
+    }
+
+    public function accountantHub()
+    {
+        return $this->renderCategoryHub('accountant');
+    }
+
+    public function costsHub()
+    {
+        return $this->renderCategoryHub('costs');
+    }
+
+    public function logisticsHub()
+    {
+        return $this->renderCategoryHub('logistics');
+    }
+
+    public function salesHub()
+    {
+        return $this->renderCategoryHub('sales');
+    }
+
+    protected function renderCategoryHub(string $menuCategoryKey)
+    {
+        [$from, $to, $range] = $this->resolveDashboardPeriod(request());
+
+        return view('admin.reports.category-hub', array_merge(
+            ReportsCatalog::categoryHub(
+                $menuCategoryKey,
+                request()->only(['range', 'from', 'to'])
+            ),
+            [
+                'range' => $range,
+                'from' => $from,
+                'to' => $to,
+                'rangeOptions' => $this->dashboardRangeOptions(),
+                'periodLabel' => $this->dashboardPeriodLabel($from, $to),
+            ]
+        ));
+    }
+
+    public function expenseSummary(Request $request, OperationalReportService $reports)
+    {
+        [$from, $to, $range] = $this->resolveDashboardPeriod($request);
+        $data = $reports->expenseSummary($from, $to);
+        $currencyCode = config('app.currency', 'BDT');
+
+        return view('admin.finance.expense_summary', array_merge($data, [
+            'range' => $range,
+            'rangeOptions' => $this->dashboardRangeOptions(),
+            'periodLabel' => $this->dashboardPeriodLabel($from, $to),
+            'currencyCode' => $currencyCode,
+        ]));
+    }
+
+    public function utilitiesReport(Request $request, OperationalReportService $reports)
+    {
+        [$from, $to, $range] = $this->resolveDashboardPeriod($request);
+        $data = $reports->utilitiesReport($from, $to);
+        $currencyCode = config('app.currency', 'BDT');
+
+        return view('admin.finance.utilities_report', array_merge($data, [
+            'range' => $range,
+            'rangeOptions' => $this->dashboardRangeOptions(),
+            'periodLabel' => $this->dashboardPeriodLabel($from, $to),
+            'currencyCode' => $currencyCode,
+        ]));
+    }
+
+    public function logisticsBillsSummary(Request $request, OperationalReportService $reports)
+    {
+        [$from, $to, $range] = $this->resolveDashboardPeriod($request);
+        $data = $reports->logisticsBillsSummary($from, $to);
+        $currencyCode = config('app.currency', 'BDT');
+
+        return view('admin.finance.logistics_bills_summary', array_merge($data, [
+            'range' => $range,
+            'rangeOptions' => $this->dashboardRangeOptions(),
+            'periodLabel' => $this->dashboardPeriodLabel($from, $to),
+            'currencyCode' => $currencyCode,
+        ]));
+    }
+
+    public function routeCosts(Request $request, OperationalReportService $reports)
+    {
+        [$from, $to, $range] = $this->resolveDashboardPeriod($request);
+        $data = $reports->routeCosts($from, $to);
+        $currencyCode = config('app.currency', 'BDT');
+
+        return view('admin.finance.route_costs', array_merge($data, [
+            'range' => $range,
+            'rangeOptions' => $this->dashboardRangeOptions(),
+            'periodLabel' => $this->dashboardPeriodLabel($from, $to),
+            'currencyCode' => $currencyCode,
+        ]));
+    }
+
+    public function fleetExpensesReport(Request $request, OperationalReportService $reports)
+    {
+        [$from, $to, $range] = $this->resolveDashboardPeriod($request);
+        $data = $reports->fleetExpenseSummary($from, $to);
+        $currencyCode = config('app.currency', 'BDT');
+
+        return view('admin.finance.fleet_expenses_report', array_merge($data, [
+            'range' => $range,
+            'rangeOptions' => $this->dashboardRangeOptions(),
+            'periodLabel' => $this->dashboardPeriodLabel($from, $to),
+            'currencyCode' => $currencyCode,
+        ]));
+    }
+
+    public function salesRegister(Request $request, FinancialReportExportService $exports)
+    {
+        [$from, $to, $range] = $this->resolveDashboardPeriod($request);
+        $rows = $exports->salesRegister($request);
+        $currencyCode = config('app.currency', 'BDT');
+
+        return view('admin.finance.sales_register', [
+            'from' => $from,
+            'to' => $to,
+            'range' => $range,
+            'rangeOptions' => $this->dashboardRangeOptions(),
+            'periodLabel' => $this->dashboardPeriodLabel($from, $to),
+            'currencyCode' => $currencyCode,
+            'rows' => $rows,
+            'totalNet' => $rows->sum(fn ($row) => (float) str_replace(',', '', $row[4] ?? 0)),
+        ]);
+    }
+
+    public function outstandingInvoicesReport(Request $request, FinancialReportExportService $exports)
+    {
+        $asOf = $request->filled('as_of')
+            ? Carbon::parse($request->input('as_of'))->endOfDay()
+            : Carbon::today()->endOfDay();
+        $rows = $exports->outstandingInvoices($request);
+        $currencyCode = config('app.currency', 'BDT');
+
+        return view('admin.finance.outstanding_invoices_report', [
+            'asOf' => $asOf,
+            'currencyCode' => $currencyCode,
+            'rows' => $rows,
+            'totalOutstanding' => $rows->sum(fn ($row) => (float) str_replace(',', '', $row[7] ?? 0)),
+        ]);
+    }
+
+    public function outstandingBillsReport(Request $request, FinancialReportExportService $exports)
+    {
+        $asOf = $request->filled('as_of')
+            ? Carbon::parse($request->input('as_of'))->endOfDay()
+            : Carbon::today()->endOfDay();
+        $rows = $exports->outstandingBills($request);
+        $currencyCode = config('app.currency', 'BDT');
+
+        return view('admin.finance.outstanding_bills_report', [
+            'asOf' => $asOf,
+            'currencyCode' => $currencyCode,
+            'rows' => $rows,
+            'totalOutstanding' => $rows->sum(fn ($row) => (float) str_replace(',', '', $row[7] ?? 0)),
+        ]);
+    }
+
+    public function commissionsReport(Request $request, OperationalReportService $reports)
+    {
+        $data = $reports->commissionSummary($request);
+        $currencyCode = config('app.currency', 'BDT');
+
+        return view('admin.finance.commissions_report', array_merge($data, [
+            'currencyCode' => $currencyCode,
+            'periodLabel' => $data['from']->format('d M Y') . ' – ' . $data['to']->format('d M Y'),
+        ]));
+    }
+
+    public function salesTargetsReport(Request $request, OperationalReportService $reports)
+    {
+        [$from, $to, $range] = $this->resolveDashboardPeriod($request);
+        $data = $reports->salesTargets($from, $to);
+        $currencyCode = config('app.currency', 'BDT');
+
+        return view('admin.finance.sales_targets_report', array_merge($data, [
+            'range' => $range,
+            'rangeOptions' => $this->dashboardRangeOptions(),
+            'periodLabel' => $this->dashboardPeriodLabel($from, $to),
+            'currencyCode' => $currencyCode,
+        ]));
+    }
+
+    public function lowStockReport(OperationalReportService $reports)
+    {
+        $data = $reports->lowStock();
+        $currencyCode = config('app.currency', 'BDT');
+
+        return view('admin.finance.low_stock_report', array_merge($data, [
+            'currencyCode' => $currencyCode,
+            'periodLabel' => 'Current stock levels',
+        ]));
+    }
+
+    public function deliveryPerformanceReport(Request $request, OperationalReportService $reports)
+    {
+        [$from, $to, $range] = $this->resolveDashboardPeriod($request);
+        $data = $reports->deliveryPerformance($from, $to);
+
+        return view('admin.finance.delivery_performance_report', array_merge($data, [
+            'range' => $range,
+            'rangeOptions' => $this->dashboardRangeOptions(),
+            'periodLabel' => $this->dashboardPeriodLabel($from, $to),
+        ]));
+    }
+
+    public function bankReconciliationReport(Request $request, OperationalReportService $reports)
+    {
+        [$from, $to, $range] = $this->resolveDashboardPeriod($request);
+        $data = $reports->bankReconciliationSummary($from, $to);
+        $currencyCode = config('app.currency', 'BDT');
+
+        return view('admin.finance.bank_reconciliation_report', array_merge($data, [
+            'range' => $range,
+            'rangeOptions' => $this->dashboardRangeOptions(),
+            'periodLabel' => $this->dashboardPeriodLabel($from, $to),
+            'currencyCode' => $currencyCode,
+        ]));
+    }
+
+    public function customerStatementReport(Request $request, OperationalReportService $reports)
+    {
+        [$from, $to, $range] = $this->resolveDashboardPeriod($request);
+        $agentId = $request->integer('agent_id') ?: null;
+        $data = $reports->customerStatement($from, $to, $agentId);
+        $currencyCode = config('app.currency', 'BDT');
+
+        return view('admin.finance.customer_statement_report', array_merge($data, [
+            'range' => $range,
+            'rangeOptions' => $this->dashboardRangeOptions(),
+            'periodLabel' => $this->dashboardPeriodLabel($from, $to),
+            'currencyCode' => $currencyCode,
+            'agentId' => $agentId,
+        ]));
+    }
+
+    public function supplierStatementReport(Request $request, OperationalReportService $reports)
+    {
+        [$from, $to, $range] = $this->resolveDashboardPeriod($request);
+        $supplierId = $request->integer('supplier_id') ?: null;
+        $data = $reports->supplierStatement($from, $to, $supplierId);
+        $currencyCode = config('app.currency', 'BDT');
+
+        return view('admin.finance.supplier_statement_report', array_merge($data, [
+            'range' => $range,
+            'rangeOptions' => $this->dashboardRangeOptions(),
+            'periodLabel' => $this->dashboardPeriodLabel($from, $to),
+            'currencyCode' => $currencyCode,
+            'supplierId' => $supplierId,
+        ]));
+    }
+
+    public function journalRegister(Request $request)
+    {
+        [$from, $to, $range] = $this->resolveDashboardPeriod($request);
+
+        $entries = \App\Models\JournalEntry::query()
+            ->with('lines')
+            ->where('status', 'posted')
+            ->whereDate('entry_date', '>=', $from->toDateString())
+            ->whereDate('entry_date', '<=', $to->toDateString())
+            ->orderByDesc('entry_date')
+            ->orderByDesc('id')
             ->get();
 
-        $cashIn = $entries->sum('debit');
-        $cashOut = $entries->sum('credit');
-        $net = $cashIn - $cashOut;
+        return view('admin.finance.journal_register', [
+            'from' => $from,
+            'to' => $to,
+            'range' => $range,
+            'rangeOptions' => $this->dashboardRangeOptions(),
+            'periodLabel' => $this->dashboardPeriodLabel($from, $to),
+            'entries' => $entries,
+        ]);
+    }
 
-        return view('admin.finance.cashflow', compact('from', 'to', 'cashIn', 'cashOut', 'net'));
+    public function executiveSummary(Request $request)
+    {
+        $request->attributes->set('report_executive_mode', true);
+
+        return app(ReportsDashboardController::class)($request);
     }
 
     public function agentPerformance(Request $request)
     {
-        $from = $request->query('from')
-            ? Carbon::parse($request->query('from'))->startOfDay()
-            : Carbon::now()->startOfMonth();
-        $to = $request->query('to')
-            ? Carbon::parse($request->query('to'))->endOfDay()
-            : Carbon::now()->endOfDay();
+        [$from, $to, $range] = $this->resolveDashboardPeriod($request);
+        $currencyCode = config('app.currency', 'BDT');
+        $periodLabel = $this->dashboardPeriodLabel($from, $to);
+        $rangeOptions = $this->dashboardRangeOptions();
 
         $invoices = Invoice::with(['order.agent', 'receipts', 'creditNotes', 'advanceApplications'])
             ->whereBetween('issued_at', [$from, $to])
@@ -260,22 +574,42 @@ class ReportController extends Controller
                 'advances' => $bucket['advances'],
                 'outstanding' => $outstanding,
             ];
-        })->sortByDesc('net_sales');
+        })->sortByDesc('net_sales')->values();
 
-        return view('admin.finance.agent_performance', [
-            'from' => $from,
-            'to' => $to,
-            'rows' => $rows,
-        ]);
+        $summary = [
+            'net_sales' => round((float) $rows->sum('net_sales'), 2),
+            'receipts' => round((float) $rows->sum('receipts'), 2),
+            'outstanding' => round((float) $rows->sum('outstanding'), 2),
+            'agent_count' => $rows->count(),
+            'collection_rate' => $rows->sum('net_sales') > 0
+                ? round($rows->sum('receipts') / $rows->sum('net_sales') * 100, 1)
+                : 0,
+        ];
+
+        $topAgents = $rows->take(5)->map(fn (array $row) => [
+            'label' => $row['agent']->name,
+            'value' => $row['net_sales'],
+        ])->all();
+
+        return view('admin.finance.agent_performance', compact(
+            'from',
+            'to',
+            'range',
+            'rangeOptions',
+            'periodLabel',
+            'currencyCode',
+            'rows',
+            'summary',
+            'topAgents'
+        ));
     }
 
     public function productionSummary(Request $request)
     {
-        [$from, $to] = $this->resolveDateRange(
-            $request,
-            Carbon::now()->startOfMonth(),
-            Carbon::now()->endOfMonth()
-        );
+        [$from, $to, $range] = $this->resolveDashboardPeriod($request);
+        $currencyCode = config('app.currency', 'BDT');
+        $periodLabel = $this->dashboardPeriodLabel($from, $to);
+        $rangeOptions = $this->dashboardRangeOptions();
 
         $production = ProductionRun::with('product')
             ->whereBetween('created_at', [$from, $to])
@@ -362,22 +696,23 @@ class ReportController extends Controller
         return view('admin.finance.production_summary', [
             'from' => $from,
             'to' => $to,
+            'range' => $range,
+            'rangeOptions' => $rangeOptions,
+            'periodLabel' => $periodLabel,
+            'currencyCode' => $currencyCode,
             'byProduct' => $byProduct,
             'salesTotal' => $salesTotal,
             'expensesTotal' => $expensesTotal,
             'materialCostTotal' => $materialCostTotal,
             'approxProfit' => $salesTotal - $materialCostTotal - $expensesTotal,
+            'totalRuns' => (int) $byProduct->sum('runs'),
+            'totalQuantity' => (float) $byProduct->sum('quantity'),
         ]);
     }
 
     public function payrollSummary(Request $request)
     {
-        $from = $request->query('from')
-            ? Carbon::parse($request->query('from'))
-            : Carbon::now()->startOfMonth();
-        $to = $request->query('to')
-            ? Carbon::parse($request->query('to'))
-            : Carbon::now()->endOfMonth();
+        [$from, $to, $range] = $this->resolveDashboardPeriod($request);
 
         $distributions = SalaryDistribution::with('employee')
             ->whereBetween('period_start', [$from, $to])
@@ -425,7 +760,15 @@ class ReportController extends Controller
             'grand' => $rows->sum('grand_total'),
         ];
 
-        return view('admin.finance.payroll_summary', compact('from', 'to', 'rows', 'totals'));
+        return view('admin.finance.payroll_summary', [
+            'from' => $from,
+            'to' => $to,
+            'range' => $range,
+            'rangeOptions' => $this->dashboardRangeOptions(),
+            'periodLabel' => $this->dashboardPeriodLabel($from, $to),
+            'rows' => $rows,
+            'totals' => $totals,
+        ]);
     }
 
     protected function resolveDateRange(Request $request, Carbon $defaultFrom, Carbon $defaultTo): array
@@ -472,47 +815,97 @@ class ReportController extends Controller
 
     public function trialBalance(Request $request, HierarchicalReportService $reports)
     {
-        [$from, $to] = $this->resolveDateRange(
-            $request,
-            Carbon::now()->startOfMonth(),
-            Carbon::now()->endOfMonth()
-        );
+        [$from, $to, $range] = $this->resolveDashboardPeriod($request);
 
         $expandAll = $request->boolean('expand', true);
         $rows = $reports->trialBalance($from, $to, $expandAll);
+        $tree = $reports->trialBalanceTree($from, $to);
 
+        $leaves = $rows->where('is_group', false);
         $totals = [
-            'opening_debit' => $rows->sum('opening_debit'),
-            'opening_credit' => $rows->sum('opening_credit'),
-            'period_debit' => $rows->sum('period_debit'),
-            'period_credit' => $rows->sum('period_credit'),
-            'closing_debit' => $rows->sum('closing_debit'),
-            'closing_credit' => $rows->sum('closing_credit'),
+            'opening_debit' => $leaves->sum('opening_debit'),
+            'opening_credit' => $leaves->sum('opening_credit'),
+            'period_debit' => $leaves->sum('period_debit'),
+            'period_credit' => $leaves->sum('period_credit'),
+            'closing_debit' => $leaves->sum('closing_debit'),
+            'closing_credit' => $leaves->sum('closing_credit'),
         ];
 
-        return view('admin.finance.trial_balance', compact('from', 'to', 'rows', 'totals', 'expandAll'));
+        $isBalanced = abs($totals['period_debit'] - $totals['period_credit']) < 0.01
+            && abs($totals['closing_debit'] - $totals['closing_credit']) < 0.01;
+
+        $currencyCode = config('app.currency', 'BDT');
+
+        return view('admin.finance.trial_balance', [
+            'from' => $from,
+            'to' => $to,
+            'range' => $range,
+            'rangeOptions' => $this->dashboardRangeOptions(),
+            'periodLabel' => $this->dashboardPeriodLabel($from, $to),
+            'rows' => $rows,
+            'tree' => $tree,
+            'totals' => $totals,
+            'expandAll' => $expandAll,
+            'isBalanced' => $isBalanced,
+            'currencyCode' => $currencyCode,
+        ]);
     }
 
     public function generalLedger(Request $request)
     {
-        [$from, $to] = $this->resolveDateRange(
-            $request,
-            Carbon::now()->startOfMonth(),
-            Carbon::now()->endOfMonth()
-        );
+        [$from, $to, $range] = $this->resolveDashboardPeriod($request);
 
-        $accounts = Account::orderBy('code')->get();
-        $selectedAccount = $request->query('account_id')
+        $activeAccounts = $this->generalLedgerActiveAccounts($from, $to);
+        if ($activeAccounts->isEmpty()) {
+            $activeAccounts = $this->generalLedgerActiveAccounts(
+                $from->copy()->subYear(),
+                $to
+            );
+        }
+
+        $autoSelectedAccount = false;
+        $selectedAccount = $request->filled('account_id')
             ? Account::find($request->query('account_id'))
             : null;
 
+        if (! $selectedAccount && $activeAccounts->isNotEmpty()) {
+            $selectedAccount = $activeAccounts->first()['account'];
+            $autoSelectedAccount = ! $request->has('account_id');
+        }
+
+        if ($autoSelectedAccount && $selectedAccount) {
+            return redirect()->route('admin.reports.general-ledger', array_merge(
+                $request->only(['range', 'from', 'to']),
+                ['account_id' => $selectedAccount->id],
+            ));
+        }
+
+        if ($selectedAccount) {
+            $selectedAccount->loadMissing([
+                'parent',
+                'parent.parent',
+                'parent.parent.parent',
+                'parent.parent.parent.parent',
+                'parent.parent.parent.parent.parent',
+            ]);
+        }
+
+        $accountOptions = $activeAccounts->pluck('account');
+        if ($selectedAccount && ! $accountOptions->pluck('id')->contains($selectedAccount->id)) {
+            $accountOptions = $accountOptions->prepend($selectedAccount)->values();
+        }
+
         $lines = collect();
         $runningBalance = 0.0;
+        $openingBalance = 0.0;
+        $periodDebit = 0.0;
+        $periodCredit = 0.0;
 
         if ($selectedAccount) {
             $openingDebit = $this->accountDebitTotal($selectedAccount->id, null, $from->copy()->subDay()->endOfDay());
             $openingCredit = $this->accountCreditTotal($selectedAccount->id, null, $from->copy()->subDay()->endOfDay());
-            $runningBalance = round($openingDebit - $openingCredit, 2);
+            $openingBalance = round($openingDebit - $openingCredit, 2);
+            $runningBalance = $openingBalance;
 
             $entries = JournalEntryLine::query()
                 ->with(['journalEntry', 'account'])
@@ -541,16 +934,70 @@ class ReportController extends Controller
                     'balance' => $runningBalance,
                 ];
             });
+
+            $periodDebit = round((float) $lines->sum('debit'), 2);
+            $periodCredit = round((float) $lines->sum('credit'), 2);
         }
 
-        return view('admin.finance.general_ledger', compact(
-            'from',
-            'to',
-            'accounts',
-            'selectedAccount',
-            'lines',
-            'runningBalance'
-        ));
+        $closingBalance = $runningBalance;
+        $currencyCode = config('app.currency', 'BDT');
+
+        return view('admin.finance.general_ledger', [
+            'from' => $from,
+            'to' => $to,
+            'range' => $range,
+            'rangeOptions' => $this->dashboardRangeOptions(),
+            'periodLabel' => $this->dashboardPeriodLabel($from, $to),
+            'selectedAccount' => $selectedAccount,
+            'accountOptions' => $accountOptions,
+            'activeAccounts' => $activeAccounts,
+            'autoSelectedAccount' => $autoSelectedAccount,
+            'lines' => $lines,
+            'openingBalance' => $openingBalance,
+            'periodDebit' => $periodDebit,
+            'periodCredit' => $periodCredit,
+            'closingBalance' => $closingBalance,
+            'currencyCode' => $currencyCode,
+        ]);
+    }
+
+    /**
+     * @return Collection<int, array{account: Account, line_count: int, period_debit: float, period_credit: float}>
+     */
+    protected function generalLedgerActiveAccounts(Carbon $from, Carbon $to): Collection
+    {
+        $accountIds = JournalEntryLine::query()
+            ->whereHas('journalEntry', function ($query) use ($from, $to) {
+                $query->where('status', 'posted')
+                    ->whereDate('entry_date', '>=', $from->toDateString())
+                    ->whereDate('entry_date', '<=', $to->toDateString());
+            })
+            ->selectRaw('account_id, COUNT(*) as line_count, COALESCE(SUM(debit), 0) as period_debit, COALESCE(SUM(credit), 0) as period_credit')
+            ->groupBy('account_id')
+            ->orderByDesc('line_count')
+            ->get();
+
+        $accounts = Account::query()
+            ->whereIn('id', $accountIds->pluck('account_id'))
+            ->get()
+            ->keyBy('id');
+
+        return $accountIds
+            ->map(function ($row) use ($accounts) {
+                $account = $accounts->get($row->account_id);
+                if (! $account) {
+                    return null;
+                }
+
+                return [
+                    'account' => $account,
+                    'line_count' => (int) $row->line_count,
+                    'period_debit' => round((float) $row->period_debit, 2),
+                    'period_credit' => round((float) $row->period_credit, 2),
+                ];
+            })
+            ->filter()
+            ->values();
     }
 
     protected function accountDebitTotal(int $accountId, ?Carbon $from, Carbon $to): float
@@ -579,18 +1026,14 @@ class ReportController extends Controller
 
     public function inventoryValuation(Request $request)
     {
-        $costing = app(InventoryCostingService::class);
-        $rows = $costing->valuationReport();
-        $operationalValue = $costing->operationalStockValue();
-        $ledgerValue = $costing->ledgerInventoryBalance();
-        $variance = round($operationalValue - $ledgerValue, 2);
+        $summary = app(InventoryCostingService::class)->valuationSummary();
+        $asOf = Carbon::today();
+        $periodLabel = 'As of ' . $asOf->format('d M Y');
 
-        return view('admin.finance.inventory_valuation', compact(
-            'rows',
-            'operationalValue',
-            'ledgerValue',
-            'variance'
-        ));
+        return view('admin.finance.inventory_valuation', array_merge($summary, [
+            'asOf' => $asOf,
+            'periodLabel' => $periodLabel,
+        ]));
     }
 
     public function receivableAging(Request $request)
@@ -619,11 +1062,7 @@ class ReportController extends Controller
 
     public function productionVariance(Request $request)
     {
-        [$from, $to] = $this->resolveDateRange(
-            $request,
-            Carbon::now()->startOfMonth(),
-            Carbon::now()->endOfMonth()
-        );
+        [$from, $to, $range] = $this->resolveDashboardPeriod($request);
 
         $rows = app(ProductionVarianceService::class)->report($from, $to);
         $totals = [
@@ -632,7 +1071,15 @@ class ReportController extends Controller
             'standard' => round((float) $rows->sum(fn (array $row) => $row['standard_unit_cost'] * $row['quantity']), 2),
         ];
 
-        return view('admin.finance.production_variance', compact('from', 'to', 'rows', 'totals'));
+        return view('admin.finance.production_variance', [
+            'from' => $from,
+            'to' => $to,
+            'range' => $range,
+            'rangeOptions' => $this->dashboardRangeOptions(),
+            'periodLabel' => $this->dashboardPeriodLabel($from, $to),
+            'rows' => $rows,
+            'totals' => $totals,
+        ]);
     }
 
     public function batchTraceLookup(Request $request)

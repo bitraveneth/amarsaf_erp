@@ -114,6 +114,53 @@ class ExpenseController extends Controller
         return redirect()->route('admin.expenses.index')->with('status', 'Expense deleted.');
     }
 
+    public function syncLedger(Request $request)
+    {
+        $from = $request->filled('from')
+            ? Carbon::parse($request->input('from'))->startOfDay()
+            : Carbon::now()->startOfMonth();
+        $to = $request->filled('to')
+            ? Carbon::parse($request->input('to'))->endOfDay()
+            : Carbon::now()->endOfMonth();
+
+        $expenses = Expense::query()
+            ->where('amount', '>', 0)
+            ->whereIn('status', self::VALID_STATUSES)
+            ->whereDate('date', '>=', $from->toDateString())
+            ->whereDate('date', '<=', $to->toDateString())
+            ->orderBy('id')
+            ->get();
+
+        $synced = 0;
+        $skipped = 0;
+        $failed = 0;
+
+        foreach ($expenses as $expense) {
+            if ($this->hasPostedJournal($expense)) {
+                $skipped++;
+                continue;
+            }
+
+            try {
+                DB::transaction(fn () => $this->posting->sync($expense));
+                $synced++;
+            } catch (\Throwable) {
+                $failed++;
+            }
+        }
+
+        $message = match (true) {
+            $synced > 0 && $failed === 0 => "{$synced} expense(s) posted to the ledger.",
+            $synced > 0 => "{$synced} expense(s) posted. {$failed} could not be posted — check expense category accounts and open accounting periods.",
+            $failed > 0 => "No expenses were posted. {$failed} failed — check expense category accounts and open accounting periods.",
+            default => 'All expenses in this period already have ledger entries.',
+        };
+
+        return redirect()
+            ->to($request->input('redirect', route('admin.reports.pl', $request->only(['range', 'from', 'to']))))
+            ->with('status', $message);
+    }
+
     protected function validated(Request $request): array
     {
         $data = $request->validate([
@@ -159,6 +206,7 @@ class ExpenseController extends Controller
             ->where('journal_type', 'expense')
             ->where('source_type', Expense::class)
             ->where('source_id', $expense->id)
+            ->where('status', 'posted')
             ->exists();
     }
 }

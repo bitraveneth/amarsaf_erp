@@ -29,7 +29,18 @@ class ManufacturingDashboardController extends Controller
         $totalQuantity = $runs->sum('quantity');
         $approvedRuns = $runs->where('qc_status', 'approved');
         $approvedQuantity = $approvedRuns->sum('quantity');
-        $pendingQcCount = $runs->where('qc_status', '!=', 'approved')->count();
+        $pendingQcInPeriod = $runs->where('qc_status', '!=', 'approved')->count();
+
+        $openQcCount = ProductionRun::query()
+            ->where('status', '!=', 'cancelled')
+            ->where(function ($query) {
+                $query->whereNull('qc_status')
+                    ->orWhere('qc_status', 'pending');
+            })
+            ->when($warehouseIds !== null, function ($query) use ($warehouseIds) {
+                $query->whereIn('warehouse_id', $warehouseIds);
+            })
+            ->count();
 
         $batches = Batch::with('product')
             ->whereBetween('production_date', [$from->toDateString(), $to->toDateString()])
@@ -105,12 +116,12 @@ class ManufacturingDashboardController extends Controller
 
         $flowStep = ManufacturingFlow::dashboardStep(
             $productsWithoutActiveBom,
-            $pendingQcCount,
+            $openQcCount,
             $awaitingStockCount
         );
         $flowInProgress = ManufacturingFlow::dashboardInProgress(
             $productsWithoutActiveBom,
-            $pendingQcCount,
+            $openQcCount,
             $awaitingStockCount
         );
 
@@ -120,13 +131,19 @@ class ManufacturingDashboardController extends Controller
             'range' => $range,
             'rangeOptions' => $this->dashboardRangeOptions(),
             'periodLabel' => $this->dashboardPeriodLabel($from, $to),
+            'reportPeriodParams' => [
+                'from' => $from->toDateString(),
+                'to' => $to->toDateString(),
+            ],
             'totalRuns' => $totalRuns,
             'totalQuantity' => $totalQuantity,
             'approvedQuantity' => $approvedQuantity,
             'approvedRunsCount' => $approvedRuns->count(),
-            'pendingQcCount' => $pendingQcCount,
+            'openQcCount' => $openQcCount,
+            'pendingQcInPeriod' => $pendingQcInPeriod,
             'batchCount' => $batchCount,
             'expiringSoon' => $expiringSoon,
+            'expiringSoonCount' => $expiringSoon->count(),
             'topProducts' => $topProducts,
             'recentRuns' => $recentRuns,
             'qcApprovalRate' => $qcApprovalRate,

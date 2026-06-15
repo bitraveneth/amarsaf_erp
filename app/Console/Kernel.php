@@ -16,6 +16,21 @@ class Kernel extends ConsoleKernel
             ->everyFifteenMinutes()
             ->withoutOverlapping()
             ->runInBackground();
+
+        if (filter_var(config('database.backup.schedule_enabled', true), FILTER_VALIDATE_BOOLEAN)) {
+            $backup = $schedule->command('erp:backup-database')
+                ->withoutOverlapping(60)
+                ->runInBackground()
+                ->timezone(config('app.timezone'));
+
+            $time = config('database.backup.schedule_time', '02:00');
+
+            if (config('database.backup.schedule', 'daily') === 'weekly') {
+                $backup->weeklyOn((int) config('database.backup.schedule_day', 0), $time);
+            } else {
+                $backup->dailyAt($time);
+            }
+        }
     }
 
     /**

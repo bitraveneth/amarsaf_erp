@@ -23,7 +23,7 @@ class ReportsDashboardController extends Controller
 
     public function __invoke(Request $request)
     {
-        [$from, $to, $range] = $this->resolveDashboardPeriod($request, 'year');
+        [$from, $to, $range] = $this->resolveDashboardPeriod($request, 'month');
         $currencyCode = config('app.currency', 'BDT');
 
         $invoices = Invoice::with(['receipts', 'creditNotes', 'advanceApplications', 'order.agent'])
@@ -103,7 +103,11 @@ class ReportsDashboardController extends Controller
             ['label' => 'Payroll', 'value' => $totalPayroll],
         ]);
 
-        return view('admin.reports.dashboard', [
+        return view(
+            $request->attributes->get('report_executive_mode')
+                ? 'admin.reports.executive'
+                : 'admin.reports.dashboard',
+            [
             'from' => $from,
             'to' => $to,
             'range' => $range,

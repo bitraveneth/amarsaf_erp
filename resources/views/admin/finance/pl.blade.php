@@ -2,183 +2,112 @@
 
 @section('content')
 @php
-    $grossMargin = $netSales > 0 ? ($grossProfit / $netSales) * 100 : 0;
-    $netMargin = $netSales > 0 ? ($profit / $netSales) * 100 : 0;
-    $operatingRatio = $netSales > 0 ? ((($cogs ?? 0) + $commissions + ($otherExpenses ?? 0) + $payroll) / $netSales) * 100 : 0;
-    $profitTone = $profit >= 0 ? 'success' : 'danger';
+    $is = $incomeStatement ?? [];
+    $summary = $is['summary'] ?? [];
+    $trust = $is['trust'] ?? [];
+    $queryParams = request()->only(['range', 'from', 'to', 'compare']);
+    $ccy = $is['currencyCode'] ?? $currencyCode;
+    $netRevenue = (float) ($netRevenue ?? $netSales ?? 0);
+    $grossProfitVal = (float) ($grossProfit ?? 0);
+    $operatingProfitVal = (float) ($operatingProfit ?? 0);
+    $netProfitVal = (float) ($netProfit ?? 0);
+    $grossMargin = $netRevenue > 0 ? round($grossProfitVal / $netRevenue * 100, 1) : 0;
+    $operatingMargin = $netRevenue > 0 ? round($operatingProfitVal / $netRevenue * 100, 1) : 0;
+    $netMargin = $summary['net_margin'] ?? ($netRevenue > 0 ? round($netProfitVal / $netRevenue * 100, 1) : 0);
+    $profitTone = $netProfitVal >= 0 ? 'success' : 'danger';
+    $grossTone = $grossProfitVal >= 0 ? 'success' : 'danger';
+    $operatingTone = $operatingProfitVal >= 0 ? 'brand' : 'danger';
 @endphp
 
-<div class="erp-dash-page">
-    <x-dashboard.hero
-        eyebrow="Profit & loss"
-        title="Profit &amp; loss"
-        subtitle="Income statement based on ledger activity and operating expenses for the selected period."
-        :period="$periodLabel"
-    >
-        <x-slot:actions>
-            <div class="flex flex-wrap items-center gap-2">
-                @include('admin.finance.partials.export_center_button', ['module' => 'profit-loss', 'from' => $from, 'to' => $to])
-                @include('admin.finance.partials.print_button', ['label' => 'Print statement'])
+<x-report.page
+    page-class="is-page"
+    eyebrow="Finance reports"
+    title="Income statement"
+    subtitle="Summary KPIs and line-by-line detail from posted ledger accounts."
+    :period="$periodLabel"
+>
+    <x-slot:actions>
+        <x-report.header-actions
+            :range-action="route('admin.reports.pl')"
+            :range="$range"
+            :from="request('from', $from->toDateString())"
+            :to="request('to', $to->toDateString())"
+            :range-options="$rangeOptions"
+            :period-label="$periodLabel"
+        >
+            <x-report.export-actions module="profit-loss" :from="$from" :to="$to" />
+        </x-report.header-actions>
+    </x-slot:actions>
+
+    @if(!empty($unposted))
+        <x-slot:alerts>
+            <div class="rounded-2xl border border-amber-200 bg-amber-50/90 px-5 py-4 text-sm text-amber-950 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100 print:hidden">
+                <p class="font-semibold">Some data is not in the ledger yet</p>
+                <p class="mt-1 text-sm opacity-90">New invoices, receipts, GRNs, and expenses usually post automatically. These items still need attention before the statement is complete:</p>
+                <ul class="mt-2 space-y-1 text-sm">
+                    @foreach($unposted as $item)
+                        <li class="flex flex-wrap items-center justify-between gap-2">
+                            <div>
+                                <a href="{{ $item['href'] }}" class="font-medium underline">{{ $item['label'] }} ({{ $item['count'] }})</a>
+                                @if(!empty($item['hint']))
+                                    <span class="mt-0.5 block text-xs opacity-80">{{ $item['hint'] }}</span>
+                                @endif
+                            </div>
+                            @if(!empty($item['can_sync']))
+                                <form method="POST" action="{{ route('admin.expenses.sync-ledger') }}">
+                                    @csrf
+                                    <input type="hidden" name="from" value="{{ $from->toDateString() }}">
+                                    <input type="hidden" name="to" value="{{ $to->toDateString() }}">
+                                    <input type="hidden" name="range" value="{{ $range }}">
+                                    <input type="hidden" name="redirect" value="{{ request()->fullUrl() }}">
+                                    <button type="submit" class="text-xs font-semibold underline">Sync missing expenses</button>
+                                </form>
+                            @endif
+                        </li>
+                    @endforeach
+                </ul>
             </div>
-        </x-slot:actions>
-    </x-dashboard.hero>
+        </x-slot:alerts>
+    @endif
 
-    <x-dashboard.period-filter
-        :action="route('admin.reports.pl')"
-        :range="$range"
-        :from="request('from', $from->toDateString())"
-        :to="request('to', $to->toDateString())"
-        :range-options="$rangeOptions"
-    />
+    <x-slot:kpis>
+        <x-dashboard.kpi
+            label="Net revenue"
+            tone="brand"
+            :value="$ccy . ' ' . number_format($netRevenue, 0)"
+            hint="Gross sales less returns plus other income"
+        />
+        <x-dashboard.kpi
+            label="Gross profit"
+            :tone="$grossTone"
+            :value="$ccy . ' ' . number_format($grossProfitVal, 0)"
+            :hint="'Revenue less COGS · ' . $grossMargin . '% margin'"
+        />
+        <x-dashboard.kpi
+            label="Operating profit"
+            :tone="$operatingTone"
+            :value="$ccy . ' ' . number_format($operatingProfitVal, 0)"
+            :hint="'After admin & selling costs · ' . $operatingMargin . '% margin'"
+        />
+        <x-dashboard.kpi
+            label="Net profit"
+            :tone="$profitTone"
+            :value="$ccy . ' ' . number_format($netProfitVal, 0)"
+            :hint="'Bottom line · ' . $netMargin . '% net margin'"
+        />
+    </x-slot:kpis>
 
-    <div class="erp-dash-kpi-grid">
-        <x-dashboard.kpi label="Net sales" :value="$currencyCode . ' ' . number_format($netSales, 0)" hint="Sales revenue less returns" />
-        <x-dashboard.kpi label="Gross profit" :tone="($grossProfit ?? 0) >= 0 ? 'success' : 'danger'" :value="$currencyCode . ' ' . number_format($grossProfit ?? 0, 0)" hint="Net sales less COGS" />
-        <x-dashboard.kpi label="Net profit" :tone="$profitTone" :value="$currencyCode . ' ' . number_format($profit, 0)" :hint="$profit < 0 ? 'Loss for the period' : 'Profit for the period'" />
-        <x-dashboard.kpi label="Net margin" :tone="$profitTone" :value="number_format($netMargin, 1) . '%'" hint="Net profit as share of net sales" />
-    </div>
-
-    <div class="erp-dash-statement">
-        <div class="erp-dash-statement__head">
-            <h2 class="erp-dash-panel__title">Income statement</h2>
-            <p class="erp-dash-panel__subtitle">For the period ending {{ $to->format('d M Y') }}</p>
-        </div>
-
-        <table class="erp-dash-statement__table">
-            <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
-                <tr class="erp-dash-statement__section">
-                    <td colspan="2">Revenue</td>
-                </tr>
-                <tr class="erp-dash-statement__row">
-                    <td>Sales revenue</td>
-                    <td class="text-success-600 dark:text-success-400">+{{ number_format($sales, 2) }}</td>
-                </tr>
-                <tr class="erp-dash-statement__row">
-                    <td>Sales returns</td>
-                    <td class="text-error-600 dark:text-error-400">-{{ number_format($returns, 2) }}</td>
-                </tr>
-                <tr class="erp-dash-statement__total">
-                    <td>Net sales</td>
-                    <td class="text-gray-900 dark:text-white">{{ number_format($netSales, 2) }}</td>
-                </tr>
-
-                <tr class="erp-dash-statement__section">
-                    <td colspan="2">Cost of goods sold</td>
-                </tr>
-                <tr class="erp-dash-statement__row">
-                    <td>
-                        @if(($cogsSource ?? 'estimated') === 'gl')
-                            Cost of goods sold (GL)
-                        @else
-                            Material costs (estimated)
-                        @endif
-                    </td>
-                    <td class="text-error-600 dark:text-error-400">-{{ number_format($cogs ?? 0, 2) }}</td>
-                </tr>
-
-                <tr class="erp-dash-statement__total">
-                    <td>Gross profit</td>
-                    <td class="{{ ($grossProfit ?? 0) >= 0 ? 'text-success-600 dark:text-success-400' : 'text-error-600 dark:text-error-400' }}">
-                        {{ ($grossProfit ?? 0) >= 0 ? '+' : '-' }}{{ number_format(abs($grossProfit ?? 0), 2) }}
-                    </td>
-                </tr>
-
-                <tr class="erp-dash-statement__section">
-                    <td colspan="2">Operating expenses</td>
-                </tr>
-                <tr class="erp-dash-statement__row">
-                    <td>Commission expense</td>
-                    <td class="text-error-600 dark:text-error-400">-{{ number_format($commissions, 2) }}</td>
-                </tr>
-                <tr class="erp-dash-statement__row">
-                    <td>Other operating expenses</td>
-                    <td class="text-error-600 dark:text-error-400">-{{ number_format($otherExpenses ?? 0, 2) }}</td>
-                </tr>
-                <tr class="erp-dash-statement__row">
-                    <td>Payroll and allowances</td>
-                    <td class="text-error-600 dark:text-error-400">-{{ number_format($payroll, 2) }}</td>
-                </tr>
-
-                <tr class="erp-dash-statement__total">
-                    <td>Net profit {{ $profit < 0 ? '(Loss)' : '' }}</td>
-                    <td class="{{ $profit >= 0 ? 'text-success-600 dark:text-success-400' : 'text-error-600 dark:text-error-400' }}">
-                        {{ $profit >= 0 ? '+' : '-' }}{{ number_format(abs($profit), 2) }}
-                    </td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
-
-    <div class="erp-dash-kpi-grid md:grid-cols-3">
-        <x-dashboard.kpi label="Gross margin" :tone="($grossProfit ?? 0) >= 0 ? 'success' : 'danger'" :value="number_format($grossMargin, 1) . '%'" hint="Of net sales" />
-        <x-dashboard.kpi label="Operating ratio" tone="warning" :value="number_format($operatingRatio, 1) . '%'" hint="Costs relative to net sales" />
-        <x-dashboard.kpi label="COGS source" tone="brand" :value="($cogsSource ?? 'estimated') === 'gl' ? 'General ledger' : 'Estimated'" hint="How COGS was calculated" />
-    </div>
-
-    <x-dashboard.panel title="Chart breakdown" subtitle="Hierarchical ledger roll-up for this period">
-        <div class="grid gap-6 lg:grid-cols-3">
-            <div>
-                <h3 class="mb-2 text-sm font-semibold text-gray-900 dark:text-white">Revenue</h3>
-                <div class="erp-table-wrap">
-                    <table class="erp-table">
-                        <tbody>@include('admin.finance.partials.hierarchical-rows', ['rows' => $revenue['rows'] ?? []])</tbody>
-                        <tfoot><tr class="font-semibold"><td>Total</td><td class="is-right">{{ number_format($revenue['total'] ?? 0, 2) }}</td></tr></tfoot>
-                    </table>
-                </div>
-            </div>
-            <div>
-                <h3 class="mb-2 text-sm font-semibold text-gray-900 dark:text-white">Manufacturing account</h3>
-                <div class="erp-table-wrap">
-                    <table class="erp-table">
-                        <tbody>@include('admin.finance.partials.hierarchical-rows', ['rows' => $manufacturing['rows'] ?? []])</tbody>
-                        <tfoot><tr class="font-semibold"><td>Total</td><td class="is-right">{{ number_format($manufacturing['total'] ?? 0, 2) }}</td></tr></tfoot>
-                    </table>
-                </div>
-            </div>
-            <div>
-                <h3 class="mb-2 text-sm font-semibold text-gray-900 dark:text-white">Operating expenses</h3>
-                <div class="erp-table-wrap">
-                    <table class="erp-table">
-                        <tbody>@include('admin.finance.partials.hierarchical-rows', ['rows' => $operating['rows'] ?? []])</tbody>
-                        <tfoot><tr class="font-semibold"><td>Total</td><td class="is-right">{{ number_format($operating['total'] ?? 0, 2) }}</td></tr></tfoot>
-                    </table>
-                </div>
-            </div>
-        </div>
-        <p class="mt-4 text-sm">
-            <a href="{{ route('admin.reports.manufacturing-schedule', ['from' => $from->toDateString(), 'to' => $to->toDateString()]) }}" class="erp-link">View manufacturing schedule</a>
-        </p>
-    </x-dashboard.panel>
-
-    <x-dashboard.panel title="Ledger detail" subtitle="Account activity for this period">
-        @if(isset($accountRows) && $accountRows->isNotEmpty())
-            <div class="erp-table-wrap">
-                <table class="erp-table">
-                    <thead>
-                        <tr>
-                            <th>Account</th>
-                            <th class="is-right">Debits</th>
-                            <th class="is-right">Credits</th>
-                            <th class="is-right">Net</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach($accountRows as $row)
-                            <tr>
-                                <td>{{ $row['account'] }}</td>
-                                <td class="is-right erp-table-num">{{ number_format($row['debit'], 2) }}</td>
-                                <td class="is-right erp-table-num">{{ number_format($row['credit'], 2) }}</td>
-                                <td class="is-right erp-table-num {{ $row['net'] >= 0 ? 'text-success-600 dark:text-success-400' : 'text-error-600 dark:text-error-400' }}">
-                                    {{ $row['net'] >= 0 ? '+' : '-' }}{{ number_format(abs($row['net']), 2) }}
-                                </td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
-        @else
-            <p class="erp-body text-gray-500 dark:text-gray-400">No ledger entries found for this period.</p>
-        @endif
-    </x-dashboard.panel>
-</div>
+    @include('admin.finance.partials.income-statement', [
+        'incomeStatement' => $incomeStatement,
+        'from' => $from,
+        'to' => $to,
+        'range' => $range,
+        'rangeOptions' => $rangeOptions,
+        'periodLabel' => $periodLabel,
+        'compareMode' => $compareMode ?? 'prior',
+        'queryParams' => $queryParams,
+        'trust' => $trust,
+        'currencyCode' => $ccy,
+    ])
+</x-report.page>
 @endsection

@@ -385,27 +385,64 @@ class MenuHelper
                         ],
                     ],
                     [
-                        'name' => 'Reports',
+                        'name' => 'Reports dashboard',
+                        'icon' => 'reports',
+                        'path' => '/admin/reports-dashboard',
+                        'permission' => 'reports.view',
+                    ],
+                    [
+                        'name' => 'Financial statements',
                         'icon' => 'reports',
                         'path' => '#',
                         'permission' => 'reports.view',
                         'subItems' => [
-                            ['name' => 'Reports dashboard', 'path' => '/admin/reports-dashboard', 'permission' => 'reports.view'],
-                            ['name' => 'Profit & loss', 'path' => '/admin/reports/pl', 'permission' => 'reports.view'],
-                            ['name' => 'Trial balance', 'path' => '/admin/reports/trial-balance', 'permission' => 'reports.view'],
-                            ['name' => 'General ledger', 'path' => '/admin/reports/general-ledger', 'permission' => 'reports.view'],
-                            ['name' => 'Inventory valuation', 'path' => '/admin/reports/inventory-valuation', 'permission' => 'reports.view'],
+                            ['name' => 'Income statement', 'path' => '/admin/reports/income-statement', 'permission' => 'reports.view'],
+                            ['name' => 'Balance sheet', 'path' => '/admin/reports/balance-sheet', 'permission' => 'reports.view'],
+                            ['name' => 'Cash flow', 'path' => '/admin/reports/cash-flow', 'permission' => 'reports.view'],
+                            ['name' => 'VAT report', 'path' => '/admin/reports/vat-report', 'permission' => 'reports.view'],
+                        ],
+                    ],
+                    [
+                        'name' => 'Receivables & payables',
+                        'icon' => 'chart',
+                        'path' => '#',
+                        'permission' => 'reports.view',
+                        'subItems' => [
                             ['name' => 'AR aging', 'path' => '/admin/reports/ar-aging', 'permission' => 'reports.view'],
                             ['name' => 'AP aging', 'path' => '/admin/reports/ap-aging', 'permission' => 'reports.view'],
-                            ['name' => 'Balance sheet', 'path' => '/admin/reports/bs', 'permission' => 'reports.view'],
-                            ['name' => 'Cash flow', 'path' => '/admin/reports/cashflow', 'permission' => 'reports.view'],
-                            ['name' => 'VAT report', 'path' => '/admin/reports/vat', 'permission' => 'reports.view'],
-                            ['name' => 'Agent performance', 'path' => '/admin/reports/agents', 'permission' => 'reports.view'],
-                            ['name' => 'Production reports', 'path' => '/admin/reports/production', 'permission' => 'reports.view'],
+                        ],
+                    ],
+                    [
+                        'name' => 'Inventory & production',
+                        'icon' => 'inventory',
+                        'path' => '/admin/reports/operations',
+                        'permission' => 'reports.view',
+                        'subItems' => [
+                            ['name' => 'Operations hub', 'path' => '/admin/reports/operations', 'permission' => 'reports.view'],
+                            ['name' => 'Inventory valuation', 'path' => '/admin/reports/inventory-valuation', 'permission' => 'reports.view'],
+                            ['name' => 'Production reports', 'path' => '/admin/reports/production-summary', 'permission' => 'reports.view'],
                             ['name' => 'Production variance', 'path' => '/admin/reports/production-variance', 'permission' => 'reports.view'],
                             ['name' => 'Batch traceability', 'path' => '/admin/reports/batch-trace', 'permission' => 'reports.view'],
-                            ['name' => 'Payroll summary', 'path' => '/admin/reports/payroll', 'permission' => 'reports.view'],
+                            ['name' => 'Manufacturing schedule', 'path' => '/admin/reports/manufacturing-schedule', 'permission' => 'reports.view'],
                         ],
+                    ],
+                    [
+                        'name' => 'Accountant tools',
+                        'icon' => 'ledger',
+                        'path' => '/admin/reports/accountant',
+                        'permission' => 'reports.view',
+                        'subItems' => [
+                            ['name' => 'Accountant hub', 'path' => '/admin/reports/accountant', 'permission' => 'reports.view'],
+                            ['name' => 'Trial balance', 'path' => '/admin/reports/trial-balance', 'permission' => 'reports.view'],
+                            ['name' => 'General ledger', 'path' => '/admin/reports/general-ledger', 'permission' => 'reports.view'],
+                            ['name' => 'Payroll summary', 'path' => '/admin/reports/payroll-summary', 'permission' => 'reports.view'],
+                        ],
+                    ],
+                    [
+                        'name' => 'Agent performance',
+                        'icon' => 'chart',
+                        'path' => '/admin/reports/agent-performance',
+                        'permission' => 'reports.view',
                     ],
                 ],
             ],
@@ -581,16 +618,27 @@ class MenuHelper
                         ->all();
                 }
 
-                if ($itemName === 'reports') {
+                if ($itemName === 'inventory & production') {
+                    $subItems = collect($item['subItems'] ?? []);
+                    foreach ([
+                        ['name' => 'Manufacturing schedule', 'path' => '/admin/reports/manufacturing-schedule', 'permission' => 'reports.view'],
+                        ['name' => 'Batch traceability', 'path' => '/admin/reports/batch-trace', 'permission' => 'reports.view'],
+                        ['name' => 'Production variance', 'path' => '/admin/reports/production-variance', 'permission' => 'reports.view'],
+                    ] as $link) {
+                        $subItems->push($link);
+                    }
+
+                    $item['subItems'] = $subItems
+                        ->unique(fn (array $sub) => mb_strtolower(trim(($sub['name'] ?? '') . '|' . ($sub['path'] ?? ''))))
+                        ->values()
+                        ->all();
+                }
+
+                if ($itemName === 'accountant tools') {
                     $subItems = collect($item['subItems'] ?? []);
                     foreach ([
                         ['name' => 'Trial balance', 'path' => '/admin/reports/trial-balance', 'permission' => 'reports.view'],
                         ['name' => 'General ledger', 'path' => '/admin/reports/general-ledger', 'permission' => 'reports.view'],
-                        ['name' => 'Inventory valuation', 'path' => '/admin/reports/inventory-valuation', 'permission' => 'reports.view'],
-                        ['name' => 'AR aging', 'path' => '/admin/reports/ar-aging', 'permission' => 'reports.view'],
-                        ['name' => 'AP aging', 'path' => '/admin/reports/ap-aging', 'permission' => 'reports.view'],
-                        ['name' => 'Production variance', 'path' => '/admin/reports/production-variance', 'permission' => 'reports.view'],
-                        ['name' => 'Batch traceability', 'path' => '/admin/reports/batch-trace', 'permission' => 'reports.view'],
                     ] as $link) {
                         $subItems->push($link);
                     }
@@ -627,15 +675,42 @@ class MenuHelper
             self::ensureStockMovementLinks(
                 self::ensureAgentAdvanceLinks(
                     self::ensureWarehouseLocationLinks(
-                        self::ensureExportCenterLink(
-                            self::ensureLearningHubLink(
-                                self::ensureSystemSettingsLinks($groups)
+                        self::ensureReportsMenuFromCatalog(
+                            self::ensureExportCenterLink(
+                                self::ensureLearningHubLink(
+                                    self::ensureSystemSettingsLinks($groups)
+                                )
                             )
                         )
                     )
                 )
             )
         );
+    }
+
+    protected static function ensureReportsMenuFromCatalog(array $groups): array
+    {
+        foreach ($groups as &$group) {
+            if (mb_strtolower(trim($group['title'] ?? '')) !== 'reports & analytics') {
+                continue;
+            }
+
+            $catalogItems = \App\Support\ReportsCatalog::sidebarMenuItems();
+            $dataExport = [
+                'name' => 'Data export',
+                'icon' => 'export',
+                'path' => '#',
+                'subItems' => [
+                    ['name' => 'Export center', 'path' => '/admin/export-center'],
+                    ['name' => 'Tally export', 'path' => '/admin/export-center?module=tally-xml', 'permission' => 'accounting.manage'],
+                ],
+            ];
+
+            $group['items'] = collect($catalogItems)->push($dataExport)->values()->all();
+            break;
+        }
+
+        return $groups;
     }
 
     protected static function ensureLearningHubLink(array $groups): array
@@ -708,7 +783,7 @@ class MenuHelper
             );
 
             if (! $hasDataExport) {
-                $items->prepend([
+                $items->push([
                     'name' => 'Data export',
                     'icon' => 'export',
                     'path' => '#',
@@ -772,7 +847,7 @@ class MenuHelper
                         $name = mb_strtolower(trim($subItem['name'] ?? ''));
                         $path = trim($subItem['path'] ?? '');
 
-                        return ($name === 'production analysis' && $path === '/admin/reports/production')
+                        return ($name === 'production analysis' && $path === '/admin/reports/production-summary')
                             || ($name === 'help & configuration guide' && $path === '/admin/help')
                             || $path === '/admin/help';
                     });
@@ -965,6 +1040,18 @@ SVG,
   <path d="M12 4.5V14.25M12 14.25L9.75 12M12 14.25L14.25 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="M6.75 19.5H17.25" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
   <path d="M8.25 16.5V19.5H15.75V16.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+SVG,
+            'chart' => <<<'SVG'
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M6 18V11M12 18V7M18 18V13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+  <path d="M4 18H20" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+</svg>
+SVG,
+            'ledger' => <<<'SVG'
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M6 5H18C19.1046 5 20 5.89543 20 7V17C20 18.1046 19.1046 19 18 19H6C4.89543 19 4 18.1046 4 17V7C4 5.89543 4.89543 5 6 5Z" stroke="currentColor" stroke-width="1.5"/>
+  <path d="M8 9H16M8 12H14M8 15H12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
 </svg>
 SVG,
             'default' => <<<'SVG'

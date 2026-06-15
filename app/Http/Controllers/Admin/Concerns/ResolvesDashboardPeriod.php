@@ -75,4 +75,23 @@ trait ResolvesDashboardPeriod
     {
         return $from->format('d M Y') . ' – ' . $to->format('d M Y');
     }
+
+    /**
+     * @return array{0: Carbon, 1: Carbon, 2: string}
+     */
+    protected function resolvePriorPeriod(Carbon $from, Carbon $to, string $range, string $compareMode = 'prior'): array
+    {
+        if ($compareMode === 'yoy') {
+            $priorFrom = $from->copy()->subYear();
+            $priorTo = $to->copy()->subYear();
+
+            return [$priorFrom, $priorTo, $range];
+        }
+
+        $days = max(1, $from->diffInDays($to) + 1);
+        $priorTo = $from->copy()->subDay()->endOfDay();
+        $priorFrom = $priorTo->copy()->subDays($days - 1)->startOfDay();
+
+        return [$priorFrom, $priorTo, $range];
+    }
 }

@@ -133,6 +133,101 @@ class DatabaseBackupManager
         return self::DIRECTORY . '/' . basename($filename);
     }
 
+    public function storeUpload(\Illuminate\Http\UploadedFile $file): string
+    {
+        $extension = strtolower($file->getClientOriginalExtension());
+
+        if ($extension !== 'sql') {
+            throw new RuntimeException('Only .sql database dump files can be imported.');
+        }
+
+        $disk = Storage::disk(self::DISK);
+
+        if (! $disk->exists(self::DIRECTORY)) {
+            $disk->makeDirectory(self::DIRECTORY);
+        }
+
+        $baseName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
+        $safeName = trim((string) preg_replace('/[^A-Za-z0-9._-]+/', '-', $baseName), '-');
+        $safeName = $safeName !== '' ? $safeName : 'database';
+
+        $filename = sprintf('imported-%s-%s.sql', now()->format('Ymd-His'), $safeName);
+
+        $file->storeAs(self::DIRECTORY, $filename, self::DISK);
+
+        if (! $disk->exists($this->relativePath($filename))) {
+            throw new RuntimeException('Unable to store the imported SQL file.');
+        }
+
+        return $filename;
+    }
+
+    public function delete(string $filename): void
+    {
+        $relativePath = $this->relativePath($filename);
+        $disk = Storage::disk(self::DISK);
+
+        if (! $disk->exists($relativePath)) {
+            throw new RuntimeException('Backup file was not found.');
+        }
+
+        if (! $disk->delete($relativePath)) {
+            throw new RuntimeException('Unable to delete the backup file.');
+        }
+    }
+
+    /**
+     * @return array{deleted: array<int, string>, count: int}
+     */
+    public function prune(int $retentionDays): array
+    {
+        if ($retentionDays <= 0) {
+            return ['deleted' => [], 'count' => 0];
+        }
+
+        $cutoff = now()->subDays($retentionDays)->timestamp;
+        $deleted = [];
+
+        foreach ($this->list() as $backup) {
+            if ($backup['last_modified_at']->getTimestamp() >= $cutoff) {
+                continue;
+            }
+
+            $this->delete($backup['filename']);
+            $deleted[] = $backup['filename'];
+        }
+
+        return ['deleted' => $deleted, 'count' => count($deleted)];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public static function scheduleSummary(): array
+    {
+        $enabled = filter_var(config('database.backup.schedule_enabled', true), FILTER_VALIDATE_BOOLEAN);
+        $schedule = config('database.backup.schedule', 'daily');
+        $time = config('database.backup.schedule_time', '02:00');
+        $day = (int) config('database.backup.schedule_day', 0);
+        $retention = (int) config('database.backup.retention_days', 14);
+
+        $dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+        return [
+            'enabled' => $enabled,
+            'schedule' => $schedule,
+            'time' => $time,
+            'day' => $day,
+            'day_label' => $dayNames[$day] ?? 'Sunday',
+            'retention_days' => $retention,
+            'label' => ! $enabled
+                ? 'Automatic backups are disabled'
+                : ($schedule === 'weekly'
+                    ? "Weekly on {$dayNames[$day]} at {$time}"
+                    : "Daily at {$time}"),
+        ];
+    }
+
     protected function mysqlConfig(): array
     {
         $defaultConnection = Config::get('database.default');
@@ -152,7 +247,7 @@ class DatabaseBackupManager
     protected function dumpCommand(array $config): array
     {
         return array_values(array_filter([
-            'mysqldump',
+            $this->resolveBinary('mysqldump', 'database.backup.mysqldump'),
             '--single-transaction',
             '--quick',
             '--skip-lock-tables',
@@ -168,13 +263,111 @@ class DatabaseBackupManager
     protected function restoreCommand(array $config): array
     {
         return array_values(array_filter([
-            'mysql',
+            $this->resolveBinary('mysql', 'database.backup.mysql'),
             $this->hostFlag($config),
             $this->portFlag($config),
             $this->socketFlag($config),
             $this->userFlag($config),
             $config['database'],
         ]));
+    }
+
+    protected function resolveBinary(string $command, string $configKey): string
+    {
+        $configured = trim((string) Config::get($configKey, ''));
+
+        if ($configured !== '') {
+            return $this->assertBinaryExists($configured, $command);
+        }
+
+        $discovered = $this->discoverBinary($command);
+
+        if ($discovered !== null) {
+            return $discovered;
+        }
+
+        throw new RuntimeException($this->missingBinaryMessage($command));
+    }
+
+    protected function discoverBinary(string $command): ?string
+    {
+        if ($this->commandIsRunnable($command)) {
+            return $command;
+        }
+
+        $executable = PHP_OS_FAMILY === 'Windows' ? $command . '.exe' : $command;
+
+        foreach ($this->candidateBinaryPaths($executable) as $path) {
+            if (is_file($path)) {
+                return $path;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    protected function candidateBinaryPaths(string $executable): array
+    {
+        $paths = [];
+
+        if (PHP_OS_FAMILY === 'Windows') {
+            $programFiles = getenv('ProgramFiles') ?: 'C:\\Program Files';
+            $programFilesX86 = getenv('ProgramFiles(x86)') ?: 'C:\\Program Files (x86)';
+
+            foreach ([$programFiles, $programFilesX86] as $root) {
+                $mysqlRoot = $root . DIRECTORY_SEPARATOR . 'MySQL';
+                if (is_dir($mysqlRoot)) {
+                    foreach (glob($mysqlRoot . DIRECTORY_SEPARATOR . 'MySQL Server *' . DIRECTORY_SEPARATOR . 'bin' . DIRECTORY_SEPARATOR . $executable) ?: [] as $match) {
+                        $paths[] = $match;
+                    }
+                }
+            }
+
+            $paths[] = 'C:\\xampp\\mysql\\bin\\' . $executable;
+            $paths[] = 'C:\\laragon\\bin\\mysql\\mysql-8.0.30-winx64\\bin\\' . $executable;
+
+            foreach (glob('C:\\laragon\\bin\\mysql\\*\\bin\\' . $executable) ?: [] as $match) {
+                $paths[] = $match;
+            }
+        }
+
+        return array_values(array_unique($paths));
+    }
+
+    protected function commandIsRunnable(string $command): bool
+    {
+        $probe = new Process([$command, '--version']);
+        $probe->setTimeout(10);
+
+        try {
+            $probe->run();
+
+            return $probe->isSuccessful();
+        } catch (\Throwable) {
+            return false;
+        }
+    }
+
+    protected function assertBinaryExists(string $path, string $command): string
+    {
+        if (! is_file($path)) {
+            throw new RuntimeException("Configured {$command} path was not found: {$path}");
+        }
+
+        return $path;
+    }
+
+    protected function missingBinaryMessage(string $command): string
+    {
+        $envKey = $command === 'mysqldump' ? 'MYSQL_DUMP_PATH' : 'MYSQL_CLIENT_PATH';
+        $example = PHP_OS_FAMILY === 'Windows'
+            ? 'C:\\Program Files\\MySQL\\MySQL Server 8.4\\bin\\' . $command . '.exe'
+            : '/usr/bin/' . $command;
+
+        return "'{$command}' was not found on this server. Set {$envKey} in your .env file, for example: {$envKey}=\"{$example}\"";
     }
 
     protected function hostFlag(array $config): ?string

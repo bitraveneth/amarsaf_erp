@@ -326,6 +326,8 @@ class ProductionController extends Controller
             'initialRepeatRunId' => $repeatFromRun?->id,
             'appliedRunId' => $repeatFromRun ? (string) $repeatFromRun->id : '',
             'previewRunId' => $repeatFromRun ? (string) $repeatFromRun->id : '',
+            'useExistingBatch' => old('batch_mode') === 'existing',
+            'currencyCode' => config('app.currency', 'BDT'),
         ];
 
         return view('admin.production.create', [

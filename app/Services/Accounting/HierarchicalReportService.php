@@ -3,7 +3,11 @@
 namespace App\Services\Accounting;
 
 use App\Models\Account;
+use App\Models\Expense;
+use App\Models\JournalEntry;
 use App\Models\JournalEntryLine;
+use App\Models\LogisticsBill;
+use App\Models\SalaryDistribution;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -20,6 +24,48 @@ class HierarchicalReportService
         }
 
         return $rows;
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    public function trialBalanceTree(Carbon $from, Carbon $to): array
+    {
+        return Account::query()
+            ->roots()
+            ->orderBy('code')
+            ->get()
+            ->map(fn (Account $root) => $this->buildTrialBalanceTreeNode($root, $from, $to))
+            ->filter()
+            ->values()
+            ->all();
+    }
+
+    protected function buildTrialBalanceTreeNode(Account $node, Carbon $from, Carbon $to): ?array
+    {
+        $balances = $this->nodeBalances($node, $from, $to);
+        $children = [];
+
+        if ($node->is_group) {
+            foreach ($node->children()->orderBy('code')->get() as $child) {
+                $built = $this->buildTrialBalanceTreeNode($child, $from, $to);
+                if ($built !== null) {
+                    $children[] = $built;
+                }
+            }
+        }
+
+        if (! $node->is_group) {
+            if (abs($balances['closing_debit']) < 0.01 && abs($balances['closing_credit']) < 0.01) {
+                return null;
+            }
+        } elseif ($children === [] && abs($balances['closing_debit']) < 0.01 && abs($balances['closing_credit']) < 0.01) {
+            return null;
+        }
+
+        return array_merge($this->rowMeta($node), $balances, [
+            'children' => $children,
+        ]);
     }
 
     protected function appendTrialBalanceNode(Collection $rows, Account $node, Carbon $from, Carbon $to, bool $expandAll): void
@@ -74,13 +120,141 @@ class HierarchicalReportService
         $manufacturing = $this->sectionTree('manufacturing', $to, $from);
         $operating = $this->sectionTree('operatingexpense', $to, $from);
 
+        $revenueRows = $revenue['rows'];
+        $operatingRows = $operating['rows'];
+
+        $grossSales = round(
+            $this->amountBySlug($revenueRows, 'product_sales')
+            + $this->amountBySlug($revenueRows, 'service_revenue')
+            + $this->amountBySlug($revenueRows, 'export_sales'),
+            2
+        );
+        $salesReturns = round(abs($this->amountBySlug($revenueRows, 'sales_returns')), 2);
+        $otherIncome = round($this->subtotalByCode($revenueRows, '4200'), 2);
         $netRevenue = $revenue['total'];
+
         $manufacturingCost = $manufacturing['total'];
-        $operatingExpenses = $operating['total'];
         $grossProfit = round($netRevenue - $manufacturingCost, 2);
+
+        $administrativeExpenses = round($this->subtotalByCode($operatingRows, '6100'), 2);
+        $sellingExpenses = round($this->subtotalByCode($operatingRows, '6200'), 2);
+        $financialExpenses = round($this->subtotalByCode($operatingRows, '6300'), 2);
+        $operatingExpenses = $operating['total'];
+        $operatingProfit = round($grossProfit - $administrativeExpenses - $sellingExpenses, 2);
         $netProfit = round($grossProfit - $operatingExpenses, 2);
 
-        return compact('revenue', 'manufacturing', 'operating', 'netRevenue', 'manufacturingCost', 'operatingExpenses', 'grossProfit', 'netProfit');
+        $commissionExpense = round($this->amountBySlug($operatingRows, 'commission_expense'), 2);
+        $deliveryExpense = round(
+            $this->amountBySlug($operatingRows, 'delivery_expense')
+            + $this->amountBySlug($operatingRows, 'vehicle_fuel')
+            + $this->amountBySlug($operatingRows, 'courier_expense'),
+            2
+        );
+        $payrollExpense = round($this->amountBySlug($operatingRows, 'salaries_wages'), 2);
+
+        return [
+            'revenue' => $revenue,
+            'manufacturing' => $manufacturing,
+            'operating' => $operating,
+            'grossSales' => $grossSales,
+            'salesReturns' => $salesReturns,
+            'otherIncome' => $otherIncome,
+            'netRevenue' => $netRevenue,
+            'manufacturingCost' => $manufacturingCost,
+            'grossProfit' => $grossProfit,
+            'administrativeExpenses' => $administrativeExpenses,
+            'sellingExpenses' => $sellingExpenses,
+            'financialExpenses' => $financialExpenses,
+            'commissionExpense' => $commissionExpense,
+            'deliveryExpense' => $deliveryExpense,
+            'payrollExpense' => $payrollExpense,
+            'operatingExpenses' => $operatingExpenses,
+            'operatingProfit' => $operatingProfit,
+            'netProfit' => $netProfit,
+            'unposted' => $this->unpostedSummary($from, $to),
+        ];
+    }
+
+    /**
+     * @return array<int, array{label: string, count: int, href: string}>
+     */
+    protected function unpostedSummary(Carbon $from, Carbon $to): array
+    {
+        $items = [];
+
+        $draftLogistics = LogisticsBill::query()
+            ->where('status', 'draft')
+            ->whereDate('bill_date', '>=', $from->toDateString())
+            ->whereDate('bill_date', '<=', $to->toDateString())
+            ->count();
+
+        if ($draftLogistics > 0) {
+            $items[] = [
+                'label' => 'Draft logistics bills',
+                'count' => $draftLogistics,
+                'href' => route('admin.logistics-bills.index'),
+            ];
+        }
+
+        $unpostedPayroll = SalaryDistribution::query()
+            ->whereNull('journal_entry_id')
+            ->whereDate('period_end', '>=', $from->toDateString())
+            ->whereDate('period_end', '<=', $to->toDateString())
+            ->count();
+
+        if ($unpostedPayroll > 0) {
+            $items[] = [
+                'label' => 'Payroll not in ledger',
+                'count' => $unpostedPayroll,
+                'href' => route('admin.salary-distributions.index'),
+            ];
+        }
+
+        $periodExpenses = Expense::query()
+            ->where('amount', '>', 0)
+            ->whereDate('date', '>=', $from->toDateString())
+            ->whereDate('date', '<=', $to->toDateString())
+            ->pluck('id');
+
+        if ($periodExpenses->isNotEmpty()) {
+            $postedExpenseIds = JournalEntry::query()
+                ->where('source_type', Expense::class)
+                ->where('status', 'posted')
+                ->whereIn('source_id', $periodExpenses)
+                ->pluck('source_id');
+
+            $unpostedExpenses = $periodExpenses->diff($postedExpenseIds)->count();
+
+            if ($unpostedExpenses > 0) {
+                $items[] = [
+                    'key' => 'expenses',
+                    'label' => 'Expenses not in P&L ledger',
+                    'count' => $unpostedExpenses,
+                    'href' => route('admin.expenses.index', [
+                        'from' => $from->toDateString(),
+                        'to' => $to->toDateString(),
+                    ]),
+                    'hint' => 'Usually older records saved before auto-posting, or a failed post. New expenses post automatically when you save them.',
+                    'can_sync' => true,
+                ];
+            }
+        }
+
+        return $items;
+    }
+
+    protected function amountBySlug(Collection $rows, string $slug): float
+    {
+        $row = $rows->first(fn (array $item) => ($item['slug'] ?? '') === $slug && empty($item['is_subtotal']));
+
+        return (float) ($row['amount'] ?? 0);
+    }
+
+    protected function subtotalByCode(Collection $rows, string $code): float
+    {
+        $row = $rows->first(fn (array $item) => ($item['code'] ?? '') === $code && ! empty($item['is_subtotal']));
+
+        return (float) ($row['amount'] ?? 0);
     }
 
     public function manufacturingSchedule(Carbon $from, Carbon $to): array

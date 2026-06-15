@@ -2,98 +2,204 @@
 
 @section('content')
 @php
-    $profitTone = $netProfitEstimate >= 0 ? 'success' : 'danger';
-    $profitShare = $grossRevenue > 0 ? ($netProfitEstimate / $grossRevenue) * 100 : 0;
-    $reportLinks = [
-        ['href' => route('admin.reports.pl', request()->only(['range', 'from', 'to'])), 'label' => 'Profit & loss', 'hint' => 'Formal income statement'],
-        ['href' => route('admin.reports.bs'), 'label' => 'Balance sheet', 'hint' => 'Assets, liabilities, equity'],
-        ['href' => route('admin.reports.cashflow'), 'label' => 'Cash flow', 'hint' => 'Cash in and out'],
-        ['href' => route('admin.reports.vat'), 'label' => 'VAT report', 'hint' => 'VAT summary'],
-        ['href' => route('admin.reports.agents'), 'label' => 'Agent performance', 'hint' => 'Agent rankings'],
-        ['href' => route('admin.reports.production'), 'label' => 'Production reports', 'hint' => 'Factory output'],
+    use App\Support\ReportsCatalog;
+
+    $profitTone = $netProfitEstimate >= 0 ? 'brand' : 'danger';
+    $periodQuery = request()->only(['range', 'from', 'to']);
+    $reportGroups = ReportsCatalog::groups($periodQuery);
+    $featuredReports = ReportsCatalog::featured($periodQuery);
+    $snapshotCards = [
+        [
+            'label' => 'Net sales',
+            'numeric' => number_format($grossRevenue, 0),
+            'currency' => $currencyCode,
+            'caption' => 'Invoiced sales after credits',
+            'href' => route('admin.reports.pl', $periodQuery),
+            'tone' => 'brand',
+            'valueTone' => 'brand',
+            'icon' => 'revenue',
+        ],
+        [
+            'label' => 'Collections',
+            'numeric' => number_format($totalCollections, 0),
+            'currency' => $currencyCode,
+            'caption' => 'Receipts in ' . strtolower($periodLabel),
+            'href' => route('admin.reports.cashflow', $periodQuery),
+            'tone' => 'success',
+            'valueTone' => 'neutral',
+            'icon' => 'receivables',
+        ],
+        [
+            'label' => 'Outstanding',
+            'numeric' => number_format($outstanding, 0),
+            'currency' => $currencyCode,
+            'caption' => 'Open receivables at period end',
+            'href' => route('admin.reports.ar-aging'),
+            'tone' => 'orange',
+            'valueTone' => $outstanding > 0 ? 'warning' : 'neutral',
+            'icon' => 'receivables',
+        ],
+        [
+            'label' => 'Est. net profit',
+            'numeric' => number_format($netProfitEstimate, 0),
+            'currency' => $currencyCode,
+            'caption' => 'Management estimate — see income statement',
+            'href' => route('admin.reports.pl', $periodQuery),
+            'tone' => 'purple',
+            'valueTone' => $profitTone,
+            'icon' => 'revenue',
+        ],
+        [
+            'label' => 'Production output',
+            'numeric' => number_format($productionQty, 0),
+            'caption' => 'Approved quantity in period',
+            'href' => route('admin.reports.production', $periodQuery),
+            'tone' => 'blue',
+            'valueTone' => 'neutral',
+            'icon' => 'production',
+        ],
+        [
+            'label' => 'Active agents',
+            'numeric' => number_format($activeAgents),
+            'caption' => 'Selling partners in network',
+            'href' => route('admin.reports.agents', $periodQuery),
+            'tone' => 'success',
+            'valueTone' => 'neutral',
+            'icon' => 'users',
+        ],
+        [
+            'label' => 'Operating spend',
+            'numeric' => number_format($totalExpenses, 0),
+            'currency' => $currencyCode,
+            'caption' => 'Expenses, gifts, and campaigns',
+            'href' => route('admin.reports.expense-summary', $periodQuery),
+            'tone' => 'error',
+            'valueTone' => $totalExpenses > 0 ? 'warning' : 'neutral',
+            'icon' => 'orders',
+        ],
+        [
+            'label' => 'Collection rate',
+            'numeric' => number_format($collectionRate, 1) . '%',
+            'caption' => 'Receipts vs net sales',
+            'href' => route('admin.reports.agents', $periodQuery),
+            'tone' => 'amber',
+            'valueTone' => $collectionRate >= 80 ? 'neutral' : 'warning',
+            'icon' => 'delivery',
+        ],
     ];
 @endphp
 
-<div class="erp-dash-page">
-    <x-dashboard.hero
-        eyebrow="Reports"
-        title="Reports dashboard"
-        subtitle="Executive view of revenue, collections, cost structure, and operational output for the selected period."
-        :period="$periodLabel"
-    >
-        <x-slot:actions>
+<div class="dash-page">
+    <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <x-dashboard.page-header
+            title="Reports dashboard"
+            subtitle="Key figures for the selected period, then open any detailed report."
+        />
+        <div class="flex flex-wrap items-center gap-2 print:hidden">
+            <x-dashboard.period-filter
+                variant="compact"
+                :action="route('admin.reports.dashboard')"
+                :range="$range"
+                :from="request('from', $from->toDateString())"
+                :to="request('to', $to->toDateString())"
+                :range-options="$rangeOptions"
+                :period-label="$periodLabel"
+            />
             @include('admin.finance.partials.print_button', ['label' => 'Print'])
-        </x-slot:actions>
-    </x-dashboard.hero>
-
-    <x-dashboard.period-filter
-        :action="route('admin.reports.dashboard')"
-        :range="$range"
-        :from="request('from', $from->toDateString())"
-        :to="request('to', $to->toDateString())"
-        :range-options="$rangeOptions"
-    />
-
-    <div class="erp-dash-kpi-grid">
-        <x-dashboard.kpi label="Net sales" :value="$currencyCode . ' ' . number_format($grossRevenue, 0)" hint="Invoiced sales after credits" />
-        <x-dashboard.kpi label="Collections" tone="success" :value="$currencyCode . ' ' . number_format($totalCollections, 0)" hint="Receipts applied in period" />
-        <x-dashboard.kpi label="Outstanding" tone="warning" :value="$currencyCode . ' ' . number_format($outstanding, 0)" hint="Open receivables as of period end" />
-        <x-dashboard.kpi label="Est. net profit" :tone="$profitTone" :value="$currencyCode . ' ' . number_format($netProfitEstimate, 0)" hint="Revenue less COGS, commissions, expenses, payroll" />
+            <a href="{{ route('admin.exports.month-end-pack.download', $periodQuery) }}" class="erp-btn-secondary text-sm">Month-end pack</a>
+        </div>
     </div>
 
-    <div class="erp-dash-layout-split">
-        <x-dashboard.panel title="Revenue trend" subtitle="Net invoiced revenue vs collections" badge="Chart">
-            <x-dashboard.bar-chart
-                :labels="$chartLabels"
-                :values="$chartRevenue"
-                :secondary="$chartCollections"
-                :currency="$currencyCode"
-            />
-            <div class="mt-5 grid gap-4 md:grid-cols-2">
-                <x-dashboard.progress label="Collection efficiency" tone="success" :percent="$collectionRate" hint="Collections as a share of net revenue" />
-                <x-dashboard.progress
-                    label="Receivable pressure"
-                    tone="warning"
-                    :percent="$grossRevenue > 0 ? ($outstanding / $grossRevenue) * 100 : 0"
-                    hint="Outstanding balance relative to revenue"
+    <x-dashboard.snapshot-kpis
+        class="mt-2"
+        eyebrow="Period snapshot"
+        :title="$periodLabel"
+        description="Click a card to open the related report. Figures are estimates unless you open a formal statement."
+        :cards="$snapshotCards"
+    />
+
+    <section class="dash-performance mt-8">
+        <x-dashboard.section-header
+            title="Revenue and collections"
+            description="Net invoiced sales compared with cash collected in the selected period."
+            class="mb-5"
+        >
+            <x-slot:actions>
+                <a href="{{ route('admin.reports.pl', $periodQuery) }}" class="erp-btn-secondary !px-3 !py-1.5 !text-xs">Income statement</a>
+                <a href="{{ route('admin.reports.cashflow', $periodQuery) }}" class="erp-btn-secondary !px-3 !py-1.5 !text-xs">Cash flow</a>
+            </x-slot:actions>
+        </x-dashboard.section-header>
+
+        <div class="grid grid-cols-1 gap-6 xl:grid-cols-3">
+            <div class="xl:col-span-2 rounded-2xl border border-gray-200 bg-white p-6 shadow-theme-sm dark:border-gray-800 dark:bg-gray-900">
+                <x-dashboard.bar-chart
+                    :labels="$chartLabels"
+                    :values="$chartRevenue"
+                    :secondary="$chartCollections"
+                    :currency="$currencyCode"
                 />
+                <div class="mt-5 grid gap-4 sm:grid-cols-2">
+                    <x-dashboard.progress label="Collection efficiency" tone="success" :percent="$collectionRate" hint="Collections as a share of net revenue" />
+                    <x-dashboard.progress
+                        label="Receivable pressure"
+                        tone="warning"
+                        :percent="$grossRevenue > 0 ? ($outstanding / $grossRevenue) * 100 : 0"
+                        hint="Outstanding relative to revenue"
+                    />
+                </div>
             </div>
-        </x-dashboard.panel>
 
-        <div class="space-y-5">
-            <x-dashboard.highlight
-                label="Estimated net result"
-                :value="$currencyCode . ' ' . number_format($netProfitEstimate, 0)"
-                :tone="$profitTone"
-                hint="Approximate profit after tracked COGS, commissions, operating spend, and payroll."
-            />
-
-            <x-dashboard.panel title="Cost mix" subtitle="Share of revenue consumed by major cost buckets">
+            <div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-theme-sm dark:border-gray-800 dark:bg-gray-900">
+                <x-dashboard.section-header
+                    title="Cost mix"
+                    description="Estimated spend buckets in period."
+                    class="mb-4"
+                />
                 <x-dashboard.bar-chart
                     :labels="$costChartLabels"
                     :values="$costChartValues"
                     primary-label="Cost"
                     :currency="$currencyCode"
                 />
-            </x-dashboard.panel>
-        </div>
-    </div>
-
-    <div class="erp-dash-layout-thirds">
-        <x-dashboard.panel title="Top agents" subtitle="By net sales in period">
-            <x-dashboard.rank-list title="Agents" :currency="$currencyCode" :items="$topAgents" />
-        </x-dashboard.panel>
-
-        <x-dashboard.panel title="Operations" subtitle="Production and network footprint">
-            <div class="erp-dash-kpi-grid !grid-cols-1 sm:!grid-cols-2">
-                <x-dashboard.kpi label="Approved output" :value="number_format($productionQty, 0)" hint="Approved production quantity" />
-                <x-dashboard.kpi label="Active agents" :value="number_format($activeAgents)" hint="Selling partners in network" />
+                <dl class="mt-5 space-y-3 border-t border-gray-100 pt-4 text-sm dark:border-gray-800">
+                    <div class="flex items-center justify-between gap-3">
+                        <dt class="text-gray-500 dark:text-gray-400">Est. COGS</dt>
+                        <dd class="font-semibold tabular-nums text-gray-900 dark:text-white">{{ $currencyCode }} {{ number_format($cogsEstimate, 0) }}</dd>
+                    </div>
+                    <div class="flex items-center justify-between gap-3">
+                        <dt class="text-gray-500 dark:text-gray-400">Commissions</dt>
+                        <dd class="font-semibold tabular-nums text-gray-900 dark:text-white">{{ $currencyCode }} {{ number_format($commissionsTotal, 0) }}</dd>
+                    </div>
+                    <div class="flex items-center justify-between gap-3">
+                        <dt class="text-gray-500 dark:text-gray-400">Payroll</dt>
+                        <dd class="font-semibold tabular-nums text-gray-900 dark:text-white">{{ $currencyCode }} {{ number_format($totalPayroll, 0) }}</dd>
+                    </div>
+                </dl>
             </div>
-        </x-dashboard.panel>
+        </div>
+    </section>
 
-        <x-dashboard.panel title="Drill down" subtitle="Open detailed statements" class="border-dashed">
-            <x-dashboard.link-grid :links="$reportLinks" />
-        </x-dashboard.panel>
-    </div>
+    <section class="dash-activity-panel mt-8">
+        <x-dashboard.section-header
+            title="Top agents"
+            description="Highest net sales in the selected period."
+            class="mb-5"
+        >
+            <x-slot:actions>
+                <a href="{{ route('admin.reports.agents', $periodQuery) }}" class="erp-btn-secondary !px-3 !py-1.5 !text-xs">Agent performance</a>
+            </x-slot:actions>
+        </x-dashboard.section-header>
+
+        <div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-theme-sm dark:border-gray-800 dark:bg-gray-900">
+            <x-dashboard.rank-list title="Agents" :currency="$currencyCode" :items="$topAgents" />
+        </div>
+    </section>
+
+    <section class="mt-8">
+        <x-dashboard.reports-library
+            :groups="$reportGroups"
+            :featured="$featuredReports"
+        />
+    </section>
 </div>
 @endsection

@@ -286,6 +286,7 @@ class BomController extends Controller
                     'unit_cost' => $row['unit_cost'] ?? '',
                     'unit' => $row['unit'] ?? '',
                 ])->values()->all(),
+                'currencyCode' => config('app.currency', 'BDT'),
             ],
         ];
     }

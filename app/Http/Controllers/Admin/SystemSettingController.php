@@ -57,6 +57,7 @@ class SystemSettingController extends Controller
                 'textDark' => SystemSettings::defaultTextColorDark(),
             ],
             'backups' => $backupManager->list(),
+            'backupSchedule' => DatabaseBackupManager::scheduleSummary(),
         ]);
     }
 
@@ -166,12 +167,12 @@ class SystemSettingController extends Controller
             $filename = $backupManager->create();
         } catch (RuntimeException $exception) {
             return redirect()
-                ->route('admin.settings.index')
+                ->route('admin.settings.index', ['tab' => 'database'])
                 ->withErrors(['backup' => $exception->getMessage()]);
         }
 
         return redirect()
-            ->route('admin.settings.index')
+            ->route('admin.settings.index', ['tab' => 'database'])
             ->with('status', "Database backup created: {$filename}");
     }
 
@@ -184,6 +185,71 @@ class SystemSettingController extends Controller
         }
 
         return Storage::disk('local')->download($path, basename($filename));
+    }
+
+    public function importBackup(Request $request, DatabaseBackupManager $backupManager)
+    {
+        $data = $request->validate([
+            'backup_file' => 'required|file|max:512000',
+            'restore_after_import' => 'sometimes|accepted',
+            'confirm_restore' => 'required_if:restore_after_import,1|accepted',
+        ]);
+
+        $restoreAfterImport = $request->boolean('restore_after_import');
+        $safetyBackup = null;
+
+        try {
+            $filename = $backupManager->storeUpload($request->file('backup_file'));
+
+            if (! $restoreAfterImport) {
+                return redirect()
+                    ->route('admin.settings.index', ['tab' => 'database'])
+                    ->with('status', "SQL file imported and saved as {$filename}. You can restore it from the list below when ready.");
+            }
+
+            $safetyBackup = $backupManager->create();
+            $backupManager->restore($filename);
+        } catch (RuntimeException $exception) {
+            if ($safetyBackup) {
+                try {
+                    $backupManager->restore($safetyBackup);
+                } catch (RuntimeException $rollbackException) {
+                    return redirect()
+                        ->route('admin.settings.index', ['tab' => 'database'])
+                        ->withErrors([
+                            'backup' => $exception->getMessage() . ' Automatic rollback also failed. Safety backup: ' . $safetyBackup,
+                        ]);
+                }
+            }
+
+            return redirect()
+                ->route('admin.settings.index', ['tab' => 'database'])
+                ->withErrors(['backup' => $exception->getMessage()]);
+        }
+
+        return redirect()
+            ->route('admin.settings.index', ['tab' => 'database'])
+            ->with('status', "Imported {$filename} and restored the database. A pre-restore safety backup was created as {$safetyBackup}.");
+    }
+
+    public function deleteBackup(Request $request, DatabaseBackupManager $backupManager)
+    {
+        $data = $request->validate([
+            'filename' => 'required|string',
+            'confirm_delete' => 'required|accepted',
+        ]);
+
+        try {
+            $backupManager->delete($data['filename']);
+        } catch (RuntimeException $exception) {
+            return redirect()
+                ->route('admin.settings.index', ['tab' => 'database'])
+                ->withErrors(['backup' => $exception->getMessage()]);
+        }
+
+        return redirect()
+            ->route('admin.settings.index', ['tab' => 'database'])
+            ->with('status', 'Backup deleted: ' . basename($data['filename']));
     }
 
     public function restoreBackup(Request $request, DatabaseBackupManager $backupManager)
@@ -204,7 +270,7 @@ class SystemSettingController extends Controller
                     $backupManager->restore($safetyBackup);
                 } catch (RuntimeException $rollbackException) {
                     return redirect()
-                        ->route('admin.settings.index')
+                        ->route('admin.settings.index', ['tab' => 'database'])
                         ->withErrors([
                             'backup' => $exception->getMessage() . ' Automatic rollback also failed. Safety backup: ' . $safetyBackup,
                         ]);
@@ -212,12 +278,12 @@ class SystemSettingController extends Controller
             }
 
             return redirect()
-                ->route('admin.settings.index')
+                ->route('admin.settings.index', ['tab' => 'database'])
                 ->withErrors(['backup' => $exception->getMessage()]);
         }
 
         return redirect()
-            ->route('admin.settings.index')
+            ->route('admin.settings.index', ['tab' => 'database'])
             ->with('status', 'Database restored from backup. A pre-restore safety backup was created as ' . $safetyBackup . '.');
     }
 }

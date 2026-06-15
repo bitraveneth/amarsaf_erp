@@ -148,4 +148,24 @@ return [
 
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Database backup binaries
+    |--------------------------------------------------------------------------
+    |
+    | Full paths to mysqldump/mysql when they are not on the system PATH (common
+    | on Windows with XAMPP or MySQL Server). Leave blank to auto-detect.
+    |
+    */
+
+    'backup' => [
+        'mysqldump' => env('MYSQL_DUMP_PATH'),
+        'mysql' => env('MYSQL_CLIENT_PATH'),
+        'schedule_enabled' => env('DB_BACKUP_SCHEDULE_ENABLED', true),
+        'schedule' => env('DB_BACKUP_SCHEDULE', 'daily'),
+        'schedule_time' => env('DB_BACKUP_SCHEDULE_TIME', '02:00'),
+        'schedule_day' => (int) env('DB_BACKUP_SCHEDULE_DAY', 0),
+        'retention_days' => (int) env('DB_BACKUP_RETENTION_DAYS', 14),
+    ],
+
 ];

@@ -1,16 +1,17 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="erp-page">
-    <x-admin.page-header
-        icon="batch"
-        title="Batch trace: {{ $batch->batch_code }}"
-        :subtitle="$batch->product?->name"
-    >
-        <x-slot:actions>
+<x-report.page
+    eyebrow="Inventory reports"
+    :title="'Batch trace: ' . $batch->batch_code"
+    :subtitle="$batch->product?->name"
+>
+    <x-slot:actions>
+        <x-report.header-actions>
+            <x-report.hub-link category="operations" />
             <a href="{{ route('admin.reports.batch-trace') }}" class="erp-btn-secondary">Back to lookup</a>
-        </x-slot:actions>
-    </x-admin.page-header>
+        </x-report.header-actions>
+    </x-slot:actions>
 
     @php
         $sections = [
@@ -54,8 +55,9 @@
     @endphp
 
     @foreach($sections as $title => $columns)
-        <x-admin.table-card :title="$title">
-            <table class="erp-table">
+        <x-dashboard.panel :title="$title">
+            <div class="overflow-x-auto">
+                <table class="erp-dash-statement__table">
                 <thead>
                     <tr>
                         @foreach($columns as $column)
@@ -86,8 +88,9 @@
                         </tr>
                     @endforelse
                 </tbody>
-            </table>
-        </x-admin.table-card>
+                </table>
+            </div>
+        </x-dashboard.panel>
     @endforeach
-</div>
+</x-report.page>
 @endsection

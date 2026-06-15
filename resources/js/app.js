@@ -3,6 +3,15 @@ import './invoice';
 import { registerAssistantBot } from './assistant-bot';
 import { registerSystemTour } from './system-tour';
 import { registerLearningLang, learningHub } from './learning-hub';
+import { registerPlStatement } from './pl-statement';
+import { registerReportsLibrary } from './reports-library';
+import { registerTrialBalance } from './trial-balance';
+import { registerGeneralLedger } from './general-ledger';
+import { initHeaderAlerts } from './header-alerts';
+import { initBillItems } from './bill-items';
+import { registerBomForm } from './bom-form';
+import { registerProductionForm, initProductionFormWidgets } from './production-form';
+import { initSalaryDistributionForm } from './salary-distribution-form';
 import Alpine from 'alpinejs';
 import ApexCharts from 'apexcharts';
 import flatpickr from 'flatpickr';
@@ -43,6 +52,12 @@ document.addEventListener('alpine:init', () => {
     registerSystemTour(Alpine, window.erpTourSteps || []);
     registerAssistantBot(Alpine);
     registerLearningLang(Alpine);
+    registerPlStatement(Alpine);
+    registerReportsLibrary(Alpine);
+    registerTrialBalance(Alpine);
+    registerGeneralLedger(Alpine);
+    registerBomForm(Alpine);
+    registerProductionForm(Alpine);
 });
 
 window.learningHub = learningHub;
@@ -55,6 +70,16 @@ document.addEventListener('DOMContentLoaded', () => {
         document.body.dataset.platform = window.erpPlatform;
     }
 
+    initHeaderAlerts();
+    initBillItems();
+    initProductionFormWidgets();
+    initSalaryDistributionForm();
+
+    const dashboardRoot = document.querySelector('[data-dashboard-ajax][data-dashboard-charts]');
+    if (dashboardRoot) {
+        import('./dashboard-charts').then(({ initDashboardCharts }) => initDashboardCharts());
+    }
+
     const commandModifier = window.erpPlatform === 'mac' ? '⌘' : 'Ctrl';
     document.querySelectorAll('[data-shortcut-mod]').forEach((el) => {
         el.textContent = commandModifier;
@@ -64,36 +89,6 @@ document.addEventListener('DOMContentLoaded', () => {
         el.setAttribute('title', `Open command palette (${commandModifier} K)`);
     });
 
-
-        // Map imports
-    if (document.querySelector('#mapOne')) {
-        import('./components/map').then(module => module.initMap());
-    }
-
-    // Chart imports
-    // chartOne (monthly sale) is rendered with dynamic ERP data via
-    // an inline script on the dashboard, so we skip the TailAdmin
-    // demo initialiser here.
-    if (document.querySelector('#chartTwo') && !document.querySelector('[data-dashboard-ajax]')) {
-        import('./components/chart/chart-2').then(module => module.initChartTwo());
-    }
-    // Dashboard statistics chart (#chartThree) is now rendered
-    // from Blade with real ERP data, so we no longer load the
-    // TailAdmin demo chart-3.js here to avoid double charts.
-    if (document.querySelector('#chartSix')) {
-        import('./components/chart/chart-6').then(module => module.initChartSix());
-    }
-    if (document.querySelector('#chartEight')) {
-        import('./components/chart/chart-8').then(module => module.initChartEight());
-    }
-    if (document.querySelector('#chartThirteen')) {
-        import('./components/chart/chart-13').then(module => module.initChartThirteen());
-    }
-
-    // Calendar init (only used on TailAdmin calendar examples)
-    if (document.querySelector('#calendar')) {
-        import('./components/calendar-init').then(module => module.calendarInit());
-    }
 
     // Sidebar groups
     const toggles = document.querySelectorAll('[data-collapse-toggle]');

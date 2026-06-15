@@ -42,7 +42,6 @@ use App\Http\Controllers\Admin\LogisticsDashboardController;
 use App\Http\Controllers\Admin\LogisticsCarrierController;
 use App\Http\Controllers\Admin\CarrierRateCardController;
 use App\Http\Controllers\Admin\FleetRecurringChargeController;
-use App\Http\Controllers\Admin\LogisticsRouteReportController;
 use App\Http\Controllers\Admin\VehicleScheduleController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\Auth\LoginController;
@@ -138,6 +137,8 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::get('settings', [SystemSettingController::class, 'index'])->middleware('perm:system.settings')->name('settings.index');
     Route::patch('settings', [SystemSettingController::class, 'update'])->middleware('perm:system.settings')->name('settings.update');
     Route::post('settings/backups', [SystemSettingController::class, 'createBackup'])->middleware('perm:system.settings')->name('settings.backups.create');
+    Route::post('settings/backups/import', [SystemSettingController::class, 'importBackup'])->middleware('perm:system.settings')->name('settings.backups.import');
+    Route::post('settings/backups/delete', [SystemSettingController::class, 'deleteBackup'])->middleware('perm:system.settings')->name('settings.backups.delete');
     Route::get('settings/backups/{filename}', [SystemSettingController::class, 'downloadBackup'])->middleware('perm:system.settings')->where('filename', '.*')->name('settings.backups.download');
     Route::post('settings/backups/restore', [SystemSettingController::class, 'restoreBackup'])->middleware('perm:system.settings')->name('settings.backups.restore');
 
@@ -273,7 +274,7 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::get('logistics/carriers/{carrier}/edit', [LogisticsCarrierController::class, 'edit'])->middleware('perm:control.warehouses')->name('logistics.carriers.edit');
     Route::patch('logistics/carriers/{carrier}', [LogisticsCarrierController::class, 'update'])->middleware('perm:control.warehouses')->name('logistics.carriers.update');
     Route::delete('logistics/carriers/{carrier}', [LogisticsCarrierController::class, 'destroy'])->middleware('perm:control.warehouses')->name('logistics.carriers.destroy');
-    Route::get('logistics/route-costs', [LogisticsRouteReportController::class, 'index'])->middleware('perm:control.warehouses')->name('logistics.route-costs');
+    Route::get('logistics/route-costs', fn () => redirect()->route('admin.reports.route-costs', request()->query()))->middleware('perm:reports.view')->name('logistics.route-costs');
 
     Route::get('carrier-rate-cards', [CarrierRateCardController::class, 'index'])->middleware('perm:control.warehouses')->name('carrier-rate-cards.index');
     Route::get('carrier-rate-cards/create', [CarrierRateCardController::class, 'create'])->middleware('perm:control.warehouses')->name('carrier-rate-cards.create');
@@ -412,8 +413,8 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::post('sales-targets', [SalesTargetController::class, 'store'])->middleware('perm:sales.manage')->name('sales-targets.store');
     Route::get('sales-targets/{salesTarget}/edit', [SalesTargetController::class, 'edit'])->middleware('perm:sales.manage')->name('sales-targets.edit');
     Route::patch('sales-targets/{salesTarget}', [SalesTargetController::class, 'update'])->middleware('perm:sales.manage')->name('sales-targets.update');
-    Route::get('commissions', [CommissionReportController::class, 'index'])->middleware('perm:control.agents')->name('commissions.index');
-    Route::get('commissions/summary', [CommissionReportController::class, 'index'])->middleware('perm:control.agents')->name('commissions.summary');
+    Route::get('commissions', fn (\Illuminate\Http\Request $request) => redirect()->route('admin.reports.commissions', $request->query(), 301))->middleware('perm:control.agents')->name('commissions.index');
+    Route::get('commissions/summary', fn (\Illuminate\Http\Request $request) => redirect()->route('admin.reports.commissions', $request->query(), 301))->middleware('perm:control.agents')->name('commissions.summary');
     Route::get('commissions/export', [CommissionReportController::class, 'export'])->middleware('perm:control.agents')->name('commissions.export');
     Route::get('commission-rules', [CommissionReportController::class, 'rules'])->middleware('perm:control.agents')->name('commissions.rules');
     Route::get('settlements', [CommissionSettlementController::class, 'index'])->middleware('perm:control.agents')->name('settlements.index');
@@ -463,7 +464,7 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
 
     Route::get('inventory', [InventoryController::class, 'index'])->middleware('perm:inventory.manage')->name('inventory.index');
     Route::get('inventory/materials', [InventoryController::class, 'materials'])->middleware('perm:inventory.manage')->name('inventory.materials');
-    Route::get('inventory/low-stock', [InventoryController::class, 'lowStock'])->middleware('perm:inventory.manage')->name('inventory.low-stock');
+    Route::get('inventory/low-stock', fn (\Illuminate\Http\Request $request) => redirect()->route('admin.reports.low-stock', $request->query(), 301))->middleware('perm:inventory.manage')->name('inventory.low-stock');
     Route::get('mrp', [MrpController::class, 'index'])->middleware('perm:inventory.manage')->name('mrp.index');
 
     Route::get('notifications', [AdminController::class, 'notifications'])->name('notifications.index');
@@ -521,14 +522,38 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::get('finance/reconciliation', [BankReconciliationController::class, 'index'])->middleware('perm:accounting.manage')->name('finance.reconciliation');
     Route::post('finance/reconciliation/import', [BankReconciliationController::class, 'import'])->middleware('perm:accounting.manage')->name('finance.reconciliation.import');
     Route::post('finance/reconciliation', [BankReconciliationController::class, 'update'])->middleware('perm:accounting.manage')->name('finance.reconciliation.update');
-    Route::get('reports/pl', [ReportController::class, 'profitAndLoss'])->middleware('perm:reports.view')->name('reports.pl');
+    Route::get('reports/income-statement', [ReportController::class, 'profitAndLoss'])->middleware('perm:reports.view')->name('reports.pl');
+    Route::get('reports/pl', fn (\Illuminate\Http\Request $request) => redirect()->route('admin.reports.pl', $request->query(), 301));
+    Route::get('reports/operations', [ReportController::class, 'operationsHub'])->middleware('perm:reports.view')->name('reports.operations');
+    Route::get('reports/accountant', [ReportController::class, 'accountantHub'])->middleware('perm:reports.view')->name('reports.accountant');
+    Route::get('reports/costs', [ReportController::class, 'costsHub'])->middleware('perm:reports.view')->name('reports.costs');
+    Route::get('reports/logistics', [ReportController::class, 'logisticsHub'])->middleware('perm:reports.view')->name('reports.logistics');
+    Route::get('reports/sales', [ReportController::class, 'salesHub'])->middleware('perm:reports.view')->name('reports.sales');
+    Route::get('reports/executive', [ReportController::class, 'executiveSummary'])->middleware('perm:reports.view')->name('reports.executive');
+    Route::get('reports/expense-summary', [ReportController::class, 'expenseSummary'])->middleware('perm:reports.view')->name('reports.expense-summary');
+    Route::get('reports/utilities', [ReportController::class, 'utilitiesReport'])->middleware('perm:reports.view')->name('reports.utilities');
+    Route::get('reports/logistics-bills', [ReportController::class, 'logisticsBillsSummary'])->middleware('perm:reports.view')->name('reports.logistics-bills');
+    Route::get('reports/route-costs', [ReportController::class, 'routeCosts'])->middleware('perm:reports.view')->name('reports.route-costs');
+    Route::get('reports/fleet-expenses', [ReportController::class, 'fleetExpensesReport'])->middleware('perm:reports.view')->name('reports.fleet-expenses');
+    Route::get('reports/sales-register', [ReportController::class, 'salesRegister'])->middleware('perm:reports.view')->name('reports.sales-register');
+    Route::get('reports/outstanding-invoices', [ReportController::class, 'outstandingInvoicesReport'])->middleware('perm:reports.view')->name('reports.outstanding-invoices');
+    Route::get('reports/outstanding-bills', [ReportController::class, 'outstandingBillsReport'])->middleware('perm:reports.view')->name('reports.outstanding-bills');
+    Route::get('reports/commissions', [ReportController::class, 'commissionsReport'])->middleware('perm:control.agents')->name('reports.commissions');
+    Route::get('reports/sales-targets', [ReportController::class, 'salesTargetsReport'])->middleware('perm:reports.view')->name('reports.sales-targets');
+    Route::get('reports/low-stock', [ReportController::class, 'lowStockReport'])->middleware('perm:reports.view')->name('reports.low-stock');
+    Route::get('reports/delivery-performance', [ReportController::class, 'deliveryPerformanceReport'])->middleware('perm:reports.view')->name('reports.delivery-performance');
+    Route::get('reports/bank-reconciliation', [ReportController::class, 'bankReconciliationReport'])->middleware('perm:reports.view')->name('reports.bank-reconciliation');
+    Route::get('reports/customer-statement', [ReportController::class, 'customerStatementReport'])->middleware('perm:reports.view')->name('reports.customer-statement');
+    Route::get('reports/supplier-statement', [ReportController::class, 'supplierStatementReport'])->middleware('perm:reports.view')->name('reports.supplier-statement');
+    Route::get('reports/journal-register', [ReportController::class, 'journalRegister'])->middleware('perm:reports.view')->name('reports.journal-register');
     Route::get('reports/manufacturing-schedule', [ReportController::class, 'manufacturingSchedule'])->middleware('perm:reports.view')->name('reports.manufacturing-schedule');
     Route::get('reports/trial-balance', [ReportController::class, 'trialBalance'])->middleware('perm:reports.view')->name('reports.trial-balance');
     Route::get('reports/general-ledger', [ReportController::class, 'generalLedger'])->middleware('perm:reports.view')->name('reports.general-ledger');
     Route::get('reports/inventory-valuation', [ReportController::class, 'inventoryValuation'])->middleware('perm:reports.view')->name('reports.inventory-valuation');
     Route::get('reports/ar-aging', [ReportController::class, 'receivableAging'])->middleware('perm:reports.view')->name('reports.ar-aging');
     Route::get('reports/ap-aging', [ReportController::class, 'payableAging'])->middleware('perm:reports.view')->name('reports.ap-aging');
-    Route::get('reports/vat', [ReportController::class, 'vat'])->middleware('perm:reports.view')->name('reports.vat');
+    Route::get('reports/vat-report', [ReportController::class, 'vat'])->middleware('perm:reports.view')->name('reports.vat');
+    Route::get('reports/vat', fn (\Illuminate\Http\Request $request) => redirect()->route('admin.reports.vat', $request->query(), 301));
     Route::get('reports/vat/export', [ReportController::class, 'vatExport'])->middleware('perm:reports.view')->name('reports.vat.export');
     Route::get('reports/production-variance', [ReportController::class, 'productionVariance'])->middleware('perm:reports.view')->name('reports.production-variance');
     Route::get('reports/batch-trace', [ReportController::class, 'batchTraceLookup'])->middleware('perm:reports.view')->name('reports.batch-trace');
@@ -542,11 +567,16 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::get('webhooks', [WebhookController::class, 'index'])->middleware('perm:system.settings')->name('webhooks.index');
     Route::post('webhooks', [WebhookController::class, 'store'])->middleware('perm:system.settings')->name('webhooks.store');
     Route::delete('webhooks/{webhook}', [WebhookController::class, 'destroy'])->middleware('perm:system.settings')->name('webhooks.destroy');
-    Route::get('reports/bs', [ReportController::class, 'balanceSheet'])->middleware('perm:reports.view')->name('reports.bs');
-    Route::get('reports/cashflow', [ReportController::class, 'cashflow'])->middleware('perm:reports.view')->name('reports.cashflow');
-    Route::get('reports/agents', [ReportController::class, 'agentPerformance'])->middleware('perm:reports.view')->name('reports.agents');
-    Route::get('reports/production', [ReportController::class, 'productionSummary'])->middleware('perm:reports.view')->name('reports.production');
-    Route::get('reports/payroll', [ReportController::class, 'payrollSummary'])->middleware('perm:reports.view')->name('reports.payroll');
+    Route::get('reports/balance-sheet', [ReportController::class, 'balanceSheet'])->middleware('perm:reports.view')->name('reports.bs');
+    Route::get('reports/bs', fn (\Illuminate\Http\Request $request) => redirect()->route('admin.reports.bs', $request->query(), 301));
+    Route::get('reports/cash-flow', [ReportController::class, 'cashflow'])->middleware('perm:reports.view')->name('reports.cashflow');
+    Route::get('reports/cashflow', fn (\Illuminate\Http\Request $request) => redirect()->route('admin.reports.cashflow', $request->query(), 301));
+    Route::get('reports/agent-performance', [ReportController::class, 'agentPerformance'])->middleware('perm:reports.view')->name('reports.agents');
+    Route::get('reports/agents', fn (\Illuminate\Http\Request $request) => redirect()->route('admin.reports.agents', $request->query(), 301));
+    Route::get('reports/production-summary', [ReportController::class, 'productionSummary'])->middleware('perm:reports.view')->name('reports.production');
+    Route::get('reports/production', fn (\Illuminate\Http\Request $request) => redirect()->route('admin.reports.production', $request->query(), 301));
+    Route::get('reports/payroll-summary', [ReportController::class, 'payrollSummary'])->middleware('perm:reports.view')->name('reports.payroll');
+    Route::get('reports/payroll', fn (\Illuminate\Http\Request $request) => redirect()->route('admin.reports.payroll', $request->query(), 301));
     Route::get('salary-distributions', [SalaryDistributionController::class, 'index'])->middleware('perm:accounting.manage')->name('salary-distributions.index');
     Route::get('salary-distributions/create', [SalaryDistributionController::class, 'create'])->middleware('perm:accounting.manage')->name('salary-distributions.create');
     Route::post('salary-distributions', [SalaryDistributionController::class, 'store'])->middleware('perm:accounting.manage')->name('salary-distributions.store');
@@ -558,6 +588,7 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::delete('finance/{invoice}', [FinanceController::class, 'destroy'])->middleware('perm:accounting.manage')->name('finance.destroy');
     Route::delete('finance/receipts/{receipt}', [FinanceController::class, 'destroyReceipt'])->middleware('perm:accounting.manage')->name('finance.receipts.destroy');
     Route::delete('finance/credit-notes/{creditNote}', [FinanceController::class, 'destroyCreditNote'])->middleware('perm:accounting.manage')->name('finance.credit-notes.destroy');
+    Route::post('expenses/sync-ledger', [ExpenseController::class, 'syncLedger'])->middleware('perm:accounting.manage')->name('expenses.sync-ledger');
     Route::get('expenses', [ExpenseController::class, 'index'])->middleware('perm:accounting.manage')->name('expenses.index');
     Route::get('expenses/create', [ExpenseController::class, 'create'])->middleware('perm:accounting.manage')->name('expenses.create');
     Route::post('expenses', [ExpenseController::class, 'store'])->middleware('perm:accounting.manage')->name('expenses.store');

@@ -1,80 +1,57 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="erp-page">
-    <x-admin.page-header
-        icon="ledger"
-        title="Trial balance"
-        :subtitle="$from->format('d M Y') . ' – ' . $to->format('d M Y')"
-    >
-        <x-slot:actions>
-            <div class="flex flex-wrap items-center gap-2">
-                @include('admin.finance.partials.export_center_button', ['module' => 'trial-balance', 'from' => $from, 'to' => $to])
-                @include('admin.finance.partials.print_button')
+<x-report.page
+    page-class="tb-page"
+    eyebrow="Accounting reports"
+    title="Trial balance"
+    subtitle="Every account with opening balance, period movement, and closing balance."
+    :period="$periodLabel"
+>
+    <x-slot:actions>
+        <x-report.header-actions
+            :range-action="route('admin.reports.trial-balance')"
+            :range="$range"
+            :from="request('from', $from->toDateString())"
+            :to="request('to', $to->toDateString())"
+            :range-options="$rangeOptions"
+            :period-label="$periodLabel"
+        >
+            <x-report.hub-link category="accountant" />
+            <x-report.export-actions module="trial-balance" :from="$from" :to="$to" />
+        </x-report.header-actions>
+    </x-slot:actions>
+
+    @if(!$isBalanced)
+        <x-slot:alerts>
+            <div class="rounded-xl border border-amber-200 bg-amber-50/90 px-4 py-3 text-sm text-amber-950 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100 print:hidden">
+                <span class="font-semibold">Books are out of balance</span>
+                <span class="mt-0.5 block opacity-90">Period or closing debits do not equal credits — review journals before month-end.</span>
             </div>
-        </x-slot:actions>
-    </x-admin.page-header>
+        </x-slot:alerts>
+    @endif
 
-    <x-admin.filter-panel method="GET">
-        <div class="erp-field">
-            <label class="erp-label" for="tb-from">From</label>
-            <input id="tb-from" type="date" name="from" value="{{ $from->toDateString() }}" class="erp-input">
-        </div>
-        <div class="erp-field">
-            <label class="erp-label" for="tb-to">To</label>
-            <input id="tb-to" type="date" name="to" value="{{ $to->toDateString() }}" class="erp-input">
-        </div>
-        <button type="submit" class="erp-btn-primary">Apply</button>
-    </x-admin.filter-panel>
+    @isset($totals)
+        <x-slot:kpis>
+            <x-dashboard.kpi label="Period debits" :value="number_format($totals['period_debit'], 2)" hint="Movement in range" />
+            <x-dashboard.kpi label="Period credits" :value="number_format($totals['period_credit'], 2)" hint="Movement in range" />
+            <x-dashboard.kpi
+                label="Books status"
+                :tone="$isBalanced ? 'success' : 'danger'"
+                :value="$isBalanced ? 'Balanced' : 'Out of balance'"
+                hint="Debits must equal credits"
+            />
+            <x-dashboard.kpi label="Closing debits" :value="number_format($totals['closing_debit'], 2)" :hint="'Closing credits: ' . number_format($totals['closing_credit'], 2)" />
+        </x-slot:kpis>
+    @endisset
 
-    <x-admin.table-card title="Account balances">
-        <table class="erp-table">
-            <thead>
-                <tr>
-                    <th>Account</th>
-                    <th class="is-right">Opening DR</th>
-                    <th class="is-right">Opening CR</th>
-                    <th class="is-right">Period DR</th>
-                    <th class="is-right">Period CR</th>
-                    <th class="is-right">Closing DR</th>
-                    <th class="is-right">Closing CR</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach($rows as $row)
-                    <tr class="{{ !empty($row['is_subtotal']) ? 'font-semibold bg-gray-50/80 dark:bg-gray-800/40' : '' }}">
-                        <td style="padding-left: {{ 1 + (($row['level'] ?? 0) * 1.25) }}rem">
-                            @if(empty($row['is_group']))
-                                <a href="{{ route('admin.reports.general-ledger', ['account_id' => $row['id'], 'from' => $from->toDateString(), 'to' => $to->toDateString()]) }}" class="erp-link">
-                                    {{ $row['code'] }} — {{ $row['name'] }}
-                                </a>
-                            @else
-                                {{ $row['code'] }} — {{ $row['name'] }}
-                            @endif
-                        </td>
-                        <td class="is-right">{{ number_format($row['opening_debit'], 2) }}</td>
-                        <td class="is-right">{{ number_format($row['opening_credit'], 2) }}</td>
-                        <td class="is-right">{{ number_format($row['period_debit'], 2) }}</td>
-                        <td class="is-right">{{ number_format($row['period_credit'], 2) }}</td>
-                        <td class="is-right">{{ number_format($row['closing_debit'], 2) }}</td>
-                        <td class="is-right">{{ number_format($row['closing_credit'], 2) }}</td>
-                    </tr>
-                @endforeach
-            </tbody>
-            @isset($totals)
-                <tfoot class="bg-gray-50 font-semibold dark:bg-gray-800/50">
-                    <tr>
-                        <td>Totals</td>
-                        <td class="is-right">{{ number_format($totals['opening_debit'], 2) }}</td>
-                        <td class="is-right">{{ number_format($totals['opening_credit'], 2) }}</td>
-                        <td class="is-right">{{ number_format($totals['period_debit'], 2) }}</td>
-                        <td class="is-right">{{ number_format($totals['period_credit'], 2) }}</td>
-                        <td class="is-right">{{ number_format($totals['closing_debit'], 2) }}</td>
-                        <td class="is-right">{{ number_format($totals['closing_credit'], 2) }}</td>
-                    </tr>
-                </tfoot>
-            @endisset
-        </table>
-    </x-admin.table-card>
-</div>
+    @include('admin.finance.partials.trial-balance-statement', [
+        'tree' => $tree,
+        'from' => $from,
+        'to' => $to,
+        'totals' => $totals ?? null,
+        'periodLabel' => $periodLabel,
+        'currencyCode' => $currencyCode,
+    ])
+</x-report.page>
 @endsection

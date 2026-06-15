@@ -78,9 +78,11 @@
         'colors' => ['brand_primary_color', 'brand_secondary_color', 'text_color_light', 'text_color_dark', 'default_theme_mode'],
         'sms' => ['sms_provider', 'sms_base_url', 'sms_api_key', 'sms_api_secret', 'sms_sender_id'],
         'smtp' => ['smtp_host', 'smtp_port', 'smtp_encryption', 'smtp_username', 'smtp_password', 'mail_from_address', 'mail_from_name'],
-        'database' => ['backup', 'filename', 'confirm_restore', 'restore'],
+        'database' => ['backup', 'backup_file', 'filename', 'confirm_restore', 'restore', 'restore_after_import'],
     ];
-    $initialSettingsTab = 'brand';
+    $initialSettingsTab = in_array(request('tab'), ['brand', 'colors', 'currency', 'sms', 'smtp', 'database'], true)
+        ? request('tab')
+        : 'brand';
 
     if (($errors ?? null) && $errors->any()) {
         $errorKeys = array_keys($errors->getMessages());
@@ -134,14 +136,30 @@
     </div>
 
     @if($errors->any())
+        @php
+            $nonBackupErrors = collect($errors->getMessages())->except(['backup', 'backup_file']);
+        @endphp
+        @if($errors->has('backup') || $errors->has('backup_file'))
+            <div class="rounded-xl border border-error-200 bg-error-50 px-4 py-3 text-sm text-error-700 dark:border-error-500/30 dark:bg-error-500/10 dark:text-error-300">
+                <div class="font-semibold">Database backup</div>
+                @if($errors->has('backup'))
+                    <p class="mt-1">{{ $errors->first('backup') }}</p>
+                @endif
+                @if($errors->has('backup_file'))
+                    <p class="mt-1">{{ $errors->first('backup_file') }}</p>
+                @endif
+            </div>
+        @endif
+        @if($nonBackupErrors->isNotEmpty())
         <div class="rounded-xl border border-error-200 bg-error-50 px-4 py-3 text-sm text-error-700 dark:border-error-500/30 dark:bg-error-500/10 dark:text-error-300">
             <div class="font-semibold">Please review the form.</div>
             <ul class="mt-2 space-y-1">
-                @foreach($errors->all() as $error)
+                @foreach($nonBackupErrors->flatten() as $error)
                     <li>{{ $error }}</li>
                 @endforeach
             </ul>
         </div>
+        @endif
     @endif
 
     <div class="rounded-2xl border border-gray-200 bg-white p-2 shadow-theme-xs dark:border-gray-800 dark:bg-gray-900">
@@ -611,9 +629,9 @@
     <section x-show="activeTab === 'database'" x-cloak class="rounded-2xl border border-gray-200 bg-white p-6 shadow-theme-xs dark:border-gray-800 dark:bg-gray-900">
         <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div>
-                <h2 class="text-sm font-semibold text-gray-900 dark:text-white">Database backup and restore</h2>
+                <h2 class="text-sm font-semibold text-gray-900 dark:text-white">Database backup, import, and restore</h2>
                 <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                    Create SQL snapshots of the live database, download them, and restore the system from a saved backup.
+                    Export SQL snapshots, import dumps from another server, download them, or restore when you need to roll back.
                 </p>
             </div>
 
@@ -626,8 +644,60 @@
             </form>
         </div>
 
+        <div class="mt-5 rounded-2xl border border-brand-200 bg-brand-50 px-4 py-3 text-sm text-brand-900 dark:border-brand-500/20 dark:bg-brand-500/10 dark:text-brand-100">
+            <div class="font-semibold">Automatic backups</div>
+            <p class="mt-1">{{ $backupSchedule['label'] }} · keep {{ $backupSchedule['retention_days'] }} days</p>
+            <p class="mt-2 text-xs text-brand-800/80 dark:text-brand-200/80">
+                Standard for ERP production: <strong>daily</strong> at night (default 02:00). Weekly is fine for staging/dev.
+                Requires server cron: <code class="rounded bg-white/70 px-1 py-0.5 dark:bg-gray-900/50">* * * * * php artisan schedule:run</code>
+            </p>
+        </div>
+
         <div class="mt-5 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200">
-            Restoring a backup will replace the current database state. Use restore only when you intentionally want to roll back to a previous snapshot.
+            Restoring a backup replaces the entire database. Import saves the file first; use restore only when you intentionally want to roll back.
+            @unless(app()->environment(['local', 'testing']))
+                <span class="mt-2 block font-semibold">Restore is disabled in production — you can still import and download SQL files here.</span>
+            @endunless
+        </div>
+
+        <div class="mt-6 rounded-2xl border border-gray-200 bg-gray-50 p-5 dark:border-gray-800 dark:bg-gray-950/40">
+            <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Import SQL file</h3>
+            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                Upload a <code class="rounded bg-white px-1 py-0.5 text-[11px] dark:bg-gray-900">.sql</code> dump from your computer or another server (max 500 MB).
+            </p>
+
+            <form method="POST" action="{{ route('admin.settings.backups.import') }}" enctype="multipart/form-data" class="mt-4 space-y-4">
+                @csrf
+                <div>
+                    <label for="backup_file" class="erp-label">SQL dump file</label>
+                    <input type="file" name="backup_file" id="backup_file" accept=".sql,text/plain" required
+                           class="mt-1.5 block w-full text-sm text-gray-600 file:mr-4 file:rounded-lg file:border-0 file:bg-brand-500 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-brand-600 dark:text-gray-300">
+                    @error('backup_file')
+                        <p class="mt-1 text-xs text-error-600">{{ $message }}</p>
+                    @enderror
+                </div>
+
+                @if(app()->environment(['local', 'testing']))
+                    <label class="flex items-start gap-3 text-sm text-gray-700 dark:text-gray-300">
+                        <input type="checkbox" name="restore_after_import" value="1" class="mt-1 rounded border-gray-300 text-brand-600 focus:ring-brand-500 dark:border-gray-600"
+                               @checked(old('restore_after_import'))>
+                        <span>
+                            <span class="font-medium text-gray-900 dark:text-white">Restore database immediately after import</span>
+                            <span class="mt-1 block text-xs text-gray-500 dark:text-gray-400">Overwrites all current data. A safety backup is created first.</span>
+                        </span>
+                    </label>
+                    <label class="flex items-start gap-3 text-sm text-gray-700 dark:text-gray-300">
+                        <input type="checkbox" name="confirm_restore" value="1" class="mt-1 rounded border-gray-300 text-brand-600 focus:ring-brand-500 dark:border-gray-600"
+                               @checked(old('confirm_restore'))>
+                        <span>I understand this will replace the live database if restore is checked above.</span>
+                    </label>
+                @endif
+
+                <button type="submit"
+                        class="inline-flex items-center rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 shadow-theme-xs hover:border-brand-400 hover:text-brand-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:border-brand-500 dark:hover:text-brand-300">
+                    Import SQL file
+                </button>
+            </form>
         </div>
 
         <div class="mt-6 overflow-hidden rounded-2xl border border-gray-200 dark:border-gray-800">
@@ -646,7 +716,13 @@
                             <tr>
                                 <td class="px-4 py-4 align-top">
                                     <div class="font-medium text-gray-900 dark:text-white">{{ $backup['filename'] }}</div>
-                                    <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">SQL snapshot stored in local backup storage.</div>
+                                    <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                        @if(str_starts_with($backup['filename'], 'imported-'))
+                                            Imported SQL snapshot.
+                                        @else
+                                            SQL snapshot stored on this server.
+                                        @endif
+                                    </div>
                                 </td>
                                 <td class="px-4 py-4 align-top text-gray-600 dark:text-gray-300">
                                     {{ $backup['last_modified_at']->format('d M Y, h:i A') }}
@@ -660,6 +736,7 @@
                                            class="inline-flex items-center rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-700 hover:border-brand-400 hover:text-brand-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:border-brand-500 dark:hover:text-brand-300">
                                             Download
                                         </a>
+                                        @if(app()->environment(['local', 'testing']))
                                         <form method="POST" action="{{ route('admin.settings.backups.restore') }}"
                                               onsubmit="return confirm('Restore this backup and overwrite the current database?');">
                                             @csrf
@@ -668,6 +745,17 @@
                                             <button type="submit"
                                                     class="inline-flex items-center rounded-lg border border-error-200 bg-error-50 px-3 py-2 text-xs font-semibold text-error-700 hover:bg-error-100 dark:border-error-500/20 dark:bg-error-500/10 dark:text-error-300">
                                                 Restore
+                                            </button>
+                                        </form>
+                                        @endif
+                                        <form method="POST" action="{{ route('admin.settings.backups.delete') }}"
+                                              onsubmit="return confirm('Delete this backup file permanently?');">
+                                            @csrf
+                                            <input type="hidden" name="filename" value="{{ $backup['filename'] }}">
+                                            <input type="hidden" name="confirm_delete" value="1">
+                                            <button type="submit"
+                                                    class="inline-flex items-center rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-600 hover:border-error-300 hover:text-error-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400">
+                                                Delete
                                             </button>
                                         </form>
                                     </div>

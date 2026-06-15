@@ -212,12 +212,12 @@
         </div>
 
         {{-- Total Preview (Read-only) --}}
-        <div class="flex flex-col gap-1.5">
+        <div class="flex flex-col gap-1.5" data-currency-prefix="{{ config('app.currency', 'BDT') }} ">
             <label class="text-theme-sm font-medium text-gray-700 dark:text-gray-300">
                 Total compensation
             </label>
-            <div class="h-11 w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-theme-sm font-semibold text-brand-700 dark:border-gray-700 dark:bg-gray-800/50 dark:text-brand-400 flex items-center">
-                ${{ number_format(
+            <div class="total-compensation h-11 w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-theme-sm font-semibold text-brand-700 dark:border-gray-700 dark:bg-gray-800/50 dark:text-brand-400 flex items-center">
+                {{ config('app.currency', 'BDT') }} {{ number_format(
                     (old('base_salary', $distribution->base_salary ?? 0)) +
                     (old('bonus', $distribution->bonus ?? 0)) +
                     (old('ta_allowances', $distribution->ta_allowances ?? 0)) +
@@ -351,36 +351,3 @@
         </p>
     </div>
 </div>
-
-@push('scripts')
-<script>
-    // Auto-calculate total compensation
-    document.addEventListener('DOMContentLoaded', function() {
-        const inputs = ['base_salary', 'bonus', 'ta_allowances', 'da_allowances', 'commission', 'overtime_pay'];
-        const totalDisplay = document.querySelector('.total-compensation');
-        
-        function calculateTotal() {
-            let total = 0;
-            inputs.forEach(id => {
-                const input = document.getElementById(id);
-                if (input) {
-                    total += parseFloat(input.value) || 0;
-                }
-            });
-            if (totalDisplay) {
-                totalDisplay.textContent = `$${total.toFixed(2)}`;
-            }
-        }
-        
-        inputs.forEach(id => {
-            const input = document.getElementById(id);
-            if (input) {
-                input.addEventListener('input', calculateTotal);
-            }
-        });
-        
-        // Initial calculation
-        calculateTotal();
-    });
-</script>
-@endpush

@@ -8,7 +8,10 @@ use App\Models\CustomerGift;
 use App\Models\Expense;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
+use App\Models\JournalEntry;
 use App\Models\JournalEntryLine;
+use App\Models\LogisticsBill;
+use App\Services\ProductionVarianceService;
 use App\Models\LedgerEntry;
 use App\Models\ProductionRun;
 use App\Models\PurchaseBill;
@@ -20,82 +23,42 @@ use Illuminate\Support\Collection;
 
 class FinancialReportExportService
 {
+    public function __construct(
+        protected HierarchicalReportService $reports,
+        protected IncomeStatementPresenter $presenter
+    ) {
+    }
+
     public function profitAndLoss(Request $request): Collection
     {
         [$from, $to] = $this->resolvePeriod($request);
         $currencyCode = config('app.currency', 'BDT');
+        $statement = $this->reports->profitAndLoss($from, $to);
+        $periodLabel = $from->format('d M Y') . ' – ' . $to->format('d M Y');
 
-        $entries = LedgerEntry::whereBetween('created_at', [$from, $to])->get();
-
-        $sales = (float) $entries->where('account', 'Sales Revenue')->sum('credit');
-        $returns = (float) $entries->where('account', 'Sales Returns')->sum('debit');
-        $commissions = (float) $entries->where('account', 'Commission Expense')->sum('debit');
-        $otherExpenses = $this->operatingExpensesTotal($from, $to);
-        $payroll = $this->payrollTotal($from, $to);
-
-        $netSales = $sales - $returns;
-
-        $invoiceItems = InvoiceItem::with(['invoice', 'product'])
-            ->whereHas('invoice', function ($q) use ($from, $to) {
-                $q->whereDate('issued_at', '>=', $from->toDateString())
-                    ->whereDate('issued_at', '<=', $to->toDateString());
-            })
-            ->get();
-
-        $costByProduct = ProductionRun::whereNotNull('material_unit_cost')
-            ->get()
-            ->groupBy('product_id')
-            ->map(fn ($group) => (float) $group->avg('material_unit_cost'));
-
-        $cogsEstimated = 0.0;
-        foreach ($invoiceItems as $item) {
-            if (! $item->product_id) {
-                continue;
-            }
-            $unitCost = $costByProduct->get($item->product_id);
-            if ($unitCost === null) {
-                continue;
-            }
-            $cogsEstimated += $unitCost * (float) $item->quantity;
-        }
-
-        $cogsGl = (float) LedgerEntry::where('account', config('accounting.accounts.cogs', 'Cost of Goods Sold'))
-            ->whereBetween('created_at', [$from, $to])
-            ->sum('debit');
-
-        $cogs = $cogsGl > 0 ? $cogsGl : $cogsEstimated;
-        $grossProfit = $netSales - $cogs;
-        $profit = $grossProfit - $commissions - $otherExpenses - $payroll;
+        $presentation = $this->presenter->present(
+            $statement,
+            $periodLabel,
+            $currencyCode,
+            $from,
+            $to
+        );
 
         $rows = collect([
-            ['Sales revenue', $this->money($sales)],
-            ['Sales returns', $this->money($returns)],
-            ['Net sales', $this->money($netSales)],
-            ['Cost of goods sold', $this->money($cogs)],
-            ['Gross profit', $this->money($grossProfit)],
-            ['Commission expense', $this->money($commissions)],
-            ['Operating expenses', $this->money($otherExpenses)],
-            ['Payroll', $this->money($payroll)],
-            ['Net profit', $this->money($profit)],
-            ['', ''],
-            ['Period', $from->format('d M Y') . ' – ' . $to->format('d M Y')],
-            ['Currency', $currencyCode],
-            ['', ''],
-            ['Account breakdown', 'Net (' . $currencyCode . ')'],
+            ['Income statement', 'Amount (' . $currencyCode . ')', '% of income'],
+            ['Period', $periodLabel, ''],
+            ['', '', ''],
         ]);
 
-        $accountRows = $entries->groupBy('account')->map(function (Collection $group, string $account) {
-            $debit = (float) $group->sum('debit');
-            $credit = (float) $group->sum('credit');
+        foreach ($presentation['rows'] as $row) {
+            $indent = str_repeat('  ', (int) ($row['indent'] ?? 0));
+            $label = $indent . ($row['code'] ? $row['code'] . ' ' : '') . ($row['label'] ?? '');
 
-            return [
-                'account' => $account,
-                'net' => $credit - $debit,
-            ];
-        })->sortBy('account');
-
-        foreach ($accountRows as $row) {
-            $rows->push([$row['account'], $this->money($row['net'])]);
+            $rows->push([
+                $label,
+                $row['amount_display'] ?? '',
+                $row['pct_display'] ?? '',
+            ]);
         }
 
         return $rows->values();
@@ -455,6 +418,302 @@ class FinancialReportExportService
                 ];
             })
             ->values();
+    }
+
+    public function expenseSummary(Request $request): Collection
+    {
+        [$from, $to] = $this->resolvePeriod($request);
+        $data = app(OperationalReportService::class)->expenseSummary($from, $to);
+
+        return $data['rows']->map(fn (array $row) => [
+            $row['code'],
+            $row['name'],
+            (string) $row['line_count'],
+            $this->money($row['total']),
+        ]);
+    }
+
+    public function utilitiesReport(Request $request): Collection
+    {
+        [$from, $to] = $this->resolvePeriod($request);
+        $data = app(OperationalReportService::class)->utilitiesReport($from, $to);
+
+        return collect($data['lines'] ?? [])->map(fn (Expense $expense) => [
+            $expense->date?->format('Y-m-d') ?? '—',
+            $expense->description ?? '—',
+            $expense->reference ?? '—',
+            $this->money((float) $expense->amount),
+            ucfirst((string) $expense->status),
+        ]);
+    }
+
+    public function logisticsBills(Request $request): Collection
+    {
+        [$from, $to] = $this->resolvePeriod($request);
+        $data = app(OperationalReportService::class)->logisticsBillsSummary($from, $to);
+
+        return collect($data['bills'] ?? [])->map(fn (LogisticsBill $bill) => [
+            $bill->bill_date?->format('Y-m-d') ?? '—',
+            $bill->number ?? $bill->id,
+            $bill->transportCarrier?->name ?? '—',
+            $this->money((float) $bill->net_total + (float) $bill->vat_amount),
+            $this->money((float) $bill->outstanding),
+            ucfirst(str_replace('_', ' ', (string) $bill->status)),
+        ]);
+    }
+
+    public function routeCosts(Request $request): Collection
+    {
+        [$from, $to] = $this->resolvePeriod($request);
+        $data = app(OperationalReportService::class)->routeCosts($from, $to);
+
+        return $data['rows']->map(fn (array $row) => [
+            $row['route']->name ?? '—',
+            $this->money($row['fleet_cost']),
+            $this->money($row['carrier_cost']),
+            $this->money($row['logistics_cost']),
+            $this->money($row['zone_revenue']),
+            $this->money($row['margin_after_logistics']),
+        ]);
+    }
+
+    public function fleetExpenses(Request $request): Collection
+    {
+        [$from, $to] = $this->resolvePeriod($request);
+        $data = app(OperationalReportService::class)->fleetExpenseSummary($from, $to);
+
+        return $data['rows']->map(fn (array $row) => [
+            $row['label'],
+            (string) $row['count'],
+            $this->money($row['total']),
+        ]);
+    }
+
+    public function commissionSummary(Request $request): Collection
+    {
+        $data = app(OperationalReportService::class)->commissionSummary($request);
+
+        return $data['rows']->map(fn (array $row) => [
+            $row['agent']->code ?? $row['agent']->id,
+            $row['agent']->name ?? '—',
+            $this->money($row['sales']),
+            $this->money($row['commission']),
+            $this->money($row['rate']),
+        ]);
+    }
+
+    public function salesTargets(Request $request): Collection
+    {
+        [$from, $to] = $this->resolvePeriod($request);
+        $data = app(OperationalReportService::class)->salesTargets($from, $to);
+
+        return $data['rows']->map(fn (array $row) => [
+            $row['name'],
+            $this->money($row['target_amount']),
+            $this->money($row['achieved']),
+            $this->money($row['gap']),
+            $this->money($row['progress']),
+        ]);
+    }
+
+    public function lowStock(Request $request): Collection
+    {
+        $data = app(OperationalReportService::class)->lowStock();
+
+        return $data['rows']->map(fn (array $row) => [
+            $row['product']->sku ?? '—',
+            $row['product']->name ?? '—',
+            $this->money($row['available']),
+            $this->money($row['reorder_level']),
+            $this->money($row['gap']),
+        ]);
+    }
+
+    public function deliveryPerformance(Request $request): Collection
+    {
+        [$from, $to] = $this->resolvePeriod($request);
+        $data = app(OperationalReportService::class)->deliveryPerformance($from, $to);
+
+        return collect($data['deliveries'] ?? [])->map(fn ($delivery) => [
+            $delivery->created_at?->format('Y-m-d') ?? '—',
+            $delivery->order?->number ?? $delivery->order_id,
+            $delivery->order?->agent?->name ?? '—',
+            $delivery->route?->name ?? '—',
+            ucfirst((string) $delivery->status),
+        ]);
+    }
+
+    public function bankReconciliation(Request $request): Collection
+    {
+        [$from, $to] = $this->resolvePeriod($request);
+        $data = app(OperationalReportService::class)->bankReconciliationSummary($from, $to);
+        $rows = collect();
+
+        foreach ($data['receipts'] as $receipt) {
+            $rows->push([
+                'Receipt',
+                $receipt->received_at?->format('Y-m-d') ?? '—',
+                $receipt->invoice?->number ?? '—',
+                $receipt->invoice?->order?->agent?->name ?? '—',
+                $this->money((float) $receipt->amount),
+            ]);
+        }
+
+        foreach ($data['payments'] as $payment) {
+            $rows->push([
+                'Payment',
+                $payment->paid_at?->format('Y-m-d') ?? '—',
+                $payment->bill?->number ?? '—',
+                $payment->bill?->supplier?->name ?? '—',
+                $this->money((float) $payment->amount),
+            ]);
+        }
+
+        return $rows->values();
+    }
+
+    public function journalRegister(Request $request): Collection
+    {
+        [$from, $to] = $this->resolvePeriod($request);
+
+        return JournalEntry::query()
+            ->withSum('lines as debit_total', 'debit')
+            ->withSum('lines as credit_total', 'credit')
+            ->where('status', 'posted')
+            ->whereDate('entry_date', '>=', $from->toDateString())
+            ->whereDate('entry_date', '<=', $to->toDateString())
+            ->orderBy('entry_date')
+            ->get()
+            ->map(fn (JournalEntry $entry) => [
+                $entry->entry_date?->format('Y-m-d') ?? '—',
+                $entry->number ?? $entry->id,
+                $entry->description ?? '—',
+                $this->money((float) ($entry->debit_total ?? 0)),
+                $this->money((float) ($entry->credit_total ?? 0)),
+            ]);
+    }
+
+    public function customerStatement(Request $request): Collection
+    {
+        [$from, $to] = $this->resolvePeriod($request);
+        $agentId = $request->integer('agent_id') ?: null;
+        $data = app(OperationalReportService::class)->customerStatement($from, $to, $agentId);
+
+        return $data['rows']->map(fn (array $row) => [
+            $row['date'] instanceof Carbon ? $row['date']->format('Y-m-d') : '—',
+            $row['type'],
+            $row['reference'],
+            $this->money($row['debit']),
+            $this->money($row['credit']),
+        ]);
+    }
+
+    public function supplierStatement(Request $request): Collection
+    {
+        [$from, $to] = $this->resolvePeriod($request);
+        $supplierId = $request->integer('supplier_id') ?: null;
+        $data = app(OperationalReportService::class)->supplierStatement($from, $to, $supplierId);
+
+        return $data['rows']->map(fn (array $row) => [
+            $row['date'] instanceof Carbon ? $row['date']->format('Y-m-d') : '—',
+            $row['type'],
+            $row['reference'],
+            $this->money($row['debit']),
+            $this->money($row['credit']),
+        ]);
+    }
+
+    public function executiveSummary(Request $request): Collection
+    {
+        return $this->profitAndLoss($request);
+    }
+
+    public function productionSummary(Request $request): Collection
+    {
+        [$from, $to] = $this->resolvePeriod($request);
+        $runs = ProductionRun::with('product')
+            ->whereBetween('created_at', [$from, $to])
+            ->where('qc_status', 'approved')
+            ->get()
+            ->groupBy('product_id');
+
+        return $runs->map(function (Collection $group) {
+            $product = $group->first()->product;
+
+            return [
+                $product?->name ?? '—',
+                (string) $group->count(),
+                $this->money((float) $group->sum('quantity')),
+                $this->money((float) $group->avg('material_unit_cost')),
+            ];
+        })->values();
+    }
+
+    public function productionVariance(Request $request): Collection
+    {
+        [$from, $to] = $this->resolvePeriod($request);
+        $rows = app(ProductionVarianceService::class)->report($from, $to);
+
+        return $rows->map(fn (array $row) => [
+            $row['product_name'] ?? '—',
+            $row['run_id'] ?? '—',
+            $this->money($row['standard_unit_cost'] ?? 0),
+            $this->money($row['actual_unit_cost'] ?? 0),
+            $this->money($row['variance_total'] ?? 0),
+        ]);
+    }
+
+    public function payrollSummary(Request $request): Collection
+    {
+        [$from, $to] = $this->resolvePeriod($request);
+
+        return SalaryDistribution::with('employee')
+            ->whereBetween('period_start', [$from, $to])
+            ->get()
+            ->map(fn (SalaryDistribution $row) => [
+                $row->employee?->name ?? '—',
+                $this->money((float) $row->base_salary),
+                $this->money((float) $row->commission),
+                $this->money((float) $row->bonus),
+                $this->money((float) $row->base_salary + (float) $row->bonus + (float) $row->ta_allowances + (float) $row->da_allowances + (float) $row->commission),
+            ]);
+    }
+
+    public function agentPerformance(Request $request): Collection
+    {
+        [$from, $to] = $this->resolvePeriod($request);
+        $invoices = Invoice::with(['order.agent', 'receipts', 'creditNotes'])
+            ->whereBetween('issued_at', [$from, $to])
+            ->get();
+
+        return $invoices
+            ->filter(fn (Invoice $invoice) => $invoice->order?->agent)
+            ->groupBy(fn (Invoice $invoice) => $invoice->order->agent_id)
+            ->map(function (Collection $group) use ($from, $to) {
+                $agent = $group->first()->order->agent;
+                $sales = $group->sum(fn (Invoice $invoice) => $invoice->netSalesAfterCreditsInRange($from, $to));
+                $collections = $group->sum(fn (Invoice $invoice) => $invoice->receiptsTotalInRange($from, $to));
+
+                return [
+                    $agent->name ?? '—',
+                    $this->money($sales),
+                    $this->money($collections),
+                    $this->money(max(0, $sales - $collections)),
+                ];
+            })
+            ->values();
+    }
+
+    public function inventoryValuation(Request $request): Collection
+    {
+        $summary = app(InventoryCostingService::class)->valuationSummary();
+
+        return collect($summary['rows'] ?? [])->map(fn (array $line) => [
+            $line['product']?->name ?? '—',
+            $line['warehouse']?->name ?? '—',
+            $this->money($line['quantity'] ?? 0),
+            $this->money($line['total_value'] ?? 0),
+        ]);
     }
 
     /**
