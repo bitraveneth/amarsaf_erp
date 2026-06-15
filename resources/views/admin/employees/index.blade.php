@@ -1,40 +1,22 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="space-y-8">
-    <!-- Header with gradient -->
-    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-            <div class="flex items-center gap-3">
-                <div class="relative">
-                    <div class="absolute -inset-1 bg-gradient-to-r from-brand-500 to-brand-600 rounded-xl blur opacity-20"></div>
-                    <div class="relative flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-brand-600 text-white shadow-lg">
-                        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
-                        </svg>
-                    </div>
-                </div>
-                <div>
-                    <h1 class="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
-                        Employees
-                    </h1>
-                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                        Manage employee profiles, contact details, and documents
-                    </p>
-                </div>
-            </div>
-        </div>
-        
-        <a href="{{ route('admin.employees.create') }}" 
-           class="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-brand-500 to-brand-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md hover:from-brand-600 hover:to-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500/50 transition-all duration-200">
-            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/>
-            </svg>
-            Add Employee
-        </a>
-    </div>
-
-    <!-- Status Message -->
+<div class="space-y-6">
+    <x-admin.page-header
+        title="Employees"
+        subtitle="Manage employee profiles, contact details, and documents."
+        icon="default"
+    >
+        <x-slot:actions>
+            <a href="{{ route('admin.employees.create') }}"
+               class="erp-btn-primary inline-flex items-center gap-2">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/>
+                </svg>
+                Add employee
+            </a>
+        </x-slot:actions>
+    </x-admin.page-header>
 
     @if($employees->isNotEmpty())
         @php
@@ -44,122 +26,32 @@
             $withEmail = $employees->filter(fn($e) => !empty($e->work_email))->count();
         @endphp
 
-        <!-- Summary Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
-            <div class="relative overflow-hidden rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition-all hover:shadow-md dark:border-gray-800 dark:bg-gray-900">
-                <div class="absolute right-0 top-0 h-20 w-20 translate-x-6 -translate-y-6 opacity-5">
-                    <svg class="h-full w-full text-gray-900 dark:text-white" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
-                    </svg>
-                </div>
-                <div class="relative">
-                    <div class="flex items-center justify-between">
-                        <span class="text-sm font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Total Employees</span>
-                        <div class="rounded-lg bg-brand-100 p-2 dark:bg-brand-900/30">
-                            <svg class="h-4 w-4 text-brand-700 dark:text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                            </svg>
-                        </div>
-                    </div>
-                    <p class="mt-3 text-3xl font-bold text-gray-900 dark:text-white">{{ $totalEmployees }}</p>
-                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Active workforce</p>
-                </div>
-            </div>
-
-            <div class="relative overflow-hidden rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition-all hover:shadow-md dark:border-gray-800 dark:bg-gray-900">
-                <div class="absolute right-0 top-0 h-20 w-20 translate-x-6 -translate-y-6 opacity-5">
-                    <svg class="h-full w-full text-gray-900 dark:text-white" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M3.75 6A2.25 2.25 0 016 3.75h12A2.25 2.25 0 0121 6v12a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18V6z" />
-                    </svg>
-                </div>
-                <div class="relative">
-                    <div class="flex items-center justify-between">
-                        <span class="text-sm font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Departments</span>
-                        <div class="rounded-lg bg-blue-light-100 p-2 dark:bg-blue-light-900/30">
-                            <svg class="h-4 w-4 text-blue-light-700 dark:text-blue-light-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2zM8 7h8M8 11h6M8 15h4" />
-                            </svg>
-                        </div>
-                    </div>
-                    <p class="mt-3 text-3xl font-bold text-gray-900 dark:text-white">{{ $totalDepartments }}</p>
-                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Unique departments</p>
-                </div>
-            </div>
-
-            <div class="relative overflow-hidden rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition-all hover:shadow-md dark:border-gray-800 dark:bg-gray-900">
-                <div class="absolute right-0 top-0 h-20 w-20 translate-x-6 -translate-y-6 opacity-5">
-                    <svg class="h-full w-full text-gray-900 dark:text-white" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
-                        <path d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
-                    </svg>
-                </div>
-                <div class="relative">
-                    <div class="flex items-center justify-between">
-                        <span class="text-sm font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Work Zones</span>
-                        <div class="rounded-lg bg-purple-100 p-2 dark:bg-purple-900/30">
-                            <svg class="h-4 w-4 text-purple-700 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                            </svg>
-                        </div>
-                    </div>
-                    <p class="mt-3 text-3xl font-bold text-gray-900 dark:text-white">{{ $totalZones }}</p>
-                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Active territories</p>
-                </div>
-            </div>
-
-            <div class="relative overflow-hidden rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition-all hover:shadow-md dark:border-gray-800 dark:bg-gray-900">
-                <div class="absolute right-0 top-0 h-20 w-20 translate-x-6 -translate-y-6 opacity-5">
-                    <svg class="h-full w-full text-gray-900 dark:text-white" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.57 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
-                    </svg>
-                </div>
-                <div class="relative">
-                    <div class="flex items-center justify-between">
-                        <span class="text-sm font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Contact Ready</span>
-                        <div class="rounded-lg bg-success-100 p-2 dark:bg-success-900/30">
-                            <svg class="h-4 w-4 text-success-700 dark:text-success-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                            </svg>
-                        </div>
-                    </div>
-                    <p class="mt-3 text-3xl font-bold text-gray-900 dark:text-white">{{ $withEmail }}</p>
-                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">With work email</p>
-                </div>
-            </div>
+        <div class="erp-dash-kpi-grid">
+            <x-admin.stat-card label="Total employees" :value="$totalEmployees" hint="Active workforce" />
+            <x-admin.stat-card label="Departments" :value="$totalDepartments" hint="Unique departments" />
+            <x-admin.stat-card label="Work zones" :value="$totalZones" hint="Active territories" />
+            <x-admin.stat-card label="Contact ready" :value="$withEmail" hint="With work email" />
         </div>
 
-        <!-- Employees Table -->
-        <div class="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900 overflow-hidden">
-            <div class="border-b border-gray-100 px-6 py-4 dark:border-gray-800">
-                <div class="flex items-center justify-between">
-                    <div class="flex items-center gap-2">
-                        <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-100 dark:bg-brand-900/30">
-                            <svg class="h-4 w-4 text-brand-700 dark:text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
-                            </svg>
-                        </div>
-                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Employee Directory</h3>
-                    </div>
-                    <span class="rounded-full bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-300">
-                        {{ $employees->count() }} of {{ $totalEmployees }} employees
-                    </span>
-                </div>
+        <div class="erp-table-card">
+            <div class="erp-table-card-header">
+                <h3 class="erp-h3">Employee directory</h3>
+                <span class="erp-caption">{{ $employees->count() }} of {{ $totalEmployees }} employees</span>
             </div>
-            <div class="overflow-x-auto">
-                <table class="w-full">
-                    <thead class="bg-gray-50 dark:bg-gray-800/50">
+            <div class="erp-table-wrap">
+                <table class="erp-table w-full">
+                    <thead>
                         <tr>
-                            <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-400">Employee</th>
-                            <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-400">Department</th>
-                            <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-400">Position</th>
-                            <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-400">Contact</th>
-                            <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-400">Work Zone</th>
-                            <th class="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-400">Actions</th>
-                            <th class="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-400">HR</th>
+                            <th>Employee</th>
+                            <th>Department</th>
+                            <th>Position</th>
+                            <th>Contact</th>
+                            <th>Work zone</th>
+                            <th class="is-right">Actions</th>
+                            <th class="is-right">HR</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
+                    <tbody>
                         @foreach($employees as $employee)
                             <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
                                 <td class="px-6 py-4">
@@ -348,8 +240,8 @@
                         </svg>
                     </div>
                 </div>
-                <h2 class="mt-8 text-2xl font-bold text-gray-900 dark:text-white">No employees yet</h2>
-                <p class="mt-3 text-base text-gray-500 dark:text-gray-400 max-w-md mx-auto">
+                <h2 class="erp-h2">No employees yet</h2>
+                <p class="erp-caption mt-3 max-w-md mx-auto">
                     Your employee directory is empty. Add your first employee to start managing your workforce.
                 </p>
                 <div class="mt-8 flex items-center justify-center gap-4">

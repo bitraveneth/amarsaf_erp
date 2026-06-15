@@ -66,3 +66,18 @@ Sign off each module before production launch. Mark: **Pass** / **Fail** / **N/A
 ## Notes
 
 Record failures with URL, screenshot, and steps to reproduce.
+
+## Design checklist (visual QA)
+
+Reference: [erp-design-guide.md](erp-design-guide.md) and [design-consistency-audit.md](design-consistency-audit.md).
+
+| Check | Pass |
+|-------|------|
+| Page title uses `x-admin.page-header` or `erp-h1` (not `text-2xl`/`text-3xl`) | |
+| KPI numbers use `erp-metric-value` / `x-admin.stat-card` | |
+| Tables use `erp-table` with `erp-table-num` for amounts | |
+| Header shows breadcrumbs on desktop; search centered on xl+ | |
+| Language toggle in user menu (not global header bar) | |
+| Bengali locale renders Noto Sans Bengali without layout breaks | |
+| No new hex colours outside brand tokens | |
+

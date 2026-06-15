@@ -1,76 +1,21 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="space-y-8">
-    <!-- Header with gradient -->
-    <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
-        <div>
-            <div class="flex items-start gap-4">
-                <!-- Employee Avatar -->
-                <div class="relative">
-                    <div class="absolute -inset-1 bg-gradient-to-r from-brand-500 to-brand-600 rounded-full blur opacity-20"></div>
-                    <div class="relative">
-                        @if($employee->photo_path)
-                            <img src="{{ asset('storage/'.$employee->photo_path) }}" 
-                                 alt="{{ $employee->name }}" 
-                                 class="h-16 w-16 rounded-full object-cover border-4 border-white shadow-xl dark:border-gray-800">
-                        @else
-                            <div class="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-brand-600 text-2xl font-bold text-white shadow-xl">
-                                {{ substr($employee->name, 0, 1) }}{{ substr($employee->name, strpos($employee->name, ' ') + 1, 1) ?? '' }}
-                            </div>
-                        @endif
-                    </div>
-                </div>
-                
-                <div>
-                    <div class="flex items-center gap-3 flex-wrap">
-                        <h1 class="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
-                            Leave Requests
-                        </h1>
-                        <span class="inline-flex items-center rounded-full bg-brand-50 px-3 py-1 text-xs font-medium text-brand-700 dark:bg-brand-500/20 dark:text-brand-400">
-                            {{ $employee->name }}
-                        </span>
-                    </div>
-                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                        Manage leave applications and approvals
-                    </p>
-                    <div class="mt-3 flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                        </svg>
-                        <span>{{ $employee->job_position ?? 'Employee' }}</span>
-                        @if($employee->department)
-                            <span class="inline-flex h-1 w-1 rounded-full bg-gray-300 dark:bg-gray-700"></span>
-                            <span>{{ $employee->department }}</span>
-                        @endif
-                        @if($employee->work_zone)
-                            <span class="inline-flex h-1 w-1 rounded-full bg-gray-300 dark:bg-gray-700"></span>
-                            <span>{{ $employee->work_zone }}</span>
-                        @endif
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="flex items-center gap-3">
-            <a href="{{ route('admin.employees.index') }}" 
-               class="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white/80 backdrop-blur-sm px-5 py-2.5 text-sm font-medium text-gray-700 shadow-xs hover:bg-white hover:shadow-sm dark:border-gray-700 dark:bg-gray-900/80 dark:text-gray-300 dark:hover:bg-gray-900 transition-all duration-200">
-                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-                Back to Employees
+<div class="space-y-6">
+    <x-admin.page-header
+        title="Leave requests"
+        :subtitle="'Manage leave applications for ' . $employee->name . ' · ' . ($employee->job_position ?? 'Employee')"
+        icon="default"
+    >
+        <x-slot:actions>
+            <a href="{{ route('admin.employees.index') }}" class="erp-btn-secondary inline-flex items-center gap-2">
+                Back to employees
             </a>
-            <a href="{{ route('admin.employees.leaves.create', $employee) }}" 
-               class="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-brand-500 to-brand-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md hover:from-brand-600 hover:to-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500/50 transition-all duration-200">
-                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                </svg>
-                Add Leave Request
+            <a href="{{ route('admin.employees.leaves.create', $employee) }}" class="erp-btn-primary inline-flex items-center gap-2">
+                Add leave request
             </a>
-        </div>
-    </div>
-
-    <!-- Status Message -->
+        </x-slot:actions>
+    </x-admin.page-header>
 
     @if($leaves->isNotEmpty())
         @php

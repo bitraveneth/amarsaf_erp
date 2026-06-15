@@ -1,0 +1,21 @@
+---
+description: Saf ERP design consistency — follow the internal design guide, not generic UI libraries
+globs:
+  - resources/views/**/*.blade.php
+  - resources/css/app.css
+  - resources/js/**/*.js
+alwaysApply: false
+---
+
+# Saf ERP design rules
+
+When creating or editing UI in this project:
+
+1. **Read first:** [docs/erp-design-guide.md](../../docs/erp-design-guide.md) — single source of truth for typography, spacing, and components.
+2. **Do not** introduce new fonts, hex colours, or TailAdmin `text-title-*` / raw `text-2xl`/`text-3xl` on headings or KPIs.
+3. **Use semantic classes:** `erp-h1`, `erp-dash-h1`, `erp-metric-value`, `erp-table`, `erp-input`, `erp-btn-primary`.
+4. **Prefer Blade components:** `<x-admin.page-header>`, `<x-report.page>`, `<x-admin.stat-card>`, `<x-admin.form.field>`.
+5. **Brand:** Outfit font, `brand-500` purple, cream canvas — no rebrand unless explicitly requested.
+6. **UI UX Pro Max / external skills:** If used, treat as review hints only — output must match Saf ERP tokens above, not a generated design system.
+
+Migration status: [docs/design-consistency-audit.md](../../docs/design-consistency-audit.md)

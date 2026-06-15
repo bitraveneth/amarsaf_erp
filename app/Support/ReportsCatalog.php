@@ -160,13 +160,27 @@ class ReportsCatalog
         ];
     }
 
-    protected static function menuPath(string $routeName): string
+    public static function menuPath(string $routeName): string
     {
         try {
             return route($routeName, [], false);
         } catch (\Throwable) {
             return '/admin/' . ltrim(str_replace('.', '/', preg_replace('#^admin\.#', '', $routeName)), '/');
         }
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    public static function findByRoute(?string $routeName): ?array
+    {
+        if ($routeName === null || $routeName === '') {
+            return null;
+        }
+
+        return collect(self::definitions())->first(
+            fn (array $report) => ($report['route'] ?? null) === $routeName
+        );
     }
 
     protected static function hydrateReport(array $report, array $periodQuery): array

@@ -2,38 +2,26 @@
 
 @section('content')
 <div class="space-y-6">
-    <!-- Header -->
-    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-            <div class="flex items-center gap-3">
-                <h1 class="text-2xl font-semibold text-gray-900 dark:text-white">
-                    Production orders & Runs
-                </h1>
-                <span class="inline-flex items-center rounded-full bg-brand-50 px-3 py-1 text-xs font-medium text-brand-700 dark:bg-brand-500/20 dark:text-brand-400">
-                    Manufacturing
-                </span>
-            </div>
-            <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                Create production orders for batches, record actual runs, QC, and stock posting.
-            </p>
-        </div>
-        <a href="{{ route('admin.production.create') }}" 
-           data-tour="production-primary-action"
-           class="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-semibold text-white shadow-theme-sm hover:bg-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500/50">
-            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-            </svg>
-            New Production order / Run
-        </a>
-    </div>
+    <x-admin.page-header
+        title="Production orders & runs"
+        subtitle="Create production orders for batches, record actual runs, QC, and stock posting."
+        icon="manufacturing"
+    >
+        <x-slot:actions>
+            <a href="{{ route('admin.production.create') }}"
+               data-tour="production-primary-action"
+               class="erp-btn-primary inline-flex items-center gap-2">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                </svg>
+                New production order
+            </a>
+        </x-slot:actions>
+    </x-admin.page-header>
 
-    <!-- Today's Production Metrics -->
     @if(isset($byLineShift) && $byLineShift->isNotEmpty())
         <div class="space-y-3">
-            <div class="flex items-center justify-between">
-                <h2 class="text-lg font-medium text-gray-900 dark:text-white">Today's Production</h2>
-                <span class="text-sm text-gray-500 dark:text-gray-400">{{ $today }}</span>
-            </div>
+            <x-dashboard.section-header title="Today's production" :description="$today" />
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 @foreach($byLineShift as $key => $qty)
                     @php

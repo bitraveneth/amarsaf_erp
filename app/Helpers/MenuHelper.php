@@ -3,6 +3,7 @@
 namespace App\Helpers;
 
 use App\Models\MenuGroup;
+use App\Support\ReportsCatalog;
 use Illuminate\Support\Facades\Route;
 
 class MenuHelper
@@ -140,6 +141,144 @@ class MenuHelper
         }
 
         return $currentPath === $menuPath || str_starts_with($currentPath, $menuPath . '/');
+    }
+
+    /**
+     * Breadcrumb trail for the global header from sidebar menu.
+     *
+     * @return list<array{label: string, path: ?string, current?: bool}>
+     */
+    public static function currentBreadcrumb(): array
+    {
+        $currentPath = '/' . trim(request()->path(), '/');
+        $currentPath = rtrim($currentPath, '/') ?: '/';
+
+        $bestMatch = null;
+
+        foreach (self::getMenuGroups() as $group) {
+            $groupTitle = trim($group['title'] ?? '');
+
+            foreach ($group['items'] ?? [] as $item) {
+                foreach ($item['subItems'] ?? [] as $subItem) {
+                    $subPath = $subItem['path'] ?? null;
+
+                    if (! self::matchesCurrentPath($subPath, $currentPath)) {
+                        continue;
+                    }
+
+                    $depth = strlen(rtrim((string) $subPath, '/'));
+                    $crumbs = [];
+
+                    if ($groupTitle !== '') {
+                        $crumbs[] = ['label' => $groupTitle, 'path' => null];
+                    }
+
+                    $itemPath = $item['path'] ?? null;
+                    if ($itemPath && $itemPath !== '#' && $itemPath !== $subPath) {
+                        $crumbs[] = ['label' => $item['name'], 'path' => $itemPath];
+                    }
+
+                    $crumbs[] = ['label' => $subItem['name'], 'path' => $subPath, 'current' => true];
+
+                    if ($bestMatch === null || $depth > $bestMatch['depth']) {
+                        $bestMatch = ['depth' => $depth, 'crumbs' => $crumbs];
+                    }
+                }
+
+                $itemPath = $item['path'] ?? null;
+
+                if (! $itemPath || $itemPath === '#') {
+                    continue;
+                }
+
+                if (! self::matchesCurrentPath($itemPath, $currentPath)) {
+                    continue;
+                }
+
+                $depth = strlen(rtrim($itemPath, '/'));
+                $crumbs = [];
+
+                if ($groupTitle !== '') {
+                    $crumbs[] = ['label' => $groupTitle, 'path' => null];
+                }
+
+                $crumbs[] = ['label' => $item['name'], 'path' => $itemPath, 'current' => true];
+
+                if ($bestMatch === null || $depth > $bestMatch['depth']) {
+                    $bestMatch = ['depth' => $depth, 'crumbs' => $crumbs];
+                }
+            }
+        }
+
+        if ($bestMatch !== null) {
+            return $bestMatch['crumbs'];
+        }
+
+        $routeName = request()->route()?->getName();
+
+        if ($routeName === 'admin.reports.dashboard') {
+            return [
+                ['label' => self::reportsGroupLabel(), 'path' => '/admin/reports-dashboard'],
+                ['label' => __('ui.dashboards.reports'), 'path' => null, 'current' => true],
+            ];
+        }
+
+        if ($routeName) {
+            $hub = collect(ReportsCatalog::menuCategories())->first(
+                fn (array $category) => ($category['hubRoute'] ?? null) === $routeName
+            );
+
+            if ($hub) {
+                return [
+                    ['label' => self::reportsGroupLabel(), 'path' => '/admin/reports-dashboard'],
+                    ['label' => $hub['label'], 'path' => null, 'current' => true],
+                ];
+            }
+
+            $report = ReportsCatalog::findByRoute($routeName);
+
+            if ($report) {
+                $crumbs = [
+                    ['label' => self::reportsGroupLabel(), 'path' => '/admin/reports-dashboard'],
+                ];
+
+                $menuCategory = $report['menuCategory'] ?? null;
+
+                if ($menuCategory) {
+                    $category = collect(ReportsCatalog::menuCategories())->firstWhere('key', $menuCategory);
+
+                    if ($category && ! empty($category['hubRoute']) && $category['hubRoute'] !== $routeName) {
+                        $crumbs[] = [
+                            'label' => $category['label'],
+                            'path' => ReportsCatalog::menuPath($category['hubRoute']),
+                        ];
+                    }
+                }
+
+                $crumbs[] = ['label' => $report['title'], 'path' => null, 'current' => true];
+
+                return $crumbs;
+            }
+        }
+
+        return [
+            ['label' => __('ui.dashboards.home'), 'path' => '/admin', 'current' => true],
+        ];
+    }
+
+    protected static function reportsGroupLabel(): string
+    {
+        foreach (self::getMenuGroups() as $group) {
+            foreach ($group['items'] ?? [] as $item) {
+                if (($item['path'] ?? null) === '/admin/reports-dashboard') {
+                    $title = trim($group['title'] ?? '');
+
+                    return $title !== '' ? $title : 'Reports & analytics';
+                }
+            }
+        }
+
+        return 'Reports & analytics';
     }
 
     public static function knownAdminPaths(): array

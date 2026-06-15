@@ -1,34 +1,13 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="space-y-8">
-    <!-- Header with gradient -->
-    <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6" data-tour="finance-overview-header">
-        <div>
-            <div class="flex items-start gap-4">
-                <!-- Finance Icon -->
-                <div class="relative">
-                    <div class="absolute -inset-1 bg-gradient-to-r from-brand-500 to-brand-600 rounded-xl blur opacity-20"></div>
-                    <div class="relative flex h-16 w-16 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-brand-600 text-2xl font-bold text-white shadow-xl">
-                        <svg class="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v9.25m-1.5-9H5.625m-.75 0H4.5m10.5 6h3.75M4.5 15h9.75" />
-                        </svg>
-                    </div>
-                </div>
-                
-                <div>
-                    <h1 class="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
-                        Customer invoices
-                    </h1>
-                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                        Sales invoices, receipts, and outstanding balances
-                    </p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Status Message -->
+<div class="space-y-6">
+    <x-admin.page-header
+        title="Customer invoices"
+        subtitle="Sales invoices, receipts, and outstanding balances."
+        icon="ledger"
+        data-tour="finance-overview-header"
+    />
 
     @if($invoices->isNotEmpty())
         @php

@@ -394,3 +394,41 @@ Use `<x-dashboard.section-header>` — one H2 + optional one-line description, l
 **Do:** Put date, period, and actions in the header's right column. Keep subtitles to one line (~80 chars).
 
 **Don't:** Put today's date under the H1. Repeat period in badge + subtitle + section eyebrow. Float section descriptions to the right.
+
+---
+
+## 16. TailAdmin legacy tokens
+
+Saf ERP started from TailAdmin. Some TailAdmin tokens remain in `app.css` for surfaces and shadows. **Typography must use ERP semantic classes** — not TailAdmin title scale.
+
+### Font configuration
+
+| Source | Font | Status |
+|--------|------|--------|
+| `resources/css/app.css` `@theme` | **Outfit** (+ Noto Sans Bengali for `bn`) | **Authoritative** |
+| `tailwind.config.js` | Outfit (aligned with `@theme`) | Fallback for tooling |
+
+Do not reintroduce Inter or other fonts in Blade/CSS.
+
+### Deprecated for headings & KPIs (do not use in new code)
+
+| Token | Replace with |
+|-------|----------------|
+| `text-2xl`, `text-3xl` on page titles | `erp-h1` or `<x-admin.page-header>` |
+| `text-3xl`, `text-title-sm` on KPI values | `erp-metric-value` or `<x-admin.stat-card>` |
+| `text-title-md`, `text-title-lg`, `text-title-xl` on module UI | `erp-dash-h1`, `erp-h2`, `erp-h3` |
+| `font-semibold` on H1–H3 | weight **700** via `erp-*` classes |
+| Gradient text headings (`bg-clip-text`) | Standard `erp-h1` on module pages |
+
+### Still allowed (TailAdmin shell)
+
+| Token | Use |
+|-------|-----|
+| `shadow-theme-xs`, `shadow-theme-sm`, `shadow-theme-md` | Cards, dropdowns |
+| `bg-canvas`, `blue-light-*` | Surfaces, tints |
+| `text-theme-xs`, `text-theme-sm` | Only inside legacy components until migrated |
+
+### Custom classes vs `@apply`
+
+Never `@apply` custom app classes (e.g. `print-hidden`) inside `app.css` — attach them on HTML elements instead. Tailwind v4 only accepts utility classes in `@apply`.
+

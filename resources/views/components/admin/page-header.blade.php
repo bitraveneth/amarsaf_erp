@@ -8,7 +8,7 @@
 ])
 
 @php
-    $titleClass = $variant === 'dashboard' ? 'erp-dash-h1' : 'erp-page-title';
+    $titleClass = $variant === 'dashboard' ? 'erp-dash-h1' : 'erp-h1';
 @endphp
 
 <div {{ $attributes->merge(['class' => 'erp-page-header']) }}>
