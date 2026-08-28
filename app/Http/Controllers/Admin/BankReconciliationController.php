@@ -92,6 +92,9 @@ class BankReconciliationController extends Controller
             ->values()
             ->all();
 
+        $preview = $importService->summarizeMatches(array_merge($receiptMatches, $paymentMatches));
+        $unmatched = collect($preview)->where('matched', false)->count();
+
         return redirect()
             ->route('admin.finance.reconciliation', [
                 'range' => $range,
@@ -99,14 +102,15 @@ class BankReconciliationController extends Controller
                 'to' => $to->toDateString(),
             ])
             ->with('bank_import_results', [
-                'rows' => array_merge($receiptMatches, $paymentMatches),
+                'preview' => array_slice($preview, 0, 40),
                 'matched_receipts' => count($matchedReceiptIds),
                 'matched_payments' => count($matchedPaymentIds),
                 'total_rows' => count($rows),
+                'unmatched' => $unmatched,
             ])
             ->with('bank_import_receipt_ids', $matchedReceiptIds)
             ->with('bank_import_payment_ids', $matchedPaymentIds)
-            ->with('status', 'Bank statement imported. Review suggested matches and save reconciliation.');
+            ->with('status', 'Bank statement imported. Review suggested matches and save.');
     }
 
     public function update(Request $request)
@@ -220,12 +224,24 @@ class BankReconciliationController extends Controller
                     : $now->copy()->endOfMonth();
                 break;
             default:
-                $from = $now->copy()->startOfMonth();
-                $to = $now->copy()->endOfMonth();
-                $range = 'custom';
+                $from = $now->copy()->subMonths(3)->startOfDay();
+                $to = $now->copy()->endOfDay();
+                $range = '3m';
                 break;
         }
 
         return [$from, $to, $range];
+    }
+
+    public function sample(Request $request, BankStatementImportService $importService)
+    {
+        [$from, $to] = $this->resolvePeriod($request);
+        $demo = $importService->buildDemoStatementCsv($from, $to);
+        $filename = 'saf-demo-bank-statement-'.$from->toDateString().'-'.$to->toDateString().'.csv';
+
+        return response($demo['csv'], 200, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
+        ]);
     }
 }

@@ -9,6 +9,10 @@ return [
         'en' => 'Finance officers, auditors, and income-tax advisors',
         'bn' => 'হিসাব কর্মকর্তা, নিরীক্ষক ও আয়কর পরামর্শক',
     ],
+    'steps_extra' => [
+        ['title' => ['en' => 'Accounting dashboard', 'bn' => 'হিসাব ড্যাশবোর্ড'], 'body' => ['en' => 'Start here for AR/AP snapshot, then jump into invoices, bills, or journals.', 'bn' => 'AR/AP সারাংশ এখান থেকে — তারপর ইনভয়েস, বিল বা জার্নালে যান।'], 'path' => '/admin/accounting-dashboard'],
+        ['title' => ['en' => 'Bank reconciliation', 'bn' => 'ব্যাংক মিলকরণ'], 'body' => ['en' => 'Match bank statement lines to receipts, payments, and expenses before month-end close.', 'bn' => 'মাস শেষের আগে ব্যাংক স্টেটমেন্ট রসিদ, পেমেন্ট ও খরচের সাথে মিলান।'], 'path' => '/admin/finance/reconciliation'],
+    ],
     'technical_tab' => [
         'en' => 'Tax & ledger reference',
         'bn' => 'কর ও লেজার রেফারেন্স',

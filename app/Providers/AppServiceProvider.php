@@ -29,6 +29,14 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        if ($this->app->environment('local')) {
+            config([
+                'session.secure' => false,
+                'session.domain' => null,
+                'session.same_site' => 'lax',
+            ]);
+        }
+
         $appName = config('app.name');
         $brandName = SystemSettings::brandName($appName);
         $legalCompanyName = SystemSettings::legalCompanyName($appName);

@@ -7,7 +7,7 @@
  * Structure:
  *   1. Index (client-user-guide.md)
  *   2. Whole-system overview (00-how-the-system-works.md)
- *   3. Module guides 01–10 (one per ERP area)
+ *   3. Module guides 01–13 (one per ERP area)
  */
 return [
     'client-user-guide.md',
@@ -24,4 +24,5 @@ return [
     'modules/10-reports.md',
     'modules/11-ledger-mapping.md',
     'modules/12-hr-payroll.md',
+    'modules/13-books-for-finance-managers.md',
 ];

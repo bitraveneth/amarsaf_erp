@@ -169,11 +169,7 @@
                 <div id="bill-items" class="space-y-4"
                      data-start-index="1"
                      data-currency="{{ config('app.currency', 'BDT') }}"
-                     data-product-options='@json($products->map(fn ($product) => [
-                         "id" => $product->id,
-                         "label" => trim(($product->sku ? $product->sku . " — " : "") . $product->name),
-                         "defaultVat" => $product->taxClass->rate ?? 0,
-                     ]))'>
+                     data-product-options='@json($productOptions)'>
                     <!-- First row -->
                     <div class="bill-item-row rounded-xl border border-gray-200 bg-gray-50 p-5 dark:border-gray-700 dark:bg-gray-800/50">
                         <div class="flex items-center justify-between mb-4">

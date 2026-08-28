@@ -102,6 +102,20 @@ class EmployeeUsersSeeder extends Seeder
             $this->syncPrimaryRole($user);
         }
 
+        // Logistics / delivery coordinator login
+        $logisticsLead = Employee::where('name', 'Logistics Coordinator')->first();
+
+        $logistics = User::updateOrCreate(
+            ['email' => 'logistics@saferpv.local'],
+            [
+                'name'        => 'Demo Logistics Coordinator',
+                'password'    => Hash::make($seedPassword),
+                'role'        => 'delivery_coordinator',
+                'employee_id' => $logisticsLead?->id,
+            ]
+        );
+        $this->syncPrimaryRole($logistics);
+
         // Real-world additional office roles (not necessarily linked to employee profiles)
         $purchase = User::updateOrCreate(
             ['email' => 'purchase@saferpv.local'],

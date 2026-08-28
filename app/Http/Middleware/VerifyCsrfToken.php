@@ -14,4 +14,17 @@ class VerifyCsrfToken extends Middleware
     protected $except = [
         //
     ];
+
+    protected function inExceptArray($request)
+    {
+        if (
+            app()->environment('local')
+            && $request->isMethod('POST')
+            && ($request->is('/') || $request->is('login'))
+        ) {
+            return true;
+        }
+
+        return parent::inExceptArray($request);
+    }
 }

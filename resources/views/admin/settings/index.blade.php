@@ -383,7 +383,7 @@
                 <div class="mb-5 flex items-start justify-between gap-4">
                     <div>
                         <h2 class="text-sm font-semibold text-gray-900 dark:text-white">Visual identity</h2>
-                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Saf brand palette — purple accent, deep black &amp; light gray surfaces, fresh green success, orange urgency.</p>
+                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Saf brand palette — purple accent, cream canvas, fresh green success, orange urgency.</p>
                     </div>
                     <button type="button"
                             @click="resetThemeColors()"
@@ -394,7 +394,7 @@
 
                 <div class="mb-5 grid gap-3 rounded-xl border border-gray-200 bg-gray-50 p-4 text-xs dark:border-gray-800 dark:bg-gray-900/60 md:grid-cols-4">
                     <div><span class="font-semibold text-gray-700 dark:text-gray-300">Primary</span><br><span class="text-gray-500">#5F4BFF → #4D39E6</span></div>
-                    <div><span class="font-semibold text-gray-700 dark:text-gray-300">Surfaces</span><br><span class="text-gray-500">#F3F4F6 light · #0E0F14 dark</span></div>
+                    <div><span class="font-semibold text-gray-700 dark:text-gray-300">Surfaces</span><br><span class="text-gray-500">#FAF7F2 cream · #0E0F14 dark</span></div>
                     <div><span class="font-semibold text-gray-700 dark:text-gray-300">Accents</span><br><span class="text-gray-500">Lavender #E9E4FF · Blue #D6E6FF · Gray #94A3B8</span></div>
                     <div><span class="font-semibold text-gray-700 dark:text-gray-300">Status</span><br><span class="text-success-600">Green #22B573</span> · <span class="text-warning-600">Orange #FF8A24</span> · <span class="text-error-600">Red #EF4444</span></div>
                 </div>

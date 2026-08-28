@@ -206,7 +206,8 @@
 
             <template x-if="block.type === 'diagram'">
                 <div class="learning-block__diagram-wrap">
-                    <div class="learning-block__diagram"></div>
+                    <h4 class="learning-block__title" x-show="block.title" x-text="block.title ? t(block.title) : ''"></h4>
+                    <div class="learning-block__diagram" data-learning-diagram></div>
                 </div>
             </template>
 

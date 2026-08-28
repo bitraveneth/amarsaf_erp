@@ -90,6 +90,11 @@ class MenuStructureSeeder extends Seeder
             ->where('path', '/admin/expenses')
             ->delete();
 
+        MenuItem::query()
+            ->where('name', 'Books for finance managers')
+            ->where('path', 'like', '/admin/client-guide%')
+            ->delete();
+
         // Vehicle loads belongs under Logistics only (not Delivery).
         $deliveryParentId = MenuItem::query()
             ->whereNull('parent_id')

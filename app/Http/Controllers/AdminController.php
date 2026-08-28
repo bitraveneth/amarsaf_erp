@@ -13,6 +13,7 @@ use App\Models\SalesTarget;
 use App\Models\StockEntry;
 use App\Services\Dashboard\DashboardInsightsService;
 use App\Support\InvoiceRevenueMetrics;
+use App\Support\UserHomeResolver;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
@@ -26,23 +27,12 @@ class AdminController extends Controller
     {
         $user = auth()->user();
 
-        // Role/permission-based dashboard routing:
-        // non-admin users should land on their functional dashboard.
+        // Non-admin users land on their role-specific home (warehouse, sales, etc.).
         if ($user && ! $user->hasAnyRole(['admin', 'super_admin'])) {
-            if (Permission::can($user, 'sales.manage')) {
-                return redirect()->route('admin.sales.dashboard');
-            }
+            $homeRoute = UserHomeResolver::routeName($user);
 
-            if (Permission::can($user, 'manufacturing.manage')) {
-                return redirect()->route('admin.manufacturing.dashboard');
-            }
-
-            if (Permission::can($user, 'accounting.manage')) {
-                return redirect()->route('admin.accounting.dashboard');
-            }
-
-            if (Permission::can($user, 'reports.view')) {
-                return redirect()->route('admin.reports.dashboard');
+            if ($homeRoute !== 'admin.dashboard') {
+                return redirect()->route($homeRoute);
             }
 
             return view('admin.dashboard-not-implemented', [
@@ -96,11 +86,19 @@ class AdminController extends Controller
         $monthlySalesTarget = 0.0;
         $monthlyTargetBasis = 'No monthly sales target configured';
         if ($salesTargetReady) {
+            $targetColumns = ['agent_id', 'employee_id', 'target_value'];
+            if (Schema::hasColumn('sales_targets', 'kind')) {
+                $targetColumns[] = 'kind';
+            }
+
             $activeTargets = SalesTarget::query()
                 ->whereDate('period_start', '<=', $currentMonthEnd->toDateString())
                 ->whereDate('period_end', '>=', $currentMonthStart->toDateString())
-                ->get(['agent_id', 'employee_id', 'target_value']);
+                ->get($targetColumns);
 
+            $companyTargetTotal = (float) $activeTargets
+                ->where('kind', SalesTarget::KIND_COMPANY)
+                ->sum('target_value');
             $agentTargetTotal = (float) $activeTargets
                 ->whereNotNull('agent_id')
                 ->sum('target_value');
@@ -109,7 +107,10 @@ class AdminController extends Controller
                 ->whereNotNull('employee_id')
                 ->sum('target_value');
 
-            if ($agentTargetTotal > 0) {
+            if ($companyTargetTotal > 0) {
+                $monthlySalesTarget = round($companyTargetTotal, 2);
+                $monthlyTargetBasis = 'Based on company sales target';
+            } elseif ($agentTargetTotal > 0) {
                 $monthlySalesTarget = round($agentTargetTotal, 2);
                 $monthlyTargetBasis = 'Based on active agent sales targets';
             } elseif ($employeeTargetTotal > 0) {

@@ -150,6 +150,9 @@ export function learningHub(modules, ui, roles, initialModule, defaultRole, lear
             window.addEventListener('learning:mermaid-ready', () => {
                 this.$nextTick(() => this.renderLessonVisuals());
             });
+            window.addEventListener('erp:theme-changed', () => {
+                this.$nextTick(() => this.renderLessonVisuals());
+            });
         },
 
         loadProgress() {
@@ -658,6 +661,17 @@ export function learningHub(modules, ui, roles, initialModule, defaultRole, lear
                     ? normalizeMermaidSource(Alpine.store('learningLang').pick(mod.flowchart_technical))
                     : '';
                 await this.renderMermaidInto(refEl, source);
+            }
+
+            const diagramBlocks = (lesson?.blocks ?? []).filter((block) => block?.type === 'diagram');
+            const diagramEls = document.querySelectorAll('[data-learning-diagram]');
+
+            for (let i = 0; i < diagramEls.length; i += 1) {
+                const block = diagramBlocks[i];
+                const source = block?.source
+                    ? normalizeMermaidSource(Alpine.store('learningLang').pick(block.source))
+                    : '';
+                await this.renderMermaidInto(diagramEls[i], source);
             }
         },
     };

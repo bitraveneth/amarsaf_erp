@@ -161,7 +161,7 @@
                         />
                     </svg>
                     <div class="dash-target-ring__center">
-                        <p class="dash-target-ring__percent text-gray-300 dark:text-gray-600">—</p>
+                        <p class="dash-target-ring__percent text-gray-400 dark:text-gray-500">—</p>
                     </div>
                 </div>
                 <p class="mt-4 text-base font-semibold text-gray-800 dark:text-white">No target set</p>

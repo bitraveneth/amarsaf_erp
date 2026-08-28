@@ -12,6 +12,7 @@ return [
             ['title' => ['en' => 'Purchase orders', 'bn' => 'ক্রয় অর্ডার'], 'path' => '/admin/purchase-orders'],
             ['title' => ['en' => 'Sales orders', 'bn' => 'বিক্রয় অর্ডার'], 'path' => '/admin/orders'],
             ['title' => ['en' => 'Customer invoices', 'bn' => 'গ্রাহক ইনভয়েস'], 'path' => '/admin/finance'],
+            ['title' => ['en' => 'Logistics dashboard', 'bn' => 'লজিস্টিক্স'], 'path' => '/admin/logistics'],
         ],
     ],
     'products' => [
@@ -21,6 +22,8 @@ return [
             ['title' => ['en' => 'Materials', 'bn' => 'কাঁচামাল'], 'path' => '/admin/materials'],
             ['title' => ['en' => 'Tax classes', 'bn' => 'ট্যাক্স ক্লাস'], 'path' => '/admin/tax-classes'],
             ['title' => ['en' => 'Price lists', 'bn' => 'প্রাইস লিস্ট'], 'path' => '/admin/products-price-list'],
+            ['title' => ['en' => 'Packaging types', 'bn' => 'প্যাকেজিং'], 'path' => '/admin/packaging'],
+            ['title' => ['en' => 'Material categories', 'bn' => 'ম্যাটেরিয়াল ক্যাটাগরি'], 'path' => '/admin/material-categories'],
         ],
     ],
     'agents' => [
@@ -43,10 +46,21 @@ return [
     'warehouses' => [
         'roles' => ['admin', 'warehouse_officer', 'delivery_coordinator', 'sales_officer'],
         'related_screens' => [
+            ['title' => ['en' => 'Warehouse dashboard', 'bn' => 'গুদাম ড্যাশবোর্ড'], 'path' => '/admin/warehouses-dashboard'],
             ['title' => ['en' => 'Warehouses', 'bn' => 'গুদাম'], 'path' => '/admin/warehouses'],
             ['title' => ['en' => 'Locations', 'bn' => 'লোকেশন'], 'path' => '/admin/warehouse-locations'],
-            ['title' => ['en' => 'Vehicles', 'bn' => 'যান'], 'path' => '/admin/vehicles'],
-            ['title' => ['en' => 'Delivery routes', 'bn' => 'ডেলিভারি রুট'], 'path' => '/admin/delivery-routes'],
+        ],
+    ],
+    'logistics' => [
+        'roles' => ['admin', 'warehouse_officer', 'delivery_coordinator', 'accounts_officer'],
+        'related_screens' => [
+            ['title' => ['en' => 'Logistics dashboard', 'bn' => 'লজিস্টিক্স ড্যাশবোর্ড'], 'path' => '/admin/logistics'],
+            ['title' => ['en' => 'Vehicle loads', 'bn' => 'যান লোড'], 'path' => '/admin/vehicle-load'],
+            ['title' => ['en' => 'Fleet expenses', 'bn' => 'ফ্লিট খরচ'], 'path' => '/admin/fleet-expenses'],
+            ['title' => ['en' => 'Vehicle registry', 'bn' => 'যান রেজিস্ট্রি'], 'path' => '/admin/vehicles'],
+            ['title' => ['en' => 'Logistics bills', 'bn' => 'লজিস্টিক্স বিল'], 'path' => '/admin/logistics-bills'],
+            ['title' => ['en' => 'Transport carriers', 'bn' => 'ক্যারিয়ার'], 'path' => '/admin/logistics/carriers'],
+            ['title' => ['en' => 'Delivery zones & routes', 'bn' => 'জোন ও রুট'], 'path' => '/admin/delivery-routes'],
         ],
     ],
     'manufacturing' => [
@@ -74,6 +88,10 @@ return [
             ['title' => ['en' => 'Picking lists', 'bn' => 'পিকিং লিস্ট'], 'path' => '/admin/orders-picking'],
             ['title' => ['en' => 'Sales dashboard', 'bn' => 'বিক্রয় ড্যাশবোর্ড'], 'path' => '/admin/sales-dashboard'],
             ['title' => ['en' => 'Returns', 'bn' => 'ফেরত'], 'path' => '/admin/returns/customer'],
+            ['title' => ['en' => 'Sales targets', 'bn' => 'বিক্রয় টার্গেট'], 'path' => '/admin/sales-targets'],
+            ['title' => ['en' => 'Commission settlements', 'bn' => 'কমিশন সেটেলমেন্ট'], 'path' => '/admin/settlements'],
+            ['title' => ['en' => 'Customer gifts', 'bn' => 'গিফট'], 'path' => '/admin/gifts'],
+            ['title' => ['en' => 'Marketing campaigns', 'bn' => 'ক্যাম্পেইন'], 'path' => '/admin/campaigns'],
         ],
     ],
     'delivery' => [
@@ -97,6 +115,7 @@ return [
     'accounting' => [
         'roles' => ['admin', 'accounts_officer'],
         'related_screens' => [
+            ['title' => ['en' => 'Accounting dashboard', 'bn' => 'হিসাব ড্যাশবোর্ড'], 'path' => '/admin/accounting-dashboard'],
             ['title' => ['en' => 'Customer invoices', 'bn' => 'গ্রাহক ইনভয়েস'], 'path' => '/admin/finance'],
             ['title' => ['en' => 'Expenses', 'bn' => 'খরচ'], 'path' => '/admin/expenses'],
             ['title' => ['en' => 'Expense category mapping', 'bn' => 'Expense mapping'], 'path' => '/admin/expense-categories'],
@@ -104,6 +123,7 @@ return [
             ['title' => ['en' => 'Journals', 'bn' => 'জার্নাল'], 'path' => '/admin/journals'],
             ['title' => ['en' => 'Chart of accounts', 'bn' => 'চার্ট অফ অ্যাকাউন্টস'], 'path' => '/admin/accounts'],
             ['title' => ['en' => 'Accounting periods', 'bn' => 'অ্যাকাউন্টিং পিরিয়ড'], 'path' => '/admin/accounting-periods'],
+            ['title' => ['en' => 'Bank reconciliation', 'bn' => 'ব্যাংক মিলকরণ'], 'path' => '/admin/finance/reconciliation'],
         ],
     ],
     'ledger-mapping' => [
@@ -131,6 +151,8 @@ return [
             ['title' => ['en' => 'P and L', 'bn' => 'লাভ-ক্ষতি'], 'path' => '/admin/reports/pl'],
             ['title' => ['en' => 'VAT report', 'bn' => 'VAT'], 'path' => '/admin/reports/vat'],
             ['title' => ['en' => 'Export center', 'bn' => 'এক্সপোর্ট'], 'path' => '/admin/export-center'],
+            ['title' => ['en' => 'Logistics reports', 'bn' => 'লজিস্টিক্স রিপোর্ট'], 'path' => '/admin/reports/logistics'],
+            ['title' => ['en' => 'Route cost vs sales', 'bn' => 'রুট খরচ'], 'path' => '/admin/reports/route-costs'],
         ],
     ],
 ];

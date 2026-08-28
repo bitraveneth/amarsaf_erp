@@ -28,6 +28,15 @@ class LearningEnrichment
                 }
 
                 if (($lesson['type'] ?? '') === 'flow') {
+                    $lesson['blocks'] = $lesson['blocks'] ?? [];
+                    $hasDiagram = collect($lesson['blocks'])->contains(fn ($b) => ($b['type'] ?? '') === 'diagram');
+                    if (! $hasDiagram && ! empty($module['flowchart'])) {
+                        array_unshift($lesson['blocks'], [
+                            'type' => 'diagram',
+                            'source' => $module['flowchart'],
+                        ]);
+                    }
+
                     $pipeline = LearningPipeline::forLesson($module, $custom);
                     $lesson['pipeline'] = $pipeline;
                     $pipelineBlock = [
@@ -115,6 +124,10 @@ class LearningEnrichment
     protected static function flowBlocks(array $module): array
     {
         return [
+            [
+                'type' => 'diagram',
+                'source' => $module['flowchart'] ?? ['en' => '', 'bn' => ''],
+            ],
             [
                 'type' => 'callout',
                 'variant' => 'tip',

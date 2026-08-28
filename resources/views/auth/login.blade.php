@@ -15,7 +15,11 @@
         </p>
     </header>
 
-    <form method="POST" action="{{ route('login') }}" class="auth-form__body">
+    @if (session('status'))
+        <p class="auth-form__alert" role="status">{{ session('status') }}</p>
+    @endif
+
+    <form method="POST" action="/" class="auth-form__body">
         @csrf
 
         <div class="auth-field">
@@ -74,16 +78,25 @@
         </button>
 
         @if(app()->environment('local'))
+            @php
+                $demoPassword = env('SEED_USER_PASSWORD', 'password') ?: 'password';
+                $demoLogins = [
+                    'super@saferpv.local' => 'Super Admin',
+                    'admin@saferpv.local' => 'HR & Admin',
+                    'purchase@saferpv.local' => 'Purchase',
+                    'warehouse@saferpv.local' => 'Warehouse',
+                    'production@saferpv.local' => 'Manufacturing',
+                    'qc@saferpv.local' => 'QC',
+                    'employee@saferpv.local' => 'Sales',
+                    'logistics@saferpv.local' => 'Logistics',
+                    'accounts@saferpv.local' => 'Accounts',
+                ];
+            @endphp
             <div class="auth-demo">
                 <p class="auth-demo__label">Demo logins <span class="auth-demo__hint">local only</span></p>
                 <div class="auth-demo__chips">
-                    @foreach([
-                        'super@saferpv.local' => 'Super',
-                        'admin@saferpv.local' => 'Admin',
-                        'accounts@saferpv.local' => 'Accounts',
-                        'warehouse@saferpv.local' => 'Warehouse',
-                    ] as $email => $label)
-                        <button type="button" class="auth-demo__chip" data-demo-login data-email="{{ $email }}" data-password="password">
+                    @foreach($demoLogins as $email => $label)
+                        <button type="button" class="auth-demo__chip" data-demo-login data-email="{{ $email }}" data-password="{{ $demoPassword }}">
                             {{ $label }}
                         </button>
                     @endforeach
@@ -94,30 +107,3 @@
 </div>
 @endsection
 
-@push('scripts')
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-    const emailInput = document.getElementById('email');
-    const passwordInput = document.getElementById('password');
-
-    document.querySelector('[data-password-toggle]')?.addEventListener('click', function () {
-        if (!passwordInput) return;
-        const show = passwordInput.type === 'password';
-        passwordInput.type = show ? 'text' : 'password';
-        this.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
-    });
-
-    document.querySelectorAll('[data-demo-login]').forEach(function (button) {
-        button.addEventListener('click', function () {
-            if (emailInput) emailInput.value = this.dataset.email || '';
-            if (passwordInput) passwordInput.value = this.dataset.password || '';
-            emailInput?.focus();
-        });
-    });
-
-    if (window.innerWidth < 768 && emailInput) {
-        emailInput.removeAttribute('autofocus');
-    }
-});
-</script>
-@endpush

@@ -1562,7 +1562,7 @@ class SystemCalculationTest extends TestCase
                 Request::create('/admin/sales-targets', 'GET', ['month' => '2026-03'])
             );
 
-            $targetRow = $targetView->getData()['targets']->items()[0];
+            $targetRow = $targetView->getData()['rows']->first();
 
             $this->assertEquals(100.0, (float) $targetRow['achieved']);
             $this->assertEquals(100.0, (float) $targetRow['remaining']);
@@ -1735,8 +1735,8 @@ class SystemCalculationTest extends TestCase
             Request::create('/admin/sales-targets', 'GET', ['month' => now()->format('Y-m')])
         );
 
-        $rows = $view->getData()['targets'];
-        $first = $rows->items()[0];
+        $rows = $view->getData()['rows'];
+        $first = $rows->first();
 
         $this->assertEquals(500.0, $first['achieved']);
         $this->assertEquals(500.0, $first['remaining']);
@@ -1839,8 +1839,8 @@ class SystemCalculationTest extends TestCase
             Request::create('/admin/sales-targets', 'GET', ['month' => now()->format('Y-m')])
         );
 
-        $rows = $view->getData()['targets'];
-        $first = $rows->items()[0];
+        $rows = $view->getData()['rows'];
+        $first = $rows->first();
 
         $this->assertEquals(60.0, (float) $first['achieved']);
         $this->assertEquals(440.0, (float) $first['remaining']);
@@ -1943,8 +1943,8 @@ class SystemCalculationTest extends TestCase
             Request::create('/admin/sales-targets', 'GET', ['month' => now()->format('Y-m')])
         );
 
-        $rows = $view->getData()['targets'];
-        $first = $rows->items()[0];
+        $rows = $view->getData()['rows'];
+        $first = $rows->first();
 
         $this->assertEquals(0.0, (float) $first['achieved']);
         $this->assertEquals(500.0, (float) $first['remaining']);

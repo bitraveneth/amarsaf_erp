@@ -72,4 +72,4 @@ Configure at **Accounting → Expense category mapping** (`/admin/expense-catego
 
 **Learning Hub → Transaction → ledger map** — full bilingual course with quizzes.
 
-Related: [Accounting](09-accounting.md) · [Reports](10-reports.md)
+Related: [Accounting](09-accounting.md) · [Reports](10-reports.md) · [Books for finance managers](13-books-for-finance-managers.md)

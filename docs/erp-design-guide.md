@@ -289,7 +289,8 @@ Official Saf palette (CSS tokens in `resources/css/app.css` `@theme`):
 | Primary purple | `brand-500` · `#5F4BFF` | Buttons, links, focus rings, charts |
 | Primary dark | `brand-600` · `#4D39E6` | Hover, secondary accent |
 | Deep black | `#0E0F14` | Dark canvas, primary text (light mode) |
-| Light gray | `#F3F4F6` | Light canvas, dark-mode text |
+| Cream canvas | `#FAF7F2` | Light-mode page background |
+| Light gray | `#F3F4F6` | Dark-mode text |
 | Soft lavender | `#E9E4FF` | Tinted surfaces, highlights |
 | Soft blue | `#D6E6FF` | Info panels, calendar tints |
 | Cool gray | `gray-400` · `#94A3B8` | Muted labels, borders |

@@ -15,8 +15,8 @@ return [
             'bn' => 'পুরো সিস্টেম কীভাবে চলে',
         ],
         'summary' => [
-            'en' => 'Saf ERP connects buying, making, storing, selling, delivering, and billing in one flow.',
-            'bn' => 'Saf ERP কেনাকাটা, উৎপাদন, মজুদ, বিক্রয়, ডেলিভারি ও হিসাব এক ধারায় জোড়ে।',
+            'en' => 'Saf ERP connects buying, making, storing, selling, delivering, logistics cost, and billing in one flow.',
+            'bn' => 'Saf ERP কেনাকাটা, উৎপাদন, মজুদ, বিক্রয়, ডেলিভারি, লজিস্টিক্স খরচ ও হিসাব এক ধারায় জোড়ে।',
         ],
         'flowchart' => [
             'en' => <<<'MERMAID'
@@ -26,7 +26,8 @@ flowchart LR
     C --> D["QC and stock"]
     D --> E["Agent order"]
     E --> F["Deliver POD"]
-    F --> G["Invoice and receipt"]
+    F --> G["Logistics cost"]
+    G --> H["Invoice and receipt"]
 MERMAID,
             'bn' => <<<'MERMAID'
 flowchart LR
@@ -35,7 +36,8 @@ flowchart LR
     C --> D["QC ও স্টক"]
     D --> E["এজেন্ট অর্ডার"]
     E --> F["ডেলিভারি POD"]
-    F --> G["ইনভয়েস ও রসিদ"]
+    F --> G["লজিস্টিক্স খরচ"]
+    G --> H["ইনভয়েস ও রসিদ"]
 MERMAID,
         ],
         'steps' => [
@@ -55,8 +57,8 @@ MERMAID,
                 'path' => '/admin/production',
             ],
             [
-                'title' => ['en' => 'Sell and collect', 'bn' => 'বিক্রি ও আদায়'],
-                'body' => ['en' => 'Sales order → delivery → invoice → receipt from agent.', 'bn' => 'বিক্রয় অর্ডার → ডেলিভারি → ইনভয়েস → এজেন্টের কাছ থেকে টাকা।'],
+                'title' => ['en' => 'Sell, deliver, and move', 'bn' => 'বিক্রি, ডেলিভারি ও সরান'],
+                'body' => ['en' => 'Sales order → delivery POD → logistics cost (fleet or carrier) → invoice → receipt from agent.', 'bn' => 'বিক্রয় অর্ডার → ডেলিভারি POD → লজিস্টিক্স খরচ (ফ্লিট বা ক্যারিয়ার) → ইনভয়েস → এজেন্টের কাছ থেকে টাকা।'],
                 'path' => '/admin/orders',
             ],
         ],
@@ -70,7 +72,7 @@ MERMAID,
             ],
         ],
         'tips' => [
-            ['en' => 'Every document links to the next: PO → GRN → production → sales → delivery → invoice.', 'bn' => 'প্রতিটি ডকুমেন্ট পরেরটির সাথে যুক্ত: PO → GRN → উৎপাদন → বিক্রয় → ডেলিভারি → ইনভয়েস।'],
+            ['en' => 'Every document links to the next: PO → GRN → production → sales → delivery → logistics bill / fleet cost → invoice.', 'bn' => 'প্রতিটি ডকুমেন্ট পরেরটির সাথে যুক্ত: PO → GRN → উৎপাদন → বিক্রয় → ডেলিভারি → লজিস্টিক্স বিল / ফ্লিট খরচ → ইনভয়েস।'],
             ['en' => 'If stock is wrong, fix master data or GRN before blaming sales.', 'bn' => 'স্টক ভুল হলে বিক্রয় নয়, আগে মাস্টার ডেটা বা GRN ঠিক করুন।'],
         ],
     ],
@@ -136,18 +138,73 @@ MERMAID,
         'slug' => 'warehouses',
         'order' => 4,
         'icon' => 'warehouses',
-        'title' => ['en' => 'Warehouses and routes', 'bn' => 'গুদাম ও রুট'],
-        'summary' => ['en' => 'Define where stock lives and how deliveries travel.', 'bn' => 'স্টক কোথায় ও ডেলিভারি কোন পথে — তা নির্ধারণ করুন।'],
+        'title' => ['en' => 'Warehouses and locations', 'bn' => 'গুদাম ও লোকেশন'],
+        'summary' => ['en' => 'Define where stock lives. Vehicles, carriers, and route cost live in Logistics.', 'bn' => 'স্টক কোথায় থাকে তা নির্ধারণ করুন। যান, ক্যারিয়ার ও রুট খরচ Logistics-এ।'],
         'flowchart' => [
-            'en' => "flowchart TD\n    A[\"Warehouse\"] --> B[\"Locations\"]\n    B --> C[\"Vehicles and routes\"]",
-            'bn' => "flowchart TD\n    A[\"গুদাম\"] --> B[\"লোকেশন\"]\n    B --> C[\"যান ও রুট\"]",
+            'en' => "flowchart TD\n    A[\"Warehouse\"] --> B[\"Locations / bins\"]\n    B --> C[\"Stock in / out\"]",
+            'bn' => "flowchart TD\n    A[\"গুদাম\"] --> B[\"লোকেশন / বিন\"]\n    B --> C[\"স্টক ইন / আউট\"]",
         ],
         'steps' => [
-            ['title' => ['en' => 'Create warehouse', 'bn' => 'গুদাম তৈরি'], 'body' => ['en' => 'Factory for production; depot for sales area.', 'bn' => 'উৎপাদনের জন্য Factory; বিক্রয় এলাকার জন্য depot।'], 'path' => '/admin/warehouses/create'],
-            ['title' => ['en' => 'Delivery routes', 'bn' => 'ডেলিভারি রুট'], 'body' => ['en' => 'Link zones to routes for dispatch planning.', 'bn' => 'ডিসপ্যাচ পরিকল্পনায় জোন রুটের সাথে যুক্ত করুন।'], 'path' => '/admin/delivery-routes'],
+            ['title' => ['en' => 'Create warehouse', 'bn' => 'গুদাম তৈরি'], 'body' => ['en' => 'Factory for production; depot for sales area. Open Warehouse dashboard for a snapshot.', 'bn' => 'উৎপাদনের জন্য Factory; বিক্রয় এলাকার জন্য depot। সারাংশের জন্য Warehouse dashboard খুলুন।'], 'path' => '/admin/warehouses/create'],
+            ['title' => ['en' => 'Warehouse locations', 'bn' => 'গুদাম লোকেশন'], 'body' => ['en' => 'Bins and aisles inside a warehouse for pick accuracy.', 'bn' => 'পিক সঠিকতার জন্য গুদামের ভিতর বিন ও অ্যাসল।'], 'path' => '/admin/warehouse-locations'],
         ],
         'examples' => [],
-        'tips' => [['en' => 'Production usually uses a Factory-type warehouse.', 'bn' => 'উৎপাদন সাধারণত Factory টাইপ গুদাম ব্যবহার করে।']],
+        'tips' => [
+            ['en' => 'Production usually uses a Factory-type warehouse.', 'bn' => 'উৎপাদন সাধারণত Factory টাইপ গুদাম ব্যবহার করে।'],
+            ['en' => 'Fleet, carriers, and logistics bills are in **Logistics**, not Warehouses.', 'bn' => 'ফ্লিট, ক্যারিয়ার ও লজিস্টিক্স বিল **Logistics**-এ — Warehouses-এ নয়।'],
+        ],
+    ],
+    [
+        'slug' => 'logistics',
+        'order' => 4.5,
+        'icon' => 'inventory',
+        'title' => ['en' => 'Logistics & fleet', 'bn' => 'লজিস্টিক্স ও ফ্লিট'],
+        'summary' => [
+            'en' => 'Own trucks vs hired carriers: vehicle loads, fleet spend, logistics bills, and route profitability — separate from Delivery POD.',
+            'bn' => 'নিজস্ব ট্রাক বনাম ভাড়া ক্যারিয়ার: যান লোড, ফ্লিট খরচ, লজিস্টিক্স বিল ও রুট লাভজনকতা — Delivery POD থেকে আলাদা।',
+        ],
+        'flowchart' => [
+            'en' => <<<'MERMAID'
+flowchart LR
+    A["Own fleet"] --> B["Vehicle load"]
+    B --> C["Fleet expense"]
+    D["Hired carrier"] --> E["Rate card"]
+    E --> F["Logistics bill"]
+    C --> G["Route cost vs sales"]
+    F --> G
+MERMAID,
+            'bn' => <<<'MERMAID'
+flowchart LR
+    A["নিজস্ব ফ্লিট"] --> B["যান লোড"]
+    B --> C["ফ্লিট খরচ"]
+    D["ভাড়া ক্যারিয়ার"] --> E["রেট কার্ড"]
+    E --> F["লজিস্টিক্স বিল"]
+    C --> G["রুট খরচ বনাম বিক্রয়"]
+    F --> G
+MERMAID,
+        ],
+        'steps' => [
+            ['title' => ['en' => 'Open logistics dashboard', 'bn' => 'লজিস্টিক্স ড্যাশবোর্ড'], 'body' => ['en' => 'Master data → Logistics → Logistics dashboard. See month-to-date fleet spend, unpaid carrier bills, and active vehicles.', 'bn' => 'Master data → Logistics → Logistics dashboard। মাসের ফ্লিট খরচ, বকেয়া ক্যারিয়ার বিল ও সক্রিয় যান দেখুন।'], 'path' => '/admin/logistics'],
+            ['title' => ['en' => 'Register vehicles', 'bn' => 'যান নিবন্ধন'], 'body' => ['en' => 'Vehicle registry: plate, capacity, active flag. Used on vehicle loads and fleet expenses.', 'bn' => 'Vehicle registry: নম্বর প্লেট, ক্যাপাসিটি, Active। Vehicle load ও fleet expense-এ ব্যবহার।'], 'path' => '/admin/vehicles'],
+            ['title' => ['en' => 'Plan a vehicle load', 'bn' => 'যান লোড পরিকল্পনা'], 'body' => ['en' => 'Assign confirmed deliveries to a truck trip. Capacity and route help dispatch — this is ops, not yet a GL bill.', 'bn' => 'নিশ্চিত ডেলিভারি একটি ট্রাক ট্রিপে দিন। ক্যাপাসিটি ও রুট ডিসপ্যাচে সাহায্য করে — এখনো GL বিল নয়।'], 'path' => '/admin/vehicle-load'],
+            ['title' => ['en' => 'Record fleet expenses', 'bn' => 'ফ্লিট খরচ'], 'body' => ['en' => 'Fuel, maintenance, rent on own trucks. These are operating costs — not the same as a carrier invoice.', 'bn' => 'নিজস্ব ট্রাকে জ্বালানি, রক্ষণাবেক্ষণ, ভাড়া। এটি অপারেটিং খরচ — ক্যারিয়ার ইনভয়েস নয়।'], 'path' => '/admin/fleet-expenses'],
+            ['title' => ['en' => 'Add transport carriers', 'bn' => 'ট্রান্সপোর্ট ক্যারিয়ার'], 'body' => ['en' => 'Hired truck/courier vendors live under Logistics — not raw-material Suppliers. Then add a rate card if you quote by route or kg.', 'bn' => 'ভাড়া ট্রাক/কুরিয়ার Logistics-এ — কাঁচামাল Suppliers-এ নয়। রুট বা কেজি অনুযায়ী রেট কার্ড যোগ করুন।'], 'path' => '/admin/logistics/carriers'],
+            ['title' => ['en' => 'Post a logistics bill', 'bn' => 'লজিস্টিক্স বিল'], 'body' => ['en' => 'Carrier invoice for hired transport. Record lines (freight, loading, demurrage), VAT, and payments. Outstanding shows on the dashboard.', 'bn' => 'ভাড়া পরিবহনের ক্যারিয়ার ইনভয়েস। লাইন (ফ্রেইট, লোডিং), VAT ও পেমেন্ট। বকেয়া ড্যাশবোর্ডে দেখায়।'], 'path' => '/admin/logistics-bills'],
+            ['title' => ['en' => 'Review route cost vs sales', 'bn' => 'রুট খরচ বনাম বিক্রয়'], 'body' => ['en' => 'Reports → Logistics reports → Route cost vs sales. Compare fleet + carrier spend to sales by route.', 'bn' => 'Reports → Logistics reports → Route cost vs sales। রুট অনুযায়ী ফ্লিট + ক্যারিয়ার খরচ বিক্রয়ের সাথে তুলনা।'], 'path' => '/admin/reports/route-costs'],
+        ],
+        'examples' => [
+            [
+                'title' => ['en' => 'Own truck vs hired carrier', 'bn' => 'নিজস্ব ট্রাক বনাম ভাড়া ক্যারিয়ার'],
+                'body' => [
+                    'en' => 'Dhaka city: own van — record fuel as a fleet expense. Chittagong trip: hired XYZ Logistics — create a logistics bill against the carrier, not a purchase bill on a raw-material supplier.',
+                    'bn' => 'ঢাকা শহর: নিজস্ব ভ্যান — জ্বালানি fleet expense। চট্টগ্রাম ট্রিপ: XYZ Logistics ভাড়া — logistics bill, কাঁচামাল সাপ্লায়ারের purchase bill নয়।',
+                ],
+            ],
+        ],
+        'tips' => [
+            ['en' => 'Delivery POD proves goods arrived. Logistics records **how much the trip cost**.', 'bn' => 'Delivery POD পণ্য পৌঁছানোর প্রমাণ। Logistics **ট্রিপ কত খরচ** রেকর্ড করে।'],
+            ['en' => 'Do not post the same freight twice (fleet expense + logistics bill) for one trip.', 'bn' => 'এক ট্রিপে একই ফ্রেইট দুবার পোস্ট করবেন না (fleet expense + logistics bill)।'],
+        ],
     ],
     [
         'slug' => 'manufacturing',
@@ -394,15 +451,15 @@ MERMAID,
         'order' => 11,
         'icon' => 'reports',
         'title' => ['en' => 'Reports', 'bn' => 'রিপোর্ট'],
-        'summary' => ['en' => 'P&L, stock value, aging, production summaries.', 'bn' => 'P&L, স্টক মূল্য, aging, উ৮্পাদন সারাংশ।'],
+        'summary' => ['en' => 'P&L, stock, aging, logistics, fleet, and export center.', 'bn' => 'P&L, স্টক, aging, লজিস্টিক্স, ফ্লিট ও এক্সপোর্ট সেন্টার।'],
         'flowchart' => [
-            'en' => "flowchart TD\n    A[\"Daily posting\"] --> B[\"Reports dashboard\"]\n    B --> C[\"P and L, Stock, Aging\"]",
-            'bn' => "flowchart TD\n    A[\"দৈনিক পোস্টিং\"] --> B[\"রিপোর্ট ড্যাশবোর্ড\"]\n    B --> C[\"P&L, স্টক, Aging\"]",
+            'en' => "flowchart TD\n    A[\"Daily posting\"] --> B[\"Reports dashboard\"]\n    B --> C[\"P and L / VAT / stock\"]\n    B --> D[\"Logistics and fleet\"]\n    B --> E[\"Export center\"]",
+            'bn' => "flowchart TD\n    A[\"দৈনিক পোস্টিং\"] --> B[\"রিপোর্ট ড্যাশবোর্ড\"]\n    B --> C[\"P&L / VAT / স্টক\"]\n    B --> D[\"লজিস্টিক্স ও ফ্লিট\"]\n    B --> E[\"এক্সপোর্ট সেন্টার\"]",
         ],
         'steps' => [
             ['title' => ['en' => 'Open reports', 'bn' => 'রিপোর্ট খুলুন'], 'body' => ['en' => 'Reports dashboard lists all standard reports.', 'bn' => 'রিপোর্ট ড্যাশবোর্ডে সব স্ট্যান্ডার্ড রিপোর্ট।'], 'path' => '/admin/reports-dashboard'],
         ],
         'examples' => [],
-        'tips' => [['en' => 'Run month-end pack: inventory valuation + AR aging + P&L.', 'bn' => 'মাস শেষে: inventory valuation + AR aging + P&L চালান।']],
+        'tips' => [['en' => 'Run month-end pack: inventory valuation + AR aging + P&L + logistics/fleet. Use Export center for auditor CSV/PDF.', 'bn' => 'মাস শেষে: inventory valuation + AR aging + P&L + লজিস্টিক্স/ফ্লিট। অডিটর CSV/PDF-এর জন্য Export center।']],
     ],
 ];

@@ -62,7 +62,7 @@ class LearningPipeline
         return match ($slug) {
             'overview', 'products' => 'foundation',
             'agents', 'sales' => 'commercial',
-            'accounting', 'profit-loss', 'reports' => 'finance',
+            'accounting', 'profit-loss', 'reports', 'ledger-mapping', 'hr-payroll' => 'finance',
             default => 'operations',
         };
     }

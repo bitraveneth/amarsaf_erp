@@ -55,17 +55,7 @@
 
         <form action="{{ route('admin.production.store') }}" method="POST" class="p-6" id="production-create-form"
               x-data="productionForm(@js($formState))"
-              data-production-widgets='@json([
-                  "productUnitCosts" => $productUnitCosts ?? [],
-                  "materialRequirements" => $materialRequirements ?? [],
-                  "warehouseStock" => $warehouseStock ?? [],
-                  "warehouseNames" => $warehouses->pluck("name", "id"),
-                  "bomCatalog" => $bomCatalog ?? [],
-                  "openBatchesByProduct" => $openBatchesByProduct ?? [],
-                  "defaultWarehouseId" => $defaultWarehouseId ?? "",
-                  "oldBatchId" => old("batch_id"),
-                  "bomCreateUrl" => route("admin.boms.create"),
-              ])'>
+              data-production-widgets='@json($productionWidgets)'>
             @csrf
             <input type="hidden" name="batch_mode" id="batch_mode" value="{{ old('batch_mode', 'auto') }}">
 

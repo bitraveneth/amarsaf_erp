@@ -151,11 +151,12 @@ class ErpAssistantInsightsService
             $activeTargets = SalesTarget::query()
                 ->whereDate('period_start', '<=', $monthEnd->toDateString())
                 ->whereDate('period_end', '>=', $monthStart->toDateString())
-                ->get(['agent_id', 'employee_id', 'target_value']);
+                ->get(['kind', 'agent_id', 'employee_id', 'target_value']);
 
+            $companyTarget = (float) $activeTargets->where('kind', 'company')->sum('target_value');
             $agentTarget = (float) $activeTargets->whereNotNull('agent_id')->sum('target_value');
             $employeeTarget = (float) $activeTargets->whereNull('agent_id')->whereNotNull('employee_id')->sum('target_value');
-            $target = $agentTarget > 0 ? $agentTarget : $employeeTarget;
+            $target = $companyTarget > 0 ? $companyTarget : ($agentTarget > 0 ? $agentTarget : $employeeTarget);
             $achieved = $data['finance']['revenue_mtd'] ?? 0.0;
 
             $data['sales_target'] = [

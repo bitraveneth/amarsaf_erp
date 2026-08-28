@@ -12,7 +12,7 @@
 | **Whole system** | **How the whole system works** | First day — see how all modules connect |
 | **Your module** | One guide per area below | Daily work in your department |
 
-In the app: **System settings → Client manual** shows all guides in one scrollable page.
+In the app: **Help → Client manual** shows all guides in one scrollable page.
 
 ---
 
@@ -33,6 +33,7 @@ In the app: **System settings → Client manual** shows all guides in one scroll
 | **10** | [Reports and analytics](modules/10-reports.md) | Management, accounts |
 | **11** | [Transaction → ledger map](modules/11-ledger-mapping.md) | Accounts, owners, client demos |
 | **12** | [HR & payroll](modules/12-hr-payroll.md) | HR admin, accounts |
+| **13** | [Books for finance managers](modules/13-books-for-finance-managers.md) | CA, accounting manager, month-end owner |
 
 ---
 
@@ -59,7 +60,7 @@ In the app: **System settings → Client manual** shows all guides in one scroll
 | Warehouse officer | GRN, pending receipts, transfers, picking | 03, 05, 06, 08 |
 | Sales officer | Sales orders | 07, 02 |
 | Delivery coordinator | Deliveries, POD | 08, 04 |
-| Accounts officer | Invoices, bills, expenses | 09, 10 |
+| Accounts officer | Invoices, bills, expenses | 09, 10, 11, 13 |
 | Admin | All master data, users | 01, 02, 04 + settings |
 
 ---

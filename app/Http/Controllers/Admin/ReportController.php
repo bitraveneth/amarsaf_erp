@@ -22,6 +22,7 @@ use App\Models\SalaryDistribution;
 use App\Models\PurchaseBill;
 use App\Services\Accounting\AgingReportService;
 use App\Services\Accounting\CashFlowReportService;
+use App\Services\Accounting\InventoryCostingService;
 use App\Services\Accounting\HierarchicalReportService;
 use App\Services\Accounting\IncomeStatementPresenter;
 use App\Services\Accounting\FinancialReportExportService;

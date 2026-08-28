@@ -42,7 +42,14 @@
         window.erpTheme.applyTheme(window.erpTheme.resolveTheme());
     </script>
 
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @php($useBuiltAssets = app()->environment('local') && file_exists(public_path('build/manifest.json')))
+    @if($useBuiltAssets)
+        @php($manifest = json_decode(file_get_contents(public_path('build/manifest.json')), true))
+        <link rel="stylesheet" href="{{ asset('build/'.$manifest['resources/css/app.css']['file']) }}">
+        <script type="module" src="{{ asset('build/'.$manifest['resources/js/auth-login.js']['file']) }}"></script>
+    @else
+        @vite(['resources/css/app.css', 'resources/js/auth-login.js'])
+    @endif
 
     @if(!empty($brandThemeVariables))
         <style>
@@ -66,11 +73,8 @@
     <div class="auth-shell__page">
         <header class="auth-shell__page-bar">
             <div class="auth-shell__toolbar">
-                <x-locale-toggle />
-                <button type="button" id="auth-theme-toggle" class="auth-shell__theme-btn" aria-label="Toggle theme">
-                    <svg class="dark:hidden" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4 12H2M20 12h-2" stroke-linecap="round"/></svg>
-                    <svg class="hidden dark:block" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 3a9 9 0 109 9c0-1.2-.2-2.4-.6-3.5A7 7 0 0112 3z" stroke-linecap="round"/></svg>
-                </button>
+                <x-locale-toggle-auth class="locale-toggle--auth" />
+                <x-layout.header-theme-toggle vanilla class="header-theme-toggle--auth" />
             </div>
         </header>
 
@@ -98,13 +102,7 @@
         </p>
     </div>
 
-    <script>
-        document.getElementById('auth-theme-toggle')?.addEventListener('click', function () {
-            const next = document.documentElement.classList.contains('dark') ? 'light' : 'dark';
-            window.erpTheme.applyTheme(next);
-            window.erpTheme.setStoredTheme(next);
-        });
-    </script>
+    @stack('scripts')
 
     @stack('scripts')
 </body>

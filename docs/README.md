@@ -9,7 +9,7 @@ This folder holds **client-facing manuals** in plain English. Hand these to cust
 | Layer | File(s) | Purpose |
 |---|---|---|
 | **Whole system** | `00-how-the-system-works.md` | How every module connects — read first |
-| **Each module** | `modules/01` … `modules/10` | Step-by-step for one area of the business |
+| **Each module** | `modules/01` … `modules/13` | Step-by-step for one area of the business |
 
 Plus **`client-user-guide.md`** = index, roles, checklists, links to all guides.
 
@@ -30,12 +30,15 @@ Plus **`client-user-guide.md`** = index, roles, checklists, links to all guides.
 | 08 | `modules/08-delivery-and-pod.md` | Inventory → Deliveries, picking |
 | 09 | `modules/09-accounting.md` | Accounting |
 | 10 | `modules/10-reports.md` | Reports & analytics |
+| 11 | `modules/11-ledger-mapping.md` | Accounting — Dr/Cr cheat sheet |
+| 12 | `modules/12-hr-payroll.md` | HR & payroll |
+| 13 | `modules/13-books-for-finance-managers.md` | Accounting — CA / month-end reference |
 
 ---
 
 ## In-app viewing
 
-**System settings → Client manual** loads every file listed in `manual-manifest.php` in order.
+**Help → Client manual** loads every file listed in `manual-manifest.php` in order.
 
 ---
 

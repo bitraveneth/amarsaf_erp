@@ -540,8 +540,8 @@ class ModuleExportBuilders
         return $query->orderByDesc('period_start')
             ->get()
             ->map(fn ($target) => [
-                $target->agent?->name ?? $target->employee?->name ?? '—',
-                $target->agent_id ? 'Agent' : 'Employee',
+                $target->ownerName(),
+                $target->ownerTypeLabel(),
                 $target->period_start->format('d M Y'),
                 $target->period_end->format('d M Y'),
                 number_format((float) $target->target_value, 2),

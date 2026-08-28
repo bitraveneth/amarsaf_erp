@@ -252,5 +252,5 @@ See **Common problems** in `client-user-guide.md` for a longer list.
 | Document | Purpose |
 |---|---|
 | `client-user-guide.md` | Index, roles, status codes, checklists |
-| `modules/01` … `modules/10` | Detailed per-module manuals |
+| `modules/01` … `modules/13` | Detailed per-module manuals |
 | `system-cycle.md` | Extended cycle notes for implementers |

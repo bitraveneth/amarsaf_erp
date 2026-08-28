@@ -37,8 +37,9 @@ class PurchaseBillController extends Controller
         $suppliers = Supplier::orderBy('name')->get();
         $products = Product::with('taxClass')->orderBy('name')->get();
         $warehouses = Warehouse::orderBy('name')->get();
+        $productOptions = $this->billProductOptions($products);
 
-        return view('admin.bills.create', compact('suppliers', 'products', 'warehouses'));
+        return view('admin.bills.create', compact('suppliers', 'products', 'warehouses', 'productOptions'));
     }
 
     public function edit(PurchaseBill $bill)
@@ -46,10 +47,24 @@ class PurchaseBillController extends Controller
         $suppliers = Supplier::orderBy('name')->get();
         $products = Product::with('taxClass')->orderBy('name')->get();
         $warehouses = Warehouse::orderBy('name')->get();
+        $productOptions = $this->billProductOptions($products);
 
         $bill->load('items');
 
-        return view('admin.bills.edit', compact('bill', 'suppliers', 'products', 'warehouses'));
+        return view('admin.bills.edit', compact('bill', 'suppliers', 'products', 'warehouses', 'productOptions'));
+    }
+
+    /**
+     * Options payload for bill line-item product selects.
+     * Prepared here so Blade does not compile @json($products->map(fn () => [...])).
+     */
+    private function billProductOptions($products)
+    {
+        return $products->map(fn ($product) => [
+            'id' => $product->id,
+            'label' => trim(($product->sku ? $product->sku . ' — ' : '') . $product->name),
+            'defaultVat' => $product->taxClass->rate ?? 0,
+        ])->values();
     }
 
     public function store(Request $request)

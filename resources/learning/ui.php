@@ -2,9 +2,9 @@
 
 return [
     'hub_title' => ['en' => 'ERP Academy', 'bn' => 'ERP একাডেমি'],
-    'hub_subtitle' => [
-        'en' => 'Structured courses for every Saf ERP module — learn step by step, practice in the system, and pass the quiz to complete each course.',
-        'bn' => 'প্রতিটি Saf ERP মডিউলের জন্য কাঠামোবদ্ধ কোর্স — ধাপে ধাপে শিখুন, সিস্টেমে অনুশীলন করুন, কুইজ পাস করে কোর্স সম্পন্ন করুন।',
+        'hub_subtitle' => [
+        'en' => 'Structured courses for every Saf ERP module — including Logistics, sales campaigns, and Export center. Learn step by step, practise in the system, and pass the quiz.',
+        'bn' => 'প্রতিটি Saf ERP মডিউলের কোর্স — লজিস্টিক্স, বিক্রয় ক্যাম্পেইন ও Export center সহ। ধাপে ধাপে শিখুন, সিস্টেমে অনুশীলন করুন, কুইজ পাস করুন।',
     ],
     'overview_badge' => ['en' => 'Learning Hub', 'bn' => 'শেখার কেন্দ্র'],
     'search_placeholder' => ['en' => 'Search courses…', 'bn' => 'কোর্স খুঁজুন…'],

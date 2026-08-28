@@ -2,18 +2,24 @@
 
 @section('content')
 <div class="max-w-3xl space-y-6">
-    <div>
-        <h1 class="text-2xl font-semibold text-gray-900 dark:text-white">Edit Sales Target</h1>
-        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Update the owner, period, or target amount.</p>
-    </div>
+    <x-admin.page-header
+        icon="chart"
+        eyebrow="Sales"
+        title="Edit target"
+        :subtitle="'Update '.$salesTarget->ownerName().' for '.$salesTarget->period_start->format('F Y').'.'"
+    >
+        <x-slot:actions>
+            <a href="{{ route('admin.sales-targets.index', ['month' => $salesTarget->period_start->format('Y-m')]) }}" class="erp-btn-secondary">Board</a>
+        </x-slot:actions>
+    </x-admin.page-header>
 
-    <form action="{{ route('admin.sales-targets.update', $salesTarget) }}" method="POST" class="rounded-2xl border border-gray-200 bg-white p-6 shadow-theme-sm dark:border-gray-800 dark:bg-gray-900 space-y-6">
+    <form action="{{ route('admin.sales-targets.update', $salesTarget) }}" method="POST" class="erp-target-hero space-y-6">
         @csrf
         @method('PATCH')
         @include('admin.sales-targets.partials.form', ['salesTarget' => $salesTarget])
-        <div class="flex items-center justify-end gap-3">
-            <a href="{{ route('admin.sales-targets.index') }}" class="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-700 shadow-theme-xs hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">Cancel</a>
-            <button type="submit" class="rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white shadow-theme-sm hover:bg-brand-600">Update Target</button>
+        <div class="erp-form-actions">
+            <a href="{{ route('admin.sales-targets.index', ['month' => $salesTarget->period_start->format('Y-m')]) }}" class="erp-btn-secondary">Cancel</a>
+            <button type="submit" class="erp-btn-primary">Update target</button>
         </div>
     </form>
 </div>

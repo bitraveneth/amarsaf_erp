@@ -12,6 +12,7 @@
     ];
 
     $totalOrders = $orders instanceof \Illuminate\Pagination\LengthAwarePaginator ? $orders->total() : $orders->count();
+    $onPageCount = $orders->count();
     $totalRevenue = $orders->sum('total');
     $totalCommission = $orders->sum('commission_total');
     $pendingOrders = $orders->where('status', 'pending')->count();
@@ -79,7 +80,7 @@
                     </span>
                 </div>
                 <p class="erp-po-index-stat__value">{{ number_format($totalOrders) }}</p>
-                <p class="erp-po-index-stat__hint">On this page · {{ number_format($totalOrders) }} total</p>
+                <p class="erp-po-index-stat__hint">{{ number_format($onPageCount) }} on this page · {{ number_format($totalOrders) }} total</p>
             </div>
 
             <div class="erp-po-index-stat">
@@ -89,7 +90,7 @@
                         <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                     </span>
                 </div>
-                <p class="erp-po-index-stat__value">{{ $currencyCode }} {{ number_format($totalRevenue, 0) }}</p>
+                <p class="erp-po-index-stat__value {{ $totalRevenue < 0 ? 'erp-po-index-stat__value--negative' : '' }}">{{ $currencyCode }} {{ number_format($totalRevenue, 0) }}</p>
                 <p class="erp-po-index-stat__hint">Current page total</p>
             </div>
 

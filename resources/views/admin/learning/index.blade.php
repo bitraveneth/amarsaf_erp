@@ -525,9 +525,12 @@
             if (typeof mermaid === 'undefined') return;
             mermaid.initialize({
                 startOnLoad: false,
-                theme: document.documentElement.classList.contains('dark') ? 'dark' : 'default',
+                theme: document.documentElement.classList.contains('dark') ? 'dark' : 'base',
+                themeVariables: document.documentElement.classList.contains('dark')
+                    ? { primaryColor: '#33259e', primaryTextColor: '#f3f4f6', lineColor: '#ad92ff', secondaryColor: '#151821', tertiaryColor: '#1a1252' }
+                    : { primaryColor: '#e9e4ff', primaryTextColor: '#0e0f14', lineColor: '#5f4bff', secondaryColor: '#f3f4f6', tertiaryColor: '#ddd4ff' },
                 securityLevel: 'loose',
-                fontFamily: window.erpUiFontStack || 'sans-serif',
+                fontFamily: window.erpUiFontStack || 'Inter, sans-serif',
                 flowchart: { htmlLabels: true, curve: 'basis', padding: 18 },
             });
             window.dispatchEvent(new CustomEvent('learning:mermaid-ready'));
@@ -537,6 +540,7 @@
         } else {
             initMermaid();
         }
+        window.addEventListener('erp:theme-changed', initMermaid);
     })();
 </script>
 @endpush

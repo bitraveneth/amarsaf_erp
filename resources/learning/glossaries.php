@@ -21,6 +21,7 @@ return [
         ['term' => ['en' => 'FG', 'bn' => 'FG'], 'def' => ['en' => 'Finished Goods — sellable products in warehouse stock.', 'bn' => 'Finished Goods — বিক্রয়যোগ্য তৈরি পণ্য স্টকে।']],
         ['term' => ['en' => 'AR / AP', 'bn' => 'AR / AP'], 'def' => ['en' => 'Accounts Receivable (agents owe you) / Accounts Payable (you owe suppliers).', 'bn' => 'Accounts Receivable (এজেন্টের বকেয়া) / Accounts Payable (সাপ্লায়ারের বকেয়া)।']],
         ['term' => ['en' => 'COGS', 'bn' => 'COGS'], 'def' => ['en' => 'Cost of Goods Sold — expense when sold stock leaves inventory; pairs with revenue on invoice.', 'bn' => 'Cost of Goods Sold — বিক্রিত স্টকের খরচ; ইনভয়েসে আয়ের সাথে যায়।']],
+        ['term' => ['en' => 'Logistics', 'bn' => 'লজিস্টিক্স'], 'def' => ['en' => 'Cost of moving goods — own fleet expenses and hired-carrier bills. Separate from Delivery POD.', 'bn' => 'পণ্য সরানোর খরচ — নিজস্ব ফ্লিট ও ভাড়া ক্যারিয়ার বিল। Delivery POD থেকে আলাদা।']],
     ],
     'products' => [
         ['term' => ['en' => 'Material', 'bn' => 'কাঁচামাল'], 'def' => ['en' => 'Items you buy and consume in production (raw, service, or in-house types).', 'bn' => 'যা কিনে উৎপাদনে ব্যবহার করেন (raw, service, in-house)।']],
@@ -52,7 +53,14 @@ return [
         ['term' => ['en' => 'Factory warehouse', 'bn' => 'Factory'], 'def' => ['en' => 'Usually receives raw materials and outputs finished goods from production.', 'bn' => 'সাধারণত কাঁচামাল গ্রহণ ও FG উৎপাদন।']],
         ['term' => ['en' => 'Depot', 'bn' => 'Depot'], 'def' => ['en' => 'Distribution warehouse closer to sales zones.', 'bn' => 'বিক্রয় এলাকার কাছের ডিস্ট্রিবিউশন গুদাম।']],
         ['term' => ['en' => 'Location', 'bn' => 'Location'], 'def' => ['en' => 'Bin or zone inside a warehouse for finer stock placement.', 'bn' => 'গুদামের ভিতরের বিন বা জোন।']],
-        ['term' => ['en' => 'Delivery route', 'bn' => 'Delivery route'], 'def' => ['en' => 'Planned path linking agent zones to vehicles and dispatch.', 'bn' => 'এজেন্ট জোন, যান ও ডিসপ্যাচের পরিকল্পিত পথ।']],
+    ],
+    'logistics' => [
+        ['term' => ['en' => 'Transport carrier', 'bn' => 'ক্যারিয়ার'], 'def' => ['en' => 'Hired truck or courier vendor — not a raw-material supplier.', 'bn' => 'ভাড়া ট্রাক/কুরিয়ার — কাঁচামাল সাপ্লায়ার নয়।']],
+        ['term' => ['en' => 'Rate card', 'bn' => 'রেট কার্ড'], 'def' => ['en' => 'Quoted freight rates by route, kg, or trip for a carrier.', 'bn' => 'ক্যারিয়ারের রুট/কেজি/ট্রিপ অনুযায়ী ফ্রেইট রেট।']],
+        ['term' => ['en' => 'Logistics bill', 'bn' => 'লজিস্টিক্স বিল'], 'def' => ['en' => 'Carrier invoice for hired transport — freight, loading, VAT, payments.', 'bn' => 'ভাড়া পরিবহনের ইনভয়েস — ফ্রেইট, লোডিং, VAT, পেমেন্ট।']],
+        ['term' => ['en' => 'Fleet expense', 'bn' => 'ফ্লিট খরচ'], 'def' => ['en' => 'Own-truck cost: fuel, maintenance, rent — not a carrier bill.', 'bn' => 'নিজস্ব ট্রাকের খরচ: জ্বালানি, রক্ষণাবেক্ষণ, ভাড়া।']],
+        ['term' => ['en' => 'Vehicle load', 'bn' => 'যান লোড'], 'def' => ['en' => 'Deliveries assigned to one truck trip for capacity planning.', 'bn' => 'এক ট্রাক ট্রিপে একাধিক ডেলিভারি।']],
+        ['term' => ['en' => 'Route cost vs sales', 'bn' => 'রুট খরচ বনাম বিক্রয়'], 'def' => ['en' => 'Report comparing fleet + carrier spend to sales by delivery route.', 'bn' => 'রুট অনুযায়ী ফ্লিট + ক্যারিয়ার খরচ বিক্রয়ের সাথে তুলনা।']],
     ],
     'manufacturing' => [
         ['term' => ['en' => 'BOM', 'bn' => 'BOM'], 'def' => ['en' => 'Active recipe — without it, production may not consume materials correctly.', 'bn' => 'সক্রিয় রেসিপি — ছাড়া কাঁচামাল সঠিক কাটতে নাও পারে।']],
@@ -75,12 +83,15 @@ return [
         ['term' => ['en' => 'Sample order', 'bn' => 'Sample'], 'def' => ['en' => 'Promotional free goods — tracked but not invoiced like normal sales.', 'bn' => 'পromotional ফ্রি পণ্য — ট্র্যাক হয়, সাধারণ বিল নয়।']],
         ['term' => ['en' => 'Picking list', 'bn' => 'Picking'], 'def' => ['en' => 'Warehouse list of what to pull for confirmed orders.', 'bn' => 'গুদামে কী তুলতে হবে তার তালিকা।']],
         ['term' => ['en' => 'Sales return', 'bn' => 'Return'], 'def' => ['en' => 'Customer sends goods back — reverses stock and may credit invoice.', 'bn' => 'ফেরত — স্টক ও ইনভয়েস সমন্বয়।']],
+        ['term' => ['en' => 'Sales target', 'bn' => 'টার্গেট'], 'def' => ['en' => 'Qty or value goal per agent and period — compared on the sales dashboard.', 'bn' => 'এজেন্ট ও পিরিয়ডের পরিমাণ/মূল্য লক্ষ্য — বিক্রয় ড্যাশবোর্ডে তুলনা।']],
+        ['term' => ['en' => 'Customer gift', 'bn' => 'গিফট'], 'def' => ['en' => 'Promotional free goods tracked with orders — not billed as normal sales.', 'bn' => 'অর্ডারের সাথে প্রমোশনাল ফ্রি পণ্য — সাধারণ বিল নয়।']],
+        ['term' => ['en' => 'Campaign', 'bn' => 'ক্যাম্পেইন'], 'def' => ['en' => 'Time-boxed promotion that can link gifts or special offers.', 'bn' => 'সময়সীমা প্রমোশন — গিফট বা অফার যুক্ত হতে পারে।']],
     ],
     'delivery' => [
         ['term' => ['en' => 'Delivery note', 'bn' => 'Delivery'], 'def' => ['en' => 'Dispatch document linking order, vehicle, and route.', 'bn' => 'ডিসপ্যাচ ডকুমেন্ট — অর্ডার, যান, রুট।']],
         ['term' => ['en' => 'POD', 'bn' => 'POD'], 'def' => ['en' => 'Proof of Delivery — delivered qty, shorts, damage, receiver signature.', 'bn' => 'ডেলিভারির প্রমাণ — পরিমাণ, কমতি, ক্ষতি, গ্রহীতা।']],
         ['term' => ['en' => 'Short delivery', 'bn' => 'Short'], 'def' => ['en' => 'Agent received less than dispatched — adjust before invoice.', 'bn' => 'পাঠানোর চেয়ে কম পৌঁছেছে — ইনভয়েসের আগে ঠিক করুন।']],
-        ['term' => ['en' => 'Vehicle load', 'bn' => 'Vehicle load'], 'def' => ['en' => 'Batch of deliveries assigned to one vehicle trip.', 'bn' => 'এক যানে একাধিক ডেলিভারি।']],
+        ['term' => ['en' => 'Vehicle load', 'bn' => 'Vehicle load'], 'def' => ['en' => 'Batch of deliveries assigned to one vehicle trip — planned in Logistics, not Warehouses.', 'bn' => 'এক যানে একাধিক ডেলিভারি — Logistics-এ পরিকল্পনা, Warehouses-এ নয়।']],
         ['term' => ['en' => 'Delivered status', 'bn' => 'Delivered'], 'def' => ['en' => 'Order line ready for invoicing after POD.', 'bn' => 'POD-এর পর ইনভয়েসের জন্য প্রস্তুত।']],
     ],
     'accounting' => [
@@ -91,6 +102,7 @@ return [
         ['term' => ['en' => 'Withholding tax', 'bn' => 'Withholding'], 'def' => ['en' => 'Tax deducted at source on payments — tracked in receivable until claimed.', 'bn' => 'উৎসে কর — আদায় পর্যন্ত receivable-এ।']],
         ['term' => ['en' => 'Journal entry', 'bn' => 'Journal'], 'def' => ['en' => 'Double-entry posting: debits must equal credits.', 'bn' => 'ডাবল-এন্ট্রি — ডেবিট = ক্রেডিট।']],
         ['term' => ['en' => 'Accounting period', 'bn' => 'Period'], 'def' => ['en' => 'Closed month — prevents backdated changes after lock.', 'bn' => 'বন্ধ মাস — লকের পর পিছনের তারিখে পরিবর্তন নয়।']],
+        ['term' => ['en' => 'Bank reconciliation', 'bn' => 'ব্যাংক মিলকরণ'], 'def' => ['en' => 'Match bank statement lines to receipts, payments, and expenses in the ledger.', 'bn' => 'ব্যাংক স্টেটমেন্ট লাইন রসিদ, পেমেন্ট ও খরচের সাথে মিলান।']],
     ],
     'profit-loss' => [
         ['term' => ['en' => 'Net sales', 'bn' => 'Net sales'], 'def' => ['en' => 'Sales Revenue minus returns in the period — excl. VAT.', 'bn' => 'Sales Revenue − returns — VAT বাদে।']],
@@ -103,6 +115,7 @@ return [
         ['term' => ['en' => 'Trial balance', 'bn' => 'Trial balance'], 'def' => ['en' => 'List of all GL account balances — debits must equal credits.', 'bn' => 'সব GL ব্যালেন্স — ডেবিট = ক্রেডিট।']],
         ['term' => ['en' => 'AR aging', 'bn' => 'AR aging'], 'def' => ['en' => 'How long invoices have been outstanding by agent.', 'bn' => 'ইনভয়েস কতদিন বকেয়া — এজেন্ট অনুযায়ী।']],
         ['term' => ['en' => 'Stock valuation', 'bn' => 'Stock valuation'], 'def' => ['en' => 'Monetary value of inventory on hand at period end.', 'bn' => 'মজুদের টাকার মূল্য — সময় শেষে।']],
-        ['term' => ['en' => 'Month-end pack', 'bn' => 'Month-end'], 'def' => ['en' => 'Standard set: P&L, stock, AR aging, VAT for management review.', 'bn' => 'P&L, স্টক, AR aging, VAT — মাস শেষ রিভিউ।']],
+        ['term' => ['en' => 'Month-end pack', 'bn' => 'Month-end'], 'def' => ['en' => 'Standard set: P&L, stock, AR aging, VAT, logistics/fleet for management review.', 'bn' => 'P&L, স্টক, AR aging, VAT, লজিস্টিক্স/ফ্লিট — মাস শেষ রিভিউ।']],
+        ['term' => ['en' => 'Export center', 'bn' => 'Export center'], 'def' => ['en' => 'One place to download CSV/PDF by module and date range — not per-page export buttons.', 'bn' => 'মডিউল ও তারিখ অনুযায়ী CSV/PDF — পেজ-পেজ এক্সপোর্ট বোতাম নয়।']],
     ],
 ];

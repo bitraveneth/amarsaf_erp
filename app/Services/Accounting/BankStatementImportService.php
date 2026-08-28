@@ -51,6 +51,134 @@ class BankStatementImportService
         return $rows;
     }
 
+    /**
+     * Build a CSV that matches unreconciled ERP receipts (inflows) and supplier
+     * payments (outflows), plus two unmatched bank-only lines for review.
+     *
+     * @return array{csv: string, line_count: int, used_fallback: bool}
+     */
+    public function buildDemoStatementCsv(Carbon $from, Carbon $to, int $receiptLimit = 8, int $paymentLimit = 4): array
+    {
+        $receipts = Receipt::with('invoice')
+            ->where('reconciled', false)
+            ->whereBetween('received_at', [$from, $to])
+            ->orderByDesc('received_at')
+            ->limit($receiptLimit)
+            ->get();
+
+        $payments = BillPayment::with('bill')
+            ->where('reconciled', false)
+            ->whereBetween('paid_at', [$from, $to])
+            ->orderByDesc('paid_at')
+            ->limit($paymentLimit)
+            ->get();
+
+        $usedFallback = false;
+
+        if ($receipts->isEmpty() && $payments->isEmpty()) {
+            $usedFallback = true;
+            $receipts = Receipt::with('invoice')
+                ->where('reconciled', false)
+                ->orderByDesc('received_at')
+                ->limit($receiptLimit)
+                ->get();
+            $payments = BillPayment::with('bill')
+                ->where('reconciled', false)
+                ->orderByDesc('paid_at')
+                ->limit($paymentLimit)
+                ->get();
+        }
+
+        $lines = [];
+
+        foreach ($receipts as $receipt) {
+            $date = $receipt->received_at?->toDateString() ?? $from->toDateString();
+            $lines[] = [
+                $date,
+                number_format((float) $receipt->amount, 2, '.', ''),
+                $receipt->invoice?->number ?? '',
+                'Agent collection',
+            ];
+        }
+
+        foreach ($payments as $payment) {
+            $date = $payment->paid_at?->toDateString() ?? $from->toDateString();
+            $lines[] = [
+                $date,
+                number_format(-1 * abs((float) $payment->amount), 2, '.', ''),
+                $payment->bill?->number ?? '',
+                'Supplier payment',
+            ];
+        }
+
+        $anchor = optional($receipts->first())->received_at
+            ?? optional($payments->first())->paid_at
+            ?? $from->copy();
+
+        $lines[] = [
+            $anchor->copy()->addDay()->toDateString(),
+            '-12.75',
+            'CHQ-BANK',
+            'Bank service charge (no ERP match)',
+        ];
+        $lines[] = [
+            $anchor->copy()->addDays(2)->toDateString(),
+            '3.25',
+            'INT-DEMO',
+            'Account interest (no ERP match)',
+        ];
+
+        $handle = fopen('php://temp', 'r+');
+        fputcsv($handle, ['Date', 'Amount', 'Reference', 'Description']);
+        foreach ($lines as $line) {
+            fputcsv($handle, $line);
+        }
+        rewind($handle);
+        $csv = stream_get_contents($handle) ?: '';
+        fclose($handle);
+
+        return [
+            'csv' => $csv,
+            'line_count' => count($lines),
+            'used_fallback' => $usedFallback,
+        ];
+    }
+
+    /**
+     * Session-safe preview of import matches (no Eloquent models).
+     */
+    public function summarizeMatches(array $matches): array
+    {
+        return collect($matches)
+            ->map(function (array $row) {
+                $match = $row['match'] ?? null;
+                $label = null;
+
+                if ($match instanceof Receipt) {
+                    $label = $match->invoice?->number ?? ('Receipt #'.$match->id);
+                } elseif ($match instanceof BillPayment) {
+                    $label = $match->bill?->number ?? ('Payment #'.$match->id);
+                }
+
+                $date = $row['date'] ?? null;
+                if ($date instanceof Carbon) {
+                    $date = $date->toDateString();
+                }
+
+                return [
+                    'date' => (string) $date,
+                    'amount' => (float) ($row['amount'] ?? 0),
+                    'direction' => $row['direction'] ?? 'inflow',
+                    'reference' => $row['reference'] ?? null,
+                    'match_type' => $row['match_type'] ?? null,
+                    'matched' => (bool) ($row['match_id'] ?? null),
+                    'match_label' => $label,
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
     public function matchReceipts(array $statementRows, Carbon $from, Carbon $to): array
     {
         $receipts = Receipt::with('invoice.order.agent')

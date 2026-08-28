@@ -36,7 +36,7 @@
             applyTheme(theme) {
                 const html = document.documentElement;
                 const body = document.body;
-                const lightBg = '#F3F4F6';
+                const lightBg = '#FAF7F2';
                 const darkBg = '#0E0F14';
 
                 if (theme === 'dark') {

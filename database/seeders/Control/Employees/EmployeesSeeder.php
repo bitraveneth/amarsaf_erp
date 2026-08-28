@@ -90,5 +90,18 @@ class EmployeesSeeder extends Seeder
                 'work_zone'    => 'Factory',
             ]
         );
+
+        // Logistics coordinator
+        Employee::firstOrCreate(
+            ['name' => 'Logistics Coordinator'],
+            [
+                'work_email'   => 'logistics@demo.local',
+                'work_phone'   => null,
+                'work_mobile'  => '01712-000006',
+                'department'   => 'Inventory & Logistics',
+                'job_position' => 'Logistics Coordinator',
+                'work_zone'    => 'Central Depot',
+            ]
+        );
     }
 }

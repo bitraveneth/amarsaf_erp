@@ -20,7 +20,7 @@ return [
         'duration_min' => 10,
         'outcomes' => [
             ['en' => 'Separate materials from sellable products', 'bn' => 'কাঁচামাল ও বিক্রয়যোগ্য পণ্য আলাদা করুন'],
-            ['en' => 'Set SKUs, UOM, and costs correctly', 'bn' => 'SKU, UOM ও খরচ সঠিকভাবে সেট করুন'],
+            ['en' => 'Set SKUs, tax class, packaging, and material categories', 'bn' => 'SKU, ট্যাক্স ক্লাস, প্যাকেজিং ও ম্যাটেরিয়াল ক্যাটাগরি সেট করুন'],
         ],
     ],
     'agents' => [
@@ -44,10 +44,19 @@ return [
     'warehouses' => [
         'track' => ['en' => 'Operations', 'bn' => 'অপারেশন'],
         'level' => ['en' => 'Beginner', 'bn' => 'প্রাথমিক'],
-        'duration_min' => 12,
+        'duration_min' => 10,
         'outcomes' => [
-            ['en' => 'Configure warehouses, locations, and routes', 'bn' => 'গুদাম, লোকেশন ও রুট কনফিগার'],
-            ['en' => 'Link logistics to sales zones', 'bn' => 'লজিস্টিক্স বিক্রয় জোনের সাথে যুক্ত করুন'],
+            ['en' => 'Configure factory vs depot warehouses', 'bn' => 'Factory বনাম depot গুদাম কনফিগার'],
+            ['en' => 'Set bins and locations for accurate picking', 'bn' => 'সঠিক পিকের জন্য বিন ও লোকেশন সেট করুন'],
+        ],
+    ],
+    'logistics' => [
+        'track' => ['en' => 'Operations', 'bn' => 'অপারেশন'],
+        'level' => ['en' => 'Intermediate', 'bn' => 'মধ্যম'],
+        'duration_min' => 18,
+        'outcomes' => [
+            ['en' => 'Separate own-fleet cost from hired-carrier bills', 'bn' => 'নিজস্ব ফ্লিট খরচ ও ভাড়া ক্যারিয়ার বিল আলাদা করুন'],
+            ['en' => 'Plan vehicle loads and read route profitability', 'bn' => 'যান লোড পরিকল্পনা ও রুট লাভজনকতা পড়ুন'],
         ],
     ],
     'manufacturing' => [
@@ -74,7 +83,7 @@ return [
         'duration_min' => 15,
         'outcomes' => [
             ['en' => 'Create and confirm agent sales orders', 'bn' => 'এজেন্ট বিক্রয় অর্ডার তৈরি ও নিশ্চিত'],
-            ['en' => 'Understand stock reservation on confirm', 'bn' => 'নিশ্চিতকরণে স্টক রিজার্ভেশন বুঝুন'],
+            ['en' => 'Use targets, returns, gifts, and commission settlements', 'bn' => 'টার্গেট, ফেরত, গিফট ও কমিশন সেটেলমেন্ট ব্যবহার'],
         ],
     ],
     'delivery' => [
@@ -92,7 +101,7 @@ return [
         'duration_min' => 25,
         'outcomes' => [
             ['en' => 'Issue invoices and post receipts', 'bn' => 'ইনভয়েস ইস্যু ও রসিদ পোস্ট'],
-            ['en' => 'Handle VAT, withholding, and supplier bills', 'bn' => 'VAT, উৎসে কর ও সাপ্লায়ার বিল পরিচালনা'],
+            ['en' => 'Handle VAT, withholding, bank reconciliation, and supplier bills', 'bn' => 'VAT, উৎসে কর, ব্যাংক মিলকরণ ও সাপ্লায়ার বিল পরিচালনা'],
         ],
     ],
     'profit-loss' => [
@@ -109,8 +118,8 @@ return [
         'level' => ['en' => 'Intermediate', 'bn' => 'মধ্যম'],
         'duration_min' => 12,
         'outcomes' => [
-            ['en' => 'Run month-end report pack', 'bn' => 'মাস শেষ রিপোর্ট প্যাক চালান'],
-            ['en' => 'Use P&L, stock, and aging together', 'bn' => 'P&L, স্টক ও aging একসাথে ব্যবহার'],
+            ['en' => 'Run month-end pack including logistics and fleet', 'bn' => 'লজিস্টিক্স ও ফ্লিটসহ মাস শেষ প্যাক চালান'],
+            ['en' => 'Export CSV/PDF from Export center', 'bn' => 'Export center থেকে CSV/PDF নিন'],
         ],
     ],
     'ledger-mapping' => [

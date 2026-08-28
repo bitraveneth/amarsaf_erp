@@ -66,5 +66,35 @@ class SalesTargetsModuleSeeder extends Seeder
                 ]
             );
         }
+
+        $allocated = (float) SalesTarget::query()
+            ->whereDate('period_start', $currentMonthStart->toDateString())
+            ->whereDate('period_end', $currentMonthEnd->toDateString())
+            ->where(function ($query) {
+                $query->whereNotNull('agent_id')->orWhereNotNull('employee_id');
+            })
+            ->sum('target_value');
+
+        if ($allocated > 0) {
+            $company = SalesTarget::query()
+                ->whereNull('agent_id')
+                ->whereNull('employee_id')
+                ->whereDate('period_start', $currentMonthStart->toDateString())
+                ->whereDate('period_end', $currentMonthEnd->toDateString())
+                ->first();
+
+            if ($company) {
+                $company->update(['target_value' => $allocated, 'kind' => SalesTarget::KIND_COMPANY]);
+            } else {
+                SalesTarget::create([
+                    'kind' => SalesTarget::KIND_COMPANY,
+                    'agent_id' => null,
+                    'employee_id' => null,
+                    'period_start' => $currentMonthStart->toDateString(),
+                    'period_end' => $currentMonthEnd->toDateString(),
+                    'target_value' => $allocated,
+                ]);
+            }
+        }
     }
 }

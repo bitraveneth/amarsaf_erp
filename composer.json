@@ -1,8 +1,8 @@
 {
-    "name": "laravel/laravel",
+    "name": "amarsaf/erp",
     "type": "project",
-    "description": "The skeleton application for the Laravel framework.",
-    "keywords": ["laravel", "framework"],
+    "description": "Saf ERP — sales, inventory, manufacturing, and accounting for AmarSaf.",
+    "keywords": ["erp", "laravel", "accounting", "inventory", "amarsaf"],
     "license": "MIT",
     "require": {
         "php": "^8.1",

@@ -115,6 +115,8 @@ class MenuHelper
             return true;
         }
 
+        $path = explode('#', $path, 2)[0];
+
         if (! str_starts_with($path, '/admin')) {
             return true;
         }
@@ -630,7 +632,7 @@ class MenuHelper
                         'icon' => 'system',
                         'path' => '#',
                         'subItems' => [
-                            ['name' => 'Client manual', 'path' => '/admin/client-guide', 'permission' => 'system.settings'],
+                            ['name' => 'Client manual', 'path' => '/admin/client-guide'],
                         ],
                     ],
                 ],

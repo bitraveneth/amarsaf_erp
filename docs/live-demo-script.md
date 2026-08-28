@@ -6,7 +6,7 @@ Use this on demo day. Estimated time: **45–60 minutes**.
 - Laragon → **Start All**
 - Server running: `http://127.0.0.1:8000`
 - Login: `super@saferpv.local` / `password`
-- Use **Chrome/Edge** (not Cursor browser)
+- Use **Chrome or Edge**
 - Always use **127.0.0.1** (not `localhost`)
 
 ---

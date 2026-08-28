@@ -12,7 +12,13 @@ return [
     'warehouses' => [
         ['label' => ['en' => 'Warehouse', 'bn' => 'গুদাম'], 'desc' => ['en' => 'Factory or depot', 'bn' => 'Factory বা depot'], 'phase' => 'operations'],
         ['label' => ['en' => 'Locations', 'bn' => 'লোকেশন'], 'desc' => ['en' => 'Bins and zones', 'bn' => 'বিন ও জোন'], 'phase' => 'operations'],
-        ['label' => ['en' => 'Routes & vehicles', 'bn' => 'রুট ও যান'], 'desc' => ['en' => 'Dispatch planning', 'bn' => 'ডিসপ্যাচ'], 'phase' => 'operations'],
+        ['label' => ['en' => 'Stock in / out', 'bn' => 'স্টক ইন / আউট'], 'desc' => ['en' => 'GRN, production, pick', 'bn' => 'GRN, উৎপাদন, পিক'], 'phase' => 'operations'],
+    ],
+    'logistics' => [
+        ['label' => ['en' => 'Vehicles & routes', 'bn' => 'যান ও রুট'], 'desc' => ['en' => 'Registry + zones', 'bn' => 'রেজিস্ট্রি + জোন'], 'phase' => 'operations'],
+        ['label' => ['en' => 'Vehicle load', 'bn' => 'যান লোড'], 'desc' => ['en' => 'Plan the trip', 'bn' => 'ট্রিপ পরিকল্পনা'], 'phase' => 'operations'],
+        ['label' => ['en' => 'Fleet or carrier bill', 'bn' => 'ফ্লিট বা ক্যারিয়ার বিল'], 'desc' => ['en' => 'Record trip cost', 'bn' => 'ট্রিপ খরচ'], 'phase' => 'finance'],
+        ['label' => ['en' => 'Route vs sales', 'bn' => 'রুট বনাম বিক্রয়'], 'desc' => ['en' => 'Is the route profitable?', 'bn' => 'রুট লাভজনক?'], 'phase' => 'finance'],
     ],
     'inventory' => [
         ['label' => ['en' => 'Stock in', 'bn' => 'স্টক ইন'], 'desc' => ['en' => 'GRN or production', 'bn' => 'GRN বা উৎপাদন'], 'phase' => 'operations'],
@@ -37,8 +43,9 @@ return [
         ['label' => ['en' => 'Reports', 'bn' => 'রিপোর্ট'], 'desc' => ['en' => 'VAT, P&L, aging', 'bn' => 'VAT, P&L'], 'phase' => 'finance'],
     ],
     'reports' => [
-        ['label' => ['en' => 'Daily posting', 'bn' => 'দৈনিক পোস্ট'], 'desc' => ['en' => 'Invoices, GRN, payroll', 'bn' => 'ইনভয়েস, GRN'], 'phase' => 'finance'],
+        ['label' => ['en' => 'Daily posting', 'bn' => 'দৈনিক পোস্ট'], 'desc' => ['en' => 'Invoices, GRN, payroll, logistics', 'bn' => 'ইনভয়েস, GRN, লজিস্টিক্স'], 'phase' => 'finance'],
         ['label' => ['en' => 'Reports dashboard', 'bn' => 'রিপোর্ট'], 'desc' => ['en' => 'Pick standard reports', 'bn' => 'স্ট্যান্ডার্ড রিপোর্ট'], 'phase' => 'finance'],
-        ['label' => ['en' => 'Month-end pack', 'bn' => 'মাস শেষ'], 'desc' => ['en' => 'Stock + AR + P&L', 'bn' => 'স্টক + AR + P&L'], 'phase' => 'finance'],
+        ['label' => ['en' => 'Export center', 'bn' => 'এক্সপোর্ট'], 'desc' => ['en' => 'CSV / PDF packs', 'bn' => 'CSV / PDF প্যাক'], 'phase' => 'finance'],
+        ['label' => ['en' => 'Month-end pack', 'bn' => 'মাস শেষ'], 'desc' => ['en' => 'Stock + AR + P&L + fleet', 'bn' => 'স্টক + AR + P&L + ফ্লিট'], 'phase' => 'finance'],
     ],
 ];

@@ -520,6 +520,7 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::get('finance/{invoice}/json', [FinanceController::class, 'exportJson'])->middleware('perm:accounting.manage')->name('finance.json');
     Route::get('finance/{invoice}/e-invoice', [FinanceController::class, 'exportEInvoice'])->middleware('perm:accounting.manage')->name('finance.e-invoice');
     Route::get('finance/reconciliation', [BankReconciliationController::class, 'index'])->middleware('perm:accounting.manage')->name('finance.reconciliation');
+    Route::get('finance/reconciliation/sample.csv', [BankReconciliationController::class, 'sample'])->middleware('perm:accounting.manage')->name('finance.reconciliation.sample');
     Route::post('finance/reconciliation/import', [BankReconciliationController::class, 'import'])->middleware('perm:accounting.manage')->name('finance.reconciliation.import');
     Route::post('finance/reconciliation', [BankReconciliationController::class, 'update'])->middleware('perm:accounting.manage')->name('finance.reconciliation.update');
     Route::get('reports/income-statement', [ReportController::class, 'profitAndLoss'])->middleware('perm:reports.view')->name('reports.pl');

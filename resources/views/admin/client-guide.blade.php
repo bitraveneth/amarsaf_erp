@@ -13,12 +13,12 @@
             continue;
         }
         $markdown = file_get_contents($path);
-        $title = 'Section';
+        $sectionTitle = 'Section';
         if (preg_match('/^#\s+(.+)$/m', $markdown, $m)) {
-            $title = trim($m[1]);
+            $sectionTitle = trim($m[1]);
         }
         $anchor = 'guide-' . md5($relativePath);
-        $manualToc[] = ['title' => $title, 'anchor' => $anchor, 'path' => $relativePath];
+        $manualToc[] = ['title' => $sectionTitle, 'anchor' => $anchor, 'path' => $relativePath];
         $manualSections[] = [
             'path' => $relativePath,
             'anchor' => $anchor,
@@ -34,8 +34,8 @@
             <div>
                 <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Client Manual</h1>
                 <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                    Plain-English guides for your team — products, manufacturing, and more.
-                    Detailed module manuals live in the <code class="text-xs">docs/modules/</code> folder for printing or sharing.
+                    Plain-English guides for your team — products, manufacturing, books for finance managers, and more.
+                    Use <strong>Print</strong> for a paper copy. Detailed files also live in the <code class="text-xs">docs/modules/</code> folder.
                 </p>
             </div>
             <div class="flex items-center gap-2">

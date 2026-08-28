@@ -3,6 +3,8 @@
 > **Who this is for:** Accounts officer, Finance manager  
 > **What you achieve:** Money in and out is recorded; agents and suppliers balances are correct.
 
+**Finance managers / CAs:** for source of truth, month-end, and how to read P&L / trial balance / balance sheet, see **[Books for finance managers](13-books-for-finance-managers.md)**. This chapter is the daily operational guide.
+
 ---
 
 ## Money flow overview
@@ -146,4 +148,5 @@ Payment: **Dr Commission payable | Cr Bank.**
 - Module 07 — Sales  
 - Module 03 — Procurement  
 - Module 10 — Reports  
-- Module 11 — Transaction → ledger map
+- Module 11 — Transaction → ledger map  
+- Module 13 — [Books for finance managers](13-books-for-finance-managers.md)

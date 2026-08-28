@@ -259,7 +259,7 @@ class OperationalReportService
 
             return [
                 'target' => $target,
-                'name' => $target->agent?->name ?? $target->employee?->name ?? '—',
+                'name' => $target->ownerName(),
                 'target_amount' => $targetAmount,
                 'achieved' => round($achieved, 2),
                 'progress' => $progress,
@@ -418,7 +418,7 @@ class OperationalReportService
             'from' => $from,
             'to' => $to,
             'agent' => $agent,
-            'agents' => Agent::orderBy('name')->get(['id', 'name', 'code']),
+            'agents' => Agent::orderBy('name')->get(['id', 'name']),
             'rows' => $rows,
             'opening' => round($opening, 2),
             'closing' => round($opening + $movement, 2),

@@ -330,6 +330,20 @@ class ProductionController extends Controller
             'currencyCode' => config('app.currency', 'BDT'),
         ];
 
+        // Build widget payload in PHP — inline @json([ ... route() ... ]) breaks Blade (unclosed '[').
+        // Bit raven — https://github.com/bitraveneth
+        $productionWidgets = [
+            'productUnitCosts' => $productUnitCosts,
+            'materialRequirements' => $materialRequirements,
+            'warehouseStock' => $warehouseStock,
+            'warehouseNames' => $warehouses->pluck('name', 'id'),
+            'bomCatalog' => $bomCatalog,
+            'openBatchesByProduct' => $openBatchesByProduct,
+            'defaultWarehouseId' => $defaultWarehouseId ?? '',
+            'oldBatchId' => old('batch_id'),
+            'bomCreateUrl' => route('admin.boms.create'),
+        ];
+
         return view('admin.production.create', [
             'products'           => $products,
             'batches'            => $batches,
@@ -346,6 +360,7 @@ class ProductionController extends Controller
             'productSkus'          => $productSkus,
             'openBatchesByProduct' => $openBatchesByProduct,
             'formState'            => $formState,
+            'productionWidgets'    => $productionWidgets,
         ]);
     }
 
