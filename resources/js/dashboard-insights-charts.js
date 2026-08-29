@@ -1,4 +1,5 @@
 const CHART_HEIGHT = 280;
+const DONUT_CHART_HEIGHT = 220;
 const WIDE_CHART_HEIGHT = 260;
 
 function cssVar(name, fallback) {
@@ -6,17 +7,21 @@ function cssVar(name, fallback) {
     return value || fallback;
 }
 
-/** Saf ERP chart palette — reads live CSS tokens (respects Admin → Settings → Colors). */
+/**
+ * Saf ERP chart palette — distinct hues from design tokens so mix slices
+ * stay readable for super admin and every other dashboard role.
+ * Reads live CSS variables (Admin → Settings → Colors).
+ */
 function erpChartPalette() {
     return [
         cssVar('--color-brand-500', '#5f4bff'),
-        cssVar('--color-brand-400', '#8f6bff'),
-        cssVar('--color-brand-300', '#ad92ff'),
-        cssVar('--color-brand-600', '#4d39e6'),
-        cssVar('--color-blue-light-500', '#4b7fff'),
-        cssVar('--color-blue-light-400', '#6698ff'),
         cssVar('--color-success-500', '#22b573'),
+        cssVar('--color-blue-light-500', '#4b7fff'),
         cssVar('--color-warning-500', '#ff8a24'),
+        cssVar('--color-brand-700', '#3f2ec4'),
+        cssVar('--color-success-400', '#3ecf8e'),
+        cssVar('--color-blue-light-300', '#8fb8ff'),
+        cssVar('--color-orange-400', '#fd853a'),
     ];
 }
 
@@ -35,28 +40,6 @@ function chartTheme() {
         error: cssVar('--color-error-500', '#ef4444'),
         info: cssVar('--color-blue-light-500', '#4b7fff'),
         warning: cssVar('--color-warning-500', '#ff8a24'),
-    };
-}
-
-function tailAdminLegend(theme) {
-    return {
-        show: true,
-        position: 'bottom',
-        horizontalAlign: 'center',
-        fontFamily: window.erpUiFontStack,
-        fontSize: '13px',
-        fontWeight: 400,
-        labels: { colors: theme.foreColor },
-        markers: {
-            size: 5,
-            shape: 'circle',
-            strokeWidth: 0,
-            offsetX: -2,
-        },
-        itemMargin: {
-            horizontal: 10,
-            vertical: 4,
-        },
     };
 }
 
@@ -111,50 +94,135 @@ function formatCurrency(value, currencyCode) {
     return `${currencyCode} ${amount.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
 }
 
-function renderDonut(el, labels, values, currencyCode) {
+/** Short centre label so long BDT totals do not touch the donut ring. */
+function formatCompactAmount(value) {
+    const amount = Number(value || 0);
+    const abs = Math.abs(amount);
+
+    if (abs >= 10_000_000) {
+        return `${(amount / 10_000_000).toFixed(1)} Cr`;
+    }
+
+    if (abs >= 100_000) {
+        return `${(amount / 100_000).toFixed(1)} L`;
+    }
+
+    if (abs >= 1000) {
+        return `${(amount / 1000).toFixed(1)}K`;
+    }
+
+    return amount.toLocaleString(undefined, { maximumFractionDigits: 0 });
+}
+
+function compactCenterFontSize(display) {
+    const length = String(display).replace(/\s/g, '').length;
+
+    if (length <= 4) {
+        return '20px';
+    }
+
+    if (length <= 7) {
+        return '18px';
+    }
+
+    return '16px';
+}
+
+function escapeHtml(value) {
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+}
+
+function renderMixLegend(legendEl, labels, values, colors, currencyCode) {
+    if (!legendEl) {
+        return;
+    }
+
+    const total = values.reduce((sum, value) => sum + Number(value || 0), 0);
+    const hasData = values.some((value) => Number(value) > 0);
+
+    if (!hasData) {
+        legendEl.innerHTML = '';
+        legendEl.hidden = true;
+        return;
+    }
+
+    legendEl.hidden = false;
+    legendEl.innerHTML = labels
+        .map((label, index) => {
+            const amount = Number(values[index] || 0);
+            const percent = total > 0 ? Math.round((amount / total) * 100) : 0;
+            const color = colors[index % colors.length];
+
+            return `<li class="dash-analytics-legend__row">
+                <span class="dash-analytics-legend__swatch" style="background:${color}"></span>
+                <span class="dash-analytics-legend__name" title="${escapeHtml(label)}">${escapeHtml(label)}</span>
+                <span class="dash-analytics-legend__meta">
+                    <span class="dash-analytics-legend__amount" title="${escapeHtml(formatCurrency(amount, currencyCode))}">${escapeHtml(formatCompactAmount(amount))}</span>
+                    <span class="dash-analytics-legend__share">${percent}%</span>
+                </span>
+            </li>`;
+        })
+        .join('');
+}
+
+function renderDonut(el, labels, values, currencyCode, legendEl) {
     if (!el || !window.ApexCharts) {
         return;
     }
 
     const theme = chartTheme();
+    const colors = erpChartPalette();
     const hasData = values.some((value) => Number(value) > 0);
     const total = values.reduce((sum, value) => sum + Number(value || 0), 0);
+    const centerTotal = formatCompactAmount(total);
+    const sliceGap = theme.isDark
+        ? cssVar('--color-gray-900', '#151821')
+        : cssVar('--color-white', '#ffffff');
 
     const chart = new window.ApexCharts(el, {
-        ...baseChartOptions('donut', CHART_HEIGHT),
+        ...baseChartOptions('donut', DONUT_CHART_HEIGHT),
         series: hasData ? values : [],
         labels: hasData ? labels : [],
-        colors: erpChartPalette(),
-        stroke: { show: false },
-        legend: tailAdminLegend(theme),
+        colors,
+        stroke: {
+            show: true,
+            width: 3,
+            colors: [sliceGap],
+        },
+        legend: { show: false },
         plotOptions: {
             pie: {
+                expandOnClick: false,
                 donut: {
-                    size: '72%',
+                    size: '78%',
                     labels: {
                         show: true,
                         name: {
                             show: true,
-                            fontSize: '13px',
-                            fontWeight: 500,
-                            color: theme.labelColor,
-                            offsetY: 22,
+                            fontSize: '11px',
+                            fontWeight: 600,
+                            color: theme.foreColor,
+                            offsetY: 18,
                         },
                         value: {
                             show: true,
-                            fontSize: '22px',
-                            fontWeight: 600,
+                            fontSize: compactCenterFontSize(centerTotal),
+                            fontWeight: 700,
                             color: theme.totalColor,
-                            offsetY: -8,
-                            formatter: (val) => formatCurrency(val, currencyCode),
+                            offsetY: -6,
+                            formatter: (val) => formatCompactAmount(val),
                         },
                         total: {
                             show: true,
-                            label: 'Total',
-                            fontSize: '13px',
-                            fontWeight: 500,
-                            color: theme.labelColor,
-                            formatter: () => formatCurrency(total, currencyCode),
+                            label: `${currencyCode} total`,
+                            fontSize: '11px',
+                            fontWeight: 600,
+                            color: theme.foreColor,
+                            formatter: () => centerTotal,
                         },
                     },
                 },
@@ -170,6 +238,7 @@ function renderDonut(el, labels, values, currencyCode) {
 
     chart.render();
     pushChart(chart);
+    renderMixLegend(legendEl, labels, values, colors, currencyCode);
 }
 
 function renderCashBar(el, labels, values, currencyCode) {
@@ -361,6 +430,7 @@ export function initDashboardInsightsCharts() {
         config.productMix?.labels || [],
         config.productMix?.values || [],
         currencyCode,
+        document.querySelector('#insights-legend-product-mix'),
     );
 
     renderDonut(
@@ -368,6 +438,7 @@ export function initDashboardInsightsCharts() {
         config.agentMix?.labels || [],
         config.agentMix?.values || [],
         currencyCode,
+        document.querySelector('#insights-legend-agent-mix'),
     );
 
     renderCashBar(

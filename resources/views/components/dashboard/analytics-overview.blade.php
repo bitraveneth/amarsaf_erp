@@ -16,28 +16,30 @@
     <div class="dash-analytics-grid">
         <div class="dash-analytics-card">
             <div class="dash-analytics-card__head">
-                <h3 class="dash-analytics-card__title">Revenue by product</h3>
-                <p class="dash-analytics-card__desc">Share of net sales this month</p>
+                <h3 class="dash-analytics-card__title erp-h3">Revenue by product</h3>
+                <p class="dash-analytics-card__desc erp-caption">Share of net sales this month</p>
             </div>
-            <div class="dash-analytics-card__body">
-                <div id="insights-chart-product-mix" class="dash-analytics-chart"></div>
-            </div>
-        </div>
-
-        <div class="dash-analytics-card">
-            <div class="dash-analytics-card__head">
-                <h3 class="dash-analytics-card__title">Revenue by agent</h3>
-                <p class="dash-analytics-card__desc">Top partner contribution</p>
-            </div>
-            <div class="dash-analytics-card__body">
-                <div id="insights-chart-agent-mix" class="dash-analytics-chart"></div>
+            <div class="dash-analytics-card__body dash-analytics-mix">
+                <div id="insights-chart-product-mix" class="dash-analytics-chart dash-analytics-chart--donut"></div>
+                <ul id="insights-legend-product-mix" class="dash-analytics-legend" hidden></ul>
             </div>
         </div>
 
         <div class="dash-analytics-card">
             <div class="dash-analytics-card__head">
-                <h3 class="dash-analytics-card__title">Cash snapshot</h3>
-                <p class="dash-analytics-card__desc">Invoiced, collected, and open balances</p>
+                <h3 class="dash-analytics-card__title erp-h3">Revenue by agent</h3>
+                <p class="dash-analytics-card__desc erp-caption">Top partner contribution</p>
+            </div>
+            <div class="dash-analytics-card__body dash-analytics-mix">
+                <div id="insights-chart-agent-mix" class="dash-analytics-chart dash-analytics-chart--donut"></div>
+                <ul id="insights-legend-agent-mix" class="dash-analytics-legend" hidden></ul>
+            </div>
+        </div>
+
+        <div class="dash-analytics-card">
+            <div class="dash-analytics-card__head">
+                <h3 class="dash-analytics-card__title erp-h3">Cash snapshot</h3>
+                <p class="dash-analytics-card__desc erp-caption">Invoiced, collected, and open balances</p>
             </div>
             <div class="dash-analytics-card__body">
                 <div id="insights-chart-cash" class="dash-analytics-chart"></div>
@@ -46,8 +48,8 @@
 
         <div class="dash-analytics-card">
             <div class="dash-analytics-card__head">
-                <h3 class="dash-analytics-card__title">Month momentum</h3>
-                <p class="dash-analytics-card__desc">Percent change vs {{ $charts['previousMonthLabel'] ?? 'last month' }}</p>
+                <h3 class="dash-analytics-card__title erp-h3">Month momentum</h3>
+                <p class="dash-analytics-card__desc erp-caption">Percent change vs {{ $charts['previousMonthLabel'] ?? 'last month' }}</p>
             </div>
             <div class="dash-analytics-card__body">
                 <div id="insights-chart-momentum" class="dash-analytics-chart"></div>
@@ -56,8 +58,8 @@
 
         <div class="dash-analytics-card dash-analytics-card--wide">
             <div class="dash-analytics-card__head">
-                <h3 class="dash-analytics-card__title">Operations load</h3>
-                <p class="dash-analytics-card__desc">QC, stock, batches, and delivery pipeline</p>
+                <h3 class="dash-analytics-card__title erp-h3">Operations load</h3>
+                <p class="dash-analytics-card__desc erp-caption">QC, stock, batches, and delivery pipeline</p>
             </div>
             <div class="dash-analytics-card__body">
                 <div id="insights-chart-operations" class="dash-analytics-chart dash-analytics-chart--wide"></div>
