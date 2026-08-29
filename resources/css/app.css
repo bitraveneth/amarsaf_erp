@@ -2562,7 +2562,7 @@ pre[class*='language-'] {
   }
 
   .erp-dash-panel {
-    @apply rounded-3xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900 md:p-7;
+    @apply min-w-0 overflow-hidden rounded-3xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900 md:p-7;
   }
 
   .erp-dash-panel__header {
@@ -2586,7 +2586,7 @@ pre[class*='language-'] {
   }
 
   .erp-dash-layout-split {
-    @apply grid grid-cols-1 gap-5 xl:grid-cols-[1.2fr_0.8fr];
+    @apply grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)];
   }
 
   .erp-dash-layout-thirds {
@@ -2594,7 +2594,7 @@ pre[class*='language-'] {
   }
 
   .erp-dash-highlight {
-    @apply rounded-3xl bg-gray-950 px-6 py-7 text-white dark:bg-black;
+    @apply min-w-0 overflow-hidden rounded-3xl bg-gray-950 px-6 py-7 text-white dark:bg-black;
   }
 
   .erp-dash-highlight__label {
@@ -2641,6 +2641,14 @@ pre[class*='language-'] {
     @apply mt-2 text-xs text-gray-500 dark:text-gray-400;
   }
 
+  .erp-dash-chart {
+    @apply min-w-0 max-w-full;
+  }
+
+  .erp-dash-chart__plot {
+    @apply max-w-full overflow-x-auto overflow-y-hidden rounded-2xl bg-gray-50 px-3 pt-4 pb-2 dark:bg-white/[0.04];
+  }
+
   .erp-dash-chart__legend {
     @apply mb-4 flex flex-wrap gap-4 text-xs font-medium text-gray-600 dark:text-gray-400;
   }
@@ -2662,15 +2670,15 @@ pre[class*='language-'] {
   }
 
   .erp-dash-chart__grid {
-    @apply flex items-end gap-2 overflow-x-auto pb-2;
+    @apply flex min-h-[11.5rem] w-full min-w-0 items-end gap-1.5;
   }
 
   .erp-dash-chart__column {
-    @apply flex min-w-[2.75rem] flex-1 flex-col items-center gap-2;
+    @apply flex min-w-[1.65rem] max-w-[3.25rem] flex-1 flex-col items-center gap-1.5;
   }
 
   .erp-dash-chart__bars {
-    @apply flex h-40 w-full items-end justify-center gap-1;
+    @apply box-border flex h-40 w-full items-end justify-center gap-1 overflow-hidden;
   }
 
   .erp-dash-chart__bar {
@@ -2686,7 +2694,7 @@ pre[class*='language-'] {
   }
 
   .erp-dash-chart__label {
-    @apply text-[10px] font-medium text-gray-500 dark:text-gray-400;
+    @apply max-w-full truncate text-center text-[10px] font-medium leading-tight text-gray-500 dark:text-gray-400;
   }
 
   .erp-dash-rank__title {
