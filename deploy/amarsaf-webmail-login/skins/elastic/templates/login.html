@@ -82,12 +82,17 @@ document.addEventListener('DOMContentLoaded', function () {
       toggle.type = 'button';
       toggle.className = 'amarsaf-password-toggle';
       toggle.setAttribute('aria-label', 'Show password');
+      toggle.setAttribute('tabindex', '-1');
       toggle.textContent = 'Show';
-      toggle.addEventListener('click', function () {
+      toggle.addEventListener('click', function (event) {
+        event.preventDefault();
+        event.stopPropagation();
         const reveal = passInput.type === 'password';
         passInput.type = reveal ? 'text' : 'password';
+        // Keep the same control size for Show and Hide
         toggle.textContent = reveal ? 'Hide' : 'Show';
         toggle.setAttribute('aria-label', reveal ? 'Hide password' : 'Show password');
+        passInput.focus();
       });
       cell.appendChild(toggle);
     }

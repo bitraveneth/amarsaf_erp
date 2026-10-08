@@ -195,30 +195,48 @@ body.task-login #login-form td.input .icon {
 
 body.task-login #login-form td.input .form-control {
   padding-left: 12px !important;
-  padding-right: 56px !important;
+  padding-right: 12px !important;
 }
 
 body.task-login #login-form td.input.amarsaf-password-cell {
   position: relative;
 }
 
+/* Keep password field the same size when Show/Hide is present */
+body.task-login #login-form td.input.amarsaf-password-cell .form-control {
+  padding-right: 52px !important;
+}
+
 body.task-login .amarsaf-password-toggle {
   position: absolute;
   top: 50%;
-  right: 14px;
+  right: 6px;
   transform: translateY(-50%);
+  z-index: 2;
+  height: 28px;
+  min-width: 40px;
+  padding: 0 8px;
   border: 0;
+  border-radius: 7px;
   background: transparent;
-  color: rgba(255, 255, 255, 0.45);
-  font-size: 12px;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 11px;
   font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 28px;
   cursor: pointer;
-  padding: 0;
   font-family: inherit;
 }
 
-body.task-login .amarsaf-password-toggle:hover {
+body.task-login .amarsaf-password-toggle:hover,
+body.task-login .amarsaf-password-toggle:focus {
   color: #fff;
+  background: rgba(255, 255, 255, 0.06);
+  outline: none;
+}
+
+body.task-login .amarsaf-password-toggle:active {
+  background: rgba(255, 255, 255, 0.1);
 }
 
 /* —— Visual side —— */
