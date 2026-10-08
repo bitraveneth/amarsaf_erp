@@ -44,7 +44,7 @@ body.task-login .amarsaf-auth-panel--login {
 }
 
 body.task-login .amarsaf-auth-brand {
-  margin-bottom: 36px;
+  margin-bottom: 28px;
 }
 
 body.task-login .amarsaf-auth-brand__logo {
@@ -54,17 +54,17 @@ body.task-login .amarsaf-auth-brand__logo {
 }
 
 body.task-login .amarsaf-auth-card {
-  width: min(100%, 400px);
+  width: min(100%, 360px);
 }
 
 body.task-login .amarsaf-auth-card__copy {
-  margin-bottom: 28px;
+  margin-bottom: 22px;
 }
 
 body.task-login .amarsaf-auth-card__copy h2 {
-  margin: 0 0 8px;
+  margin: 0 0 6px;
   color: #fff;
-  font-size: clamp(32px, 4vw, 40px);
+  font-size: clamp(28px, 3.5vw, 34px);
   line-height: 1.1;
   letter-spacing: -0.04em;
   font-weight: 800;
@@ -73,8 +73,8 @@ body.task-login .amarsaf-auth-card__copy h2 {
 body.task-login .amarsaf-auth-card__copy p {
   margin: 0;
   color: rgba(255, 255, 255, 0.52);
-  font-size: 15px;
-  line-height: 1.5;
+  font-size: 14px;
+  line-height: 1.45;
   font-weight: 500;
 }
 
@@ -93,7 +93,7 @@ body.task-login #login-form table {
   width: 100%;
   margin: 0;
   border-collapse: separate;
-  border-spacing: 0 14px;
+  border-spacing: 0 10px;
   table-layout: fixed;
 }
 
@@ -105,16 +105,16 @@ body.task-login #login-form td.input {
 }
 
 body.task-login #login-form td.title {
-  padding-bottom: 8px;
+  padding-bottom: 6px;
 }
 
 body.task-login #login-form td.title label {
   display: block;
   margin: 0;
-  color: rgba(255, 255, 255, 0.7);
-  font-size: 12px;
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
 }
 
@@ -125,15 +125,17 @@ body.task-login #login-form td.input {
 body.task-login #login-form input.form-control {
   width: 100% !important;
   max-width: none !important;
-  height: 52px;
-  min-height: 52px;
-  padding: 0 16px;
-  border-radius: 12px;
+  height: 42px;
+  min-height: 42px;
+  max-height: 42px;
+  padding: 0 12px;
+  border-radius: 10px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   background: rgba(255, 255, 255, 0.03);
   color: #fff;
   box-shadow: none;
-  font-size: 15px;
+  font-size: 14px;
+  line-height: 42px;
   font-family: inherit;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
@@ -144,12 +146,12 @@ body.task-login #login-form input.form-control:hover {
 
 body.task-login #login-form input.form-control:focus {
   border-color: rgba(109, 43, 213, 0.9);
-  box-shadow: 0 0 0 4px rgba(109, 43, 213, 0.22);
+  box-shadow: 0 0 0 3px rgba(109, 43, 213, 0.18);
   outline: none;
 }
 
 body.task-login #login-form p.formbuttons {
-  margin: 22px 0 0 !important;
+  margin: 16px 0 0 !important;
 }
 
 body.task-login #login-form p.formbuttons button,
@@ -159,18 +161,19 @@ body.task-login #rcmloginsubmit {
   align-items: center;
   justify-content: center;
   width: 100% !important;
-  height: 52px;
-  min-height: 52px;
+  height: 42px;
+  min-height: 42px;
+  max-height: 42px;
   margin: 0;
   border: 0;
-  border-radius: 12px;
+  border-radius: 10px;
   background: linear-gradient(90deg, var(--saf-purple) 0%, var(--saf-indigo) 100%);
   color: #fff;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 800;
   font-family: inherit;
   cursor: pointer;
-  box-shadow: 0 14px 30px rgba(109, 43, 213, 0.35);
+  box-shadow: 0 10px 22px rgba(109, 43, 213, 0.3);
   transition: transform 0.15s ease, filter 0.15s ease;
 }
 
@@ -191,8 +194,8 @@ body.task-login #login-form td.input .icon {
 }
 
 body.task-login #login-form td.input .form-control {
-  padding-left: 16px !important;
-  padding-right: 68px !important;
+  padding-left: 12px !important;
+  padding-right: 56px !important;
 }
 
 body.task-login #login-form td.input.amarsaf-password-cell {
