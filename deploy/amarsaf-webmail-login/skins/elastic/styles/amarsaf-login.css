@@ -257,9 +257,7 @@ body.task-login #login-form input#rcmloginpwd {
 }
 
 body.task-login #login-form td.input.amarsaf-password-cell input,
-body.task-login #login-form input#rcmloginpwd,
-body.task-login #login-form .amarsaf-password-wrap input {
-  padding: 0 78px 0 16px !important;
+body.task-login #login-form input#rcmloginpwd {
   text-align: left !important;
 }
 
@@ -319,34 +317,71 @@ body.task-login #login-footer[hidden] {
   display: none !important;
 }
 
+/* Password shell = same look as username; Show is a flex end control */
 body.task-login #login-form .amarsaf-password-wrap {
+  box-sizing: border-box !important;
   position: relative !important;
-  display: block !important;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
   width: 100% !important;
   height: var(--saf-field-h) !important;
   min-height: var(--saf-field-h) !important;
   max-height: var(--saf-field-h) !important;
   margin: 0 !important;
-  padding: 0 !important;
+  padding: 0 6px 0 0 !important;
   overflow: hidden !important;
+  border-radius: 12px !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  background: rgba(255, 255, 255, 0.1) !important;
 }
 
-/* Show — right end, vertically centered, high contrast */
+body.task-login #login-form .amarsaf-password-wrap:focus-within {
+  border-color: rgba(109, 43, 213, 0.95) !important;
+  box-shadow: 0 0 0 3px rgba(109, 43, 213, 0.22) !important;
+}
+
+body.task-login #login-form .amarsaf-password-wrap input,
+body.task-login #login-form .amarsaf-password-wrap input#rcmloginpwd,
+body.task-login #login-form .amarsaf-password-wrap input.form-control {
+  flex: 1 1 auto !important;
+  width: auto !important;
+  min-width: 0 !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  margin: 0 !important;
+  padding: 0 12px !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  text-align: left !important;
+}
+
+body.task-login #login-form .amarsaf-password-wrap input:focus {
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+/* Show — flex end, vertically centered */
 body.task-login .amarsaf-password-toggle {
-  position: absolute !important;
-  top: 6px !important;
-  right: 6px !important;
-  bottom: 6px !important;
+  position: static !important;
+  top: auto !important;
+  right: auto !important;
+  bottom: auto !important;
   left: auto !important;
   z-index: 5;
   box-sizing: border-box !important;
+  flex: 0 0 auto !important;
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
+  align-self: center !important;
   width: 64px !important;
-  height: auto !important;
-  min-height: 0 !important;
-  max-height: none !important;
+  height: 34px !important;
+  min-height: 34px !important;
+  max-height: 34px !important;
   margin: 0 !important;
   padding: 0 10px !important;
   border: 1px solid rgba(255, 255, 255, 0.28) !important;
