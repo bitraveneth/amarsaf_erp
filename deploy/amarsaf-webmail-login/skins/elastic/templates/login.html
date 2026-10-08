@@ -62,37 +62,72 @@
 </noscript>
 
 <script>
-document.addEventListener('DOMContentLoaded', function () {
-  function unwrapInputGroup(input) {
-    if (!input) return;
-    const group = input.closest('.input-group');
-    const cell = input.closest('td.input') || input.parentElement;
-    if (group && cell) {
-      group.querySelectorAll('.input-group-prepend, .input-group-append, .input-group-text, .icon, button')
-        .forEach((el) => el.remove());
-      cell.appendChild(input);
-      group.remove();
-    } else if (input.parentElement) {
-      input.parentElement.querySelectorAll('.input-group-prepend, .input-group-append, .input-group-text, .icon')
-        .forEach((el) => el.remove());
-    }
+(function () {
+  var FIELD_H = '40px';
+
+  function fieldStyle(extraPaddingRight) {
+    return {
+      boxSizing: 'border-box',
+      display: 'block',
+      width: '100%',
+      height: FIELD_H,
+      minHeight: FIELD_H,
+      maxHeight: FIELD_H,
+      margin: '0',
+      padding: extraPaddingRight ? '0 56px 0 12px' : '0 12px',
+      borderRadius: '10px',
+      border: '1px solid rgba(255,255,255,0.12)',
+      background: 'rgba(255,255,255,0.03)',
+      color: '#fff',
+      boxShadow: 'none',
+      fontSize: '14px',
+      lineHeight: 'normal',
+      flex: 'none'
+    };
   }
 
-  const userInput = document.getElementById('rcmloginuser');
-  const passInput = document.getElementById('rcmloginpwd');
+  function applyStyles(el, styles) {
+    if (!el) return;
+    Object.keys(styles).forEach(function (key) {
+      el.style[key] = styles[key];
+    });
+  }
 
-  unwrapInputGroup(userInput);
-  unwrapInputGroup(passInput);
+  function stripRoundcubeChrome(input) {
+    if (!input) return;
+    var cell = input.closest('td.input') || input.parentElement;
+    if (!cell) return;
 
-  if (passInput) {
-    const cell = passInput.closest('td.input') || passInput.parentElement;
-    if (cell && !cell.querySelector('.amarsaf-password-toggle')) {
-      cell.classList.add('amarsaf-password-cell');
-      if (passInput.parentElement !== cell) {
-        cell.appendChild(passInput);
-      }
+    cell.querySelectorAll('.input-group-prepend, .input-group-append, .input-group-text, i.icon')
+      .forEach(function (el) { el.remove(); });
 
-      const toggle = document.createElement('button');
+    cell.classList.remove('input-group', 'input-group-lg', 'form-group', 'row');
+    cell.classList.add('input');
+
+    if (input.parentElement !== cell) {
+      cell.appendChild(input);
+    }
+
+    input.classList.remove('input-group-lg');
+    input.removeAttribute('placeholder');
+    return cell;
+  }
+
+  function ensureToggle(passInput, cell) {
+    if (!passInput || !cell) return;
+    cell.classList.add('amarsaf-password-cell');
+    applyStyles(cell, {
+      position: 'relative',
+      display: 'block',
+      height: FIELD_H,
+      minHeight: FIELD_H,
+      maxHeight: FIELD_H,
+      overflow: 'visible'
+    });
+
+    var toggle = cell.querySelector('.amarsaf-password-toggle');
+    if (!toggle) {
+      toggle = document.createElement('button');
       toggle.type = 'button';
       toggle.className = 'amarsaf-password-toggle';
       toggle.setAttribute('aria-label', 'Show password');
@@ -101,7 +136,7 @@ document.addEventListener('DOMContentLoaded', function () {
       toggle.addEventListener('click', function (event) {
         event.preventDefault();
         event.stopPropagation();
-        const reveal = passInput.type === 'password';
+        var reveal = passInput.type === 'password';
         passInput.type = reveal ? 'text' : 'password';
         toggle.textContent = reveal ? 'Hide' : 'Show';
         toggle.setAttribute('aria-label', reveal ? 'Hide password' : 'Show password');
@@ -109,11 +144,85 @@ document.addEventListener('DOMContentLoaded', function () {
       });
       cell.appendChild(toggle);
     }
+
+    applyStyles(toggle, {
+      position: 'absolute',
+      top: '0',
+      right: '0',
+      width: '52px',
+      height: FIELD_H,
+      minHeight: FIELD_H,
+      maxHeight: FIELD_H,
+      margin: '0',
+      padding: '0',
+      border: '0',
+      background: 'transparent',
+      color: 'rgba(255,255,255,0.55)',
+      fontSize: '11px',
+      fontWeight: '700',
+      lineHeight: FIELD_H,
+      textAlign: 'center',
+      cursor: 'pointer',
+      zIndex: '5'
+    });
   }
 
-  const submit = document.getElementById('rcmloginsubmit');
-  if (submit) {
-    submit.textContent = 'Sign in';
+  function normalize() {
+    var userInput = document.getElementById('rcmloginuser');
+    var passInput = document.getElementById('rcmloginpwd');
+    var submit = document.getElementById('rcmloginsubmit');
+
+    document.querySelectorAll('#login-form td.title').forEach(function (td) {
+      td.style.display = 'block';
+    });
+
+    var userCell = stripRoundcubeChrome(userInput);
+    var passCell = stripRoundcubeChrome(passInput);
+
+    if (userCell) {
+      applyStyles(userCell, {
+        position: 'relative',
+        display: 'block',
+        height: FIELD_H,
+        minHeight: FIELD_H,
+        maxHeight: FIELD_H
+      });
+    }
+
+    applyStyles(userInput, fieldStyle(false));
+    applyStyles(passInput, fieldStyle(true));
+    ensureToggle(passInput, passCell);
+
+    if (submit) {
+      submit.textContent = 'Sign in';
+      submit.classList.remove('btn-lg', 'text-uppercase');
+      applyStyles(submit, {
+        height: FIELD_H,
+        minHeight: FIELD_H,
+        maxHeight: FIELD_H,
+        padding: '0',
+        fontSize: '14px',
+        lineHeight: '1',
+        textTransform: 'none'
+      });
+    }
   }
-});
+
+  function boot() {
+    normalize();
+    // Roundcube elastic wraps fields in input-group-lg after init — undo that.
+    [50, 150, 400, 1000].forEach(function (ms) {
+      setTimeout(normalize, ms);
+    });
+    if (window.rcmail && typeof rcmail.addEventListener === 'function') {
+      rcmail.addEventListener('init', normalize);
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', boot);
+  } else {
+    boot();
+  }
+})();
 </script>

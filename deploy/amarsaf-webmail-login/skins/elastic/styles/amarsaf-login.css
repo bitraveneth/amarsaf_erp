@@ -8,6 +8,7 @@ body.task-login {
   --saf-night: #170a35;
   --saf-violet: #2a0e5c;
   --saf-fresh: #22b573;
+  --saf-field-h: 40px;
   font-family: "Plus Jakarta Sans", system-ui, sans-serif !important;
   background: #0e0f14 !important;
 }
@@ -97,19 +98,26 @@ body.task-login #login-form table {
   table-layout: fixed;
 }
 
+body.task-login #login-form tr.form-group,
+body.task-login #login-form tr {
+  display: block;
+  margin: 0;
+}
+
 body.task-login #login-form td.title,
 body.task-login #login-form td.input {
-  display: block;
+  display: block !important;
   width: 100% !important;
-  padding: 0;
+  padding: 0 !important;
+  border: 0 !important;
 }
 
 body.task-login #login-form td.title {
-  padding-bottom: 6px;
+  padding-bottom: 6px !important;
 }
 
 body.task-login #login-form td.title label {
-  display: block;
+  display: block !important;
   margin: 0;
   color: rgba(255, 255, 255, 0.65);
   font-size: 11px;
@@ -118,26 +126,57 @@ body.task-login #login-form td.title label {
   text-transform: uppercase;
 }
 
-body.task-login #login-form td.input {
-  position: relative;
-  height: 40px !important;
-  min-height: 40px !important;
-  max-height: 40px !important;
+/* Kill Roundcube elastic "pretty login" sizing */
+body.task-login #login-form td.input,
+body.task-login #login-form td.input.input-group,
+body.task-login #login-form td.input.input-group-lg,
+body.task-login #login-form .input-group,
+body.task-login #login-form .input-group-lg {
+  display: block !important;
+  position: relative !important;
+  flex: none !important;
+  width: 100% !important;
+  height: var(--saf-field-h) !important;
+  min-height: var(--saf-field-h) !important;
+  max-height: var(--saf-field-h) !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  overflow: visible !important;
 }
 
-/* Shared field shell — email and password are the same size */
+body.task-login #login-form .input-group-prepend,
+body.task-login #login-form .input-group-append,
+body.task-login #login-form .input-group-text,
+body.task-login #login-form td.input > .icon,
+body.task-login #login-form td.input i.icon {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: 0 !important;
+  overflow: hidden !important;
+}
+
+/* Shared field shell — username and password identical */
 body.task-login #login-form input.form-control,
+body.task-login #login-form .input-group > .form-control,
+body.task-login #login-form .input-group-lg > .form-control,
 body.task-login #login-form input[type="text"],
 body.task-login #login-form input[type="password"],
 body.task-login #login-form input#rcmloginuser,
 body.task-login #login-form input#rcmloginpwd {
   box-sizing: border-box !important;
   display: block !important;
+  flex: none !important;
   width: 100% !important;
   max-width: 100% !important;
-  height: 40px !important;
-  min-height: 40px !important;
-  max-height: 40px !important;
+  height: var(--saf-field-h) !important;
+  min-height: var(--saf-field-h) !important;
+  max-height: var(--saf-field-h) !important;
   margin: 0 !important;
   padding: 0 12px !important;
   border-radius: 10px !important;
@@ -146,8 +185,13 @@ body.task-login #login-form input#rcmloginpwd {
   color: #fff !important;
   box-shadow: none !important;
   font-size: 14px !important;
-  line-height: 38px !important;
+  line-height: normal !important;
   font-family: inherit !important;
+}
+
+body.task-login #login-form td.input.amarsaf-password-cell input,
+body.task-login #login-form input#rcmloginpwd {
+  padding: 0 56px 0 12px !important;
 }
 
 body.task-login #login-form input.form-control:hover,
@@ -170,24 +214,28 @@ body.task-login #login-form p.formbuttons {
 
 body.task-login #login-form p.formbuttons button,
 body.task-login #login-form p.formbuttons .button,
-body.task-login #rcmloginsubmit {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+body.task-login #rcmloginsubmit,
+body.task-login #rcmloginsubmit.btn-lg {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
   width: 100% !important;
-  height: 40px;
-  min-height: 40px;
-  max-height: 40px;
-  margin: 0;
-  border: 0;
-  border-radius: 10px;
-  background: linear-gradient(90deg, var(--saf-purple) 0%, var(--saf-indigo) 100%);
-  color: #fff;
-  font-size: 14px;
-  font-weight: 800;
-  font-family: inherit;
+  height: var(--saf-field-h) !important;
+  min-height: var(--saf-field-h) !important;
+  max-height: var(--saf-field-h) !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 10px !important;
+  background: linear-gradient(90deg, var(--saf-purple) 0%, var(--saf-indigo) 100%) !important;
+  color: #fff !important;
+  font-size: 14px !important;
+  font-weight: 800 !important;
+  line-height: 1 !important;
+  text-transform: none !important;
+  font-family: inherit !important;
   cursor: pointer;
-  box-shadow: 0 10px 22px rgba(109, 43, 213, 0.3);
+  box-shadow: 0 10px 22px rgba(109, 43, 213, 0.3) !important;
   transition: transform 0.15s ease, filter 0.15s ease;
 }
 
@@ -201,58 +249,43 @@ body.task-login #login-footer[hidden] {
   display: none !important;
 }
 
-body.task-login #login-form td.input .input-group-prepend,
-body.task-login #login-form td.input .input-group-append,
-body.task-login #login-form td.input .input-group-text,
-body.task-login #login-form td.input .icon {
-  display: none !important;
-}
-
-/* Password = same 40px input as email; Show sits inside the right end */
-body.task-login #login-form td.input.amarsaf-password-cell {
-  position: relative !important;
-  height: 40px !important;
-  min-height: 40px !important;
-  max-height: 40px !important;
-}
-
-body.task-login #login-form td.input.amarsaf-password-cell input.form-control,
-body.task-login #login-form td.input.amarsaf-password-cell input#rcmloginpwd,
-body.task-login #login-form td.input.amarsaf-password-cell input[type="password"],
-body.task-login #login-form td.input.amarsaf-password-cell input[type="text"] {
-  width: 100% !important;
-  height: 40px !important;
-  min-height: 40px !important;
-  max-height: 40px !important;
-  padding: 0 52px 0 12px !important;
-}
-
+/* Show/Hide — inside the right end of the password field only */
 body.task-login .amarsaf-password-toggle {
-  position: absolute;
-  top: 0;
-  right: 0;
-  z-index: 2;
-  box-sizing: border-box;
-  width: 52px;
-  height: 40px;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  border-radius: 0 10px 10px 0;
-  background: transparent;
-  color: rgba(255, 255, 255, 0.55);
-  font-size: 11px;
-  font-weight: 700;
-  line-height: 40px;
-  text-align: center;
+  position: absolute !important;
+  top: 0 !important;
+  right: 0 !important;
+  bottom: auto !important;
+  left: auto !important;
+  z-index: 5;
+  box-sizing: border-box !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 52px !important;
+  height: var(--saf-field-h) !important;
+  min-height: var(--saf-field-h) !important;
+  max-height: var(--saf-field-h) !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 10px 10px 0 !important;
+  background: transparent !important;
+  color: rgba(255, 255, 255, 0.55) !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  line-height: 1 !important;
+  text-transform: none !important;
+  box-shadow: none !important;
   cursor: pointer;
-  font-family: inherit;
+  font-family: inherit !important;
 }
 
 body.task-login .amarsaf-password-toggle:hover,
 body.task-login .amarsaf-password-toggle:focus {
-  color: #fff;
-  outline: none;
+  color: #fff !important;
+  background: transparent !important;
+  outline: none !important;
+  box-shadow: none !important;
 }
 
 /* —— Visual side —— */
@@ -338,7 +371,6 @@ body.task-login .amarsaf-auth-visual__line {
   letter-spacing: -0.01em;
 }
 
-/* Hide leftovers from older installs */
 body.task-login .amarsaf-auth-panel--promo,
 body.task-login .amarsaf-auth-promo,
 body.task-login .amarsaf-auth-glow,
