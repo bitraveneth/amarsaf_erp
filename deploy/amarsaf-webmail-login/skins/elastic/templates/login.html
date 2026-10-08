@@ -104,7 +104,10 @@
     cell.classList.remove('input-group', 'input-group-lg', 'form-group', 'row');
     cell.classList.add('input');
 
-    if (input.parentElement !== cell) {
+    var wrap = cell.querySelector('.amarsaf-password-wrap');
+    if (wrap && wrap.contains(input)) {
+      // keep wrap
+    } else if (input.parentElement !== cell) {
       cell.appendChild(input);
     }
 
@@ -117,15 +120,38 @@
     if (!passInput || !cell) return;
     cell.classList.add('amarsaf-password-cell');
     applyStyles(cell, {
-      position: 'relative',
+      position: 'static',
       display: 'block',
       height: FIELD_H,
       minHeight: FIELD_H,
       maxHeight: FIELD_H,
-      overflow: 'visible'
+      overflow: 'visible',
+      padding: '0'
     });
 
-    var toggle = cell.querySelector('.amarsaf-password-toggle');
+    var wrap = cell.querySelector('.amarsaf-password-wrap');
+    if (!wrap) {
+      wrap = document.createElement('div');
+      wrap.className = 'amarsaf-password-wrap';
+      cell.appendChild(wrap);
+    }
+    if (passInput.parentElement !== wrap) {
+      wrap.appendChild(passInput);
+    }
+
+    applyStyles(wrap, {
+      position: 'relative',
+      display: 'block',
+      width: '100%',
+      height: FIELD_H,
+      minHeight: FIELD_H,
+      maxHeight: FIELD_H,
+      margin: '0',
+      padding: '0',
+      overflow: 'hidden'
+    });
+
+    var toggle = wrap.querySelector('.amarsaf-password-toggle');
     if (!toggle) {
       toggle = document.createElement('button');
       toggle.type = 'button';
@@ -142,7 +168,7 @@
         toggle.setAttribute('aria-label', reveal ? 'Hide password' : 'Show password');
         passInput.focus();
       });
-      cell.appendChild(toggle);
+      wrap.appendChild(toggle);
     }
 
     applyStyles(toggle, {
@@ -174,6 +200,11 @@
 
     document.querySelectorAll('#login-form td.title').forEach(function (td) {
       td.style.display = 'block';
+      td.style.paddingBottom = '6px';
+    });
+    document.querySelectorAll('#login-form tr').forEach(function (tr) {
+      tr.classList.remove('form-group', 'row');
+      tr.style.display = 'block';
     });
 
     var userCell = stripRoundcubeChrome(userInput);
@@ -185,7 +216,8 @@
         display: 'block',
         height: FIELD_H,
         minHeight: FIELD_H,
-        maxHeight: FIELD_H
+        maxHeight: FIELD_H,
+        padding: '0'
       });
     }
 

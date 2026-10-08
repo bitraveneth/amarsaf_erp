@@ -249,6 +249,27 @@ body.task-login #login-footer[hidden] {
   display: none !important;
 }
 
+/* Password wrap = same box as username; Show lives inside it */
+body.task-login #login-form .amarsaf-password-wrap {
+  position: relative !important;
+  display: block !important;
+  width: 100% !important;
+  height: var(--saf-field-h) !important;
+  min-height: var(--saf-field-h) !important;
+  max-height: var(--saf-field-h) !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+}
+
+body.task-login #login-form .amarsaf-password-wrap input {
+  width: 100% !important;
+  height: var(--saf-field-h) !important;
+  min-height: var(--saf-field-h) !important;
+  max-height: var(--saf-field-h) !important;
+  padding: 0 56px 0 12px !important;
+}
+
 /* Show/Hide — inside the right end of the password field only */
 body.task-login .amarsaf-password-toggle {
   position: absolute !important;

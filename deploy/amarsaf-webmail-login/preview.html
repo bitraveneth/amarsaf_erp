@@ -80,24 +80,28 @@
   <script>
   document.addEventListener('DOMContentLoaded', function () {
     const passInput = document.getElementById('rcmloginpwd');
-    if (passInput) {
-      const cell = passInput.closest('td.input') || passInput.parentElement;
-      if (cell && !cell.querySelector('.amarsaf-password-toggle')) {
-        cell.classList.add('amarsaf-password-cell');
-        const toggle = document.createElement('button');
-        toggle.type = 'button';
-        toggle.className = 'amarsaf-password-toggle';
-        toggle.setAttribute('aria-label', 'Show password');
-        toggle.setAttribute('tabindex', '-1');
-        toggle.textContent = 'Show';
-        toggle.addEventListener('click', function (event) {
-          event.preventDefault();
-          const reveal = passInput.type === 'password';
-          passInput.type = reveal ? 'text' : 'password';
-          toggle.textContent = reveal ? 'Hide' : 'Show';
-        });
-        cell.appendChild(toggle);
-      }
+    if (!passInput) return;
+    const cell = passInput.closest('td.input') || passInput.parentElement;
+    cell.classList.add('amarsaf-password-cell');
+    let wrap = cell.querySelector('.amarsaf-password-wrap');
+    if (!wrap) {
+      wrap = document.createElement('div');
+      wrap.className = 'amarsaf-password-wrap';
+      cell.appendChild(wrap);
+    }
+    wrap.appendChild(passInput);
+    if (!wrap.querySelector('.amarsaf-password-toggle')) {
+      const toggle = document.createElement('button');
+      toggle.type = 'button';
+      toggle.className = 'amarsaf-password-toggle';
+      toggle.textContent = 'Show';
+      toggle.addEventListener('click', function (event) {
+        event.preventDefault();
+        const reveal = passInput.type === 'password';
+        passInput.type = reveal ? 'text' : 'password';
+        toggle.textContent = reveal ? 'Hide' : 'Show';
+      });
+      wrap.appendChild(toggle);
     }
   });
   </script>
