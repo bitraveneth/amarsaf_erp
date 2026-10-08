@@ -4,7 +4,9 @@ set -euo pipefail
 
 echo "== Find Roundcube document root =="
 ROOT=""
+# Live Amarsaf webmail DocumentRoot is /usr/share/roundcube
 for candidate in \
+  /usr/share/roundcube \
   /var/www/webmail-new \
   /var/www/mail.amarsaf.com \
   /var/www/webmail.amarsaf.com \
@@ -18,8 +20,7 @@ do
 done
 
 if [[ -z "$ROOT" ]]; then
-  ROOT=$(grep -R "webmail.amarsaf.com" /etc/apache2/sites-enabled 2>/dev/null \
-    | grep -i DocumentRoot \
+  ROOT=$(grep -R "DocumentRoot" /etc/apache2/sites-enabled/webmail.amarsaf.com*.conf 2>/dev/null \
     | head -1 \
     | awk '{print $2}' \
     | tr -d '"' || true)

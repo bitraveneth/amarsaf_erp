@@ -9,53 +9,29 @@
 
 <div id="layout-content" class="selected no-navbar" role="main">
   <div class="amarsaf-auth-page">
-    <section class="amarsaf-auth-panel amarsaf-auth-panel--login" aria-label="Amarsaf Webmail login">
+    <section class="amarsaf-auth-card" aria-label="Amarsaf Webmail login">
       <div class="amarsaf-auth-brand">
         <img
           class="amarsaf-auth-brand__logo"
           src="skins/elastic/images/saf-logo-white.svg"
           alt="SAF"
-          width="140"
-          height="46"
+          width="120"
+          height="40"
         />
-        <span class="amarsaf-auth-brand__text">Mail</span>
       </div>
 
-      <div class="amarsaf-auth-card">
-        <div class="amarsaf-auth-card__copy">
-          <h2>Welcome back</h2>
-          <p>Sign in with your Amarsaf email username and password to access business mail.</p>
+      <div class="amarsaf-auth-card__copy">
+        <h2>Sign in</h2>
+        <p>Amarsaf Mail</p>
+      </div>
+
+      <roundcube:form id="login-form" name="login-form" method="post" class="propform">
+        <roundcube:object name="loginform" form="login-form" size="40" submit=true class="form-control" />
+        <div id="login-footer" role="contentinfo" hidden>
+          <roundcube:object name="productname" condition="config:display_product_info &gt; 0" />
+          <roundcube:container name="loginfooter" id="login-footer" />
         </div>
-
-        <roundcube:form id="login-form" name="login-form" method="post" class="propform">
-          <roundcube:object name="loginform" form="login-form" size="40" submit=true class="form-control" />
-          <div id="login-footer" role="contentinfo">
-            <roundcube:object name="productname" condition="config:display_product_info &gt; 0" />
-            <roundcube:object name="version" condition="config:display_product_info == 2" />
-            <roundcube:if condition="config:support_url" />
-              &nbsp;&bull;&nbsp; <a href="<roundcube:var name='config:support_url' />" target="_blank" class="support-link"><roundcube:label name="support" /></a>
-            <roundcube:endif />
-            <roundcube:container name="loginfooter" id="login-footer" />
-          </div>
-        </form>
-
-        <p class="amarsaf-auth-note">Use your short username (example: <strong>ceo</strong>) or full address if enabled.</p>
-      </div>
-    </section>
-
-    <section class="amarsaf-auth-panel amarsaf-auth-panel--promo" aria-label="Webmail features">
-      <div class="amarsaf-auth-promo">
-        <span class="amarsaf-auth-promo__eyebrow">SAF Food &amp; Beverage</span>
-        <h3>Amarsaf business email</h3>
-        <p>Secure access for teams across sales, operations, finance, and leadership — bottled in Dhaka, connected everywhere.</p>
-        <ul class="amarsaf-auth-benefits">
-          <li><span class="amarsaf-auth-benefits__check" aria-hidden="true">✓</span><span>Company mailboxes on amarsaf.com</span></li>
-          <li><span class="amarsaf-auth-benefits__check" aria-hidden="true">✓</span><span>Works on desktop and mobile browsers</span></li>
-          <li><span class="amarsaf-auth-benefits__check" aria-hidden="true">✓</span><span>Same brand as safwater.com / Amarsaf</span></li>
-        </ul>
-      </div>
-      <div class="amarsaf-auth-glow" aria-hidden="true"></div>
-      <div class="amarsaf-auth-pattern" aria-hidden="true"></div>
+      </form>
     </section>
   </div>
 </div>
@@ -70,13 +46,11 @@ document.addEventListener('DOMContentLoaded', function () {
   const passInput = document.getElementById('rcmloginpwd');
 
   if (userInput) {
-    userInput.setAttribute('placeholder', 'ceo or ceo@amarsaf.com');
     userInput.parentElement.querySelectorAll('.input-group-prepend, .input-group-text, .icon')
       .forEach((el) => el.remove());
   }
 
   if (passInput) {
-    passInput.setAttribute('placeholder', 'Password');
     passInput.parentElement.querySelectorAll('.input-group-prepend, .input-group-text, .icon')
       .forEach((el) => el.remove());
 
