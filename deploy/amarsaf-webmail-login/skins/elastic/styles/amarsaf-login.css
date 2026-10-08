@@ -1,16 +1,13 @@
-/* SAF Webmail — two-panel login */
+/* SAF Webmail — one-tone glass login */
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
 body.task-login {
   --saf-purple: #6d2bd5;
-  --saf-purple-deep: #5520ae;
   --saf-indigo: #4b2cd7;
-  --saf-night: #170a35;
-  --saf-violet: #2a0e5c;
-  --saf-fresh: #22b573;
-  --saf-field-h: 40px;
+  --saf-night: #14082e;
+  --saf-field-h: 44px;
   font-family: "Plus Jakarta Sans", system-ui, sans-serif !important;
-  background: #0e0f14 !important;
+  background: var(--saf-night) !important;
 }
 
 body.task-login #layout,
@@ -27,45 +24,96 @@ body.task-login #layout-content {
 }
 
 body.task-login .amarsaf-auth-page {
+  position: relative;
   width: 100%;
   min-height: 100vh;
-  display: grid;
-  grid-template-columns: minmax(360px, 1fr) minmax(360px, 1.05fr);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 20px;
+  overflow: hidden;
+  background: var(--saf-night);
 }
 
-/* —— Login side —— */
-body.task-login .amarsaf-auth-panel--login {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  padding: 48px clamp(28px, 6vw, 72px);
-  background:
-    radial-gradient(800px 420px at 0% 0%, rgba(109, 43, 213, 0.18), transparent 55%),
-    #12131a;
+body.task-login .amarsaf-auth-bg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: var(--saf-night);
+}
+
+body.task-login .amarsaf-auth-bg__orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(10px);
+}
+
+body.task-login .amarsaf-auth-bg__orb--one {
+  width: 520px;
+  height: 520px;
+  top: -160px;
+  right: -120px;
+  background: radial-gradient(circle, rgba(109, 43, 213, 0.45), transparent 68%);
+}
+
+body.task-login .amarsaf-auth-bg__orb--two {
+  width: 460px;
+  height: 460px;
+  left: -140px;
+  bottom: -160px;
+  background: radial-gradient(circle, rgba(34, 181, 115, 0.18), transparent 70%);
+}
+
+body.task-login .amarsaf-auth-bg__pattern {
+  position: absolute;
+  inset: 0;
+  opacity: 0.07;
+  background-image: url('../images/pattern-1-white.svg');
+  background-size: 180px;
+  background-repeat: repeat;
+}
+
+body.task-login .amarsaf-auth-shell {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 420px);
+}
+
+/* Glass card */
+body.task-login .amarsaf-auth-card {
+  width: 100%;
+  padding: 32px 28px 28px;
+  border-radius: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow:
+    0 24px 60px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(22px) saturate(140%);
+  -webkit-backdrop-filter: blur(22px) saturate(140%);
 }
 
 body.task-login .amarsaf-auth-brand {
-  margin-bottom: 28px;
+  display: flex;
+  justify-content: center;
+  margin-bottom: 22px;
 }
 
 body.task-login .amarsaf-auth-brand__logo {
   display: block;
-  height: 34px;
+  height: 36px;
   width: auto;
-}
-
-body.task-login .amarsaf-auth-card {
-  width: min(100%, 360px);
 }
 
 body.task-login .amarsaf-auth-card__copy {
   margin-bottom: 22px;
+  text-align: center;
 }
 
 body.task-login .amarsaf-auth-card__copy h2 {
   margin: 0 0 6px;
   color: #fff;
-  font-size: clamp(28px, 3.5vw, 34px);
+  font-size: clamp(26px, 4vw, 32px);
   line-height: 1.1;
   letter-spacing: -0.04em;
   font-weight: 800;
@@ -73,7 +121,7 @@ body.task-login .amarsaf-auth-card__copy h2 {
 
 body.task-login .amarsaf-auth-card__copy p {
   margin: 0;
-  color: rgba(255, 255, 255, 0.52);
+  color: rgba(255, 255, 255, 0.58);
   font-size: 14px;
   line-height: 1.45;
   font-weight: 500;
@@ -94,7 +142,7 @@ body.task-login #login-form table {
   width: 100%;
   margin: 0;
   border-collapse: separate;
-  border-spacing: 0 10px;
+  border-spacing: 0 12px;
   table-layout: fixed;
 }
 
@@ -119,7 +167,7 @@ body.task-login #login-form td.title {
 body.task-login #login-form td.title label {
   display: block !important;
   margin: 0;
-  color: rgba(255, 255, 255, 0.65);
+  color: rgba(255, 255, 255, 0.7);
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.05em;
@@ -161,7 +209,6 @@ body.task-login #login-form td.input i.icon {
   overflow: hidden !important;
 }
 
-/* Shared field shell — username and password identical */
 body.task-login #login-form input.form-control,
 body.task-login #login-form .input-group > .form-control,
 body.task-login #login-form .input-group-lg > .form-control,
@@ -178,10 +225,10 @@ body.task-login #login-form input#rcmloginpwd {
   min-height: var(--saf-field-h) !important;
   max-height: var(--saf-field-h) !important;
   margin: 0 !important;
-  padding: 0 12px !important;
-  border-radius: 10px !important;
-  border: 1px solid rgba(255, 255, 255, 0.12) !important;
-  background: rgba(255, 255, 255, 0.03) !important;
+  padding: 0 14px !important;
+  border-radius: 12px !important;
+  border: 1px solid rgba(255, 255, 255, 0.18) !important;
+  background: rgba(255, 255, 255, 0.08) !important;
   color: #fff !important;
   box-shadow: none !important;
   font-size: 14px !important;
@@ -190,26 +237,28 @@ body.task-login #login-form input#rcmloginpwd {
 }
 
 body.task-login #login-form td.input.amarsaf-password-cell input,
-body.task-login #login-form input#rcmloginpwd {
-  padding: 0 56px 0 12px !important;
+body.task-login #login-form input#rcmloginpwd,
+body.task-login #login-form .amarsaf-password-wrap input {
+  padding: 0 64px 0 14px !important;
 }
 
 body.task-login #login-form input.form-control:hover,
 body.task-login #login-form input#rcmloginuser:hover,
 body.task-login #login-form input#rcmloginpwd:hover {
-  border-color: rgba(255, 255, 255, 0.2) !important;
+  border-color: rgba(255, 255, 255, 0.28) !important;
+  background: rgba(255, 255, 255, 0.1) !important;
 }
 
 body.task-login #login-form input.form-control:focus,
 body.task-login #login-form input#rcmloginuser:focus,
 body.task-login #login-form input#rcmloginpwd:focus {
-  border-color: rgba(109, 43, 213, 0.9) !important;
-  box-shadow: 0 0 0 3px rgba(109, 43, 213, 0.18) !important;
+  border-color: rgba(109, 43, 213, 0.95) !important;
+  box-shadow: 0 0 0 3px rgba(109, 43, 213, 0.22) !important;
   outline: none !important;
 }
 
 body.task-login #login-form p.formbuttons {
-  margin: 16px 0 0 !important;
+  margin: 18px 0 0 !important;
 }
 
 body.task-login #login-form p.formbuttons button,
@@ -226,7 +275,7 @@ body.task-login #rcmloginsubmit.btn-lg {
   margin: 0 !important;
   padding: 0 !important;
   border: 0 !important;
-  border-radius: 10px !important;
+  border-radius: 12px !important;
   background: linear-gradient(90deg, var(--saf-purple) 0%, var(--saf-indigo) 100%) !important;
   color: #fff !important;
   font-size: 14px !important;
@@ -235,7 +284,7 @@ body.task-login #rcmloginsubmit.btn-lg {
   text-transform: none !important;
   font-family: inherit !important;
   cursor: pointer;
-  box-shadow: 0 10px 22px rgba(109, 43, 213, 0.3) !important;
+  box-shadow: 0 12px 28px rgba(109, 43, 213, 0.35) !important;
   transition: transform 0.15s ease, filter 0.15s ease;
 }
 
@@ -249,7 +298,6 @@ body.task-login #login-footer[hidden] {
   display: none !important;
 }
 
-/* Password wrap = same box as username; Show lives inside it */
 body.task-login #login-form .amarsaf-password-wrap {
   position: relative !important;
   display: block !important;
@@ -262,39 +310,32 @@ body.task-login #login-form .amarsaf-password-wrap {
   overflow: hidden !important;
 }
 
-body.task-login #login-form .amarsaf-password-wrap input {
-  width: 100% !important;
-  height: var(--saf-field-h) !important;
-  min-height: var(--saf-field-h) !important;
-  max-height: var(--saf-field-h) !important;
-  padding: 0 56px 0 12px !important;
-}
-
-/* Show/Hide — inside the right end of the password field only */
+/* Show — right end, vertically centered in the field */
 body.task-login .amarsaf-password-toggle {
   position: absolute !important;
   top: 0 !important;
   right: 0 !important;
-  bottom: auto !important;
+  bottom: 0 !important;
   left: auto !important;
   z-index: 5;
   box-sizing: border-box !important;
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
-  width: 52px !important;
-  height: var(--saf-field-h) !important;
-  min-height: var(--saf-field-h) !important;
-  max-height: var(--saf-field-h) !important;
+  width: 58px !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
   margin: 0 !important;
   padding: 0 !important;
   border: 0 !important;
-  border-radius: 0 10px 10px 0 !important;
+  border-radius: 0 12px 12px 0 !important;
   background: transparent !important;
-  color: rgba(255, 255, 255, 0.55) !important;
-  font-size: 11px !important;
+  color: rgba(255, 255, 255, 0.92) !important;
+  font-size: 12px !important;
   font-weight: 700 !important;
   line-height: 1 !important;
+  letter-spacing: 0.02em;
   text-transform: none !important;
   box-shadow: none !important;
   cursor: pointer;
@@ -304,94 +345,13 @@ body.task-login .amarsaf-password-toggle {
 body.task-login .amarsaf-password-toggle:hover,
 body.task-login .amarsaf-password-toggle:focus {
   color: #fff !important;
-  background: transparent !important;
+  background: rgba(255, 255, 255, 0.06) !important;
   outline: none !important;
   box-shadow: none !important;
 }
 
-/* —— Visual side —— */
-body.task-login .amarsaf-auth-panel--visual {
-  position: relative;
-  overflow: hidden;
-  min-height: 100vh;
-  background:
-    linear-gradient(155deg, var(--saf-night) 0%, var(--saf-violet) 48%, #3a1a8a 100%);
-}
-
-body.task-login .amarsaf-auth-visual {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 48px;
-}
-
-body.task-login .amarsaf-auth-visual__orb {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(8px);
-  pointer-events: none;
-}
-
-body.task-login .amarsaf-auth-visual__orb--one {
-  width: 420px;
-  height: 420px;
-  right: -80px;
-  top: -60px;
-  background: radial-gradient(circle, rgba(109, 43, 213, 0.55), transparent 68%);
-}
-
-body.task-login .amarsaf-auth-visual__orb--two {
-  width: 380px;
-  height: 380px;
-  left: -60px;
-  bottom: -40px;
-  background: radial-gradient(circle, rgba(34, 181, 115, 0.28), transparent 70%);
-}
-
-body.task-login .amarsaf-auth-visual__pattern {
-  position: absolute;
-  inset: 0;
-  opacity: 0.1;
-  background-image: url('../images/pattern-1-white.svg');
-  background-size: 180px;
-  background-repeat: repeat;
-  pointer-events: none;
-}
-
-body.task-login .amarsaf-auth-visual__content {
-  position: relative;
-  z-index: 1;
-  text-align: center;
-  max-width: 360px;
-}
-
-body.task-login .amarsaf-auth-visual__mark {
-  display: block;
-  width: 64px;
-  height: 64px;
-  margin: 0 auto 22px;
-  filter: brightness(0) invert(1);
-}
-
-body.task-login .amarsaf-auth-visual__title {
-  margin: 0 0 12px;
-  color: #fff;
-  font-size: clamp(56px, 8vw, 84px);
-  font-weight: 800;
-  letter-spacing: -0.06em;
-  line-height: 0.95;
-}
-
-body.task-login .amarsaf-auth-visual__line {
-  margin: 0;
-  color: rgba(255, 255, 255, 0.72);
-  font-size: 18px;
-  font-weight: 500;
-  letter-spacing: -0.01em;
-}
-
+/* Hide old two-panel leftovers */
+body.task-login .amarsaf-auth-panel--visual,
 body.task-login .amarsaf-auth-panel--promo,
 body.task-login .amarsaf-auth-promo,
 body.task-login .amarsaf-auth-glow,
@@ -401,30 +361,9 @@ body.task-login .amarsaf-auth-brand__text {
   display: none !important;
 }
 
-@media (max-width: 900px) {
-  body.task-login .amarsaf-auth-page {
-    grid-template-columns: 1fr;
-  }
-
-  body.task-login .amarsaf-auth-panel--visual {
-    display: none !important;
-  }
-
-  body.task-login .amarsaf-auth-panel--login {
-    min-height: 100vh;
-    padding: 32px 20px;
-  }
-
-  body.task-login .amarsaf-auth-brand {
-    display: flex;
-    justify-content: center;
-  }
-
+@media (max-width: 480px) {
   body.task-login .amarsaf-auth-card {
-    margin: 0 auto;
-  }
-
-  body.task-login .amarsaf-auth-card__copy {
-    text-align: center;
+    padding: 26px 20px 22px;
+    border-radius: 18px;
   }
 }

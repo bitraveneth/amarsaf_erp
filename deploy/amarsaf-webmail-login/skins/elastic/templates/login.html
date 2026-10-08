@@ -9,18 +9,24 @@
 
 <div id="layout-content" class="selected no-navbar" role="main">
   <div class="amarsaf-auth-page">
-    <section class="amarsaf-auth-panel amarsaf-auth-panel--login" aria-label="Sign in">
-      <div class="amarsaf-auth-brand">
-        <img
-          class="amarsaf-auth-brand__logo"
-          src="skins/elastic/images/saf-logo-white.svg"
-          alt="SAF"
-          width="112"
-          height="37"
-        />
-      </div>
+    <div class="amarsaf-auth-bg" aria-hidden="true">
+      <div class="amarsaf-auth-bg__orb amarsaf-auth-bg__orb--one"></div>
+      <div class="amarsaf-auth-bg__orb amarsaf-auth-bg__orb--two"></div>
+      <div class="amarsaf-auth-bg__pattern"></div>
+    </div>
 
+    <section class="amarsaf-auth-shell" aria-label="Sign in">
       <div class="amarsaf-auth-card">
+        <div class="amarsaf-auth-brand">
+          <img
+            class="amarsaf-auth-brand__logo"
+            src="skins/elastic/images/saf-logo-white.svg"
+            alt="SAF"
+            width="112"
+            height="37"
+          />
+        </div>
+
         <div class="amarsaf-auth-card__copy">
           <h2>Sign in</h2>
           <p>Access your mailbox</p>
@@ -35,25 +41,6 @@
         </form>
       </div>
     </section>
-
-    <section class="amarsaf-auth-panel amarsaf-auth-panel--visual" aria-hidden="true">
-      <div class="amarsaf-auth-visual">
-        <div class="amarsaf-auth-visual__orb amarsaf-auth-visual__orb--one"></div>
-        <div class="amarsaf-auth-visual__orb amarsaf-auth-visual__orb--two"></div>
-        <div class="amarsaf-auth-visual__pattern"></div>
-        <div class="amarsaf-auth-visual__content">
-          <img
-            class="amarsaf-auth-visual__mark"
-            src="skins/elastic/images/saf-logomark.svg"
-            alt=""
-            width="56"
-            height="56"
-          />
-          <p class="amarsaf-auth-visual__title">SAF</p>
-          <p class="amarsaf-auth-visual__line">Clarity in every drop.</p>
-        </div>
-      </div>
-    </section>
   </div>
 </div>
 
@@ -63,7 +50,7 @@
 
 <script>
 (function () {
-  var FIELD_H = '40px';
+  var FIELD_H = '44px';
 
   function fieldStyle(extraPaddingRight) {
     return {
@@ -74,10 +61,10 @@
       minHeight: FIELD_H,
       maxHeight: FIELD_H,
       margin: '0',
-      padding: extraPaddingRight ? '0 56px 0 12px' : '0 12px',
-      borderRadius: '10px',
-      border: '1px solid rgba(255,255,255,0.12)',
-      background: 'rgba(255,255,255,0.03)',
+      padding: extraPaddingRight ? '0 64px 0 14px' : '0 14px',
+      borderRadius: '12px',
+      border: '1px solid rgba(255,255,255,0.18)',
+      background: 'rgba(255,255,255,0.08)',
       color: '#fff',
       boxShadow: 'none',
       fontSize: '14px',
@@ -105,9 +92,7 @@
     cell.classList.add('input');
 
     var wrap = cell.querySelector('.amarsaf-password-wrap');
-    if (wrap && wrap.contains(input)) {
-      // keep wrap
-    } else if (input.parentElement !== cell) {
+    if (!(wrap && wrap.contains(input)) && input.parentElement !== cell) {
       cell.appendChild(input);
     }
 
@@ -175,18 +160,22 @@
       position: 'absolute',
       top: '0',
       right: '0',
-      width: '52px',
-      height: FIELD_H,
-      minHeight: FIELD_H,
-      maxHeight: FIELD_H,
+      bottom: '0',
+      width: '58px',
+      height: 'auto',
+      minHeight: '0',
+      maxHeight: 'none',
       margin: '0',
       padding: '0',
       border: '0',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
       background: 'transparent',
-      color: 'rgba(255,255,255,0.55)',
-      fontSize: '11px',
+      color: 'rgba(255,255,255,0.9)',
+      fontSize: '12px',
       fontWeight: '700',
-      lineHeight: FIELD_H,
+      lineHeight: '1',
       textAlign: 'center',
       cursor: 'pointer',
       zIndex: '5'
@@ -242,7 +231,6 @@
 
   function boot() {
     normalize();
-    // Roundcube elastic wraps fields in input-group-lg after init — undo that.
     [50, 150, 400, 1000].forEach(function (ms) {
       setTimeout(normalize, ms);
     });
