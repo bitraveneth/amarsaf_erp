@@ -365,7 +365,8 @@ body.task-login #login-form .amarsaf-password-wrap input:focus {
 }
 
 /* Show — flex end, vertically centered */
-body.task-login .amarsaf-password-toggle {
+body.task-login .amarsaf-password-toggle,
+body.task-login button.amarsaf-password-toggle {
   position: static !important;
   top: auto !important;
   right: auto !important;
@@ -396,15 +397,24 @@ body.task-login .amarsaf-password-toggle {
   box-shadow: none !important;
   cursor: pointer;
   font-family: inherit !important;
+  /* Roundcube elastic applies translateY on buttons — kill it */
+  transform: none !important;
+  translate: none !important;
+  inset: auto !important;
+  float: none !important;
+  vertical-align: middle !important;
 }
 
 body.task-login .amarsaf-password-toggle:hover,
-body.task-login .amarsaf-password-toggle:focus {
+body.task-login .amarsaf-password-toggle:focus,
+body.task-login button.amarsaf-password-toggle:hover,
+body.task-login button.amarsaf-password-toggle:focus {
   color: #fff !important;
   background: rgba(109, 43, 213, 0.85) !important;
   border-color: rgba(255, 255, 255, 0.45) !important;
   outline: none !important;
   box-shadow: none !important;
+  transform: none !important;
 }
 
 /* Hide old two-panel leftovers */

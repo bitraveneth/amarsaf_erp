@@ -211,7 +211,10 @@
       lineHeight: '1',
       textAlign: 'center',
       cursor: 'pointer',
-      zIndex: '5'
+      zIndex: '5',
+      transform: 'none',
+      float: 'none',
+      verticalAlign: 'middle'
     });
   }
 
@@ -273,11 +276,22 @@
 
   function boot() {
     normalize();
-    [50, 150, 400, 1000].forEach(function (ms) {
+    [50, 150, 400, 1000, 2000, 3000].forEach(function (ms) {
       setTimeout(normalize, ms);
     });
     if (window.rcmail && typeof rcmail.addEventListener === 'function') {
       rcmail.addEventListener('init', normalize);
+    }
+    // Keep killing Roundcube button translateY if it comes back
+    var form = document.getElementById('login-form');
+    if (form && window.MutationObserver) {
+      var obs = new MutationObserver(function () {
+        var toggle = document.querySelector('.amarsaf-password-toggle');
+        if (toggle) {
+          toggle.style.transform = 'none';
+        }
+      });
+      obs.observe(form, { attributes: true, subtree: true, attributeFilter: ['style', 'class'] });
     }
   }
 
