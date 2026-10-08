@@ -63,21 +63,34 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+  function unwrapInputGroup(input) {
+    if (!input) return;
+    const group = input.closest('.input-group');
+    const cell = input.closest('td.input') || input.parentElement;
+    if (group && cell) {
+      group.querySelectorAll('.input-group-prepend, .input-group-append, .input-group-text, .icon, button')
+        .forEach((el) => el.remove());
+      cell.appendChild(input);
+      group.remove();
+    } else if (input.parentElement) {
+      input.parentElement.querySelectorAll('.input-group-prepend, .input-group-append, .input-group-text, .icon')
+        .forEach((el) => el.remove());
+    }
+  }
+
   const userInput = document.getElementById('rcmloginuser');
   const passInput = document.getElementById('rcmloginpwd');
 
-  if (userInput) {
-    userInput.parentElement.querySelectorAll('.input-group-prepend, .input-group-text, .icon')
-      .forEach((el) => el.remove());
-  }
+  unwrapInputGroup(userInput);
+  unwrapInputGroup(passInput);
 
   if (passInput) {
-    passInput.parentElement.querySelectorAll('.input-group-prepend, .input-group-text, .icon')
-      .forEach((el) => el.remove());
-
-    const cell = passInput.closest('td') || passInput.parentElement;
+    const cell = passInput.closest('td.input') || passInput.parentElement;
     if (cell && !cell.querySelector('.amarsaf-password-toggle')) {
       cell.classList.add('amarsaf-password-cell');
+      if (passInput.parentElement !== cell) {
+        cell.appendChild(passInput);
+      }
       const toggle = document.createElement('button');
       toggle.type = 'button';
       toggle.className = 'amarsaf-password-toggle';
@@ -89,7 +102,6 @@ document.addEventListener('DOMContentLoaded', function () {
         event.stopPropagation();
         const reveal = passInput.type === 'password';
         passInput.type = reveal ? 'text' : 'password';
-        // Keep the same control size for Show and Hide
         toggle.textContent = reveal ? 'Hide' : 'Show';
         toggle.setAttribute('aria-label', reveal ? 'Hide password' : 'Show password');
         passInput.focus();
