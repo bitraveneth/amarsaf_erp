@@ -120,37 +120,40 @@ body.task-login #login-form td.title label {
 
 body.task-login #login-form td.input {
   position: relative;
-  height: 42px;
+  height: 40px !important;
+  min-height: 40px !important;
+  max-height: 40px !important;
 }
 
+/* Shared field shell — email and password are the same size */
 body.task-login #login-form input.form-control,
 body.task-login #login-form input[type="text"],
 body.task-login #login-form input[type="password"],
 body.task-login #login-form input#rcmloginuser,
 body.task-login #login-form input#rcmloginpwd {
   box-sizing: border-box !important;
+  display: block !important;
   width: 100% !important;
   max-width: 100% !important;
-  height: 42px !important;
-  min-height: 42px !important;
-  max-height: 42px !important;
+  height: 40px !important;
+  min-height: 40px !important;
+  max-height: 40px !important;
   margin: 0 !important;
   padding: 0 12px !important;
   border-radius: 10px !important;
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
   background: rgba(255, 255, 255, 0.03) !important;
   color: #fff !important;
   box-shadow: none !important;
   font-size: 14px !important;
-  line-height: 40px !important;
+  line-height: 38px !important;
   font-family: inherit !important;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 body.task-login #login-form input.form-control:hover,
 body.task-login #login-form input#rcmloginuser:hover,
 body.task-login #login-form input#rcmloginpwd:hover {
-  border-color: rgba(255, 255, 255, 0.18) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
 }
 
 body.task-login #login-form input.form-control:focus,
@@ -172,9 +175,9 @@ body.task-login #rcmloginsubmit {
   align-items: center;
   justify-content: center;
   width: 100% !important;
-  height: 42px;
-  min-height: 42px;
-  max-height: 42px;
+  height: 40px;
+  min-height: 40px;
+  max-height: 40px;
   margin: 0;
   border: 0;
   border-radius: 10px;
@@ -198,52 +201,44 @@ body.task-login #login-footer[hidden] {
   display: none !important;
 }
 
-body.task-login #login-form td.input .input-group,
 body.task-login #login-form td.input .input-group-prepend,
 body.task-login #login-form td.input .input-group-append,
 body.task-login #login-form td.input .input-group-text,
 body.task-login #login-form td.input .icon {
-  display: contents !important;
+  display: none !important;
 }
 
-body.task-login #login-form .input-group {
-  display: block !important;
-  width: 100% !important;
-  height: 42px !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  border: 0 !important;
-  background: transparent !important;
-  box-shadow: none !important;
-}
-
-/* Username and password boxes must match exactly */
+/* Password = same 40px input as email; Show sits inside the right end */
 body.task-login #login-form td.input.amarsaf-password-cell {
-  position: relative;
-  height: 42px !important;
+  position: relative !important;
+  height: 40px !important;
+  min-height: 40px !important;
+  max-height: 40px !important;
 }
 
 body.task-login #login-form td.input.amarsaf-password-cell input.form-control,
-body.task-login #login-form td.input.amarsaf-password-cell input#rcmloginpwd {
-  height: 42px !important;
-  min-height: 42px !important;
-  max-height: 42px !important;
+body.task-login #login-form td.input.amarsaf-password-cell input#rcmloginpwd,
+body.task-login #login-form td.input.amarsaf-password-cell input[type="password"],
+body.task-login #login-form td.input.amarsaf-password-cell input[type="text"] {
+  width: 100% !important;
+  height: 40px !important;
+  min-height: 40px !important;
+  max-height: 40px !important;
   padding: 0 52px 0 12px !important;
 }
 
-/* Show/Hide sits at the far right INSIDE the password field */
 body.task-login .amarsaf-password-toggle {
   position: absolute;
-  top: 1px;
-  right: 1px;
-  bottom: 1px;
-  z-index: 3;
-  width: 48px;
-  height: auto !important;
+  top: 0;
+  right: 0;
+  z-index: 2;
+  box-sizing: border-box;
+  width: 52px;
+  height: 40px;
   margin: 0;
   padding: 0;
   border: 0;
-  border-radius: 0 9px 9px 0;
+  border-radius: 0 10px 10px 0;
   background: transparent;
   color: rgba(255, 255, 255, 0.55);
   font-size: 11px;
@@ -257,7 +252,6 @@ body.task-login .amarsaf-password-toggle {
 body.task-login .amarsaf-password-toggle:hover,
 body.task-login .amarsaf-password-toggle:focus {
   color: #fff;
-  background: rgba(255, 255, 255, 0.04);
   outline: none;
 }
 

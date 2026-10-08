@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SAF Webmail — login preview</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="skins/elastic/styles/amarsaf-login.css">
+  <style>
+    html, body { margin: 0; min-height: 100%; }
+  </style>
+</head>
+<body class="task-login">
+  <div id="layout">
+    <div id="layout-content" class="selected no-navbar" role="main">
+      <div class="amarsaf-auth-page">
+        <section class="amarsaf-auth-panel amarsaf-auth-panel--login" aria-label="Sign in">
+          <div class="amarsaf-auth-brand">
+            <img
+              class="amarsaf-auth-brand__logo"
+              src="skins/elastic/images/saf-logo-white.svg"
+              alt="SAF"
+              width="112"
+              height="37"
+            />
+          </div>
+
+          <div class="amarsaf-auth-card">
+            <div class="amarsaf-auth-card__copy">
+              <h2>Sign in</h2>
+              <p>Access your mailbox</p>
+            </div>
+
+            <form id="login-form" name="login-form" method="post" class="propform">
+              <table>
+                <tr>
+                  <td class="title"><label for="rcmloginuser">Email</label></td>
+                  <td class="input">
+                    <input name="_user" id="rcmloginuser" class="form-control" type="text" autocomplete="username" value="name@amarsaf.com" />
+                  </td>
+                </tr>
+                <tr>
+                  <td class="title"><label for="rcmloginpwd">Password</label></td>
+                  <td class="input">
+                    <input name="_pass" id="rcmloginpwd" class="form-control" type="password" autocomplete="current-password" value="password123" />
+                  </td>
+                </tr>
+              </table>
+              <p class="formbuttons">
+                <button type="submit" id="rcmloginsubmit" class="button mainaction">Sign in</button>
+              </p>
+            </form>
+          </div>
+        </section>
+
+        <section class="amarsaf-auth-panel amarsaf-auth-panel--visual" aria-hidden="true">
+          <div class="amarsaf-auth-visual">
+            <div class="amarsaf-auth-visual__orb amarsaf-auth-visual__orb--one"></div>
+            <div class="amarsaf-auth-visual__orb amarsaf-auth-visual__orb--two"></div>
+            <div class="amarsaf-auth-visual__pattern"></div>
+            <div class="amarsaf-auth-visual__content">
+              <img
+                class="amarsaf-auth-visual__mark"
+                src="skins/elastic/images/saf-logomark.svg"
+                alt=""
+                width="56"
+                height="56"
+              />
+              <p class="amarsaf-auth-visual__title">SAF</p>
+              <p class="amarsaf-auth-visual__line">Clarity in every drop.</p>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const passInput = document.getElementById('rcmloginpwd');
+    if (passInput) {
+      const cell = passInput.closest('td.input') || passInput.parentElement;
+      if (cell && !cell.querySelector('.amarsaf-password-toggle')) {
+        cell.classList.add('amarsaf-password-cell');
+        const toggle = document.createElement('button');
+        toggle.type = 'button';
+        toggle.className = 'amarsaf-password-toggle';
+        toggle.setAttribute('aria-label', 'Show password');
+        toggle.setAttribute('tabindex', '-1');
+        toggle.textContent = 'Show';
+        toggle.addEventListener('click', function (event) {
+          event.preventDefault();
+          const reveal = passInput.type === 'password';
+          passInput.type = reveal ? 'text' : 'password';
+          toggle.textContent = reveal ? 'Hide' : 'Show';
+        });
+        cell.appendChild(toggle);
+      }
+    }
+  });
+  </script>
+</body>
+</html>
