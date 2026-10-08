@@ -2,36 +2,57 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="skins/elastic/styles/amarsaf-login.css">
 
 <h1 class="voice"><roundcube:object name="productname" /> <roundcube:label name="login" /></h1>
 
 <div id="layout-content" class="selected no-navbar" role="main">
   <div class="amarsaf-auth-page">
-    <section class="amarsaf-auth-card" aria-label="Amarsaf Webmail login">
+    <section class="amarsaf-auth-panel amarsaf-auth-panel--login" aria-label="Sign in">
       <div class="amarsaf-auth-brand">
         <img
           class="amarsaf-auth-brand__logo"
           src="skins/elastic/images/saf-logo-white.svg"
           alt="SAF"
-          width="120"
-          height="40"
+          width="112"
+          height="37"
         />
       </div>
 
-      <div class="amarsaf-auth-card__copy">
-        <h2>Sign in</h2>
-        <p>Amarsaf Mail</p>
-      </div>
-
-      <roundcube:form id="login-form" name="login-form" method="post" class="propform">
-        <roundcube:object name="loginform" form="login-form" size="40" submit=true class="form-control" />
-        <div id="login-footer" role="contentinfo" hidden>
-          <roundcube:object name="productname" condition="config:display_product_info &gt; 0" />
-          <roundcube:container name="loginfooter" id="login-footer" />
+      <div class="amarsaf-auth-card">
+        <div class="amarsaf-auth-card__copy">
+          <h2>Sign in</h2>
+          <p>Access your mailbox</p>
         </div>
-      </form>
+
+        <roundcube:form id="login-form" name="login-form" method="post" class="propform">
+          <roundcube:object name="loginform" form="login-form" size="40" submit=true class="form-control" />
+          <div id="login-footer" role="contentinfo" hidden>
+            <roundcube:object name="productname" condition="config:display_product_info &gt; 0" />
+            <roundcube:container name="loginfooter" id="login-footer" />
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <section class="amarsaf-auth-panel amarsaf-auth-panel--visual" aria-hidden="true">
+      <div class="amarsaf-auth-visual">
+        <div class="amarsaf-auth-visual__orb amarsaf-auth-visual__orb--one"></div>
+        <div class="amarsaf-auth-visual__orb amarsaf-auth-visual__orb--two"></div>
+        <div class="amarsaf-auth-visual__pattern"></div>
+        <div class="amarsaf-auth-visual__content">
+          <img
+            class="amarsaf-auth-visual__mark"
+            src="skins/elastic/images/saf-logomark.svg"
+            alt=""
+            width="56"
+            height="56"
+          />
+          <p class="amarsaf-auth-visual__title">SAF</p>
+          <p class="amarsaf-auth-visual__line">Clarity in every drop.</p>
+        </div>
+      </div>
     </section>
   </div>
 </div>
