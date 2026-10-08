@@ -160,7 +160,7 @@ body.task-login #login-form tr {
 }
 
 body.task-login #login-form tr + tr {
-  margin-top: 28px !important;
+  margin-top: 40px !important;
   padding-top: 0 !important;
 }
 
@@ -176,7 +176,7 @@ body.task-login #login-form td.input {
 }
 
 body.task-login #login-form td.title {
-  padding: 0 0 16px !important;
+  padding: 0 0 20px !important;
   margin: 0 !important;
 }
 
