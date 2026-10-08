@@ -1,0 +1,11 @@
+<svg width="1860" height="930" viewBox="0 0 1860 930" fill="none" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<rect width="1860" height="930" fill="url(#pattern0_1126_1035)"/>
+<defs>
+<pattern id="pattern0_1126_1035" patternUnits="userSpaceOnUse" patternTransform="matrix(94.572 0 0 94.38 0 -0.456445)" preserveAspectRatio="none" viewBox="0 -0.760742 157.62 157.3" width="1" height="1">
+<use xlink:href="#pattern0_1126_1035_inner" transform="translate(-157.62 0)"/>
+<g id="pattern0_1126_1035_inner">
+<path d="M96.724 -0.516577C98.6245 -0.796579 212.356 -0.758832 212.356 -0.758832C212.356 -0.758832 168.479 38.0004 146.786 57.4993C134.458 68.4781 122.301 81.9594 104.851 84.2952C72.526 88.6224 48.2474 56.7485 59.8647 26.5739C66.0232 10.5781 79.7649 1.29307 96.724 -0.516577Z" fill="#FFFFFF"/>
+<path d="M115.764 119.854C113.864 120.134 0.132431 120.097 0.132431 120.097C0.132431 120.097 44.0095 81.3375 65.7027 61.8386C78.0301 50.8598 90.1876 37.3785 107.637 35.0427C139.962 30.7155 164.241 62.5894 152.624 92.764C146.465 108.76 132.723 118.045 115.764 119.854Z" fill="#FFFFFF"/>
+</g>
+</pattern></defs>
+</svg>
