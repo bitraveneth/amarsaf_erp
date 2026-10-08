@@ -50,7 +50,7 @@
 
 <script>
 (function () {
-  var FIELD_H = '44px';
+  var FIELD_H = '48px';
 
   function fieldStyle(extraPaddingRight) {
     return {
@@ -61,14 +61,15 @@
       minHeight: FIELD_H,
       maxHeight: FIELD_H,
       margin: '0',
-      padding: extraPaddingRight ? '0 64px 0 14px' : '0 14px',
+      padding: extraPaddingRight ? '0 78px 0 16px' : '0 16px',
       borderRadius: '12px',
-      border: '1px solid rgba(255,255,255,0.18)',
-      background: 'rgba(255,255,255,0.08)',
+      border: '1px solid rgba(255,255,255,0.2)',
+      background: 'rgba(255,255,255,0.1)',
       color: '#fff',
       boxShadow: 'none',
-      fontSize: '14px',
+      fontSize: '15px',
       lineHeight: 'normal',
+      textAlign: 'left',
       flex: 'none'
     };
   }
@@ -158,23 +159,24 @@
 
     applyStyles(toggle, {
       position: 'absolute',
-      top: '0',
-      right: '0',
-      bottom: '0',
-      width: '58px',
+      top: '6px',
+      right: '6px',
+      bottom: '6px',
+      width: '64px',
       height: 'auto',
       minHeight: '0',
       maxHeight: 'none',
       margin: '0',
-      padding: '0',
-      border: '0',
+      padding: '0 10px',
+      border: '1px solid rgba(255,255,255,0.28)',
+      borderRadius: '8px',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      background: 'transparent',
-      color: 'rgba(255,255,255,0.9)',
-      fontSize: '12px',
-      fontWeight: '700',
+      background: 'rgba(109,43,213,0.55)',
+      color: '#fff',
+      fontSize: '13px',
+      fontWeight: '800',
       lineHeight: '1',
       textAlign: 'center',
       cursor: 'pointer',
