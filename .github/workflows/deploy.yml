@@ -90,14 +90,14 @@ jobs:
               echo "[INFO] APP_KEY already set."
             fi
 
-            log_step "Set APP_VERSION=2.2.0"
+            log_step "Set APP_VERSION=2.3.0"
             if [ -f .env ]; then
               if grep -q '^APP_VERSION=' .env; then
-                sed -i 's/^APP_VERSION=.*/APP_VERSION=2.2.0/' .env
+                sed -i 's/^APP_VERSION=.*/APP_VERSION=2.3.0/' .env
               else
-                echo 'APP_VERSION=2.2.0' >> .env
+                echo 'APP_VERSION=2.3.0' >> .env
               fi
-              echo "[INFO] APP_VERSION=2.2.0 ensured."
+              echo "[INFO] APP_VERSION=2.3.0 ensured."
             fi
 
             log_step "Set APP_DEBUG=false"

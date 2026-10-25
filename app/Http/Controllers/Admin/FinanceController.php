@@ -41,7 +41,8 @@ class FinanceController extends Controller
 
     public function show(Invoice $invoice)
     {
-        $invoice->load(['order.agent', 'items.product', 'receipts', 'creditNotes', 'advanceApplications']);
+        $this->loadInvoiceDocument($invoice);
+
         return view('admin.finance.show', compact('invoice'));
     }
 
@@ -399,26 +400,24 @@ class FinanceController extends Controller
 
     public function downloadPdf(Invoice $invoice)
     {
-        $invoice->load(['order.agent', 'items.product', 'receipts', 'creditNotes', 'advanceApplications']);
-
-        $grossTotal    = $invoice->net_total + $invoice->vat_amount;
-        $cashTotal     = $grossTotal - $invoice->withholding;
-        $creditsTotal  = $invoice->creditNotes->sum('amount');
-        $receiptsTotal = $invoice->receipts->sum('amount');
-        $advancesTotal = $invoice->advanceApplications->sum('amount');
-        $outstanding   = $cashTotal - $creditsTotal - $receiptsTotal - $advancesTotal;
+        $this->loadInvoiceDocument($invoice);
 
         $pdf = \App\Support\PdfDocumentBuilder::loadView('admin.finance.invoice_pdf', [
-            'invoice'       => $invoice,
-            'grossTotal'    => $grossTotal,
-            'cashTotal'     => $cashTotal,
-            'creditsTotal'  => $creditsTotal,
-            'receiptsTotal' => $receiptsTotal,
-            'advancesTotal' => $advancesTotal,
-            'outstanding'   => $outstanding,
+            'invoice' => $invoice,
         ])->setPaper('a4');
 
         return $pdf->download('invoice-' . $invoice->number . '.pdf');
+    }
+
+    protected function loadInvoiceDocument(Invoice $invoice): void
+    {
+        $relations = ['order.agent', 'items.product', 'receipts', 'creditNotes'];
+
+        if (Schema::hasTable('agent_advance_applications')) {
+            $relations[] = 'advanceApplications';
+        }
+
+        $invoice->load($relations);
     }
 
     public function destroy(Invoice $invoice)

@@ -7,6 +7,16 @@ Version tags follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [2.3.0] - 2026-10-25
+
+Sales invoice sheet. v2.2.0 did not include this layout.
+
+### Changed
+
+- Screen, print, and PDF invoices use the SAF sheet: logo, invoice-to block, line columns, totals, payment block, signature, and footer.
+- Discount is withholding plus credit notes. Paid advance is receipts plus advances. Total due is the outstanding amount.
+- Dompdf still uses the v2.2.0 security settings: files stay inside the application directory, and remote loading and PHP execution stay off.
+
 ## [2.2.0] - 2026-10-25
 
 Security update for the October 2026 PHP bugs and the Composer packages those bugs sat next to.

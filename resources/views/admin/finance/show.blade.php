@@ -103,45 +103,7 @@
         </div>
     </div>
 
-    <!-- Clean A4-style header for print only -->
-    <div class="hidden print-only print-header mb-8 print:!mx-0 print:!w-full print:!max-w-none">
-        <div class="flex items-start justify-between gap-8">
-                <div class="flex items-center gap-3">
-                    @php
-                    $printCompanyName = $legalCompanyName ?? config('app.name');
-                    $printCompanyInitials = $legalCompanyInitials ?? mb_strtoupper(mb_substr($printCompanyName, 0, 2));
-                @endphp
-                <div class="flex h-12 w-12 items-center justify-center rounded-full bg-brand-500 text-sm font-semibold text-white">
-                    {{ $printCompanyInitials }}
-                </div>
-                <div>
-                    <h2 class="text-lg font-semibold text-gray-900">
-                        {{ $printCompanyName }}
-                    </h2>
-                    <p class="mt-1 text-xs text-gray-600">
-                        Invoice &amp; Finance
-                    </p>
-                </div>
-            </div>
-            <div class="print-header-summary text-right space-y-1">
-                <h1 class="text-xl font-bold text-gray-900">
-                    Invoice {{ $invoice->number }}
-                </h1>
-                <p class="text-xs text-gray-600">
-                    Order #{{ $invoice->order_id ?? '—' }} · {{ $invoice->order?->agent->name ?? 'Unassigned' }}
-                </p>
-                <p class="text-xs text-gray-600">
-                    Issued: {{ optional($invoice->issued_at)->format('d M Y') }}
-                    @if($invoice->due_at)
-                        · Due: {{ $invoice->due_at->format('d M Y') }}
-                    @endif
-                </p>
-                <p class="text-xs text-gray-600">
-                    Status: {{ ucfirst(str_replace('_', ' ', $invoice->status)) }}
-                </p>
-            </div>
-        </div>
-    </div>
+    @include('admin.finance.partials.saf-invoice-sheet')
 
     @php
         // Gross invoice value (net + VAT)
@@ -150,7 +112,9 @@
         $cashTotal = $grossTotal - $invoice->withholding;
         $creditsTotal = $invoice->creditNotes->sum('amount');
         $receiptsTotal = $invoice->receipts->sum('amount');
-        $advancesTotal = $invoice->advanceApplications->sum('amount');
+        $advancesTotal = $invoice->relationLoaded('advanceApplications')
+            ? $invoice->advanceApplications->sum('amount')
+            : 0;
         $outstanding   = $cashTotal - $creditsTotal - $receiptsTotal - $advancesTotal;
     @endphp
 
@@ -348,119 +312,6 @@
                     Receipts are preserved for audit history and cannot be deleted from this screen.
                 </p>
             @endif
-        </div>
-    </div>
-
-    <!-- Simple A4-style invoice body (print only) -->
-    <div class="print-only print-sheet mt-6 text-[12px] leading-relaxed text-gray-900 print:!mx-0 print:!w-full print:!max-w-none">
-        <div class="print-meta-grid mb-6">
-            <div class="print-billto">
-                <h3 class="font-semibold text-[13px] uppercase tracking-[0.08em]">Bill to</h3>
-                <p class="mt-2 text-[13px] leading-6">
-                    {{ $invoice->order?->agent->name ?? 'Customer' }}<br>
-                </p>
-            </div>
-            <div class="print-meta-card">
-                <div class="print-meta-row">
-                    <span>Invoice No</span>
-                    <strong>{{ $invoice->number }}</strong>
-                </div>
-                <div class="print-meta-row">
-                    <span>Order No</span>
-                    <span>{{ $invoice->order_id ?? '—' }}</span>
-                </div>
-                <div class="print-meta-row">
-                    <span>Issued</span>
-                    <span>{{ optional($invoice->issued_at)->format('d M Y') }}</span>
-                </div>
-                @if($invoice->due_at)
-                    <div class="print-meta-row">
-                        <span>Due</span>
-                        <span>{{ $invoice->due_at->format('d M Y') }}</span>
-                    </div>
-                @endif
-            </div>
-        </div>
-
-        {{-- Items table --}}
-        <table class="print-items-table w-full border-collapse text-[11px]">
-            <colgroup>
-                <col style="width: 6%">
-                <col style="width: 50%">
-                <col style="width: 12%">
-                <col style="width: 16%">
-                <col style="width: 16%">
-            </colgroup>
-            <thead>
-                <tr>
-                    <th class="border border-gray-300 px-3 py-2 text-left">#</th>
-                    <th class="border border-gray-300 px-3 py-2 text-left">Description</th>
-                    <th class="border border-gray-300 px-3 py-2 text-right">Qty</th>
-                    <th class="border border-gray-300 px-3 py-2 text-right">Unit Price</th>
-                    <th class="border border-gray-300 px-3 py-2 text-right">Line Total</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach($invoice->items as $idx => $item)
-                    <tr>
-                        <td class="border border-gray-200 px-3 py-2 align-top text-left">{{ $idx + 1 }}</td>
-                        <td class="border border-gray-200 px-3 py-2 align-top text-left">
-                            {{ $item->description }}
-                        </td>
-                        <td class="border border-gray-200 px-3 py-2 align-top text-right">{{ $item->quantity }}</td>
-                        <td class="border border-gray-200 px-3 py-2 align-top text-right">
-                            {{ number_format($item->unit_price, 2) }}
-                        </td>
-                        <td class="border border-gray-200 px-3 py-2 align-top text-right">
-                            {{ number_format($item->line_total, 2) }}
-                        </td>
-                    </tr>
-                @endforeach
-            </tbody>
-        </table>
-
-        {{-- Totals --}}
-        <div class="mt-6 flex justify-end">
-            <table class="print-totals text-[11px]">
-                <tr>
-                    <td class="px-0 py-1.5 text-left">Net total:</td>
-                    <td class="px-0 py-1.5 text-right">{{ number_format($invoice->net_total, 2) }}</td>
-                </tr>
-                <tr>
-                    <td class="px-0 py-1.5 text-left">VAT:</td>
-                    <td class="px-0 py-1.5 text-right">{{ number_format($invoice->vat_amount, 2) }}</td>
-                </tr>
-                <tr>
-                    <td class="px-0 py-1.5 text-left">Gross total:</td>
-                    <td class="px-0 py-1.5 text-right">{{ number_format($grossTotal, 2) }}</td>
-                </tr>
-                <tr>
-                    <td class="px-0 py-1.5 text-left">Withholding:</td>
-                    <td class="px-0 py-1.5 text-right">- {{ number_format($invoice->withholding, 2) }}</td>
-                </tr>
-                <tr>
-                    <td class="px-0 py-1.5 text-left">Cash due:</td>
-                    <td class="px-0 py-1.5 text-right">{{ number_format($cashTotal, 2) }}</td>
-                </tr>
-                <tr>
-                    <td class="px-0 py-1.5 text-left">Credits:</td>
-                    <td class="px-0 py-1.5 text-right">- {{ number_format($creditsTotal, 2) }}</td>
-                </tr>
-                <tr>
-                    <td class="px-0 py-1.5 text-left">Receipts:</td>
-                    <td class="px-0 py-1.5 text-right">- {{ number_format($receiptsTotal, 2) }}</td>
-                </tr>
-                <tr>
-                    <td class="px-0 py-1.5 text-left">Advances:</td>
-                    <td class="px-0 py-1.5 text-right">- {{ number_format($advancesTotal, 2) }}</td>
-                </tr>
-                <tr>
-                    <td class="px-0 py-2.5 text-left font-semibold border-t border-gray-300">Outstanding:</td>
-                    <td class="px-0 py-2.5 text-right font-semibold border-t border-gray-300">
-                        {{ number_format(max(0, $outstanding), 2) }}
-                    </td>
-                </tr>
-            </table>
         </div>
     </div>
 
@@ -728,6 +579,10 @@
 </div>
 
 @push('styles')
+    <style>
+        @include('admin.finance.partials.saf-invoice-styles')
+        .erp-assistant-root { display: none !important; }
+    </style>
     <link rel="stylesheet" href="{{ asset('css/invoice-print.css') }}?v={{ filemtime(public_path('css/invoice-print.css')) }}">
 @endpush
 @endsection

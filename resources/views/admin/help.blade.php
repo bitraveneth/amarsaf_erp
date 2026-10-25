@@ -9,7 +9,7 @@
             <div class="flex items-center gap-3 mb-1">
                 <span class="bg-brand-100 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300 px-3 py-1 rounded-full text-sm font-medium">📖 ডকুমেন্টেশন</span>
                 <span class="text-gray-400">/</span>
-                <span class="text-gray-600 dark:text-gray-400 text-sm">সিস্টেম গাইড v2.2</span>
+                <span class="text-gray-600 dark:text-gray-400 text-sm">সিস্টেম গাইড v2.3</span>
             </div>
             <div>
                 <h1 class="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-3">হেল্প & সিস্টেম গাইড</h1>
