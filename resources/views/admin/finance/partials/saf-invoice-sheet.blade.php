@@ -8,7 +8,9 @@
                 <tr>
                     <td style="width:110px; vertical-align:top;">
                         <div class="saf-mark">
-                            <img src="{{ $sheet['logo_src'] }}" alt="SAF">
+                            @if($sheet['logo_src'])
+                                <img src="{{ $sheet['logo_src'] }}" alt="SAF">
+                            @endif
                             <div class="saf-mark-word">SAF</div>
                         </div>
                     </td>
@@ -154,7 +156,9 @@
                         </table>
                     </td>
                     <td class="saf-sign">
-                        <img class="saf-sign-img" src="{{ $sheet['signature_src'] }}" alt="">
+                        @if($sheet['signature_src'])
+                            <img class="saf-sign-img" src="{{ $sheet['signature_src'] }}" alt="">
+                        @endif
                         <div class="saf-sign-name">{{ $sheet['signatory_name'] }}</div>
                         <div class="saf-sign-role">{{ $sheet['signatory_title'] }}</div>
                     </td>
@@ -170,15 +174,21 @@
         <table class="saf-footer">
             <tr>
                 <td class="foot-phone">
-                    <img class="icon" src="{{ $sheet['icon_phone'] }}" alt="">
+                    @if($sheet['icon_phone'])
+                        <img class="icon" src="{{ $sheet['icon_phone'] }}" alt="">
+                    @endif
                     <span class="foot-text">{{ $sheet['footer_phone'] }}</span>
                 </td>
                 <td class="foot-mail">
-                    <img class="icon" src="{{ $sheet['icon_mail'] }}" alt="">
+                    @if($sheet['icon_mail'])
+                        <img class="icon" src="{{ $sheet['icon_mail'] }}" alt="">
+                    @endif
                     <span class="foot-text">{{ $sheet['footer_email'] }}</span>
                 </td>
                 <td class="foot-address">
-                    <img class="icon" src="{{ $sheet['icon_pin'] }}" alt="">
+                    @if($sheet['icon_pin'])
+                        <img class="icon" src="{{ $sheet['icon_pin'] }}" alt="">
+                    @endif
                     <span class="foot-text">
                         @foreach($sheet['footer_address_lines'] as $addressLine)
                             <span class="addr-line">{{ $addressLine }}</span>@if(! $loop->last)<br>@endif

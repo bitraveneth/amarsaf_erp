@@ -9,6 +9,7 @@ use App\Models\LogisticsBill;
 use App\Models\Order;
 use App\Models\ProductionRun;
 use App\Models\PurchaseOrder;
+use Illuminate\Support\Facades\Schema;
 use InvalidArgumentException;
 
 class DocumentDataFactory
@@ -51,14 +52,24 @@ class DocumentDataFactory
 
     protected static function invoice(Invoice $invoice): array
     {
-        $invoice->load(['order.agent', 'items.product', 'receipts', 'creditNotes', 'advanceApplications']);
+        $relations = ['order.agent', 'items.product', 'receipts', 'creditNotes'];
+        $advancesTotal = 0.0;
+
+        if (Schema::hasTable('agent_advance_applications')) {
+            $relations[] = 'advanceApplications';
+        }
+
+        $invoice->load($relations);
+
+        if ($invoice->relationLoaded('advanceApplications')) {
+            $advancesTotal = (float) $invoice->advanceApplications->sum('amount');
+        }
 
         $currency = config('app.currency', 'BDT');
         $grossTotal = (float) $invoice->net_total + (float) $invoice->vat_amount;
         $cashTotal = $grossTotal - (float) $invoice->withholding;
         $creditsTotal = (float) $invoice->creditNotes->sum('amount');
         $receiptsTotal = (float) $invoice->receipts->sum('amount');
-        $advancesTotal = (float) $invoice->advanceApplications->sum('amount');
         $outstanding = max(0, $cashTotal - $creditsTotal - $receiptsTotal - $advancesTotal);
 
         $agent = $invoice->order?->agent;

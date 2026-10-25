@@ -220,8 +220,16 @@ class SalesInvoicePresenter
 
     protected static function assetSrc(string $absolute, string $publicRelative, bool $forPdf): string
     {
-        if ($forPdf && is_file($absolute)) {
-            return PdfDocumentBuilder::fileUri($absolute) ?? asset($publicRelative);
+        if ($forPdf) {
+            if (! is_file($absolute) || ! is_readable($absolute)) {
+                return '';
+            }
+
+            if (strtolower(pathinfo($absolute, PATHINFO_EXTENSION)) === 'svg') {
+                return '';
+            }
+
+            return PdfDocumentBuilder::fileUri($absolute) ?? '';
         }
 
         return asset($publicRelative);
