@@ -2586,7 +2586,11 @@ pre[class*='language-'] {
   }
 
   .erp-dash-layout-split {
-    @apply grid grid-cols-1 gap-5 xl:grid-cols-[1.2fr_0.8fr];
+    @apply grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)];
+  }
+
+  .erp-dash-layout-split > * {
+    @apply min-w-0;
   }
 
   .erp-dash-layout-thirds {
@@ -2607,6 +2611,42 @@ pre[class*='language-'] {
 
   .erp-dash-highlight__hint {
     @apply mt-3 text-sm leading-6 text-white/65;
+  }
+
+  .erp-dash-estimate {
+    @apply grid gap-3 sm:grid-cols-2 xl:grid-cols-4;
+  }
+
+  .erp-dash-estimate__step {
+    @apply flex min-w-0 flex-col justify-between rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4 dark:border-gray-800 dark:bg-gray-950/40;
+  }
+
+  .erp-dash-estimate__step--result {
+    @apply border-brand-200 bg-brand-50 sm:col-span-2 xl:col-span-1 dark:border-brand-500/30 dark:bg-brand-500/10;
+  }
+
+  .erp-dash-estimate__label {
+    @apply text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400;
+  }
+
+  .erp-dash-estimate__value {
+    @apply mt-3 text-xl font-semibold tabular-nums text-gray-900 md:text-2xl dark:text-white;
+  }
+
+  .erp-dash-estimate__value--out {
+    @apply text-error-600 dark:text-error-400;
+  }
+
+  .erp-dash-estimate__value--success {
+    @apply text-success-600 dark:text-success-400;
+  }
+
+  .erp-dash-estimate__value--danger {
+    @apply text-error-600 dark:text-error-400;
+  }
+
+  .erp-dash-estimate__hint {
+    @apply mt-2 text-xs leading-5 text-gray-500 dark:text-gray-400;
   }
 
   .erp-dash-progress__head {
@@ -2661,8 +2701,12 @@ pre[class*='language-'] {
     @apply bg-success-500;
   }
 
+  .erp-dash-chart {
+    @apply min-w-0 max-w-full;
+  }
+
   .erp-dash-chart__grid {
-    @apply flex items-end gap-2 overflow-x-auto pb-2;
+    @apply flex min-w-0 items-end gap-2 overflow-x-auto pb-2;
   }
 
   .erp-dash-chart__column {
@@ -2686,7 +2730,7 @@ pre[class*='language-'] {
   }
 
   .erp-dash-chart__label {
-    @apply text-[10px] font-medium text-gray-500 dark:text-gray-400;
+    @apply w-full truncate text-center text-[10px] font-medium text-gray-500 dark:text-gray-400;
   }
 
   .erp-dash-rank__title {
