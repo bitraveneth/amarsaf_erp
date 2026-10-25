@@ -8,6 +8,7 @@ use App\Support\BusinessDataReset;
 use App\Support\DatabaseBackupManager;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
 use RuntimeException;
 
 class SystemSettingController extends Controller
@@ -172,12 +173,32 @@ class SystemSettingController extends Controller
             abort(403, 'Only a super admin can clear business data.');
         }
 
-        $data = $request->validate([
-            'groups' => 'required|array|min:1',
-            'groups.*' => 'string',
-            'confirm_phrase' => 'required|in:DELETE',
-            'confirm_clear' => 'required|accepted',
-        ]);
+        $validator = Validator::make(
+            [
+                'groups' => $request->input('groups', []),
+                'confirm_phrase' => strtoupper(trim((string) $request->input('confirm_phrase'))),
+            ],
+            [
+                'groups' => 'required|array|min:1',
+                'groups.*' => 'string',
+                'confirm_phrase' => 'required|in:DELETE',
+            ],
+            [
+                'groups.required' => 'Select at least one group to clear.',
+                'groups.min' => 'Select at least one group to clear.',
+                'confirm_phrase.required' => 'Type DELETE in the confirmation box.',
+                'confirm_phrase.in' => 'Type DELETE in the confirmation box.',
+            ]
+        );
+
+        if ($validator->fails()) {
+            return redirect()
+                ->route('admin.settings.index', ['tab' => 'database'])
+                ->withErrors($validator, 'clearData')
+                ->withInput();
+        }
+
+        $data = $validator->validated();
 
         try {
             $backup = $backupManager->create();

@@ -781,8 +781,9 @@
                     Login users, roles, menus, and company settings stay. A backup file is created before anything is deleted.
                 </p>
 
+                @php $clearErrors = $errors->getBag('clearData'); @endphp
                 <form method="POST" action="{{ route('admin.settings.data.clear') }}" class="mt-4 space-y-4"
-                      onsubmit="return confirm('Clear the selected business data? This cannot be undone except by restoring the backup.');">
+                      x-data="{ phrase: @js(old('confirm_phrase', '')) }">
                     @csrf
                     <div class="grid gap-3 md:grid-cols-2">
                         @foreach($dataResetGroups as $group)
@@ -812,32 +813,27 @@
                         </button>
                     </div>
 
-                    <div class="grid gap-4 md:grid-cols-2">
-                        <div>
-                            <label for="confirm_phrase" class="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Type DELETE to confirm</label>
-                            <input id="confirm_phrase" name="confirm_phrase" value="{{ old('confirm_phrase') }}" autocomplete="off"
-                                   class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 focus:border-error-500 focus:outline-none focus:ring-2 focus:ring-error-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white">
-                            @error('confirm_phrase')
-                                <p class="mt-1 text-xs text-error-600">{{ $message }}</p>
-                            @enderror
-                            @error('groups')
-                                <p class="mt-1 text-xs text-error-600">{{ $message }}</p>
-                            @enderror
-                            @error('clear')
-                                <p class="mt-1 text-xs text-error-600">{{ $message }}</p>
-                            @enderror
+                    <div class="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900">
+                        <label for="confirm_phrase" class="block text-sm font-semibold text-gray-900 dark:text-white">Confirm</label>
+                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">A backup is saved first. Type DELETE, then clear the groups you selected.</p>
+                        <div class="mt-3 flex flex-wrap items-center gap-3">
+                            <input id="confirm_phrase" name="confirm_phrase" value="{{ old('confirm_phrase') }}" autocomplete="off" spellcheck="false"
+                                   placeholder="DELETE"
+                                   x-model="phrase"
+                                   class="w-44 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 font-mono text-sm tracking-wide text-gray-900 placeholder:text-gray-400 focus:border-error-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-error-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder:text-gray-500 dark:focus:bg-gray-800">
+                            <button type="submit"
+                                    class="inline-flex items-center justify-center rounded-lg bg-error-600 px-4 py-2.5 text-sm font-semibold text-white shadow-theme-xs hover:bg-error-700 focus:outline-none focus:ring-2 focus:ring-error-500/40 disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-500 disabled:shadow-none dark:disabled:bg-gray-700 dark:disabled:text-gray-400"
+                                    :disabled="phrase.trim().toUpperCase() !== 'DELETE'">
+                                Clear selected data
+                            </button>
                         </div>
-                        <label class="flex items-start gap-3 text-sm text-gray-700 dark:text-gray-300 md:pt-7">
-                            <input type="checkbox" name="confirm_clear" value="1" class="mt-1 rounded border-gray-300 text-error-600 focus:ring-error-500 dark:border-gray-600"
-                                   @checked(old('confirm_clear'))>
-                            <span>I understand the selected rows will be deleted after a backup is saved.</span>
-                        </label>
+                        @if($clearErrors->any())
+                            <p class="mt-3 text-sm font-medium text-error-600 dark:text-error-400">{{ $clearErrors->first() }}</p>
+                        @endif
+                        @error('clear')
+                            <p class="mt-3 text-sm font-medium text-error-600 dark:text-error-400">{{ $message }}</p>
+                        @enderror
                     </div>
-
-                    <button type="submit"
-                            class="inline-flex items-center rounded-lg bg-error-600 px-4 py-2.5 text-sm font-semibold text-white shadow-theme-xs hover:bg-error-700 focus:outline-none focus:ring-2 focus:ring-error-500/40">
-                        Clear selected data
-                    </button>
                 </form>
             </div>
         @endif
