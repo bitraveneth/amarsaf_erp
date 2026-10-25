@@ -2,8 +2,11 @@
 
 @section('content')
 @php
-    $profitTone = $netProfitEstimate >= 0 ? 'success' : 'danger';
     $gapTone = $cashGap >= 0 ? 'success' : 'warning';
+    $money = fn ($amount) => $currencyCode.' '.number_format((float) $amount, 0);
+    $estimateClass = $netProfitEstimate > 0
+        ? 'erp-dash-estimate__value--success'
+        : ($netProfitEstimate < 0 ? 'erp-dash-estimate__value--danger' : '');
 @endphp
 
 <div class="erp-dash-page">
@@ -22,23 +25,39 @@
         :range-options="$rangeOptions"
     />
 
-    <div class="erp-dash-layout-split">
-        <x-dashboard.panel title="Cash and invoice trend" subtitle="Net sales vs receipts collected">
-            <x-dashboard.bar-chart
-                :labels="$chartLabels"
-                :values="$chartRevenue"
-                :secondary="$chartCollections"
-                :currency="$currencyCode"
-            />
-        </x-dashboard.panel>
-
-        <x-dashboard.highlight
-            label="Management estimate"
-            :value="$currencyCode . ' ' . number_format($netProfitEstimate, 0)"
-            :tone="$profitTone"
-            hint="Invoiced sales minus period expenses and payroll. Management estimate, not a formal statement."
+    <x-dashboard.panel title="Cash and invoice trend" subtitle="Net sales vs receipts collected">
+        <x-dashboard.bar-chart
+            :labels="$chartLabels"
+            :values="$chartRevenue"
+            :secondary="$chartCollections"
+            :currency="$currencyCode"
         />
-    </div>
+    </x-dashboard.panel>
+
+    <x-dashboard.panel title="Management estimate" subtitle="Invoiced sales minus period expenses and payroll.">
+        <div class="erp-dash-estimate">
+            <div class="erp-dash-estimate__step">
+                <p class="erp-dash-estimate__label">Net sales</p>
+                <p class="erp-dash-estimate__value">{{ $money($netSales) }}</p>
+                <p class="erp-dash-estimate__hint">Invoice basis</p>
+            </div>
+            <div class="erp-dash-estimate__step">
+                <p class="erp-dash-estimate__label">Expenses</p>
+                <p class="erp-dash-estimate__value {{ $totalExpenses > 0 ? 'erp-dash-estimate__value--out' : '' }}">− {{ $money($totalExpenses) }}</p>
+                <p class="erp-dash-estimate__hint">Expenses, gifts, campaigns</p>
+            </div>
+            <div class="erp-dash-estimate__step">
+                <p class="erp-dash-estimate__label">Payroll</p>
+                <p class="erp-dash-estimate__value {{ $totalPayroll > 0 ? 'erp-dash-estimate__value--out' : '' }}">− {{ $money($totalPayroll) }}</p>
+                <p class="erp-dash-estimate__hint">Salary distributions</p>
+            </div>
+            <div class="erp-dash-estimate__step erp-dash-estimate__step--result">
+                <p class="erp-dash-estimate__label">Estimate</p>
+                <p class="erp-dash-estimate__value {{ $estimateClass }}">{{ $money($netProfitEstimate) }}</p>
+                <p class="erp-dash-estimate__hint">Not a formal statement.</p>
+            </div>
+        </div>
+    </x-dashboard.panel>
 
     <div class="erp-dash-kpi-grid">
         <x-dashboard.kpi label="Net sales" :value="$currencyCode . ' ' . number_format($netSales, 0)" hint="Invoice basis before VAT" />
