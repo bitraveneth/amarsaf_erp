@@ -12,6 +12,11 @@ return new class extends Migration
             return;
         }
 
+        // MySQL ENUM update only — SQLite stores status as text.
+        if (Schema::getConnection()->getDriverName() !== 'mysql') {
+            return;
+        }
+
         // Update ENUM to include the new "packing" status between confirmed and packed
         DB::statement(
             "ALTER TABLE orders MODIFY COLUMN status ENUM('draft','confirmed','packing','packed','dispatched','delivered') NOT NULL DEFAULT 'draft'"
@@ -24,10 +29,13 @@ return new class extends Migration
             return;
         }
 
+        if (Schema::getConnection()->getDriverName() !== 'mysql') {
+            return;
+        }
+
         // Revert back to the original ENUM without "packing"
         DB::statement(
             "ALTER TABLE orders MODIFY COLUMN status ENUM('draft','confirmed','packed','dispatched','delivered') NOT NULL DEFAULT 'draft'"
         );
     }
 };
-

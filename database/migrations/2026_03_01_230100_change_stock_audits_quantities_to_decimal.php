@@ -12,6 +12,11 @@ return new class extends Migration
             return;
         }
 
+        // MySQL column type change only — SQLite does not support MODIFY.
+        if (Schema::getConnection()->getDriverName() !== 'mysql') {
+            return;
+        }
+
         DB::statement('ALTER TABLE stock_audits MODIFY system_quantity DECIMAL(12,2) NOT NULL');
         DB::statement('ALTER TABLE stock_audits MODIFY counted_quantity DECIMAL(12,2) NOT NULL');
         DB::statement('ALTER TABLE stock_audits MODIFY variance DECIMAL(12,2) NOT NULL');
@@ -20,6 +25,10 @@ return new class extends Migration
     public function down(): void
     {
         if (! Schema::hasTable('stock_audits')) {
+            return;
+        }
+
+        if (Schema::getConnection()->getDriverName() !== 'mysql') {
             return;
         }
 

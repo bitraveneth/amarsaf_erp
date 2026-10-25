@@ -397,7 +397,7 @@
 
   .erp-brand-mark--login .erp-brand-mark__logo,
   .erp-brand-mark--loader .erp-brand-mark__logo {
-    @apply h-14 max-w-[12rem];
+    @apply h-16 max-w-[14rem];
   }
 
   .erp-brand-mark__companion {
@@ -8800,9 +8800,15 @@ html.dark .header-theme-toggle--auth .header-theme-toggle__btn[data-theme="dark"
   text-decoration: none;
 }
 
+.auth-shell__card-brand .erp-brand-mark--login {
+  width: 100%;
+  justify-content: center;
+}
+
 .auth-shell__card-brand .erp-brand-mark--login .erp-brand-mark__logo {
-  height: 3.75rem;
-  max-width: 14rem;
+  height: 4.5rem;
+  max-width: min(16rem, 72%);
+  width: auto;
 }
 
 .auth-shell__brand-name {
@@ -8817,7 +8823,7 @@ html.dark .header-theme-toggle--auth .header-theme-toggle__btn[data-theme="dark"
 }
 
 .auth-shell__form-wrap {
-  margin-top: 2rem;
+  margin-top: 1.75rem;
 }
 
 .auth-shell__footer {
