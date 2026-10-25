@@ -7,6 +7,20 @@ Version tags follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [2.2.0] - 2026-10-25
+
+Security update for the October 2026 PHP bugs and the Composer packages those bugs sat next to.
+
+### Security
+
+- Deploy stops when PHP is missing the fixes for CVE-2026-109618 and CVE-2026-109619 (PHP2Shell). On Ubuntu it installs USN-8948-1 and restarts php-fpm and Apache. `php -v` can still print 8.3.6 or 8.1.2 after the Ubuntu package update.
+- Guzzle 7.16.0, Symfony 6.4.46, CommonMark 2.10.4, PHPUnit 10.5.66, and Dompdf 3.1.6.
+- PDF rendering stays inside the application directory. Remote file loading and PHP execution inside PDFs stay off.
+- The API `token` guard rejects non-string credentials (CVE-2026-114509). Sign-in uses the session and Sanctum.
+- Production session cookies are marked Secure when `APP_ENV=production`.
+
+Laravel 10 still has advisories that are only fixed in Laravel 12 and 13: the email-rule header bug, signed-URL path confusion, and a debug-page issue that applies when `APP_DEBUG` is true.
+
 ## [2.0.0] - 2026-06-08
 
 Major release on branch [`v2`](https://github.com/bitraveneth/Saf_Erp/tree/v2).  

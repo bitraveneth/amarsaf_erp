@@ -31,6 +31,13 @@ jobs:
           mkdir -p ~/.ssh
           ssh-keyscan -H "$VPS_HOST" >> ~/.ssh/known_hosts
 
+      - name: Patch PHP runtime on VPS
+        env:
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+        run: |
+          ssh "$VPS_USER@$VPS_HOST" 'bash -se' < scripts/ensure-php-security-release.sh
+
       - name: Deploy to VPS
         env:
           VPS_USER: ${{ secrets.VPS_USER }}
@@ -81,6 +88,16 @@ jobs:
               echo "[INFO] APP_KEY generated."
             else
               echo "[INFO] APP_KEY already set."
+            fi
+
+            log_step "Set APP_VERSION=2.2.0"
+            if [ -f .env ]; then
+              if grep -q '^APP_VERSION=' .env; then
+                sed -i 's/^APP_VERSION=.*/APP_VERSION=2.2.0/' .env
+              else
+                echo 'APP_VERSION=2.2.0' >> .env
+              fi
+              echo "[INFO] APP_VERSION=2.2.0 ensured."
             fi
 
             log_step "Set APP_DEBUG=false"

@@ -31,7 +31,7 @@ Staff manuals: [docs/client-user-guide.md](docs/client-user-guide.md)
 
 ## Requirements
 
-- PHP 8.1+
+- PHP with the October 2026 security updates for CVE-2026-109618 and CVE-2026-109619: upstream 8.2.35, 8.3.36, 8.4.27, or 8.5.12, or the Ubuntu USN-8948-1 packages (24.04: `php8.3` `8.3.6-0ubuntu0.24.04.13` or newer). `php -v` can still print 8.3.6 after that Ubuntu update.
 - Composer 2
 - MySQL 8
 - Node.js 18+ and npm

@@ -20,6 +20,7 @@ class PdfDocumentBuilder
         $pdf->setOption('isRemoteEnabled', false);
         $pdf->setOption('isPhpEnabled', false);
         $pdf->setOption('defaultFont', 'DejaVu Sans');
+        $pdf->setOption('chroot', realpath(base_path()) ?: base_path());
 
         return $pdf;
     }
@@ -39,9 +40,9 @@ class PdfDocumentBuilder
         $normalized = str_replace('\\', '/', $absolutePath);
 
         if (preg_match('/^[A-Za-z]:\//', $normalized) === 1) {
-            return 'file:///' . $normalized;
+            return 'file:///'.$normalized;
         }
 
-        return 'file://' . $normalized;
+        return 'file://'.$normalized;
     }
 }
