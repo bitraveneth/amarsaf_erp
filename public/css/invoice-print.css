@@ -16,10 +16,21 @@
 
     #sidebar,
     header,
+    footer,
+    .admin-footer,
+    .erp-assistant-root,
     .print-hidden,
     #receipt-modal,
     #credit-modal {
         display: none !important;
+    }
+
+    .saf-mark,
+    .saf-due td,
+    .saf-footer,
+    .saf-footer td {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
     }
 
     .min-h-screen,
