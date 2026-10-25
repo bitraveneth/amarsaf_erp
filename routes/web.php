@@ -137,6 +137,7 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::get('settings', [SystemSettingController::class, 'index'])->middleware('perm:system.settings')->name('settings.index');
     Route::patch('settings', [SystemSettingController::class, 'update'])->middleware('perm:system.settings')->name('settings.update');
     Route::post('settings/backups', [SystemSettingController::class, 'createBackup'])->middleware('perm:system.settings')->name('settings.backups.create');
+    Route::post('settings/data/clear', [SystemSettingController::class, 'clearBusinessData'])->middleware('perm:system.settings')->name('settings.data.clear');
     Route::post('settings/backups/import', [SystemSettingController::class, 'importBackup'])->middleware('perm:system.settings')->name('settings.backups.import');
     Route::post('settings/backups/delete', [SystemSettingController::class, 'deleteBackup'])->middleware('perm:system.settings')->name('settings.backups.delete');
     Route::get('settings/backups/{filename}', [SystemSettingController::class, 'downloadBackup'])->middleware('perm:system.settings')->where('filename', '.*')->name('settings.backups.download');
