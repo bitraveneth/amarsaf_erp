@@ -4,6 +4,7 @@ namespace App\Support;
 
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
 use RuntimeException;
@@ -42,7 +43,21 @@ class DatabaseBackupManager
 
     public function create(): string
     {
-        $config = $this->mysqlConfig();
+        $config = $this->connectionConfig();
+
+        if (($config['driver'] ?? null) === 'sqlite') {
+            return $this->createSqliteBackup($config);
+        }
+
+        return $this->createMysqlBackup($config);
+    }
+
+    protected function createMysqlBackup(array $config): string
+    {
+        if (($config['driver'] ?? null) !== 'mysql') {
+            throw new RuntimeException('Backup and restore currently support MySQL and SQLite connections only.');
+        }
+
         $disk = Storage::disk(self::DISK);
 
         if (! $disk->exists(self::DIRECTORY)) {
@@ -91,6 +106,61 @@ class DatabaseBackupManager
         return $filename;
     }
 
+    /**
+     * @param  array<string, mixed>  $config
+     */
+    protected function createSqliteBackup(array $config): string
+    {
+        $database = $config['database'] ?? null;
+
+        if (! is_string($database) || $database === '' || $database === ':memory:' || ! is_file($database)) {
+            throw new RuntimeException('SQLite backup needs a database file on disk.');
+        }
+
+        $disk = Storage::disk(self::DISK);
+
+        if (! $disk->exists(self::DIRECTORY)) {
+            $disk->makeDirectory(self::DIRECTORY);
+        }
+
+        $filename = sprintf('sqlite-backup-%s.sql', now()->format('Ymd-His'));
+        $absolutePath = $disk->path(self::DIRECTORY . '/' . $filename);
+        $handle = fopen($absolutePath, 'wb');
+
+        if ($handle === false) {
+            throw new RuntimeException('Unable to create the backup file.');
+        }
+
+        $process = new Process([
+            $this->resolveBinary('sqlite3', 'database.backup.sqlite3'),
+            $database,
+            '.dump',
+        ]);
+        $process->setTimeout(600);
+        $errorOutput = '';
+
+        try {
+            $process->mustRun(function (string $type, string $buffer) use ($handle, &$errorOutput) {
+                if ($type === Process::ERR) {
+                    $errorOutput .= $buffer;
+
+                    return;
+                }
+
+                fwrite($handle, $buffer);
+            });
+        } catch (ProcessFailedException $exception) {
+            fclose($handle);
+            File::delete($absolutePath);
+
+            throw new RuntimeException('Database backup failed: ' . trim($errorOutput ?: $exception->getProcess()->getErrorOutput()));
+        }
+
+        fclose($handle);
+
+        return $filename;
+    }
+
     public function restore(string $filename): void
     {
         if (! app()->environment(['local', 'testing'])) {
@@ -99,7 +169,17 @@ class DatabaseBackupManager
             );
         }
 
-        $config = $this->mysqlConfig();
+        $config = $this->connectionConfig();
+
+        if (($config['driver'] ?? null) === 'sqlite') {
+            $this->restoreSqliteBackup($config, $filename);
+
+            return;
+        }
+
+        if (($config['driver'] ?? null) !== 'mysql') {
+            throw new RuntimeException('Backup and restore currently support MySQL and SQLite connections only.');
+        }
         $relativePath = self::DIRECTORY . '/' . basename($filename);
         $disk = Storage::disk(self::DISK);
 
@@ -228,10 +308,85 @@ class DatabaseBackupManager
         ];
     }
 
-    protected function mysqlConfig(): array
+    /**
+     * @param  array<string, mixed>  $config
+     */
+    protected function restoreSqliteBackup(array $config, string $filename): void
+    {
+        $database = $config['database'] ?? null;
+        $relativePath = $this->relativePath($filename);
+        $disk = Storage::disk(self::DISK);
+
+        if (! is_string($database) || $database === '' || $database === ':memory:' || ! is_file($database)) {
+            throw new RuntimeException('SQLite restore needs a database file on disk.');
+        }
+
+        if (! $disk->exists($relativePath)) {
+            throw new RuntimeException('Selected backup file was not found.');
+        }
+
+        $temporary = $database . '.restore-' . bin2hex(random_bytes(4));
+        $process = new Process([
+            $this->resolveBinary('sqlite3', 'database.backup.sqlite3'),
+            $temporary,
+        ]);
+        $stream = fopen($disk->path($relativePath), 'r');
+
+        if ($stream === false) {
+            throw new RuntimeException('Unable to open the backup file for restore.');
+        }
+
+        $process->setTimeout(600);
+        $process->setInput($stream);
+
+        try {
+            $process->mustRun();
+        } catch (ProcessFailedException $exception) {
+            File::delete($temporary);
+
+            throw new RuntimeException('Database restore failed: ' . trim($exception->getProcess()->getErrorOutput()));
+        } finally {
+            if (is_resource($stream)) {
+                fclose($stream);
+            }
+        }
+
+        DB::disconnect((string) Config::get('database.default'));
+
+        foreach ([$database . '-wal', $database . '-shm', $database . '-journal'] as $sidecar) {
+            if (is_file($sidecar)) {
+                File::delete($sidecar);
+            }
+        }
+
+        if (! copy($temporary, $database)) {
+            File::delete($temporary);
+
+            throw new RuntimeException('Unable to replace the SQLite database with the restored backup.');
+        }
+
+        File::delete($temporary);
+        DB::purge((string) Config::get('database.default'));
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function connectionConfig(): array
     {
         $defaultConnection = Config::get('database.default');
         $config = Config::get("database.connections.{$defaultConnection}");
+
+        if (! is_array($config)) {
+            throw new RuntimeException('Database connection settings are incomplete.');
+        }
+
+        return $config;
+    }
+
+    protected function mysqlConfig(): array
+    {
+        $config = $this->connectionConfig();
 
         if (($config['driver'] ?? null) !== 'mysql') {
             throw new RuntimeException('Backup and restore currently support MySQL connections only.');

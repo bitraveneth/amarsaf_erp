@@ -78,7 +78,7 @@
         'colors' => ['brand_primary_color', 'brand_secondary_color', 'text_color_light', 'text_color_dark', 'default_theme_mode'],
         'sms' => ['sms_provider', 'sms_base_url', 'sms_api_key', 'sms_api_secret', 'sms_sender_id'],
         'smtp' => ['smtp_host', 'smtp_port', 'smtp_encryption', 'smtp_username', 'smtp_password', 'mail_from_address', 'mail_from_name'],
-        'database' => ['backup', 'backup_file', 'filename', 'confirm_restore', 'restore', 'restore_after_import'],
+        'database' => ['backup', 'backup_file', 'filename', 'confirm_restore', 'restore', 'restore_after_import', 'clear', 'groups', 'confirm_phrase', 'confirm_clear'],
     ];
     $initialSettingsTab = in_array(request('tab'), ['brand', 'colors', 'currency', 'sms', 'smtp', 'database'], true)
         ? request('tab')
@@ -772,6 +772,71 @@
                 </table>
             </div>
         </div>
+
+        @if($canResetBusinessData)
+            <div class="mt-6 rounded-2xl border border-error-200 bg-error-50/40 p-5 dark:border-error-500/20 dark:bg-error-500/5">
+                <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Clear business data</h3>
+                <p class="mt-1 text-xs text-gray-600 dark:text-gray-300">
+                    Super admin only. This empties the selected tables so a client can start clean.
+                    Login users, roles, menus, and company settings stay. A backup file is created before anything is deleted.
+                </p>
+
+                @php $clearErrors = $errors->getBag('clearData'); @endphp
+                <form method="POST" action="{{ route('admin.settings.data.clear') }}" class="mt-4 space-y-4"
+                      x-data="{ phrase: @js(old('confirm_phrase', '')) }">
+                    @csrf
+                    <div class="grid gap-3 md:grid-cols-2">
+                        @foreach($dataResetGroups as $group)
+                            <label class="flex items-start gap-3 rounded-xl border border-gray-200 bg-white px-3 py-3 text-sm dark:border-gray-700 dark:bg-gray-900">
+                                <input type="checkbox" name="groups[]" value="{{ $group['key'] }}" data-clear-group
+                                       class="mt-1 rounded border-gray-300 text-error-600 focus:ring-error-500 dark:border-gray-600"
+                                       @checked(in_array($group['key'], old('groups', []), true))>
+                                <span>
+                                    <span class="font-medium text-gray-900 dark:text-white">{{ $group['label'] }}</span>
+                                    <span class="mt-1 block text-xs text-gray-500 dark:text-gray-400">{{ $group['description'] }}</span>
+                                    <span class="mt-1 block text-xs font-semibold text-gray-700 dark:text-gray-300">{{ number_format($group['rows']) }} rows in {{ $group['tables'] }} tables</span>
+                                </span>
+                            </label>
+                        @endforeach
+                    </div>
+
+                    <div class="flex flex-wrap gap-3">
+                        <button type="button"
+                                onclick="document.querySelectorAll('[data-clear-group]').forEach((box) => box.checked = true)"
+                                class="inline-flex items-center rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300">
+                            Select all business data
+                        </button>
+                        <button type="button"
+                                onclick="document.querySelectorAll('[data-clear-group]').forEach((box) => box.checked = false)"
+                                class="inline-flex items-center rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300">
+                            Clear selection
+                        </button>
+                    </div>
+
+                    <div class="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900">
+                        <label for="confirm_phrase" class="block text-sm font-semibold text-gray-900 dark:text-white">Confirm</label>
+                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">A backup is saved first. Type DELETE, then clear the groups you selected.</p>
+                        <div class="mt-3 flex flex-wrap items-center gap-3">
+                            <input id="confirm_phrase" name="confirm_phrase" value="{{ old('confirm_phrase') }}" autocomplete="off" spellcheck="false"
+                                   placeholder="DELETE"
+                                   x-model="phrase"
+                                   class="w-44 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 font-mono text-sm tracking-wide text-gray-900 placeholder:text-gray-400 focus:border-error-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-error-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder:text-gray-500 dark:focus:bg-gray-800">
+                            <button type="submit"
+                                    class="inline-flex items-center justify-center rounded-lg bg-error-600 px-4 py-2.5 text-sm font-semibold text-white shadow-theme-xs hover:bg-error-700 focus:outline-none focus:ring-2 focus:ring-error-500/40 disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-500 disabled:shadow-none dark:disabled:bg-gray-700 dark:disabled:text-gray-400"
+                                    :disabled="phrase.trim().toUpperCase() !== 'DELETE'">
+                                Clear selected data
+                            </button>
+                        </div>
+                        @if($clearErrors->any())
+                            <p class="mt-3 text-sm font-medium text-error-600 dark:text-error-400">{{ $clearErrors->first() }}</p>
+                        @endif
+                        @error('clear')
+                            <p class="mt-3 text-sm font-medium text-error-600 dark:text-error-400">{{ $message }}</p>
+                        @enderror
+                    </div>
+                </form>
+            </div>
+        @endif
     </section>
 </div>
 @endsection

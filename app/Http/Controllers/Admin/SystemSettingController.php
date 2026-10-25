@@ -4,9 +4,11 @@ namespace App\Http\Controllers\Admin;
 
 use App\Helpers\SystemSettings;
 use App\Http\Controllers\Controller;
+use App\Support\BusinessDataReset;
 use App\Support\DatabaseBackupManager;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
 use RuntimeException;
 
 class SystemSettingController extends Controller
@@ -58,6 +60,10 @@ class SystemSettingController extends Controller
             ],
             'backups' => $backupManager->list(),
             'backupSchedule' => DatabaseBackupManager::scheduleSummary(),
+            'canResetBusinessData' => (bool) auth()->user()?->hasRole('super_admin'),
+            'dataResetGroups' => auth()->user()?->hasRole('super_admin')
+                ? app(BusinessDataReset::class)->summary()
+                : [],
         ]);
     }
 
@@ -159,6 +165,56 @@ class SystemSettingController extends Controller
         return redirect()
             ->route('admin.settings.index')
             ->with('status', 'System settings updated.');
+    }
+
+    public function clearBusinessData(Request $request, BusinessDataReset $reset, DatabaseBackupManager $backupManager)
+    {
+        if (! $request->user()?->hasRole('super_admin')) {
+            abort(403, 'Only a super admin can clear business data.');
+        }
+
+        $validator = Validator::make(
+            [
+                'groups' => $request->input('groups', []),
+                'confirm_phrase' => strtoupper(trim((string) $request->input('confirm_phrase'))),
+            ],
+            [
+                'groups' => 'required|array|min:1',
+                'groups.*' => 'string',
+                'confirm_phrase' => 'required|in:DELETE',
+            ],
+            [
+                'groups.required' => 'Select at least one group to clear.',
+                'groups.min' => 'Select at least one group to clear.',
+                'confirm_phrase.required' => 'Type DELETE in the confirmation box.',
+                'confirm_phrase.in' => 'Type DELETE in the confirmation box.',
+            ]
+        );
+
+        if ($validator->fails()) {
+            return redirect()
+                ->route('admin.settings.index', ['tab' => 'database'])
+                ->withErrors($validator, 'clearData')
+                ->withInput();
+        }
+
+        $data = $validator->validated();
+
+        try {
+            $backup = $backupManager->create();
+            $result = $reset->clear($data['groups']);
+        } catch (RuntimeException $exception) {
+            return redirect()
+                ->route('admin.settings.index', ['tab' => 'database'])
+                ->withErrors(['clear' => $exception->getMessage()])
+                ->withInput();
+        }
+
+        $labels = implode(', ', $result['labels']);
+
+        return redirect()
+            ->route('admin.settings.index', ['tab' => 'database'])
+            ->with('status', "Cleared {$result['rows']} rows from {$labels}. A backup was saved first as {$backup}.");
     }
 
     public function createBackup(DatabaseBackupManager $backupManager)
