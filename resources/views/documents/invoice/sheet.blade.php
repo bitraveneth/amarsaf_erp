@@ -140,16 +140,14 @@
                 </tr>
             @endforelse
             @foreach($totals as $total)
-                <tr @class(['inv-sum', 'inv-sum-alt' => $loop->first])>
-                    <td colspan="3"></td>
-                    <td class="lbl">{{ $total['label'] }}</td>
+                <tr class="inv-sum">
+                    <td class="lbl" colspan="4">{{ $total['label'] }}</td>
                     <td class="val">{{ $total['amount'] }}</td>
                 </tr>
             @endforeach
             <tr class="inv-grand">
-                <td colspan="3"></td>
-                <td class="inv-right">{{ $grand['label'] }}</td>
-                <td class="inv-right">{{ $grand['amount'] }}</td>
+                <td class="lbl" colspan="4">{{ $grand['label'] }}</td>
+                <td class="val">{{ $grand['amount'] }}</td>
             </tr>
         </tbody>
     </table>

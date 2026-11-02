@@ -10,7 +10,6 @@
     $signatures = array_values($invoice['signatures'] ?? []);
     $signatureCount = count($signatures);
     $colCount = max(1, count($columns));
-    $sumSpan = max(0, $colCount - min(2, $colCount));
     $title = (string) ($invoice['title'] ?? $title ?? __('documents.invoice_sheet.title'));
     $generatedLabel = $generatedLabel ?? ($invoice['generated'] ?? null);
     $heading = function (string $column): string {
@@ -101,28 +100,22 @@
                 </tr>
             @endforelse
             @foreach($totals as $total)
-                <tr @class(['inv-sum', 'inv-sum-alt' => $loop->first])>
-                    @if($sumSpan > 0)
-                        <td colspan="{{ $sumSpan }}"></td>
-                    @endif
+                <tr class="inv-sum">
                     @if($colCount === 1)
-                        <td class="lbl">{{ $total['label'] }} {{ $total['amount'] }}</td>
+                        <td class="val">{{ $total['label'] }} {{ $total['amount'] }}</td>
                     @else
-                        <td class="lbl">{{ $total['label'] }}</td>
+                        <td class="lbl" colspan="{{ $colCount - 1 }}">{{ $total['label'] }}</td>
                         <td class="val">{{ $total['amount'] }}</td>
                     @endif
                 </tr>
             @endforeach
             @if(!empty($grand))
                 <tr class="inv-grand">
-                    @if($sumSpan > 0)
-                        <td colspan="{{ $sumSpan }}"></td>
-                    @endif
                     @if($colCount === 1)
-                        <td class="inv-right">{{ $grand['label'] }} {{ $grand['amount'] }}</td>
+                        <td class="val">{{ $grand['label'] }} {{ $grand['amount'] }}</td>
                     @else
-                        <td class="inv-right">{{ __('documents.invoice_sheet.total') }}</td>
-                        <td class="inv-right">{{ $grand['amount'] }}</td>
+                        <td class="lbl" colspan="{{ $colCount - 1 }}">{{ __('documents.invoice_sheet.total') }}</td>
+                        <td class="val">{{ $grand['amount'] }}</td>
                     @endif
                 </tr>
             @endif

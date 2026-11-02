@@ -4,7 +4,7 @@
         color: #1f2937;
         font-family: DejaVu Sans, Helvetica, Arial, sans-serif;
     }
-    .inv-for-pdf { padding: 10mm 14mm 10mm; }
+    .inv-for-pdf { padding: 10mm 14mm 16mm; }
     .inv-accent { color: #6A2ACD; }
     .inv-head, .inv-intro, .inv-lines, .inv-bottom, .inv-bill, .inv-meta, .inv-pay, .inv-contact {
         width: 100%;
@@ -104,7 +104,7 @@
         border: 1px solid #6A2ACD;
         text-align: center;
     }
-    .inv-lines th.inv-right, .inv-lines td.inv-right, .inv-grand td.inv-right { text-align: right; }
+    .inv-lines th.inv-right, .inv-lines td.inv-right { text-align: right; }
     .inv-lines th.inv-center, .inv-lines td.inv-center { text-align: center; }
     .inv-lines td {
         padding: 7px 8px;
@@ -118,16 +118,14 @@
     .inv-right { text-align: right; }
     .inv-center { text-align: center; }
     .inv-sum td {
-        border: none;
-        background: #ffffff;
-        padding-top: 6px;
-        padding-bottom: 6px;
+        border: 1px solid #efe6f8;
+        background: #f6f0ff;
+        padding: 7px 8px;
         font-size: 14px;
+        white-space: nowrap;
     }
-    .inv-sum.inv-sum-alt td.lbl,
-    .inv-sum.inv-sum-alt td.val { background: #f6f0ff; }
-    .inv-sum td.lbl { text-align: right; color: #374151; }
-    .inv-sum td.val { text-align: right; font-weight: 700; }
+    .inv-sum td.lbl { text-align: right; color: #374151; font-weight: 700; }
+    .inv-sum td.val { text-align: center; font-weight: 700; color: #111827; }
     .inv-grand td {
         background: #6A2ACD;
         color: #ffffff;
@@ -135,7 +133,10 @@
         font-weight: 700;
         font-size: 16px;
         padding: 10px 8px;
+        text-align: center;
+        white-space: nowrap;
     }
+    .inv-grand td.lbl { text-align: right; }
     .inv-bottom { margin-top: 12px; }
     .inv-section {
         font-size: 13px;
@@ -180,6 +181,13 @@
         font-size: 12px;
         padding: 10px 12px;
     }
+    .inv-for-pdf .inv-footer {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        margin: 0;
+    }
     .doc-preview-body:has(.inv) .doc-preview-page {
         width: 210mm;
         max-width: 210mm;
@@ -192,11 +200,20 @@
     }
     .doc-preview-body:has(.inv) .doc-copy {
         width: 210mm;
+        min-height: 297mm;
         box-sizing: border-box;
         margin: 0 auto 16px;
-        padding: 10mm 14mm 10mm;
+        padding: 10mm 14mm 16mm;
         background: #ffffff;
+        position: relative;
         box-shadow: 0 12px 40px rgba(15, 23, 42, 0.12);
+    }
+    .doc-preview-body:has(.inv) .inv-footer {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        margin: 0;
     }
     @media print {
         .doc-preview-body:has(.inv) .doc-preview-page {
@@ -205,12 +222,17 @@
             margin: 0;
         }
         .doc-preview-body:has(.inv) .doc-copy {
-            width: auto;
-            min-height: 0;
+            width: 210mm;
+            min-height: 297mm;
             margin: 0;
-            padding: 0;
             box-shadow: none;
         }
-        .inv { padding: 0; }
+        .inv-footer {
+            position: fixed;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            margin: 0;
+        }
     }
 </style>
