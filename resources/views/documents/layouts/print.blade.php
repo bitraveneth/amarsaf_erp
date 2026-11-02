@@ -6,13 +6,36 @@
     <title>{{ $payload['title'] ?? 'Document' }} · {{ $payload['number'] ?? '' }}</title>
     <link rel="stylesheet" href="{{ asset('css/document-print.css') }}?v={{ @filemtime(public_path('css/document-print.css')) ?: 1 }}">
     @include('documents.partials.styles', compact('company'))
+    <style>
+        .doc-preview-body .doc-copy-break {
+            display: block;
+            margin: 28px 0 18px;
+            text-align: center;
+            color: #64748b;
+            font-size: 10px;
+            letter-spacing: .16em;
+            text-transform: uppercase;
+        }
+        .doc-preview-body .doc-copy + .doc-copy {
+            margin-top: 8px;
+            padding-top: 8px;
+        }
+        @media print {
+            .doc-preview-body .doc-copy-break { display: none !important; }
+        }
+    </style>
 </head>
 <body class="doc-preview-body">
     <div class="doc-toolbar print-hidden">
         <div class="doc-toolbar-inner">
             <div>
                 <div class="doc-toolbar-title">{{ $payload['title'] ?? 'Document' }}</div>
-                <div class="doc-toolbar-subtitle">{{ $payload['number'] ?? '' }}</div>
+                <div class="doc-toolbar-subtitle">
+                    {{ $payload['number'] ?? '' }}
+                    @if(!empty($payload['copies']) && count($payload['copies']) > 1)
+                        · {{ implode(' · ', $payload['copies']) }}
+                    @endif
+                </div>
             </div>
             <div class="doc-toolbar-actions">
                 @if($backUrl)

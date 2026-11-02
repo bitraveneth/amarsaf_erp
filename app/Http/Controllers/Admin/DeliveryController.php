@@ -16,7 +16,6 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use App\Services\Delivery\RouteVehicleValidator;
-use Barryvdh\DomPDF\Facade\Pdf;
 
 class DeliveryController extends Controller
 {
@@ -340,12 +339,12 @@ class DeliveryController extends Controller
 
     public function podPdf(Delivery $delivery)
     {
-        $delivery->load(['order.agent', 'order.items.product', 'route', 'vehicle', 'pod', 'items.product']);
+        $pdf = \App\Support\PdfDocumentBuilder::loadView('documents.layouts.pdf', [
+            'payload' => \App\Support\Documents\DocumentDataFactory::build('pod', $delivery),
+            'company' => \App\Support\Documents\CompanyDocumentContext::make(),
+        ])->setPaper('a4');
 
-        $pdf = \App\Support\PdfDocumentBuilder::loadView('admin.deliveries.pod_pdf', compact('delivery'))
-            ->setPaper('a4');
-
-        return $pdf->download('pod-delivery-' . $delivery->id . '.pdf');
+        return $pdf->download('pod-delivery-'.$delivery->id.'.pdf');
     }
 
     public function destroy(Delivery $delivery)

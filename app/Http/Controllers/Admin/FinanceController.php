@@ -22,7 +22,6 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
-use Barryvdh\DomPDF\Facade\Pdf;
 
 class FinanceController extends Controller
 {
@@ -399,26 +398,12 @@ class FinanceController extends Controller
 
     public function downloadPdf(Invoice $invoice)
     {
-        $invoice->load(['order.agent', 'items.product', 'receipts', 'creditNotes', 'advanceApplications']);
-
-        $grossTotal    = $invoice->net_total + $invoice->vat_amount;
-        $cashTotal     = $grossTotal - $invoice->withholding;
-        $creditsTotal  = $invoice->creditNotes->sum('amount');
-        $receiptsTotal = $invoice->receipts->sum('amount');
-        $advancesTotal = $invoice->advanceApplications->sum('amount');
-        $outstanding   = $cashTotal - $creditsTotal - $receiptsTotal - $advancesTotal;
-
-        $pdf = \App\Support\PdfDocumentBuilder::loadView('admin.finance.invoice_pdf', [
-            'invoice'       => $invoice,
-            'grossTotal'    => $grossTotal,
-            'cashTotal'     => $cashTotal,
-            'creditsTotal'  => $creditsTotal,
-            'receiptsTotal' => $receiptsTotal,
-            'advancesTotal' => $advancesTotal,
-            'outstanding'   => $outstanding,
+        $pdf = \App\Support\PdfDocumentBuilder::loadView('documents.layouts.pdf', [
+            'payload' => \App\Support\Documents\DocumentDataFactory::build('invoice', $invoice),
+            'company' => \App\Support\Documents\CompanyDocumentContext::make(),
         ])->setPaper('a4');
 
-        return $pdf->download('invoice-' . $invoice->number . '.pdf');
+        return $pdf->download('invoice-'.$invoice->number.'.pdf');
     }
 
     public function destroy(Invoice $invoice)
