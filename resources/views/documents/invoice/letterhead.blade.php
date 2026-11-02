@@ -25,7 +25,14 @@
             </div>
         </td>
         <td style="width: 42%;">
-            <div @class(['inv-title', 'inv-title-long' => mb_strlen($title) > 8])>{{ $title }}</div>
+            @php
+                $titleLines = preg_split('/\s+/u', trim($title), -1, PREG_SPLIT_NO_EMPTY) ?: [$title];
+            @endphp
+            <div @class(['inv-title', 'inv-title-stack' => count($titleLines) > 1])>
+                @foreach($titleLines as $line)
+                    <div class="inv-title-line">{{ $line }}</div>
+                @endforeach
+            </div>
             @if(!empty($generatedLabel))
                 <div class="inv-generated">{{ __('documents.labels.generated') }}: {{ $generatedLabel }}</div>
             @endif

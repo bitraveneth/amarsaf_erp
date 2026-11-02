@@ -18,7 +18,7 @@
             '#', 'sl' => __('documents.invoice_sheet.sl'),
             'particulars', 'product', 'description' => __('documents.invoice_sheet.product'),
             'qty', 'quantity' => __('documents.invoice_sheet.quantity'),
-            'rate', 'unit price', 'unit' => __('documents.invoice_sheet.rate'),
+            'rate', 'unit price' => __('documents.invoice_sheet.rate'),
             'amount', 'line total' => __('documents.invoice_sheet.amount'),
             default => $column,
         };

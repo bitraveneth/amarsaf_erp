@@ -157,15 +157,17 @@
     <table class="inv-bottom">
         <tr>
             <td style="width: 62%; padding-right: 16px;">
-                <div class="inv-section">{{ __('documents.invoice_sheet.payment_details') }}</div>
-                <table class="inv-pay">
-                    @foreach($payments as $row)
-                        <tr @class(['inv-alt' => $loop->iteration % 2 === 0])>
-                            <td class="lbl">{{ $row['label'] }}:</td>
-                            <td class="val">{{ $row['value'] }}</td>
-                        </tr>
-                    @endforeach
-                </table>
+                @if($payments !== [])
+                    <div class="inv-section">{{ __('documents.invoice_sheet.payment_details') }}</div>
+                    <table class="inv-pay">
+                        @foreach($payments as $row)
+                            <tr @class(['inv-alt' => $loop->iteration % 2 === 0])>
+                                <td class="lbl">{{ $row['label'] }}:</td>
+                                <td class="val">{{ $row['value'] }}</td>
+                            </tr>
+                        @endforeach
+                    </table>
+                @endif
 
                 @if($notes !== [])
                     <div class="inv-notes">

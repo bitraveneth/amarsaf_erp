@@ -265,7 +265,8 @@ class DocumentPrintDesignTest extends TestCase
             'company' => $this->company(),
         ])->render();
 
-        $this->assertStringContainsString('class="inv-title inv-title-long"', $html);
+        $this->assertStringContainsString('inv-title-stack', $html);
+        $this->assertStringContainsString('inv-title-line', $html);
         $this->assertStringContainsString('Sales order', $html);
         $this->assertStringContainsString('Gulshan Trading', $html);
         $this->assertStringContainsString('Prepared by', $html);
