@@ -122,7 +122,6 @@
                         @endif
                     </table>
                 </td>
-                <td class="inv-totals-side"></td>
             </tr>
         </table>
     @endif

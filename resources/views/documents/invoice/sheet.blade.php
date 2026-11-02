@@ -159,7 +159,6 @@
                     </tr>
                 </table>
             </td>
-            <td class="inv-totals-side"></td>
         </tr>
     </table>
 

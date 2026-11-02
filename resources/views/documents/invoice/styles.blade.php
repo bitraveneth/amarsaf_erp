@@ -117,23 +117,22 @@
     .inv-lines tr.inv-alt td { background: #f6f0ff; }
     .inv-right { text-align: right; }
     .inv-center { text-align: center; }
-    .inv-totals-wrap { width: 100%; margin-top: 16px; border-collapse: collapse; }
-    .inv-totals-side { width: 22%; }
-    .inv-totals-hold { width: 56%; }
-    .inv-totals { width: 100%; border-collapse: separate; border-spacing: 0; }
+    .inv-totals-wrap { width: 100%; margin-top: 18px; border-collapse: collapse; }
+    .inv-totals-side { width: 54%; }
+    .inv-totals-hold { width: 46%; }
+    .inv-totals { width: 100%; border-collapse: separate; border-spacing: 0 8px; }
     .inv-totals td {
-        width: 50%;
         text-align: center;
         font-size: 14px;
         font-weight: 700;
         color: #374151;
         background: #f6f0ff;
         border: none;
-        border-bottom: 1px solid #ffffff;
-        padding: 8px 12px;
+        padding: 8px 10px;
         white-space: nowrap;
     }
-    .inv-totals td.val { color: #111827; }
+    .inv-totals td.lbl { width: 62%; }
+    .inv-totals td.val { width: 38%; color: #111827; }
     .inv-totals tr.inv-grand td {
         background: #6A2ACD;
         color: #ffffff;
