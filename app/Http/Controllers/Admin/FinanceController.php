@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Http\Controllers\Controller;
 use App\Exceptions\AccountingPeriodClosedException;
+use App\Http\Controllers\Controller;
 use App\Models\AgentAdvance;
 use App\Models\AgentAdvanceApplication;
 use App\Models\CreditNote;
@@ -17,12 +17,14 @@ use App\Models\Receipt;
 use App\Services\Accounting\AccountingService;
 use App\Services\Accounting\InventoryAccountingService;
 use App\Services\Accounting\ProductLedgerResolver;
+use App\Support\Documents\CompanyDocumentContext;
+use App\Support\Documents\DocumentDataFactory;
+use App\Support\Documents\DocumentNumbers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
-use Barryvdh\DomPDF\Facade\Pdf;
 
 class FinanceController extends Controller
 {
@@ -30,12 +32,12 @@ class FinanceController extends Controller
         protected AccountingService $accounting,
         protected InventoryAccountingService $inventoryAccounting,
         protected ProductLedgerResolver $productLedgers
-    ) {
-    }
+    ) {}
 
     public function index()
     {
         $invoices = Invoice::with(['order.agent', 'receipts', 'creditNotes', 'advanceApplications'])->latest()->paginate(10);
+
         return view('admin.finance.index', compact('invoices'));
     }
 
@@ -43,7 +45,11 @@ class FinanceController extends Controller
     {
         $this->loadInvoiceDocument($invoice);
 
-        return view('admin.finance.show', compact('invoice'));
+        return view('admin.finance.show', [
+            'invoice' => $invoice,
+            'company' => CompanyDocumentContext::make(),
+            'payload' => DocumentDataFactory::build('invoice', $invoice),
+        ]);
     }
 
     public function updateWithholding(Request $request, Invoice $invoice)
@@ -68,7 +74,7 @@ class FinanceController extends Controller
                 $this->recordWithholdingLedgerAdjustment(
                     $invoice,
                     $invoice->withholding - $previousWithholding,
-                    'Withholding adjustment on ' . $invoice->number
+                    'Withholding adjustment on '.$invoice->number
                 );
             } catch (AccountingPeriodClosedException $e) {
                 throw $e;
@@ -186,11 +192,11 @@ class FinanceController extends Controller
 
         DB::transaction(function () use ($invoiceData, $order, $invoiceLines, &$invoice) {
             $invoice = Invoice::create(array_merge($invoiceData, [
-                'number' => 'INV-TMP-' . Str::uuid(),
+                'number' => 'INV-TMP-'.Str::uuid(),
             ]));
 
             $invoice->update([
-                'number' => $this->formatInvoiceNumber($invoice->id),
+                'number' => DocumentNumbers::nextInvoice($invoice->issued_at ?? now(), $invoice->id),
             ]);
 
             foreach ($invoiceLines as $line) {
@@ -204,7 +210,7 @@ class FinanceController extends Controller
                 ]);
             }
 
-            $invoiceDescription = 'Invoice ' . $invoice->number;
+            $invoiceDescription = 'Invoice '.$invoice->number;
             $entryDate = Carbon::parse($invoice->issued_at);
             $invoice->load(['items.product.materialCategory']);
 
@@ -217,7 +223,7 @@ class FinanceController extends Controller
             }
 
             if ((float) $invoice->vat_amount > 0) {
-                $lines[] = ['account_key' => 'vat_payable', 'debit' => 0, 'credit' => $invoice->vat_amount, 'description' => 'VAT on ' . $invoice->number];
+                $lines[] = ['account_key' => 'vat_payable', 'debit' => 0, 'credit' => $invoice->vat_amount, 'description' => 'VAT on '.$invoice->number];
             }
 
             $this->accounting->post('sales_invoice', $entryDate, $lines, [
@@ -231,7 +237,7 @@ class FinanceController extends Controller
             $this->recordWithholdingLedgerAdjustment(
                 $invoice,
                 (float) $invoice->withholding,
-                'Withholding on ' . $invoice->number
+                'Withholding on '.$invoice->number
             );
 
             $this->applyAvailableAgentAdvances($invoice);
@@ -330,7 +336,7 @@ class FinanceController extends Controller
         // Maximum credit cannot exceed the remaining receivable after
         // withholding, receipts, and applied advances.
         $grossTotal = $invoice->net_total + $invoice->vat_amount;
-        $cashTotal  = $grossTotal - $invoice->withholding;
+        $cashTotal = $grossTotal - $invoice->withholding;
         $maxCredit = max(0, $cashTotal - $invoice->receipts_total - $invoice->advances_applied_total);
         $alreadyCredited = CreditNote::where('invoice_id', $invoice->id)->sum('amount');
         $remainingCredit = max(0, $maxCredit - $alreadyCredited);
@@ -338,7 +344,7 @@ class FinanceController extends Controller
         if ($data['amount'] > $remainingCredit) {
             return back()->withErrors([
                 'amount' => 'Credit amount exceeds remaining invoice value. Remaining credit allowed: '
-                    . number_format($remainingCredit, 2) . '.',
+                    .number_format($remainingCredit, 2).'.',
             ])->withInput();
         }
 
@@ -349,7 +355,7 @@ class FinanceController extends Controller
             $credit = CreditNote::create([
                 'invoice_id' => $invoice->id,
                 'order_id' => $invoice->order_id,
-                'number' => 'CN-TMP-' . Str::uuid(),
+                'number' => 'CN-TMP-'.Str::uuid(),
                 'issued_at' => Carbon::today(),
                 'amount' => $data['amount'],
                 'reason' => $data['reason'] ?? null,
@@ -364,7 +370,7 @@ class FinanceController extends Controller
             ];
 
             if ($creditBreakdown['vat'] > 0) {
-                $lines[] = ['account_key' => 'vat_payable', 'debit' => $creditBreakdown['vat'], 'credit' => 0, 'description' => 'VAT reversal on ' . $credit->number];
+                $lines[] = ['account_key' => 'vat_payable', 'debit' => $creditBreakdown['vat'], 'credit' => 0, 'description' => 'VAT reversal on '.$credit->number];
             }
 
             $lines[] = ['account_key' => 'trade_debtors', 'debit' => 0, 'credit' => $credit->amount];
@@ -374,7 +380,7 @@ class FinanceController extends Controller
                 Carbon::parse($credit->issued_at),
                 $lines,
                 [
-                    'description' => 'Credit note ' . $credit->number,
+                    'description' => 'Credit note '.$credit->number,
                     'order_id' => $invoice->order_id,
                     'invoice_id' => $invoice->id,
                     'source_type' => CreditNote::class,
@@ -400,13 +406,12 @@ class FinanceController extends Controller
 
     public function downloadPdf(Invoice $invoice)
     {
-        $this->loadInvoiceDocument($invoice);
-
-        $pdf = \App\Support\PdfDocumentBuilder::loadView('admin.finance.invoice_pdf', [
-            'invoice' => $invoice,
+        $pdf = \App\Support\PdfDocumentBuilder::loadView('documents.layouts.pdf', [
+            'payload' => \App\Support\Documents\DocumentDataFactory::build('invoice', $invoice),
+            'company' => \App\Support\Documents\CompanyDocumentContext::make(),
         ])->setPaper('a4');
 
-        return $pdf->download('invoice-' . $invoice->number . '.pdf');
+        return $pdf->download('invoice-'.$invoice->number.'.pdf');
     }
 
     protected function loadInvoiceDocument(Invoice $invoice): void
@@ -447,19 +452,14 @@ class FinanceController extends Controller
         return redirect()->route('admin.finance.index')->with('status', 'Invoice deleted.');
     }
 
-    protected function formatInvoiceNumber(int $invoiceId): string
-    {
-        return 'INV-' . str_pad((string) $invoiceId, 6, '0', STR_PAD_LEFT);
-    }
-
     protected function formatCreditNoteNumber(int $creditNoteId): string
     {
-        return 'CN-' . str_pad((string) $creditNoteId, 6, '0', STR_PAD_LEFT);
+        return 'CN-'.str_pad((string) $creditNoteId, 6, '0', STR_PAD_LEFT);
     }
 
     protected function receiptLedgerDescription(Receipt $receipt, Invoice $invoice): string
     {
-        return 'Receipt #' . $receipt->id . ' for ' . $invoice->number;
+        return 'Receipt #'.$receipt->id.' for '.$invoice->number;
     }
 
     protected function deleteReceiptLedgerEntries(Invoice $invoice, Receipt $receipt): void
@@ -477,7 +477,7 @@ class FinanceController extends Controller
         }
 
         $legacyEntries = LedgerEntry::where('invoice_id', $invoice->id)
-            ->where('description', 'Receipt for ' . $invoice->number)
+            ->where('description', 'Receipt for '.$invoice->number)
             ->where(function ($query) use ($receipt) {
                 $query->where('debit', $receipt->amount)
                     ->orWhere('credit', $receipt->amount);
@@ -545,7 +545,7 @@ class FinanceController extends Controller
                 : 'partial';
             $advance->save();
 
-            $description = 'Advance applied from ' . $agent->name . ' to ' . $invoice->number;
+            $description = 'Advance applied from '.$agent->name.' to '.$invoice->number;
 
             $this->accounting->post(
                 'agent_advance_application',

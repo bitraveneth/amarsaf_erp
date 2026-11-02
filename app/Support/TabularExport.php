@@ -72,6 +72,10 @@ class TabularExport
             $truncated = true;
         }
 
+        $rows = array_map(function ($row) {
+            return array_map(fn ($value) => self::stringify($value), array_values((array) $row));
+        }, $rows);
+
         $pdf = \App\Support\PdfDocumentBuilder::loadView('exports.table-pdf', [
             'title' => $title,
             'columns' => $columns,
@@ -79,6 +83,7 @@ class TabularExport
             'generatedAt' => now(),
             'truncated' => $truncated,
             'totalRows' => $totalRows,
+            'company' => \App\Support\Documents\CompanyDocumentContext::make(),
         ])->setPaper('a4', count($columns) > 6 ? 'landscape' : 'portrait');
 
         return $pdf->download(self::safeFilename($filename) . '.pdf');

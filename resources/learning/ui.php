@@ -2,7 +2,7 @@
 
 return [
     'hub_title' => ['en' => 'ERP Academy', 'bn' => 'ERP একাডেমি'],
-        'hub_subtitle' => [
+    'hub_subtitle' => [
         'en' => 'Structured courses for every Saf ERP module — including Logistics, sales campaigns, and Export center. Learn step by step, practise in the system, and pass the quiz.',
         'bn' => 'প্রতিটি Saf ERP মডিউলের কোর্স — লজিস্টিক্স, বিক্রয় ক্যাম্পেইন ও Export center সহ। ধাপে ধাপে শিখুন, সিস্টেমে অনুশীলন করুন, কুইজ পাস করুন।',
     ],
@@ -25,6 +25,14 @@ return [
     'reports_title' => ['en' => 'Reports & exports', 'bn' => 'রিপোর্ট ও এক্সপোর্ট'],
     'glossary_title' => ['en' => 'Glossary', 'bn' => 'শব্দকোষ'],
     'faq_title' => ['en' => 'Common questions', 'bn' => 'সাধারণ প্রশ্ন'],
+    'troubleshoot_title' => ['en' => 'Troubleshooting', 'bn' => 'সমস্যা সমাধান'],
+    'troubleshoot_intro' => [
+        'en' => 'When something looks wrong, open the case. Each one says when it can happen and why it happened.',
+        'bn' => 'কিছু ভুল দেখালে কেসটি খুলুন। প্রতিটিতে আছে কখন হতে পারে এবং কেন হয়েছে।',
+    ],
+    'when_label' => ['en' => 'When it can happen', 'bn' => 'কখন হতে পারে'],
+    'why_label' => ['en' => 'Why it happened', 'bn' => 'কেন হয়েছে'],
+    'fix_label' => ['en' => 'What to do', 'bn' => 'কী করবেন'],
     'related_screens' => ['en' => 'Related ERP screens', 'bn' => 'সম্পর্কিত ERP স্ক্রিন'],
     'progress_label' => ['en' => 'Academy progress', 'bn' => 'একাডেমি অগ্রগতি'],
     'progress_of' => ['en' => 'courses completed', 'bn' => 'কোর্স সম্পন্ন'],

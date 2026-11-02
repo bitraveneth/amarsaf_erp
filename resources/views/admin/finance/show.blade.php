@@ -103,7 +103,11 @@
         </div>
     </div>
 
-    @include('admin.finance.partials.saf-invoice-sheet')
+    <div class="doc-preview-body finance-v3-preview">
+        <div class="doc-preview-page">
+            @include('documents.partials.body', ['company' => $company, 'payload' => $payload, 'forPdf' => false])
+        </div>
+    </div>
 
     @php
         // Gross invoice value (net + VAT)
@@ -579,10 +583,23 @@
 </div>
 
 @push('styles')
-    <style>
-        @include('admin.finance.partials.saf-invoice-styles')
-        .erp-assistant-root { display: none !important; }
-    </style>
+    @include('documents.invoice.styles')
     <link rel="stylesheet" href="{{ asset('css/invoice-print.css') }}?v={{ filemtime(public_path('css/invoice-print.css')) }}">
+    <style>
+        .erp-assistant-root { display: none !important; }
+        .finance-v3-preview .doc-preview-page { margin-top: 0; }
+        @media print {
+            @page { size: A4; margin: 0; }
+            .print-invoice > *:not(.finance-v3-preview) { display: none !important; }
+            .finance-v3-preview,
+            .finance-v3-preview .doc-preview-page,
+            .finance-v3-preview .doc-copy {
+                width: 210mm !important;
+                max-width: none !important;
+                margin: 0 !important;
+                box-shadow: none !important;
+            }
+        }
+    </style>
 @endpush
 @endsection

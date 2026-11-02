@@ -3,7 +3,9 @@
 AmarSaf’s ERP for **sales, inventory, manufacturing, delivery, and accounting**. Built for agent-based distribution and bottling in Bangladesh (VAT and withholding included).
 
 **Repository:** `amarsaf_erp`  
-**Live:** [https://erp.amarsaf.com](https://erp.amarsaf.com)
+**Release:** 3.0.0 — V3 invoice sheet (see [CHANGELOG.md](CHANGELOG.md))  
+**Live:** [https://erp.amarsaf.com](https://erp.amarsaf.com)  
+**Demo:** [https://demo.amarsaf.com](https://demo.amarsaf.com)
 
 English and Bengali UI. Laravel 10, MySQL, Vite, Tailwind.
 

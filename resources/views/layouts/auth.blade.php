@@ -79,9 +79,8 @@
         </header>
 
         <main class="auth-shell__card">
-            <a href="{{ route('login') }}" class="auth-shell__card-brand">
+            <a href="{{ route('login') }}" class="auth-shell__card-brand" aria-label="{{ $appBrandName ?? config('app.name') }}">
                 <x-brand-mark variant="login" name-mode="none" />
-                <span class="auth-shell__brand-name">{{ $appBrandName ?? config('app.name') }}</span>
             </a>
 
             <div class="auth-shell__form-wrap">

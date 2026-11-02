@@ -10,25 +10,25 @@ use App\Models\Order;
 use App\Models\StockEntry;
 use App\Models\StockMovement;
 use App\Models\Vehicle;
+use App\Services\Delivery\RouteVehicleValidator;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
-use App\Services\Delivery\RouteVehicleValidator;
-use Barryvdh\DomPDF\Facade\Pdf;
 
 class DeliveryController extends Controller
 {
     public function __construct(
         protected RouteVehicleValidator $routeVehicleValidator
-    ) {
-    }
+    ) {}
+
     public function index()
     {
-        $deliveries = Delivery::with(['order.agent', 'route', 'vehicle', 'pod'])
+        $deliveries = Delivery::with(['order.agent', 'order.invoice', 'route', 'vehicle', 'pod'])
             ->orderByDesc('created_at')
             ->paginate(12);
+
         return view('admin.deliveries.index', compact('deliveries'));
     }
 
@@ -76,6 +76,7 @@ class DeliveryController extends Controller
             ->get();
         $routes = DeliveryRoute::orderBy('name')->get();
         $vehicles = Vehicle::where('is_active', true)->orderBy('name')->get();
+
         return view('admin.deliveries.create', compact('orders', 'routes', 'vehicles'));
     }
 
@@ -113,8 +114,8 @@ class DeliveryController extends Controller
         $order = $delivery->order;
         if ($order) {
             \App\Models\OrderStatusHistory::create([
-                'order_id'   => $order->id,
-                'status'     => 'delivery_scheduled',
+                'order_id' => $order->id,
+                'status' => 'delivery_scheduled',
                 'changed_at' => now(),
             ]);
         }
@@ -195,8 +196,8 @@ class DeliveryController extends Controller
                 $order->update(['status' => 'dispatched']);
 
                 \App\Models\OrderStatusHistory::create([
-                    'order_id'   => $order->id,
-                    'status'     => 'dispatched',
+                    'order_id' => $order->id,
+                    'status' => 'dispatched',
                     'changed_at' => now(),
                 ]);
             }
@@ -208,8 +209,8 @@ class DeliveryController extends Controller
                 }
 
                 \App\Models\OrderStatusHistory::create([
-                    'order_id'   => $order->id,
-                    'status'     => 'delivered',
+                    'order_id' => $order->id,
+                    'status' => 'delivered',
                     'changed_at' => now(),
                 ]);
 
@@ -252,7 +253,7 @@ class DeliveryController extends Controller
                                 $entry,
                                 'delivery',
                                 $shipQty * -1,
-                                'Delivered on order #' . $order->id,
+                                'Delivered on order #'.$order->id,
                                 $order->id
                             );
 
@@ -304,7 +305,7 @@ class DeliveryController extends Controller
                 });
             });
 
-        if (!empty($data['vehicle_id'])) {
+        if (! empty($data['vehicle_id'])) {
             $query->where('vehicle_id', $data['vehicle_id']);
         }
 
@@ -313,7 +314,8 @@ class DeliveryController extends Controller
         // Simple heuristic: sort by agent zone, then order id and assign sequence
         $sorted = $deliveries->sortBy(function (Delivery $d) {
             $zone = $d->order && $d->order->agent ? ($d->order->agent->zone ?? '') : '';
-            return $zone . '|' . str_pad((string)$d->order_id, 6, '0', STR_PAD_LEFT);
+
+            return $zone.'|'.str_pad((string) $d->order_id, 6, '0', STR_PAD_LEFT);
         })->values();
 
         $vehicleCapacities = Vehicle::pluck('capacity_crates', 'id');
@@ -326,7 +328,7 @@ class DeliveryController extends Controller
             $currentLoad = (float) ($loadByVehicle[$vehicleId] ?? 0);
 
             if ($capacity > 0 && ($currentLoad + $crates) > $capacity) {
-                $delivery->exception_notes = trim((string) (($delivery->exception_notes ? $delivery->exception_notes . "\n" : '') . 'Route warning: vehicle capacity exceeded'));
+                $delivery->exception_notes = trim((string) (($delivery->exception_notes ? $delivery->exception_notes."\n" : '').'Route warning: vehicle capacity exceeded'));
             }
 
             $loadByVehicle[$vehicleId] = $currentLoad + $crates;
@@ -335,17 +337,17 @@ class DeliveryController extends Controller
         }
 
         return redirect()->route('admin.deliveries.index')
-            ->with('status', 'Deliveries sequenced for ' . $date . '.');
+            ->with('status', 'Deliveries sequenced for '.$date.'.');
     }
 
     public function podPdf(Delivery $delivery)
     {
-        $delivery->load(['order.agent', 'order.items.product', 'route', 'vehicle', 'pod', 'items.product']);
+        $pdf = \App\Support\PdfDocumentBuilder::loadView('documents.layouts.pdf', [
+            'payload' => \App\Support\Documents\DocumentDataFactory::build('pod', $delivery),
+            'company' => \App\Support\Documents\CompanyDocumentContext::make(),
+        ])->setPaper('a4');
 
-        $pdf = \App\Support\PdfDocumentBuilder::loadView('admin.deliveries.pod_pdf', compact('delivery'))
-            ->setPaper('a4');
-
-        return $pdf->download('pod-delivery-' . $delivery->id . '.pdf');
+        return $pdf->download('pod-delivery-'.$delivery->id.'.pdf');
     }
 
     public function destroy(Delivery $delivery)
@@ -375,6 +377,7 @@ class DeliveryController extends Controller
     public function packingSlip(Delivery $delivery)
     {
         $delivery->load('order.items.product', 'route', 'vehicle', 'order.agent', 'pod', 'items.product');
+
         return view('admin.deliveries.packing_slip', compact('delivery'));
     }
 
@@ -394,6 +397,7 @@ class DeliveryController extends Controller
 
             $rows = collect($order?->items ?? [])->map(function ($item) {
                 $qty = (float) $item->quantity;
+
                 return [
                     'order_item_id' => $item->id,
                     'product_id' => $item->product_id,

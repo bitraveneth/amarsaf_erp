@@ -3,8 +3,6 @@
 namespace App\Services\Accounting;
 
 use App\Models\Account;
-use App\Models\Expense;
-use App\Models\JournalEntry;
 use App\Models\JournalEntryLine;
 use App\Models\LogisticsBill;
 use App\Models\SalaryDistribution;
@@ -210,34 +208,20 @@ class HierarchicalReportService
             ];
         }
 
-        $periodExpenses = Expense::query()
-            ->where('amount', '>', 0)
-            ->whereDate('date', '>=', $from->toDateString())
-            ->whereDate('date', '<=', $to->toDateString())
-            ->pluck('id');
+        $expenseGap = app(UnpostedExpenseNotice::class)->summary($from, $to);
 
-        if ($periodExpenses->isNotEmpty()) {
-            $postedExpenseIds = JournalEntry::query()
-                ->where('source_type', Expense::class)
-                ->where('status', 'posted')
-                ->whereIn('source_id', $periodExpenses)
-                ->pluck('source_id');
-
-            $unpostedExpenses = $periodExpenses->diff($postedExpenseIds)->count();
-
-            if ($unpostedExpenses > 0) {
-                $items[] = [
-                    'key' => 'expenses',
-                    'label' => 'Expenses not in P&L ledger',
-                    'count' => $unpostedExpenses,
-                    'href' => route('admin.expenses.index', [
-                        'from' => $from->toDateString(),
-                        'to' => $to->toDateString(),
-                    ]),
-                    'hint' => 'Usually older records saved before auto-posting, or a failed post. New expenses post automatically when you save them.',
-                    'can_sync' => true,
-                ];
-            }
+        if ($expenseGap) {
+            $items[] = [
+                'key' => 'expenses',
+                'label' => 'Expenses not in P&L ledger',
+                'count' => $expenseGap['count'],
+                'href' => route('admin.expenses.index', [
+                    'from' => $from->toDateString(),
+                    'to' => $to->toDateString(),
+                ]),
+                'hint' => $expenseGap['why'],
+                'can_sync' => $expenseGap['can_sync'],
+            ];
         }
 
         return $items;

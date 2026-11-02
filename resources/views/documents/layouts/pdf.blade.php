@@ -4,6 +4,9 @@
     <meta charset="utf-8">
     <title>{{ $payload['title'] ?? 'Document' }} · {{ $payload['number'] ?? '' }}</title>
     @include('documents.partials.styles', compact('company'))
+    @if(($payload['sheet'] ?? '') === 'invoice')
+        @include('documents.invoice.styles')
+    @endif
 </head>
 <body>
     @include('documents.partials.body', [

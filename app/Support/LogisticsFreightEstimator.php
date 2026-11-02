@@ -6,11 +6,16 @@ use App\Models\CarrierRateCard;
 use App\Models\DeliveryRoute;
 use App\Models\TransportCarrier;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Schema;
 
 class LogisticsFreightEstimator
 {
     public function activeRateCards(): Collection
     {
+        if (! Schema::hasTable('carrier_rate_cards')) {
+            return collect();
+        }
+
         return CarrierRateCard::query()
             ->with(['transportCarrier', 'deliveryRoute'])
             ->where('is_active', true)

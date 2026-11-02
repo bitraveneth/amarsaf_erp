@@ -130,6 +130,18 @@ class JournalEntryController extends Controller
         return redirect()->route('admin.journals.show', $journal)->with('status', 'Journal posted.');
     }
 
+    public function pdf(JournalEntry $journal)
+    {
+        $journal->load(['lines.account']);
+
+        $pdf = \App\Support\PdfDocumentBuilder::loadView('admin.finance.journals.pdf', [
+            'journal' => $journal,
+        ])->setPaper('a4');
+        $pdf->setOption('isFontSubsettingEnabled', false);
+
+        return $pdf->download($journal->number . '.pdf');
+    }
+
     public function reverse(JournalEntry $journal)
     {
         try {

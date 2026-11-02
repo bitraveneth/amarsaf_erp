@@ -73,7 +73,7 @@
         2
     ));
     $tabErrorMap = [
-        'brand' => ['brand_name', 'company_name', 'company_email', 'company_phone', 'company_address', 'company_logo', 'remove_logo', 'header_notice_enabled', 'header_notice_message', 'header_notice_type', 'header_notice_link'],
+        'brand' => ['brand_name', 'company_name', 'company_email', 'company_phone', 'company_address', 'company_bank_account_name', 'company_bank_account_number', 'company_bank_name', 'company_bank_branch', 'company_bank_routing', 'invoice_signatory_name', 'invoice_signatory_title', 'company_logo', 'remove_logo', 'header_notice_enabled', 'header_notice_message', 'header_notice_type', 'header_notice_link'],
         'currency' => ['currency_code', 'currency_symbol'],
         'colors' => ['brand_primary_color', 'brand_secondary_color', 'text_color_light', 'text_color_dark', 'default_theme_mode'],
         'sms' => ['sms_provider', 'sms_base_url', 'sms_api_key', 'sms_api_secret', 'sms_sender_id'],
@@ -373,6 +373,54 @@
                         <label class="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Company address</label>
                         <textarea name="company_address" rows="3"
                                   class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white">{{ old('company_address', $settings['company_address']) }}</textarea>
+                    </div>
+                </div>
+            </section>
+
+            <section class="rounded-2xl border border-gray-200 bg-white p-6 shadow-theme-xs dark:border-gray-800 dark:bg-gray-900">
+                <div class="mb-6">
+                    <h2 class="text-sm font-semibold text-gray-900 dark:text-white">Invoice payment and signature</h2>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                        These lines print in the payment box and under the signature on the customer invoice. Leave the bank lines empty and the invoice shows how that bill was paid instead.
+                    </p>
+                </div>
+
+                <div class="grid gap-5 md:grid-cols-2">
+                    <div>
+                        <label class="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Account name</label>
+                        <input type="text" name="company_bank_account_name" value="{{ old('company_bank_account_name', $settings['company_bank_account_name']) }}"
+                               class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white" />
+                    </div>
+                    <div>
+                        <label class="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Account number</label>
+                        <input type="text" name="company_bank_account_number" value="{{ old('company_bank_account_number', $settings['company_bank_account_number']) }}"
+                               class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white" />
+                    </div>
+                    <div>
+                        <label class="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Bank name</label>
+                        <input type="text" name="company_bank_name" value="{{ old('company_bank_name', $settings['company_bank_name']) }}"
+                               class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white" />
+                    </div>
+                    <div>
+                        <label class="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Branch</label>
+                        <input type="text" name="company_bank_branch" value="{{ old('company_bank_branch', $settings['company_bank_branch']) }}"
+                               class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white" />
+                    </div>
+                    <div>
+                        <label class="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Routing number</label>
+                        <input type="text" name="company_bank_routing" value="{{ old('company_bank_routing', $settings['company_bank_routing']) }}"
+                               class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white" />
+                    </div>
+                    <div>
+                        <label class="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Signatory name</label>
+                        <input type="text" name="invoice_signatory_name" value="{{ old('invoice_signatory_name', $settings['invoice_signatory_name']) }}"
+                               class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white" />
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Signatory title</label>
+                        <input type="text" name="invoice_signatory_title" value="{{ old('invoice_signatory_title', $settings['invoice_signatory_title']) }}"
+                               placeholder="Managing Director"
+                               class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white" />
                     </div>
                 </div>
             </section>

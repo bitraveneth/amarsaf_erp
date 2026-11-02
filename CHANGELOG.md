@@ -7,6 +7,30 @@ Version tags follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [3.0.0] - 2026-11-02
+
+V3 commercial documents. Invoices, purchase orders, sales orders, delivery challans, and the other printable sheets share one purple A4 layout.
+
+### Added
+
+- Shared SAF sheet for customer invoices, purchase orders, sales orders, delivery challans (customer, office, and transport copies), goods receipts, production orders, and the other commercial documents.
+- Two-line titles (for example PURCHASE / ORDER), larger company and table type, and a full A4 page even when the order has only one or two lines.
+- Totals sit on the right under the Amount column, with a gap under the product table. Sub Total, Discount (-), VAT (+), Shipping & handling, Invoice Total, and Paid Advance (-) stay on one line each.
+- Date-based numbers: invoices `SFIN` and delivery challans `SGC`.
+- Printable sample seeder (`PrintableDocumentSampleSeeder`) so a fresh demo has documents to open.
+- Login page uses the purple SAF logo.
+
+### Changed
+
+- Screen preview, browser print, and PDF download use the same sheet. Finance invoice pages and PDF downloads use this sheet.
+- Payment note is “Payment is due within 7 days of invoice date.”
+- v2.2.0 security stays in place: PDF files stay inside the application directory, remote loading and PHP execution stay off, and the API token guard rejects non-string credentials.
+- Dompdf 3.1.6, with the same locked-down PDF options as v2.2.0.
+
+### Notes for demo.amarsaf.com
+
+- This release is meant to be deployed and fully reseeded on the demo host. Do not run `migrate:fresh` on the company database at erp.amarsaf.com.
+
 ## [2.3.0] - 2026-10-25
 
 Sales invoice sheet. v2.2.0 did not include this layout.

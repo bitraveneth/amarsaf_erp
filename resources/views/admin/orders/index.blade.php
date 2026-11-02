@@ -155,6 +155,7 @@
                         <th>Status</th>
                         <th class="is-right">Total</th>
                         <th class="is-right">Commission</th>
+                        <th>Invoice</th>
                         <th class="text-right">Actions</th>
                     </tr>
                 </thead>
@@ -213,8 +214,20 @@
                                     {{ $currencyCode }} {{ number_format($order->commission_total ?? 0, 2) }}
                                 </span>
                             </td>
-                            <td class="text-right">
-                                <x-admin.action-group>
+                            <td class="whitespace-nowrap align-middle">
+                                @if($order->invoice)
+                                    <x-admin.document-link
+                                        type="invoice"
+                                        :id="$order->invoice->id"
+                                        :label="$order->invoice->number"
+                                    />
+                                @else
+                                    <span class="text-xs text-gray-400">No invoice</span>
+                                @endif
+                            </td>
+                            <td class="whitespace-nowrap align-middle text-right">
+                                <x-admin.action-group class="flex-nowrap" style="flex-wrap: nowrap; justify-content: flex-end;">
+                                    <x-admin.document-link type="sales-order" :id="$order->id" label="Order" />
                                     <x-admin.action-view :href="route('admin.orders.show', $order)" />
                                     <x-admin.action-edit :href="route('admin.orders.edit', $order)" />
                                     <x-admin.action-delete
@@ -226,7 +239,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="!px-6 !py-16 text-center">
+                            <td colspan="8" class="!px-6 !py-16 text-center">
                                 <div class="erp-po-index-empty">
                                     <div class="erp-po-index-empty__icon" aria-hidden="true">
                                         <svg class="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z"/></svg>

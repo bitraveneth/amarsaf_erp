@@ -17,6 +17,11 @@ return new class extends Migration
             ->where('status', 'packing')
             ->update(['status' => 'picked']);
 
+        // MySQL ENUM update only — SQLite stores status as text.
+        if (Schema::getConnection()->getDriverName() !== 'mysql') {
+            return;
+        }
+
         DB::statement(
             "ALTER TABLE orders MODIFY COLUMN status ENUM('draft','confirmed','picked','packed','dispatched','delivered') NOT NULL DEFAULT 'draft'"
         );
@@ -32,6 +37,10 @@ return new class extends Migration
         DB::table('orders')
             ->where('status', 'picked')
             ->update(['status' => 'packing']);
+
+        if (Schema::getConnection()->getDriverName() !== 'mysql') {
+            return;
+        }
 
         DB::statement(
             "ALTER TABLE orders MODIFY COLUMN status ENUM('draft','confirmed','packing','packed','dispatched','delivered') NOT NULL DEFAULT 'draft'"

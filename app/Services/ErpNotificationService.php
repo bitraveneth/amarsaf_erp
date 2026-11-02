@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Batch;
 use App\Models\BillOfMaterial;
+use App\Services\Accounting\UnpostedExpenseNotice;
 use App\Models\Delivery;
 use App\Models\Invoice;
 use App\Models\NotificationDispatchLog;
@@ -145,6 +146,22 @@ class ErpNotificationService
                     'source' => 'Manufacturing',
                     'title' => 'Missing BOM alert',
                     'context' => ['missing_bom_products' => $missingBomCount],
+                ]);
+            }
+        }
+
+        if (Schema::hasTable('expenses') && Schema::hasTable('journal_entries')) {
+            $expenseGap = app(UnpostedExpenseNotice::class)->summary();
+
+            if ($expenseGap) {
+                $alerts[] = NotificationActionResolver::attachLink([
+                    'key' => 'unposted_expenses_'.$expenseGap['fingerprint'],
+                    'message' => $expenseGap['title'].' '.$expenseGap['why'],
+                    'variant' => 'warning',
+                    'source' => 'Finance',
+                    'title' => 'Expenses missing from the ledger',
+                    'link' => $expenseGap['report_url'],
+                    'context' => ['unposted_expenses' => $expenseGap['count']],
                 ]);
             }
         }

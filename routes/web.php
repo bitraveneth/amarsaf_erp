@@ -609,6 +609,7 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::get('journals', [JournalEntryController::class, 'index'])->middleware('perm:accounting.manage')->name('journals.index');
     Route::get('journals/create', [JournalEntryController::class, 'create'])->middleware('perm:accounting.manage')->name('journals.create');
     Route::post('journals', [JournalEntryController::class, 'store'])->middleware('perm:accounting.manage')->name('journals.store');
+    Route::get('journals/{journal}/pdf', [JournalEntryController::class, 'pdf'])->middleware('perm:accounting.manage')->name('journals.pdf');
     Route::get('journals/{journal}', [JournalEntryController::class, 'show'])->middleware('perm:accounting.manage')->name('journals.show');
     Route::get('journals/{journal}/edit', [JournalEntryController::class, 'edit'])->middleware('perm:accounting.manage')->name('journals.edit');
     Route::patch('journals/{journal}', [JournalEntryController::class, 'update'])->middleware('perm:accounting.manage')->name('journals.update');

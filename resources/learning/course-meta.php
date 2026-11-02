@@ -131,6 +131,15 @@ return [
             ['en' => 'Know which documents post GL vs operational only', 'bn' => 'কোন ডকুমেন্ট GL পোস্ট করে জানুন'],
         ],
     ],
+    'troubleshooting' => [
+        'track' => ['en' => 'Foundation', 'bn' => 'ভিত্তি'],
+        'level' => ['en' => 'Beginner', 'bn' => 'প্রাথমিক'],
+        'duration_min' => 20,
+        'outcomes' => [
+            ['en' => 'Tell when a warning can appear and why the numbers diverged', 'bn' => 'সতর্কতা কখন আসে এবং সংখ্যা কেন আলাদা হয় তা বলুন'],
+            ['en' => 'Know which PDF is a bill, which is a challan, and which prints three copies', 'bn' => 'কোন PDF বিল, কোনটি চালান, এবং কোনটি তিন কপি ছাপে তা জানুন'],
+        ],
+    ],
     'hr-payroll' => [
         'track' => ['en' => 'Finance', 'bn' => 'অর্থ'],
         'level' => ['en' => 'Beginner', 'bn' => 'প্রাথমিক'],

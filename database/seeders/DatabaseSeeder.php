@@ -14,9 +14,9 @@ use Database\Seeders\Accounting\ProfitAndLossModuleSeeder;
 use Database\Seeders\Accounting\SalaryDistributionsModuleSeeder;
 use Database\Seeders\Accounting\TaxReportModuleSeeder;
 use Database\Seeders\Control\Agents\AgentsModuleSeeder;
-use Database\Seeders\Control\Suppliers\SuppliersModuleSeeder;
 use Database\Seeders\Control\Employees\EmployeesModuleSeeder;
 use Database\Seeders\Control\Products\ProductsModuleSeeder;
+use Database\Seeders\Control\Suppliers\SuppliersModuleSeeder;
 use Database\Seeders\Control\SystemSettings\SystemSettingsModuleSeeder;
 use Database\Seeders\Control\Warehouses\WarehousesModuleSeeder;
 use Database\Seeders\Inventory\InventoryModuleSeeder;
@@ -36,11 +36,10 @@ use Database\Seeders\Sales\PickingListsModuleSeeder;
 use Database\Seeders\Sales\ReturnsModuleSeeder;
 use Database\Seeders\Sales\SalesOrdersModuleSeeder;
 use Database\Seeders\Sales\SalesTargetsModuleSeeder;
-use Database\Seeders\Users\UsersModuleSeeder;
-use Database\Seeders\MenuStructureSeeder;
-use Database\Seeders\RolesSeeder;
 use Database\Seeders\Users\PermissionsSeeder;
+use Database\Seeders\Users\UsersModuleSeeder;
 use Illuminate\Database\Seeder;
+
 class DatabaseSeeder extends Seeder
 {
     public function run(): void
@@ -99,6 +98,8 @@ class DatabaseSeeder extends Seeder
             ProfitAndLossModuleSeeder::class,
             BalanceSheetModuleSeeder::class,
             CashflowModuleSeeder::class,
+
+            PrintableDocumentSampleSeeder::class,
 
             // 6. Users / roles / permissions / menu
             RolesSeeder::class,

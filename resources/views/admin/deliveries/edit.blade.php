@@ -326,27 +326,27 @@
                                     </td>
                                     <td class="px-2 py-3">
                                         <input type="number" min="0" step="0.01" name="items[{{ $idx }}][qty_dispatched]"
-                                               value="{{ old(\"items.$idx.qty_dispatched\", $row?->qty_dispatched ?? $defaultQty) }}"
+                                               value="{{ old('items.'.$idx.'.qty_dispatched', $row?->qty_dispatched ?? $defaultQty) }}"
                                                class="w-24 rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-white">
                                     </td>
                                     <td class="px-2 py-3">
                                         <input type="number" min="0" step="0.01" name="items[{{ $idx }}][qty_delivered]"
-                                               value="{{ old(\"items.$idx.qty_delivered\", $row?->qty_delivered ?? $defaultQty) }}"
+                                               value="{{ old('items.'.$idx.'.qty_delivered', $row?->qty_delivered ?? $defaultQty) }}"
                                                class="w-24 rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-white">
                                     </td>
                                     <td class="px-2 py-3">
                                         <input type="number" min="0" step="0.01" name="items[{{ $idx }}][qty_short]"
-                                               value="{{ old(\"items.$idx.qty_short\", $row?->qty_short ?? 0) }}"
+                                               value="{{ old('items.'.$idx.'.qty_short', $row?->qty_short ?? 0) }}"
                                                class="w-24 rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-white">
                                     </td>
                                     <td class="px-2 py-3">
                                         <input type="number" min="0" step="0.01" name="items[{{ $idx }}][qty_damaged]"
-                                               value="{{ old(\"items.$idx.qty_damaged\", $row?->qty_damaged ?? 0) }}"
+                                               value="{{ old('items.'.$idx.'.qty_damaged', $row?->qty_damaged ?? 0) }}"
                                                class="w-24 rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-white">
                                     </td>
                                     <td class="px-2 py-3">
                                         <input type="text" name="items[{{ $idx }}][notes]"
-                                               value="{{ old(\"items.$idx.notes\", $row?->notes) }}"
+                                               value="{{ old('items.'.$idx.'.notes', $row?->notes) }}"
                                                class="w-full rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
                                                placeholder="Optional note">
                                     </td>

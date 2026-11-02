@@ -5,24 +5,23 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Agent;
 use App\Models\AgentAdvance;
-use App\Models\AgentPriceList;
 use App\Models\AgentCommissionRule;
+use App\Models\AgentPriceList;
+use App\Models\Delivery;
+use App\Models\Invoice;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\OrderStatusHistory;
-use App\Models\Invoice;
-use App\Models\Delivery;
-use App\Models\StockMovement;
 use App\Models\Product;
 use App\Models\StockEntry;
+use App\Models\StockMovement;
 use App\Services\Sales\SalesFulfillmentGuide;
 use App\Services\Sales\SalesFulfillmentMetrics;
+use App\Support\CommissionCalculator;
 use App\Support\Documents\PickingListBuilder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
-use App\Http\Controllers\Admin\FinanceController;
-use App\Support\CommissionCalculator;
 
 class OrderController extends Controller
 {
@@ -33,7 +32,7 @@ class OrderController extends Controller
             $orderTypeFilter = 'all';
         }
 
-        $orders = Order::with('agent')
+        $orders = Order::with(['agent', 'invoice', 'deliveries'])
             ->when($orderTypeFilter === 'sales', function ($query) {
                 $query->where('order_type', '!=', 'return');
             })
@@ -78,6 +77,7 @@ class OrderController extends Controller
     public function edit(Order $order)
     {
         $order->load(['agent', 'items.product']);
+
         return view('admin.orders.edit', compact('order'));
     }
 
@@ -96,9 +96,9 @@ class OrderController extends Controller
         $agents = Agent::orderBy('name')->get();
         // Only sellable finished products should be available on the order form
         $products = Product::where(function ($q) {
-                $q->whereNull('product_type')
-                    ->orWhere('product_type', 'finished');
-            })
+            $q->whereNull('product_type')
+                ->orWhere('product_type', 'finished');
+        })
             ->where('is_active', true)
             ->orderBy('name')
             ->get();
@@ -217,7 +217,7 @@ class OrderController extends Controller
                     $availableQty = (float) $entries->sum('quantity');
                     if ($availableQty < (float) $quantity) {
                         throw ValidationException::withMessages([
-                            'items' => ['Insufficient available stock for product ' . ($product?->name ?? ('#' . $productId)) . '.'],
+                            'items' => ['Insufficient available stock for product '.($product?->name ?? ('#'.$productId)).'.'],
                         ]);
                     }
 
@@ -238,7 +238,7 @@ class OrderController extends Controller
                             $entry,
                             'reservation-out',
                             $reserved * -1,
-                            'Reserved for order #' . $order->id,
+                            'Reserved for order #'.$order->id,
                             $order->id
                         );
 
@@ -256,7 +256,7 @@ class OrderController extends Controller
                             $reservedEntry,
                             'reservation-in',
                             $reserved,
-                            'Reserved for order #' . $order->id,
+                            'Reserved for order #'.$order->id,
                             $order->id
                         );
                         $toReserve -= $reserved;
@@ -288,7 +288,7 @@ class OrderController extends Controller
         $oldStatus = $order->status;
 
         // Enforce simple forward-only workflow: draft -> confirmed -> packed -> dispatched -> delivered
-        $workflow = ['draft','confirmed','picked','packed','dispatched','delivered'];
+        $workflow = ['draft', 'confirmed', 'picked', 'packed', 'dispatched', 'delivered'];
         $currentIndex = array_search($oldStatus, $workflow, true);
         $targetIndex = array_search($newStatus, $workflow, true);
 
@@ -382,7 +382,7 @@ class OrderController extends Controller
 
         return redirect()
             ->route('admin.orders.picking-list', $order)
-            ->with('status', 'Partial pick saved (' . number_format($summary['picked_percent'], 0) . '% picked). Complete remaining quantities.');
+            ->with('status', 'Partial pick saved ('.number_format($summary['picked_percent'], 0).'% picked). Complete remaining quantities.');
     }
 
     public function update(Request $request, Order $order)
@@ -446,7 +446,7 @@ class OrderController extends Controller
                             $reservedEntry,
                             'reservation-release-out',
                             $releaseQty * -1,
-                            'Released from deleted order #' . $order->id,
+                            'Released from deleted order #'.$order->id,
                             $order->id
                         );
                     }
@@ -478,7 +478,7 @@ class OrderController extends Controller
                         $availableEntry,
                         'reservation-release-in',
                         $releaseQty,
-                        'Released from deleted order #' . $order->id,
+                        'Released from deleted order #'.$order->id,
                         $order->id
                     );
 

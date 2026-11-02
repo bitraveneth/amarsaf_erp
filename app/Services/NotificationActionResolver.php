@@ -55,6 +55,14 @@ class NotificationActionResolver
                 return route('admin.finance.index');
             }
 
+            if (str_starts_with($key, 'unposted_expenses_') && Route::has('admin.reports.pl')) {
+                return route('admin.reports.pl');
+            }
+
+            if (str_starts_with($key, 'expense_ledger_sync_') && Route::has('admin.reports.pl')) {
+                return route('admin.reports.pl');
+            }
+
             if (str_starts_with($key, 'missing_bom_') && Route::has('admin.boms.create')) {
                 return route('admin.boms.index');
             }

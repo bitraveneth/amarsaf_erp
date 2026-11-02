@@ -35,13 +35,26 @@ class LearningCourseBuilder
 
         foreach ($module['steps'] ?? [] as $index => $step) {
             $lessons[] = [
-                'id' => 'step-' . $index,
+                'id' => 'step-'.$index,
                 'type' => 'step',
                 'title' => $step['title'] ?? ['en' => 'Step', 'bn' => 'ধাপ'],
                 'body' => $step['body'] ?? ['en' => '', 'bn' => ''],
                 'path' => $step['path'] ?? null,
                 'step_number' => $index + 1,
                 'duration_min' => 5,
+            ];
+        }
+
+        foreach ($module['troubles'] ?? [] as $index => $trouble) {
+            $lessons[] = [
+                'id' => 'trouble-'.($trouble['id'] ?? $index),
+                'type' => 'trouble',
+                'title' => $trouble['title'] ?? ['en' => 'Troubleshooting', 'bn' => 'সমস্যা সমাধান'],
+                'when' => $trouble['when'] ?? ['en' => '', 'bn' => ''],
+                'why' => $trouble['why'] ?? ['en' => '', 'bn' => ''],
+                'fix' => $trouble['fix'] ?? null,
+                'path' => $trouble['path'] ?? null,
+                'duration_min' => 4,
             ];
         }
 

@@ -462,4 +462,38 @@ MERMAID,
         'examples' => [],
         'tips' => [['en' => 'Run month-end pack: inventory valuation + AR aging + P&L + logistics/fleet. Use Export center for auditor CSV/PDF.', 'bn' => 'মাস শেষে: inventory valuation + AR aging + P&L + লজিস্টিক্স/ফ্লিট। অডিটর CSV/PDF-এর জন্য Export center।']],
     ],
+    [
+        'slug' => 'troubleshooting',
+        'order' => 12,
+        'icon' => 'reports',
+        'roles' => ['all'],
+        'title' => ['en' => 'Troubleshooting', 'bn' => 'সমস্যা সমাধান'],
+        'summary' => [
+            'en' => 'When an expense is missing from profit and loss, when a delivery challan prints three copies, and why an invoice, purchase order, GRN, or PDF looks wrong.',
+            'bn' => 'খরচ লাভ-ক্ষতিতে না থাকলে, ডেলিভারি চালান তিন কপি ছাপলে, এবং ইনভয়েস, ক্রয় অর্ডার, GRN বা PDF ভুল দেখালে কেন হয়।',
+        ],
+        'flowchart' => [
+            'en' => <<<'MERMAID'
+flowchart TD
+    A["Something looks wrong"] --> B{"Which record?"}
+    B --> C["Expense missing on P&L"]
+    B --> D["Challan, invoice, or other PDF"]
+    C --> E["Read when and why"]
+    D --> E
+    E --> F["Fix the source, then print again"]
+MERMAID,
+            'bn' => <<<'MERMAID'
+flowchart TD
+    A["কিছু ভুল দেখাচ্ছে"] --> B{"কোন রেকর্ড?"}
+    B --> C["খরচ P&L-এ নেই"]
+    B --> D["চালান, ইনভয়েস বা অন্য PDF"]
+    C --> E["কখন ও কেন পড়ুন"]
+    D --> E
+    E --> F["উৎস ঠিক করে আবার প্রিন্ট করুন"]
+MERMAID,
+        ],
+        'steps' => [],
+        'examples' => [],
+        'tips' => [],
+    ],
 ];

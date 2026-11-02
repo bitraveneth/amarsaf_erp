@@ -314,6 +314,7 @@
              }">
             @include('layouts.app-header')
             <x-layout.header-notice />
+            <x-layout.ledger-gap-banner :notice="$ledgerGapNotice ?? null" />
 
             <div class="erp-page-shell mx-auto w-full min-w-0 max-w-(--breakpoint-2xl) p-4 md:p-6 print:!mx-0 print:!w-full print:!max-w-none print:!p-0" data-tour="page-content">
                 @if(session('status'))

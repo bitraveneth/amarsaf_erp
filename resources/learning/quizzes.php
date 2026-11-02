@@ -559,4 +559,45 @@ return [
             ],
         ],
     ],
+    'troubleshooting' => [
+        'pass_percent' => 70,
+        'questions' => [
+            [
+                'id' => 'ts1',
+                'prompt' => ['en' => 'Why can an expense be missing from profit and loss?', 'bn' => 'একটি খরচ লাভ-ক্ষতিতে নাও থাকতে পারে কেন?'],
+                'options' => [
+                    ['id' => 'a', 'text' => ['en' => 'Profit and loss only reads posted journals', 'bn' => 'লাভ-ক্ষতি শুধু পোস্ট করা জার্নাল পড়ে']],
+                    ['id' => 'b', 'text' => ['en' => 'The expense list is the profit and loss', 'bn' => 'খরচের তালিকাই লাভ-ক্ষতি']],
+                    ['id' => 'c', 'text' => ['en' => 'Challan copies replace the ledger', 'bn' => 'চালান কপি লেজারের বদলে']],
+                    ['id' => 'd', 'text' => ['en' => 'A draft order is the same as a posted voucher', 'bn' => 'ড্রাফট অর্ডার আর পোস্ট করা ভাউচার এক']],
+                ],
+                'correct' => 'a',
+                'explain' => ['en' => 'A saved expense with no posted voucher, a reversal, a draft, a closed month, or a missing account keeps the amount off the statement.', 'bn' => 'পোস্ট করা ভাউচার ছাড়া খরচ, রিভার্সাল, ড্রাফট, বন্ধ মাস বা বাদ পড়া অ্যাকাউন্ট বিবৃতিতে আসে না।'],
+            ],
+            [
+                'id' => 'ts2',
+                'prompt' => ['en' => 'Why does a delivery challan print three pages?', 'bn' => 'ডেলিভারি চালান তিন পৃষ্ঠা ছাপে কেন?'],
+                'options' => [
+                    ['id' => 'a', 'text' => ['en' => 'The printer is broken', 'bn' => 'প্রিন্টার নষ্ট']],
+                    ['id' => 'b', 'text' => ['en' => 'Customer, office, and transport each keep one copy', 'bn' => 'গ্রাহক, অফিস ও পরিবহন প্রতিটি এক কপি রাখে']],
+                    ['id' => 'c', 'text' => ['en' => 'Every PDF in the ERP prints three copies', 'bn' => 'ERP-র প্রতিটি PDF তিন কপি ছাপে']],
+                    ['id' => 'd', 'text' => ['en' => 'It is the tax invoice', 'bn' => 'এটি ট্যাক্স ইনভয়েস']],
+                ],
+                'correct' => 'b',
+                'explain' => ['en' => 'Only the delivery challan repeats the sheet as customer, office, and transport copies. It is not a tax invoice.', 'bn' => 'শুধু ডেলিভারি চালান গ্রাহক, অফিস ও পরিবহন কপি হিসেবে শিটটি আবার ছাপে। এটি ট্যাক্স ইনভয়েস নয়।'],
+            ],
+            [
+                'id' => 'ts3',
+                'prompt' => ['en' => 'Why is Qty received a blank line on a challan?', 'bn' => 'চালানে Qty received ফাঁকা থাকে কেন?'],
+                'options' => [
+                    ['id' => 'a', 'text' => ['en' => 'The product has no name', 'bn' => 'পণ্যের নাম নেই']],
+                    ['id' => 'b', 'text' => ['en' => 'Delivered quantity is still zero, so the receiver can write the count', 'bn' => 'ডেলিভার্ড পরিমাণ এখনো শূন্য, তাই গ্রহণকারী সংখ্যা লিখতে পারে']],
+                    ['id' => 'c', 'text' => ['en' => 'VAT was not set', 'bn' => 'VAT সেট হয়নি']],
+                    ['id' => 'd', 'text' => ['en' => 'The month is closed', 'bn' => 'মাস বন্ধ']],
+                ],
+                'correct' => 'b',
+                'explain' => ['en' => 'A delivered quantity above zero prints as a number. Zero stays blank on purpose.', 'bn' => 'শূন্যের বেশি ডেলিভার্ড পরিমাণ সংখ্যা হিসেবে ছাপে। শূন্য ইচ্ছা করে ফাঁকা থাকে।'],
+            ],
+        ],
+    ],
 ];
