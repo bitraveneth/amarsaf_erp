@@ -170,9 +170,9 @@
                                             </span>
                                         </div>
                                         <div>
-                                            <span class="font-mono text-sm font-medium text-gray-900 dark:text-white">
+                                            <a href="{{ route('admin.documents.preview', ['type' => 'invoice', 'id' => $invoice->id]) }}" class="font-mono text-sm font-semibold text-brand-600 hover:underline dark:text-brand-400">
                                                 {{ $invoice->number }}
-                                            </span>
+                                            </a>
                                             @if($invoice->issued_at)
                                                 <p class="text-xs text-gray-500 dark:text-gray-400">
                                                     {{ $invoice->issued_at->format('d M Y') }}
@@ -233,7 +233,8 @@
                                     </span>
                                 </td>
                                 <td class="px-4 py-3 text-right">
-                                    <div class="flex items-center justify-end gap-2">
+                                    <div class="flex flex-nowrap items-center justify-end gap-1.5" style="flex-wrap: nowrap;">
+                                        <x-admin.document-link type="invoice" :id="$invoice->id" label="Print" />
                                         @if($canMarkPaid)
                                             <form action="{{ route('admin.finance.receipts.store', $invoice) }}" 
                                                   method="POST" 

@@ -8,9 +8,26 @@ use Illuminate\Support\Facades\Storage;
 
 class CompanyDocumentContext
 {
+    /**
+     * Letterhead used when Settings has not saved a company yet.
+     * A saved company name, phone, email, or address replaces these.
+     *
+     * @return array{legal_name: string, phone: string, email: string, address: string}
+     */
+    public static function letterhead(): array
+    {
+        return [
+            'legal_name' => SystemSettings::configuredLegalName() ?: 'Sohag Food & Beverage Ltd.',
+            'phone' => self::stringSetting('company_phone') ?: '+8801750720000',
+            'email' => self::stringSetting('company_email') ?: 'contact@amarsaf.com',
+            'address' => self::stringSetting('company_address') ?: "Gokulkhali, Ward No: 08, Alamdanga,\nPS; Chuadanga-7200; Bangladesh",
+        ];
+    }
+
     public static function make(): array
     {
-        $legalName = SystemSettings::legalCompanyName();
+        $letterhead = self::letterhead();
+        $legalName = $letterhead['legal_name'];
         $logoPath = self::resolveLogoPath();
         $primary = SystemSettings::get('brand_primary', SystemSettings::defaultBrandPrimary());
 
@@ -18,9 +35,9 @@ class CompanyDocumentContext
             'legal_name' => $legalName,
             'brand_name' => SystemSettings::brandName(),
             'initials' => SystemSettings::initials($legalName),
-            'email' => self::stringSetting('company_email'),
-            'phone' => self::stringSetting('company_phone'),
-            'address' => self::stringSetting('company_address'),
+            'email' => $letterhead['email'],
+            'phone' => $letterhead['phone'],
+            'address' => $letterhead['address'],
             'logo_url' => SystemSettings::logoUrl(),
             'logo_path' => $logoPath,
             'logo_file_uri' => PdfDocumentBuilder::fileUri($logoPath),

@@ -138,6 +138,7 @@
                         <th class="is-right">Est. total</th>
                         <th>Status</th>
                         <th class="min-w-[12rem]">Progress</th>
+                        <th>Document</th>
                         <th class="text-right">Actions</th>
                     </tr>
                 </thead>
@@ -181,8 +182,11 @@
                                     <x-admin.order-workflow type="purchase" :step="$step" :in-progress="$inProgress" variant="dash" />
                                 </div>
                             </td>
-                            <td class="text-right">
-                                <x-admin.action-group>
+                            <td class="whitespace-nowrap align-middle">
+                                <x-admin.document-link type="purchase-order" :id="$order->id" label="View" />
+                            </td>
+                            <td class="whitespace-nowrap align-middle text-right">
+                                <x-admin.action-group class="flex-nowrap" style="flex-wrap: nowrap; justify-content: flex-end;">
                                     <x-admin.action-view :href="route('admin.purchase-orders.show', $order)" />
                                     @if($canEdit)
                                         <x-admin.action-edit :href="route('admin.purchase-orders.edit', $order)" />
@@ -196,7 +200,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="8" class="!px-6 !py-16 text-center">
+                            <td colspan="9" class="!px-6 !py-16 text-center">
                                 <div class="erp-po-index-empty">
                                     <div class="erp-po-index-empty__icon" aria-hidden="true">
                                         <svg class="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>

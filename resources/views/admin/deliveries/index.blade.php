@@ -106,7 +106,9 @@
                             <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-700 dark:text-gray-300">Delivery Status</th>
                             <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-700 dark:text-gray-300">POD</th>
                             <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-700 dark:text-gray-300">Update</th>
-                            <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-700 dark:text-gray-300 w-[15rem]">Actions</th>
+                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-700 dark:text-gray-300">Challan</th>
+                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-700 dark:text-gray-300">Invoice</th>
+                            <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-700 dark:text-gray-300">Actions</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
@@ -241,7 +243,17 @@
                                         </button>
                                     </form>
                                 </td>
-                                <td class="px-4 py-3 text-right align-middle">
+                                <td class="whitespace-nowrap px-4 py-3 align-middle">
+                                    <x-admin.document-link type="delivery-challan" :id="$delivery->id" label="View" />
+                                </td>
+                                <td class="whitespace-nowrap px-4 py-3 align-middle">
+                                    @if($delivery->order?->invoice)
+                                        <x-admin.document-link type="invoice" :id="$delivery->order->invoice->id" :label="$delivery->order->invoice->number" />
+                                    @else
+                                        <span class="text-xs text-gray-400">No invoice</span>
+                                    @endif
+                                </td>
+                                <td class="whitespace-nowrap px-4 py-3 text-right align-middle">
                                     <x-admin.delivery-actions :delivery="$delivery" />
                                 </td>
                             </tr>

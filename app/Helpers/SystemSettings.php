@@ -212,6 +212,23 @@ class SystemSettings
         return $fallback;
     }
 
+    public static function configuredLegalName(): ?string
+    {
+        $companyName = self::get('company_name');
+
+        if (! is_string($companyName)) {
+            return null;
+        }
+
+        $companyName = trim($companyName);
+
+        if ($companyName === '' || strcasecmp($companyName, self::appName()) === 0) {
+            return null;
+        }
+
+        return $companyName;
+    }
+
     public static function legalCompanyName(?string $fallback = null): string
     {
         $fallback = is_string($fallback) && trim($fallback) !== ''
@@ -266,7 +283,7 @@ class SystemSettings
             '--color-brand-950' => self::mixWithBlack($secondary, 0.70),
             '--color-app-text-light' => $textLight,
             '--color-app-text-dark' => $textDark,
-            '--shadow-focus-ring' => '0px 0px 0px 4px ' . self::rgba($primary, 0.16),
+            '--shadow-focus-ring' => '0px 0px 0px 4px '.self::rgba($primary, 0.16),
         ];
     }
 
@@ -286,7 +303,7 @@ class SystemSettings
             return null;
         }
 
-        return '#' . ltrim(strtoupper($value), '#');
+        return '#'.ltrim(strtoupper($value), '#');
     }
 
     protected static function encodeValue(string $key, mixed $value): ?string

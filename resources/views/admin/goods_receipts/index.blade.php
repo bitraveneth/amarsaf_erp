@@ -158,7 +158,8 @@
                             <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">{{ optional($receipt->received_at)->format('d M Y H:i') }}</td>
                             <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">{{ ucfirst(str_replace('_', ' ', $receipt->status)) }}</td>
                             <td class="px-4 py-3 text-right">
-                                <x-admin.action-group>
+                                <x-admin.action-group class="flex-nowrap" style="flex-wrap: nowrap; justify-content: flex-end;">
+                                    <x-admin.document-link type="grn" :id="$receipt->id" label="GRN" />
                                     <x-admin.action-view :href="route('admin.goods-receipts.show', $receipt)" />
                                     @if($receipt->status === 'posted')
                                         <form action="{{ route('admin.goods-receipts.reverse', $receipt) }}" method="POST" onsubmit="return confirm('Reverse {{ $receipt->grn_number }}?');" class="inline">

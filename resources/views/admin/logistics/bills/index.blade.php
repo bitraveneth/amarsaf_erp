@@ -238,8 +238,9 @@
                                     <span class="text-gray-400">—</span>
                                 @endif
                             </td>
-                            <td class="text-right">
-                                <x-admin.action-group>
+                            <td class="whitespace-nowrap text-right align-middle">
+                                <x-admin.action-group class="flex-nowrap" style="flex-wrap: nowrap; justify-content: flex-end;">
+                                    <x-admin.document-link type="logistics-bill" :id="$bill->id" label="Bill" />
                                     <x-admin.action-view :href="route('admin.logistics-bills.show', $bill)" />
                                 </x-admin.action-group>
                             </td>
