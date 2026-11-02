@@ -117,26 +117,30 @@
     .inv-lines tr.inv-alt td { background: #f6f0ff; }
     .inv-right { text-align: right; }
     .inv-center { text-align: center; }
-    .inv-sum td {
-        border: 1px solid #efe6f8;
-        background: #f6f0ff;
-        padding: 7px 8px;
+    .inv-totals-wrap { width: 100%; margin-top: 16px; border-collapse: collapse; }
+    .inv-totals-side { width: 22%; }
+    .inv-totals-hold { width: 56%; }
+    .inv-totals { width: 100%; border-collapse: separate; border-spacing: 0; }
+    .inv-totals td {
+        width: 50%;
+        text-align: center;
         font-size: 14px;
+        font-weight: 700;
+        color: #374151;
+        background: #f6f0ff;
+        border: none;
+        border-bottom: 1px solid #ffffff;
+        padding: 8px 12px;
         white-space: nowrap;
     }
-    .inv-sum td.lbl { text-align: right; color: #374151; font-weight: 700; }
-    .inv-sum td.val { text-align: center; font-weight: 700; color: #111827; }
-    .inv-grand td {
+    .inv-totals td.val { color: #111827; }
+    .inv-totals tr.inv-grand td {
         background: #6A2ACD;
         color: #ffffff;
-        border: 1px solid #6A2ACD;
-        font-weight: 700;
         font-size: 16px;
-        padding: 10px 8px;
-        text-align: center;
-        white-space: nowrap;
+        padding: 10px 12px;
+        border-bottom: none;
     }
-    .inv-grand td.lbl { text-align: right; }
     .inv-bottom { margin-top: 12px; }
     .inv-section {
         font-size: 13px;

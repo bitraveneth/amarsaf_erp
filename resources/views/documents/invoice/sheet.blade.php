@@ -139,17 +139,28 @@
                     <td colspan="5" class="inv-center">{{ __('documents.labels.no_lines') }}</td>
                 </tr>
             @endforelse
-            @foreach($totals as $total)
-                <tr class="inv-sum">
-                    <td class="lbl" colspan="4">{{ $total['label'] }}</td>
-                    <td class="val">{{ $total['amount'] }}</td>
-                </tr>
-            @endforeach
-            <tr class="inv-grand">
-                <td class="lbl" colspan="4">{{ $grand['label'] }}</td>
-                <td class="val">{{ $grand['amount'] }}</td>
-            </tr>
         </tbody>
+    </table>
+
+    <table class="inv-totals-wrap">
+        <tr>
+            <td class="inv-totals-side"></td>
+            <td class="inv-totals-hold">
+                <table class="inv-totals">
+                    @foreach($totals as $total)
+                        <tr>
+                            <td class="lbl">{{ $total['label'] }}</td>
+                            <td class="val">{{ $total['amount'] }}</td>
+                        </tr>
+                    @endforeach
+                    <tr class="inv-grand">
+                        <td class="lbl">{{ $grand['label'] }}</td>
+                        <td class="val">{{ $grand['amount'] }}</td>
+                    </tr>
+                </table>
+            </td>
+            <td class="inv-totals-side"></td>
+        </tr>
     </table>
 
     <table class="inv-bottom">

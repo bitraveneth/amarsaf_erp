@@ -99,28 +99,33 @@
                     <td colspan="{{ $colCount }}" class="inv-center">{{ __('documents.labels.no_lines') }}</td>
                 </tr>
             @endforelse
-            @foreach($totals as $total)
-                <tr class="inv-sum">
-                    @if($colCount === 1)
-                        <td class="val">{{ $total['label'] }} {{ $total['amount'] }}</td>
-                    @else
-                        <td class="lbl" colspan="{{ $colCount - 1 }}">{{ $total['label'] }}</td>
-                        <td class="val">{{ $total['amount'] }}</td>
-                    @endif
-                </tr>
-            @endforeach
-            @if(!empty($grand))
-                <tr class="inv-grand">
-                    @if($colCount === 1)
-                        <td class="val">{{ $grand['label'] }} {{ $grand['amount'] }}</td>
-                    @else
-                        <td class="lbl" colspan="{{ $colCount - 1 }}">{{ __('documents.invoice_sheet.total') }}</td>
-                        <td class="val">{{ $grand['amount'] }}</td>
-                    @endif
-                </tr>
-            @endif
         </tbody>
     </table>
+
+    @if($totals !== [] || !empty($grand))
+        <table class="inv-totals-wrap">
+            <tr>
+                <td class="inv-totals-side"></td>
+                <td class="inv-totals-hold">
+                    <table class="inv-totals">
+                        @foreach($totals as $total)
+                            <tr>
+                                <td class="lbl">{{ $total['label'] }}</td>
+                                <td class="val">{{ $total['amount'] }}</td>
+                            </tr>
+                        @endforeach
+                        @if(!empty($grand))
+                            <tr class="inv-grand">
+                                <td class="lbl">{{ __('documents.invoice_sheet.total') }}</td>
+                                <td class="val">{{ $grand['amount'] }}</td>
+                            </tr>
+                        @endif
+                    </table>
+                </td>
+                <td class="inv-totals-side"></td>
+            </tr>
+        </table>
+    @endif
 
     <table class="inv-bottom">
         <tr>
