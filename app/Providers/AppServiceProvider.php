@@ -3,7 +3,10 @@
 namespace App\Providers;
 
 use App\Helpers\HeaderMenuSearch;
+use App\Helpers\Permission;
 use App\Helpers\SystemSettings;
+use App\Services\Accounting\UnpostedExpenseNotice;
+use App\Services\ErpNotificationService;
 use App\Services\NotificationActionResolver;
 use App\Services\Inventory\ProcurementInboxService;
 use App\Services\Sales\FulfillmentInboxService;
@@ -74,6 +77,7 @@ class AppServiceProvider extends ServiceProvider
         View::share('legalCompanyName', $legalCompanyName);
         View::share('legalCompanyInitials', SystemSettings::initials($legalCompanyName));
         View::share('headerNotice', SystemSettings::headerNotice());
+        View::share('ledgerGapNotice', null);
 
         View::composer(['layouts.app-header', 'layouts.partials.admin-header'], function ($view) {
             if (!auth()->check()) {
@@ -113,6 +117,10 @@ class AppServiceProvider extends ServiceProvider
             $view->with('headerAlertCount', $headerUnreadCount);
         });
 
+        View::composer('layouts.app', function ($view) {
+            $view->with('ledgerGapNotice', $this->ledgerGapNotice());
+        });
+
         View::composer(['layouts.app', 'layouts.sidebar', 'layouts.app-header'], function ($view) {
             if (! auth()->check()) {
                 $view->with('procurementInbox', []);
@@ -139,5 +147,51 @@ class AppServiceProvider extends ServiceProvider
             $view->with('learningUi', LearningHubRepository::ui());
             $view->with('learningHubUrl', $hubUrl);
         });
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    protected function ledgerGapNotice(): ?array
+    {
+        try {
+            $user = auth()->user();
+
+            if (! $user) {
+                return null;
+            }
+
+            if (! Permission::can($user, 'reports.view') && ! Permission::can($user, 'accounting.manage')) {
+                return null;
+            }
+
+            $notice = app(UnpostedExpenseNotice::class)->summary();
+
+            if (! $notice) {
+                return null;
+            }
+
+            if (Permission::can($user, 'accounting.manage')) {
+                try {
+                    app(ErpNotificationService::class)->publishSystemAlerts([
+                        [
+                            'key' => 'unposted_expenses_'.$notice['fingerprint'],
+                            'message' => $notice['title'].' '.$notice['why'],
+                            'variant' => 'warning',
+                            'source' => 'Finance',
+                            'title' => 'Expenses missing from the ledger',
+                            'link' => $notice['report_url'],
+                            'context' => ['unposted_expenses' => $notice['count']],
+                        ],
+                    ]);
+                } catch (Throwable) {
+                    // The banner still explains the gap when notifications cannot be stored.
+                }
+            }
+
+            return $notice;
+        } catch (Throwable) {
+            return null;
+        }
     }
 }

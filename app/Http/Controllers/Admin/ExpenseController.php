@@ -7,7 +7,9 @@ use App\Models\Account;
 use App\Models\Expense;
 use App\Models\ExpenseCategory;
 use App\Models\JournalEntry;
+use App\Notifications\SystemAlertNotification;
 use App\Services\Accounting\ExpensePostingService;
+use App\Services\Accounting\UnpostedExpenseNotice;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -116,6 +118,7 @@ class ExpenseController extends Controller
 
     public function syncLedger(Request $request)
     {
+        $missingOnly = $request->input('scope') === 'missing';
         $from = $request->filled('from')
             ? Carbon::parse($request->input('from'))->startOfDay()
             : Carbon::now()->startOfMonth();
@@ -125,15 +128,17 @@ class ExpenseController extends Controller
 
         $expenses = Expense::query()
             ->where('amount', '>', 0)
-            ->whereIn('status', self::VALID_STATUSES)
-            ->whereDate('date', '>=', $from->toDateString())
-            ->whereDate('date', '<=', $to->toDateString())
+            ->when(! $missingOnly, function ($query) use ($from, $to) {
+                $query->whereDate('date', '>=', $from->toDateString())
+                    ->whereDate('date', '<=', $to->toDateString());
+            })
             ->orderBy('id')
             ->get();
 
         $synced = 0;
         $skipped = 0;
         $failed = 0;
+        $failure = null;
 
         foreach ($expenses as $expense) {
             if ($this->hasPostedJournal($expense)) {
@@ -144,21 +149,57 @@ class ExpenseController extends Controller
             try {
                 DB::transaction(fn () => $this->posting->sync($expense));
                 $synced++;
-            } catch (\Throwable) {
+            } catch (\Throwable $exception) {
                 $failed++;
+                $failure ??= $exception->getMessage();
             }
         }
 
         $message = match (true) {
             $synced > 0 && $failed === 0 => "{$synced} expense(s) posted to the ledger.",
-            $synced > 0 => "{$synced} expense(s) posted. {$failed} could not be posted — check expense category accounts and open accounting periods.",
-            $failed > 0 => "No expenses were posted. {$failed} failed — check expense category accounts and open accounting periods.",
-            default => 'All expenses in this period already have ledger entries.',
+            $synced > 0 => "{$synced} expense(s) posted. {$failed} could not be posted. {$failure}",
+            $failed > 0 => "No expenses were posted. {$failure}",
+            default => 'All of these expenses already have ledger entries.',
         };
+
+        app(UnpostedExpenseNotice::class)->forget();
+        $this->notifyLedgerSync($request->user(), $message, $failed === 0 && $synced > 0);
+        if ($failed === 0) {
+            $this->clearLedgerGapNotifications();
+        }
 
         return redirect()
             ->to($request->input('redirect', route('admin.reports.pl', $request->only(['range', 'from', 'to']))))
             ->with('status', $message);
+    }
+
+    protected function notifyLedgerSync($user, string $message, bool $success): void
+    {
+        if (! $user || ! \Illuminate\Support\Facades\Schema::hasTable('notifications')) {
+            return;
+        }
+
+        $user->notify(new SystemAlertNotification([
+            'key' => 'expense_ledger_sync_'.now()->format('YmdHis'),
+            'title' => $success ? 'Expenses posted to the ledger' : 'Expense sync needs attention',
+            'message' => $message,
+            'variant' => $success ? 'success' : 'warning',
+            'source' => 'Finance',
+            'link' => route('admin.reports.pl'),
+        ]));
+    }
+
+    protected function clearLedgerGapNotifications(): void
+    {
+        if (! \Illuminate\Support\Facades\Schema::hasTable('notifications')) {
+            return;
+        }
+
+        \Illuminate\Notifications\DatabaseNotification::query()
+            ->where('type', SystemAlertNotification::class)
+            ->whereNull('read_at')
+            ->where('data', 'like', '%unposted_expenses_%')
+            ->update(['read_at' => now()]);
     }
 
     protected function validated(Request $request): array
