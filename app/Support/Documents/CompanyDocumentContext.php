@@ -10,14 +10,14 @@ class CompanyDocumentContext
 {
     public static function make(): array
     {
-        $legalName = SystemSettings::legalCompanyName();
+        $legalName = SystemSettings::configuredLegalName();
         $logoPath = self::resolveLogoPath();
         $primary = SystemSettings::get('brand_primary', SystemSettings::defaultBrandPrimary());
 
         return [
             'legal_name' => $legalName,
             'brand_name' => SystemSettings::brandName(),
-            'initials' => SystemSettings::initials($legalName),
+            'initials' => SystemSettings::initials($legalName ?? 'SAF'),
             'email' => self::stringSetting('company_email'),
             'phone' => self::stringSetting('company_phone'),
             'address' => self::stringSetting('company_address'),

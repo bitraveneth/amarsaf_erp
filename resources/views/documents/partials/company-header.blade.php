@@ -13,7 +13,9 @@
                         @endif
                     </td>
                     <td>
-                        <div class="doc-company-name">{{ $company['legal_name'] ?? config('app.name') }}</div>
+                        @if(!empty($company['legal_name']))
+                            <div class="doc-company-name">{{ $company['legal_name'] }}</div>
+                        @endif
                         <div class="doc-company-meta">
                             @if(!empty($company['address'])){{ $company['address'] }}<br>@endif
                             @if(!empty($company['phone'])){{ $company['phone'] }}@endif

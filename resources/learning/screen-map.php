@@ -122,7 +122,7 @@ return [
             ['label' => ['en' => 'Add receipt', 'bn' => 'রসিদ যোগ'], 'desc' => ['en' => 'Posts Dr Bank, Cr AR.', 'bn' => 'Dr Bank, Cr AR পোস্ট।']],
         ],
         'table' => [
-            ['col' => 'Invoice #', 'sample' => 'INV-0042'],
+            ['col' => 'Invoice #', 'sample' => 'SFIN2026101801'],
             ['col' => 'Agent', 'sample' => 'Dhaka Dist.'],
             ['col' => 'Net', 'sample' => '৳50,000'],
             ['col' => 'VAT', 'sample' => '৳7,500'],

@@ -29,14 +29,16 @@ use App\Models\TransportCarrier;
 use App\Models\User;
 use App\Models\Vehicle;
 use App\Models\Warehouse;
+use App\Support\Documents\DocumentNumbers;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
 /**
  * Ten sample records for every printable document.
  *
- * Numbers are stable (INV-PDF-01 … INV-PDF-10 and the same pattern for
- * the other documents), so running this seeder again does not duplicate them.
+ * Sales orders stay on SO-PDF-01 … SO-PDF-10 so running this again updates
+ * the same rows. Invoices are renumbered to SFIN plus the issue date and a
+ * daily sequence. Challans are numbered SGC plus the delivery date when printed.
  */
 class PrintableDocumentSampleSeeder extends Seeder
 {
@@ -52,10 +54,12 @@ class PrintableDocumentSampleSeeder extends Seeder
             });
         }
 
-        $this->command?->info('Printable samples are ready. Ten of each document, numbered 01 to 10.');
-        $this->command?->info('Invoices INV-PDF-01 … INV-PDF-10');
+        $this->renumberLegacyInvoices();
+
+        $this->command?->info('Printable samples are ready. Ten of each document.');
+        $this->command?->info('Invoices use SFIN plus the issue date and a daily sequence, such as SFIN2026101801.');
         $this->command?->info('Sales orders and picking lists SO-PDF-01 … SO-PDF-10');
-        $this->command?->info('Delivery challans, packing slips, and proof of delivery use those orders.');
+        $this->command?->info('Delivery challans print as SGC plus the delivery date, such as SGC20261018.');
         $this->command?->info('Purchase orders PO-PDF-01 … PO-PDF-10');
         $this->command?->info('Goods receipts GRN-PDF-01 … GRN-PDF-10');
         $this->command?->info('Production orders PR-PDF-01 … PR-PDF-10');
@@ -293,9 +297,12 @@ class PrintableDocumentSampleSeeder extends Seeder
             ]);
         }
 
-        $invoice = Invoice::query()->firstOrCreate(
-            ['number' => 'INV-PDF-'.$code],
-            [
+        $invoice = Invoice::query()->where('order_id', $order->id)->first()
+            ?? Invoice::query()->where('number', 'INV-PDF-'.$code)->first();
+
+        if (! $invoice) {
+            $invoice = Invoice::query()->create([
+                'number' => DocumentNumbers::nextInvoice($when),
                 'order_id' => $order->id,
                 'issued_at' => $when->toDateString(),
                 'due_at' => $when->copy()->addDays(7)->toDateString(),
@@ -303,8 +310,13 @@ class PrintableDocumentSampleSeeder extends Seeder
                 'vat_amount' => $vat,
                 'withholding' => $withholding,
                 'status' => 'issued',
-            ]
-        );
+            ]);
+        } else {
+            $invoice->update([
+                'number' => DocumentNumbers::nextInvoice($invoice->issued_at ?? $when, $invoice->id),
+                'order_id' => $order->id,
+            ]);
+        }
 
         if ($invoice->items()->doesntExist()) {
             InvoiceItem::query()->create([
@@ -562,6 +574,27 @@ class PrintableDocumentSampleSeeder extends Seeder
             ]);
             $bill->recalculateStatus();
         }
+    }
+
+    protected function renumberLegacyInvoices(): void
+    {
+        Invoice::query()
+            ->orderBy('issued_at')
+            ->orderBy('id')
+            ->get()
+            ->each(function (Invoice $invoice): void {
+                if (preg_match('/^SFIN\d{10}$/', (string) $invoice->number) === 1) {
+                    return;
+                }
+
+                if (preg_match('/^(INV-PDF-.+|INV-\d+)$/', (string) $invoice->number) !== 1) {
+                    return;
+                }
+
+                $invoice->update([
+                    'number' => DocumentNumbers::nextInvoice($invoice->issued_at ?? $invoice->created_at ?? now(), $invoice->id),
+                ]);
+            });
     }
 
     protected function lineTotal(float $qty, float $price, float $discountPercent, float $vatRate): float

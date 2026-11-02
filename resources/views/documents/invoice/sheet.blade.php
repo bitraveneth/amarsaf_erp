@@ -30,7 +30,9 @@
                 @if(!empty($logoSrc))
                     <img src="{{ $logoSrc }}" alt="" class="inv-logo">
                 @endif
-                <div class="inv-company">{{ $company['legal_name'] ?? config('app.name') }}</div>
+                @if(!empty($company['legal_name']))
+                    <div class="inv-company">{{ $company['legal_name'] }}</div>
+                @endif
             </td>
             <td style="width: 44%;">
                 @foreach($contact as $line)

@@ -177,8 +177,8 @@ return [
                 'bn' => 'রিপোর্ট, জার্নাল ভাউচার বা টেবিল এক্সপোর্ট ইনভয়েসের মতো শিরোনাম ও টেবিল ব্যবহার করে, কিন্তু এক পৃষ্ঠা।',
             ],
             'why' => [
-                'en' => 'Customer, office, and transport copies belong to the **delivery challan** only. Invoices, purchase orders, GRNs, production orders, packing slips, proof of delivery, logistics bills, journals, and statements share the same sheet and print once. A statement is labeled Statement. An invoice is labeled Customer copy because it is the customer’s bill.',
-                'bn' => 'গ্রাহক, অফিস ও পরিবহন কপি শুধু **ডেলিভারি চালানের**। ইনভয়েস, ক্রয় অর্ডার, GRN, উৎপাদন অর্ডার, প্যাকিং স্লিপ, প্রুফ অফ ডেলিভারি, লজিস্টিক্স বিল, জার্নাল ও বিবৃতি একই শিট ব্যবহার করে এবং একবার ছাপে। বিবৃতিতে লেখা থাকে Statement। ইনভয়েসে Customer copy, কারণ সেটি গ্রাহকের বিল।',
+                'en' => 'Customer, office, and transport copies belong to the **delivery challan** only. The customer invoice has its own purple sheet and prints once. Its number looks like SFIN2026101801. A challan number looks like SGC20261018. Purchase orders, GRNs, production orders, packing slips, proof of delivery, logistics bills, journals, and statements share one sheet and print once.',
+                'bn' => 'গ্রাহক, অফিস ও পরিবহন কপি শুধু **ডেলিভারি চালানের**। গ্রাহক ইনভয়েসের নিজস্ব বেগুনি শিট আছে এবং সেটি একবার ছাপে। ইনভয়েস নম্বর দেখতে SFIN2026101801-এর মতো। চালান নম্বর দেখতে SGC20261018-এর মতো। ক্রয় অর্ডার, GRN, উৎপাদন অর্ডার, প্যাকিং স্লিপ, প্রুফ অফ ডেলিভারি, লজিস্টিক্স বিল, জার্নাল ও বিবৃতি একই শিট ব্যবহার করে এবং একবার ছাপে।',
             ],
             'fix' => [
                 'en' => 'Print the delivery challan when you need the three copies. Use the journal or report PDF when you need the accounting statement.',

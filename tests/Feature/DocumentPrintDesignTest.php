@@ -2,7 +2,9 @@
 
 namespace Tests\Feature;
 
+use App\Support\Documents\DocumentNumbers;
 use App\Support\PdfDocumentBuilder;
+use Carbon\Carbon;
 use Tests\TestCase;
 
 class DocumentPrintDesignTest extends TestCase
@@ -177,6 +179,58 @@ class DocumentPrintDesignTest extends TestCase
         $this->assertStringContainsString('Drinking water', $text);
         $this->assertStringContainsString('Sub Total', $text);
         $this->assertStringContainsString('PAYMENT DETAILS', $text);
+    }
+
+    public function test_invoice_sheet_hides_the_app_name_when_no_company_is_saved(): void
+    {
+        $payload = [
+            'title' => 'Tax invoice',
+            'number' => 'SFIN2026101801',
+            'sheet' => 'invoice',
+            'invoice' => [
+                'number' => 'SFIN2026101801',
+                'issued' => '18 October, 2026',
+                'due' => '25 October, 2026',
+                'bill_to' => ['name' => 'Gulshan Trading'],
+                'lines' => [[
+                    'sl' => '1',
+                    'description' => 'Drinking water',
+                    'qty' => 'x 2',
+                    'rate' => '540',
+                    'amount' => '1,080',
+                ]],
+                'totals' => [
+                    ['label' => 'Sub Total', 'amount' => '1,080'],
+                ],
+                'grand' => ['label' => 'Total', 'amount' => 'BDT 1,080'],
+                'payments' => [],
+                'notes' => [],
+                'signatory' => ['name' => 'Authorized signatory'],
+                'footer' => 'If you have any inquiries regarding this invoice, please contact us.',
+            ],
+        ];
+        $company = $this->company();
+        unset($company['legal_name']);
+
+        $html = view('documents.layouts.pdf', [
+            'payload' => $payload,
+            'company' => $company,
+        ])->render();
+
+        $this->assertStringNotContainsString('Saf ERP', $html);
+        $this->assertStringNotContainsString('class="inv-company"', $html);
+        $this->assertStringContainsString('SFIN2026101801', $html);
+    }
+
+    public function test_document_numbers_follow_the_date_standard(): void
+    {
+        $day = Carbon::parse('2026-10-18');
+
+        $this->assertSame('SFIN2026101801', DocumentNumbers::invoiceCode($day, 1));
+        $this->assertSame('SFIN2026101802', DocumentNumbers::invoiceCode($day, 2));
+        $this->assertSame('SGC20261018', DocumentNumbers::challanCode($day, 1, 1));
+        $this->assertSame('SGC20261018', DocumentNumbers::challanCode($day, 1, 3));
+        $this->assertSame('SGC2026101802', DocumentNumbers::challanCode($day, 2, 3));
     }
 
     public function test_challan_pdf_contains_each_copy_label(): void

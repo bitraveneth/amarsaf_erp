@@ -278,7 +278,7 @@ class DocumentDataFactory
             'signatory' => [
                 'name' => $signatoryName,
                 'title' => self::settingString('invoice_signatory_title'),
-                'company' => SystemSettings::legalCompanyName(),
+                'company' => SystemSettings::configuredLegalName(),
             ],
             'footer' => $phone
                 ? __('documents.invoice_sheet.inquiry', ['phone' => $phone])
@@ -831,7 +831,7 @@ class DocumentDataFactory
 
         $payload = self::base(
             __('documents.types.delivery_challan'),
-            'DC-'.str_pad((string) $delivery->id, 5, '0', STR_PAD_LEFT),
+            DocumentNumbers::challan($delivery),
             ucfirst(str_replace('_', ' ', $delivery->status ?? 'scheduled'))
         );
         $payload['copies'] = [
