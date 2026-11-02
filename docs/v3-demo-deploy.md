@@ -29,6 +29,10 @@ If `db:backup` is not registered, the `mysqldump` line is enough. Use the demo d
 
 ## Deploy
 
+The demo folder already has `.env`, the app key, and the database name. Leave that file as it is.
+
+`v3-invoice` is not the `test` branch the usual deploy action pulls. Check this copy out once, then install dependencies and rebuild assets the same way as a normal update. `composer.lock` and the frontend build both changed.
+
 ```bash
 cd /path/to/demo.amarsaf.com
 git fetch --prune origin
@@ -40,16 +44,7 @@ npm ci
 npm run build
 ```
 
-In the demo `.env`, set:
-
-```env
-APP_ENV=production
-APP_DEBUG=false
-APP_VERSION=3.0.0
-SEED_SALES_DEMO=true
-```
-
-`SEED_SALES_DEMO=true` loads the one-year sample company (orders, production, payroll, logistics) and the ten printable samples of each document. `SEED_SALES_DEMO=false` still seeds masters and the printable samples, without that one-year timeline.
+If the footer still shows 2.3.0 after this, the existing `.env` has `APP_VERSION=2.3.0` left from the last deploy. Change that one line to `APP_VERSION=3.0.0`. Nothing else in `.env` needs editing. With `SEED_SALES_DEMO` unset, the seeder already loads the full demo.
 
 ## Full reseed (demo only)
 
