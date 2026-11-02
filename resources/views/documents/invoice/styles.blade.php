@@ -4,7 +4,7 @@
         color: #1f2937;
         font-family: DejaVu Sans, Helvetica, Arial, sans-serif;
     }
-    .inv-for-pdf { padding: 22px 28px 54px; }
+    .inv-for-pdf { padding: 12mm 14mm 18mm; }
     .inv-accent { color: #6A2ACD; }
     .inv-head, .inv-intro, .inv-lines, .inv-bottom, .inv-bill, .inv-meta, .inv-pay, .inv-contact {
         width: 100%;
@@ -19,11 +19,29 @@
         color: #111827;
     }
     .inv-contact-line {
-        text-align: right;
-        font-size: 9px;
+        text-align: left;
+        font-size: 10px;
         color: #374151;
         line-height: 1.55;
+        margin-top: 2px;
     }
+    .inv-ico {
+        width: 11px;
+        height: 11px;
+        margin-right: 6px;
+        vertical-align: -1px;
+    }
+    .inv-generated {
+        margin-top: 8px;
+        text-align: right;
+        font-size: 10px;
+        color: #6b7280;
+    }
+    .inv-details { width: 100%; margin-top: 8px; border: 1px solid #eadff8; border-collapse: collapse; }
+    .inv-details td { border: 1px solid #eadff8; padding: 6px 8px; font-size: 10px; }
+    .inv-details .lbl { width: 48%; color: #6b7280; background: #ffffff; }
+    .inv-details .val { font-weight: 700; color: #111827; text-align: right; background: #ffffff; }
+    .inv-details tr.inv-alt td { background: #f6f0ff; }
     .inv-dot {
         display: inline-block;
         width: 6px;
@@ -58,7 +76,7 @@
         line-height: 1.05;
         text-transform: uppercase;
     }
-    .inv-title-long { font-size: 22px; letter-spacing: .04em; }
+    .inv-title-long { font-size: 28px; letter-spacing: .04em; }
     .inv-copy {
         margin-top: 6px;
         text-align: right;
@@ -83,7 +101,7 @@
         text-transform: uppercase;
         padding: 8px 8px;
         border: 1px solid #6A2ACD;
-        text-align: left;
+        text-align: center;
     }
     .inv-lines th.inv-right, .inv-lines td.inv-right, .inv-grand td.inv-right { text-align: right; }
     .inv-lines th.inv-center, .inv-lines td.inv-center { text-align: center; }
@@ -93,6 +111,7 @@
         font-size: 10px;
         color: #1f2937;
         background: #ffffff;
+        text-align: center;
     }
     .inv-lines tr.inv-alt td { background: #f6f0ff; }
     .inv-right { text-align: right; }
@@ -166,10 +185,25 @@
         bottom: 0;
         margin: 0;
     }
-    .doc-preview-page:has(.inv) {
+    .doc-preview-body:has(.inv) .doc-preview-page {
+        width: 210mm;
+        max-width: 210mm;
+        min-height: 0;
+        margin: 16px auto 32px;
+        padding: 0;
+        background: transparent;
+        border-radius: 0;
+        box-shadow: none;
+    }
+    .doc-preview-body:has(.inv) .doc-copy {
+        width: 210mm;
+        min-height: 297mm;
+        box-sizing: border-box;
+        margin: 0 auto 16px;
+        padding: 12mm 14mm 18mm;
+        background: #ffffff;
         position: relative;
-        min-height: 1040px;
-        padding-bottom: 72px;
+        box-shadow: 0 12px 40px rgba(15, 23, 42, 0.12);
     }
     .doc-preview-body .inv-footer {
         position: absolute;
@@ -179,9 +213,17 @@
         margin: 0;
     }
     @media print {
-        .doc-preview-page:has(.inv) {
+        .doc-preview-body:has(.inv) .doc-preview-page {
+            width: auto;
+            max-width: none;
+            margin: 0;
+        }
+        .doc-preview-body:has(.inv) .doc-copy {
+            width: auto;
             min-height: 0;
+            margin: 0;
             padding: 0;
+            box-shadow: none;
         }
         .inv { padding: 0 0 48px; }
         .inv-footer {

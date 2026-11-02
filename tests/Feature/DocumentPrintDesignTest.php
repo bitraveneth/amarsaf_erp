@@ -228,6 +228,7 @@ class DocumentPrintDesignTest extends TestCase
         $salesOrder = DocumentDataFactory::designedSheet([
             'title' => 'Sales order',
             'number' => '#6',
+            'generated_at' => Carbon::parse('2026-10-29 17:44:00'),
             'parties' => [
                 [
                     'label' => 'Customer',
@@ -256,7 +257,7 @@ class DocumentPrintDesignTest extends TestCase
         $this->assertSame('invoice', $salesOrder['sheet']);
         $this->assertSame('document', $salesOrder['invoice']['layout']);
         $this->assertSame('Order total', $salesOrder['invoice']['grand']['label']);
-        $this->assertSame('Details', $salesOrder['invoice']['details_label']);
+        $this->assertSame('Order details', $salesOrder['invoice']['details_label']);
         $this->assertSame('Commission', $salesOrder['invoice']['totals'][1]['label']);
 
         $html = view('documents.layouts.pdf', [
@@ -268,7 +269,12 @@ class DocumentPrintDesignTest extends TestCase
         $this->assertStringContainsString('Sales order', $html);
         $this->assertStringContainsString('Gulshan Trading', $html);
         $this->assertStringContainsString('Prepared by', $html);
-        $this->assertStringContainsString('Order total', $html);
+        $this->assertStringContainsString('>Total<', $html);
+        $this->assertStringContainsString('SL', $html);
+        $this->assertStringContainsString('Product description', $html);
+        $this->assertStringContainsString('Generated:', $html);
+        $this->assertStringContainsString('Payment is due within [X] days of invoice date.', $html);
+        $this->assertStringContainsString('If you have any inquiries regarding this sales order', $html);
         $this->assertStringNotContainsString('class="doc-banner"', $html);
         $this->assertStringNotContainsString('class="doc-lines"', $html);
 

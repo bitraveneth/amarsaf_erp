@@ -11,7 +11,18 @@
     $signatureCount = count($signatures);
     $colCount = max(1, count($columns));
     $sumSpan = max(0, $colCount - min(2, $colCount));
-    $title = (string) ($invoice['title'] ?? __('documents.invoice_sheet.title'));
+    $title = (string) ($invoice['title'] ?? $title ?? __('documents.invoice_sheet.title'));
+    $generatedLabel = $generatedLabel ?? ($invoice['generated'] ?? null);
+    $heading = function (string $column): string {
+        return match (strtolower(trim($column))) {
+            '#', 'sl' => __('documents.invoice_sheet.sl'),
+            'particulars', 'product', 'description' => __('documents.invoice_sheet.product'),
+            'qty', 'quantity' => __('documents.invoice_sheet.quantity'),
+            'rate', 'unit price', 'unit' => __('documents.invoice_sheet.rate'),
+            'amount', 'line total' => __('documents.invoice_sheet.amount'),
+            default => $column,
+        };
+    };
     $alignClass = function (?string $align): string {
         return match ($align) {
             'right' => 'inv-right',
@@ -22,46 +33,49 @@
 @endphp
 
 <div @class(['inv', 'inv-for-pdf' => $forPdf ?? false])>
-    <table class="inv-head">
-        <tr>
-            <td style="width: 56%;">
-                @if(!empty($logoSrc))
-                    <img src="{{ $logoSrc }}" alt="" class="inv-logo">
-                @endif
-                @if(!empty($company['legal_name']))
-                    <div class="inv-company">{{ $company['legal_name'] }}</div>
-                @endif
-            </td>
-            <td style="width: 44%;">
-                @foreach($contact as $line)
-                    <div class="inv-contact-line"><span class="inv-dot"></span>{{ $line }}</div>
-                @endforeach
-            </td>
-        </tr>
-    </table>
+    @include('documents.invoice.letterhead')
 
     <table class="inv-intro">
         <tr>
             <td style="width: 56%;">
                 <div class="inv-kicker">{{ $bill['label'] ?? __('documents.invoice_sheet.billed_to') }}</div>
                 <div class="inv-bill-name">{{ $bill['name'] ?? '—' }}</div>
+                <table class="inv-bill">
+                    @if(!empty($bill['phone']))
+                        <tr>
+                            <td class="lbl">{{ __('documents.invoice_sheet.phone') }}:</td>
+                            <td>{{ $bill['phone'] }}</td>
+                        </tr>
+                    @endif
+                    @if(!empty($bill['email']))
+                        <tr>
+                            <td class="lbl">{{ __('documents.invoice_sheet.email') }}:</td>
+                            <td>{{ $bill['email'] }}</td>
+                        </tr>
+                    @endif
+                    @if(!empty($bill['address']))
+                        <tr>
+                            <td class="lbl">{{ __('documents.invoice_sheet.address') }}:</td>
+                            <td>{{ $bill['address'] }}</td>
+                        </tr>
+                    @endif
+                </table>
                 @foreach($bill['lines'] ?? [] as $line)
                     <div class="inv-bill-line">{{ $line }}</div>
                 @endforeach
             </td>
             <td style="width: 44%;">
-                <div @class(['inv-title', 'inv-title-long' => mb_strlen($title) > 10])>{{ $title }}</div>
-                @if(($payload['copy_count'] ?? 1) > 1 && !empty($payload['subtitle']))
-                    <div class="inv-copy">{{ $payload['subtitle'] }}</div>
+                @if(!empty($invoice['meta']))
+                    <div class="inv-kicker">{{ $invoice['details_label'] ?? __('documents.labels.order_details') }}</div>
+                    <table class="inv-details">
+                        @foreach($invoice['meta'] as $row)
+                            <tr @class(['inv-alt' => $loop->iteration % 2 === 0])>
+                                <td class="lbl">{{ $row['label'] }}:</td>
+                                <td class="val">{{ $row['value'] }}</td>
+                            </tr>
+                        @endforeach
+                    </table>
                 @endif
-                <table class="inv-meta" align="right">
-                    @foreach($invoice['meta'] ?? [] as $row)
-                        <tr>
-                            <td class="lbl">{{ $row['label'] }}:</td>
-                            <td class="val">{{ $row['value'] }}</td>
-                        </tr>
-                    @endforeach
-                </table>
             </td>
         </tr>
     </table>
@@ -70,7 +84,7 @@
         <thead>
             <tr>
                 @foreach($columns as $index => $column)
-                    <th class="{{ $alignClass($aligns[$index] ?? null) }}" @if(!empty($widths[$index])) style="width: {{ $widths[$index] }};" @endif>{{ $column }}</th>
+                    <th class="inv-center" @if(!empty($widths[$index])) style="width: {{ $widths[$index] }};" @endif>{{ $heading($column) }}</th>
                 @endforeach
             </tr>
         </thead>
@@ -78,7 +92,7 @@
             @forelse($rows as $row)
                 <tr @class(['inv-alt' => $loop->iteration % 2 === 0])>
                     @foreach($columns as $index => $column)
-                        <td class="{{ $alignClass($aligns[$index] ?? null) }}">{{ $row[$index] ?? '' }}</td>
+                        <td class="inv-center">{{ $row[$index] ?? '' }}</td>
                     @endforeach
                 </tr>
             @empty
@@ -107,7 +121,7 @@
                     @if($colCount === 1)
                         <td class="inv-right">{{ $grand['label'] }} {{ $grand['amount'] }}</td>
                     @else
-                        <td class="inv-right">{{ $grand['label'] }}</td>
+                        <td class="inv-right">{{ __('documents.invoice_sheet.total') }}</td>
                         <td class="inv-right">{{ $grand['amount'] }}</td>
                     @endif
                 </tr>
@@ -119,7 +133,7 @@
         <tr>
             <td style="width: {{ $signatureCount > 1 ? '100%' : '62%' }};{{ $signatureCount > 1 ? '' : ' padding-right: 16px;' }}">
                 @if($payments !== [])
-                    <div class="inv-section">{{ $invoice['details_label'] ?? __('documents.labels.details') }}</div>
+                    <div class="inv-section">{{ __('documents.labels.details') }}</div>
                     <table class="inv-pay">
                         @foreach($payments as $row)
                             <tr @class(['inv-alt' => $loop->iteration % 2 === 0])>
@@ -165,7 +179,12 @@
         </table>
     @endif
 
-    @if(!empty($invoice['footer']))
-        <div class="inv-footer">{{ $invoice['footer'] }}</div>
-    @endif
+    @php
+        $inquiryDocument = strtolower($title);
+        $inquiryPhone = $company['phone'] ?? null;
+        $inquiry = is_string($inquiryPhone) && $inquiryPhone !== ''
+            ? __('documents.invoice_sheet.inquiry_document', ['document' => $inquiryDocument, 'phone' => $inquiryPhone])
+            : __('documents.invoice_sheet.inquiry_document_plain', ['document' => $inquiryDocument]);
+    @endphp
+    <div class="inv-footer">{{ $inquiry }}</div>
 </div>

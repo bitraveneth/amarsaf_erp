@@ -15,6 +15,39 @@
             $company['address'] ?? null,
         ]));
     }
+    $title = ($invoice['layout'] ?? '') === 'document'
+        ? (string) ($invoice['title'] ?? __('documents.invoice_sheet.title'))
+        : __('documents.invoice_sheet.title');
+    $generatedAt = $payload['generated_at'] ?? null;
+    $generatedLabel = $invoice['generated'] ?? null;
+    if ($generatedLabel === null && $generatedAt instanceof \DateTimeInterface) {
+        $generatedLabel = $generatedAt->timezone('Asia/Dhaka')->format('d M Y, h:i A');
+    }
+    $iconUri = function (string $name) use ($forPdf): ?string {
+        $path = public_path('images/brand/icon-'.$name.'.png');
+        if (! is_file($path)) {
+            return null;
+        }
+
+        return ($forPdf ?? false)
+            ? \App\Support\PdfDocumentBuilder::fileUri($path)
+            : asset('images/brand/icon-'.$name.'.png');
+    };
+    $contactLines = [];
+    foreach ([
+        'phone' => $company['phone'] ?? null,
+        'email' => $company['email'] ?? null,
+        'pin' => $company['address'] ?? null,
+    ] as $icon => $text) {
+        if (is_string($text) && trim($text) !== '') {
+            $contactLines[] = ['icon' => $iconUri($icon), 'text' => trim($text)];
+        }
+    }
+    if ($contactLines === []) {
+        foreach ($contact as $text) {
+            $contactLines[] = ['icon' => null, 'text' => $text];
+        }
+    }
     $fullMark = public_path('images/brand/saf-logo-full-purple.png');
     $usingDefaultLogo = ! empty($company['logo_path'])
         && is_file($fullMark)
@@ -34,23 +67,7 @@
     @include('documents.invoice.document')
 @else
 <div @class(['inv', 'inv-for-pdf' => $forPdf ?? false])>
-    <table class="inv-head">
-        <tr>
-            <td style="width: 56%;">
-                @if(!empty($logoSrc))
-                    <img src="{{ $logoSrc }}" alt="" class="inv-logo">
-                @endif
-                @if(!empty($company['legal_name']))
-                    <div class="inv-company">{{ $company['legal_name'] }}</div>
-                @endif
-            </td>
-            <td style="width: 44%;">
-                @foreach($contact as $line)
-                    <div class="inv-contact-line"><span class="inv-dot"></span>{{ $line }}</div>
-                @endforeach
-            </td>
-        </tr>
-    </table>
+    @include('documents.invoice.letterhead')
 
     <table class="inv-intro">
         <tr>
@@ -79,13 +96,13 @@
                 </table>
             </td>
             <td style="width: 44%;">
-                <div class="inv-title">{{ __('documents.invoice_sheet.title') }}</div>
-                <table class="inv-meta" align="right">
+                <div class="inv-kicker">{{ __('documents.labels.invoice_details') }}</div>
+                <table class="inv-details">
                     <tr>
                         <td class="lbl">{{ __('documents.invoice_sheet.invoice_no') }}:</td>
                         <td class="val">{{ $invoice['number'] ?? ($payload['number'] ?? '—') }}</td>
                     </tr>
-                    <tr>
+                    <tr class="inv-alt">
                         <td class="lbl">{{ __('documents.invoice_sheet.date_issued') }}:</td>
                         <td class="val">{{ $invoice['issued'] ?? '—' }}</td>
                     </tr>
@@ -104,8 +121,8 @@
                 <th style="width: 8%;" class="inv-center">{{ __('documents.invoice_sheet.sl') }}</th>
                 <th>{{ __('documents.invoice_sheet.product') }}</th>
                 <th style="width: 16%;" class="inv-center">{{ __('documents.invoice_sheet.quantity') }}</th>
-                <th style="width: 16%;" class="inv-right">{{ __('documents.invoice_sheet.rate') }}</th>
-                <th style="width: 18%;" class="inv-right">{{ __('documents.invoice_sheet.amount') }}</th>
+                <th style="width: 16%;" class="inv-center">{{ __('documents.invoice_sheet.rate') }}</th>
+                <th style="width: 18%;" class="inv-center">{{ __('documents.invoice_sheet.amount') }}</th>
             </tr>
         </thead>
         <tbody>
@@ -114,8 +131,8 @@
                     <td class="inv-center">{{ $line['sl'] }}</td>
                     <td>{{ $line['description'] }}</td>
                     <td class="inv-center">{{ $line['qty'] }}</td>
-                    <td class="inv-right">{{ $line['rate'] }}</td>
-                    <td class="inv-right">{{ $line['amount'] }}</td>
+                    <td class="inv-center">{{ $line['rate'] }}</td>
+                    <td class="inv-center">{{ $line['amount'] }}</td>
                 </tr>
             @empty
                 <tr>

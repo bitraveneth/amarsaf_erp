@@ -108,22 +108,35 @@ class DocumentDataFactory
                 $detailLabels[$label] = true;
             }
         }
-        $detailsLabel = count($parties) <= 1 && count($detailLabels) === 1
-            ? (string) array_key_first($detailLabels)
-            : __('documents.labels.details');
-
         if (! is_array($notes)) {
             $notes = [];
         }
+        $notes = self::standardNotes($notes);
+
+        $detailsLabel = trim((string) ($payload['details_title'] ?? ''));
+        if ($detailsLabel === '') {
+            $detailsLabel = count($parties) <= 1 && count($detailLabels) === 1
+                ? (string) array_key_first($detailLabels)
+                : __('documents.labels.order_details');
+        }
+
+        $generatedAt = $payload['generated_at'] ?? null;
+        $generated = $generatedAt instanceof \DateTimeInterface
+            ? $generatedAt->timezone('Asia/Dhaka')->format('d M Y, h:i A')
+            : null;
 
         $payload['sheet'] = 'invoice';
         $payload['invoice'] = [
             'layout' => 'document',
             'title' => (string) ($payload['title'] ?? __('documents.types.invoice')),
             'number' => (string) ($payload['number'] ?? ''),
+            'generated' => $generated,
             'bill_to' => [
                 'label' => (string) ($primary['label'] ?? __('documents.labels.bill_to')),
                 'name' => (string) ($primary['name'] ?? '—'),
+                'phone' => $primary['phone'] ?? null,
+                'email' => $primary['email'] ?? null,
+                'address' => $primary['address'] ?? null,
                 'lines' => array_values(array_filter($primary['lines'] ?? [])),
             ],
             'meta' => array_map(fn ($row) => [
@@ -305,6 +318,7 @@ class DocumentDataFactory
             [__('documents.signatures.received'), ''],
         ];
 
+        $payload['generated_at'] = $invoice->issued_at ?? $invoice->created_at ?? $payload['generated_at'];
         $payload['footer'] = __('documents.footer.tax_invoice');
         $payload['sheet'] = 'invoice';
         $lineSum = (float) $invoice->items->sum(fn ($item) => (float) $item->line_total);
@@ -364,6 +378,7 @@ class DocumentDataFactory
             ['label' => __('documents.invoice_sheet.subtotal'), 'amount' => self::invoiceAmount($subtotal)],
             ['label' => __('documents.invoice_sheet.discount'), 'amount' => self::invoiceAmount($discount)],
             ['label' => __('documents.invoice_sheet.vat'), 'amount' => self::invoiceAmount($vat)],
+            ['label' => __('documents.invoice_sheet.shipping'), 'amount' => self::invoiceAmount(0)],
             ['label' => __('documents.invoice_sheet.invoice_total'), 'amount' => self::invoiceAmount($invoiceTotal)],
             ['label' => __('documents.invoice_sheet.paid_advance'), 'amount' => self::invoiceAmount($paid)],
         ];
@@ -374,11 +389,12 @@ class DocumentDataFactory
             ];
         }
 
-        $phone = self::settingString('company_phone');
+        $letterhead = CompanyDocumentContext::letterhead();
+        $phone = $letterhead['phone'];
         $contact = array_values(array_filter([
-            $phone,
-            self::settingString('company_email'),
-            self::settingString('company_address'),
+            $letterhead['phone'],
+            $letterhead['email'],
+            $letterhead['address'],
         ]));
 
         $signatoryName = self::settingString('invoice_signatory_name')
@@ -402,12 +418,7 @@ class DocumentDataFactory
                 'amount' => trim($currency.' '.self::invoiceAmount($outstanding)),
             ],
             'payments' => self::invoicePaymentRows($order?->payment_mode, $paid, $outstanding, $currency),
-            'notes' => [
-                __('documents.invoice_sheet.note_due'),
-                __('documents.invoice_sheet.note_check'),
-                __('documents.invoice_sheet.note_title'),
-                __('documents.invoice_sheet.note_ref'),
-            ],
+            'notes' => self::standardNotes(),
             'signatory' => [
                 'name' => $signatoryName,
                 'title' => self::settingString('invoice_signatory_title'),
@@ -509,29 +520,40 @@ class DocumentDataFactory
             $agent?->area,
         ]));
 
+        $payload['generated_at'] = $order->created_at ?? $payload['generated_at'];
+        $payload['details_title'] = __('documents.labels.order_details');
         $payload['parties'] = [
             [
                 'label' => __('documents.labels.customer'),
                 'name' => $agent?->name ?? '—',
-                'lines' => array_values(array_filter([$agent?->phone, $agent?->email, $agent?->area])),
-            ],
-            [
-                'label' => __('documents.labels.ship_to'),
-                'name' => $order->delivery_contact_name ?: ($agent?->name ?? '—'),
-                'lines' => $shipLines,
+                'phone' => $agent?->phone,
+                'email' => $agent?->email,
+                'address' => $order->delivery_address ?: $agent?->area,
+                'lines' => [],
             ],
         ];
+        if ($order->delivery_contact_name && $order->delivery_contact_name !== ($agent?->name ?? null)) {
+            $payload['parties'][] = [
+                'label' => __('documents.labels.ship_to'),
+                'name' => $order->delivery_contact_name,
+                'lines' => $shipLines,
+            ];
+        }
 
         $payload['meta'] = [
             [__('documents.labels.order_no'), '#'.$order->id],
-            [__('documents.labels.order_date'), optional($order->created_at)->format('d M Y') ?? '—'],
-            [__('documents.labels.delivery_date'), optional($order->delivery_date)->format('d M Y') ?? __('documents.labels.tbd')],
-            [__('documents.labels.payment_mode'), ucfirst(str_replace('_', ' ', $order->payment_mode ?? 'cash'))],
-            [__('documents.labels.status'), ucfirst($order->status ?? 'draft')],
+            [__('documents.labels.order_date_label'), optional($order->created_at)->format('j F, Y') ?? '—'],
+            [__('documents.labels.delivery_date'), optional($order->delivery_date)->format('j F, Y') ?? __('documents.labels.tbd')],
         ];
 
-        $payload['columns'] = ['#', __('documents.columns.product'), __('documents.columns.sku'), __('documents.columns.qty'), __('documents.columns.unit'), __('documents.columns.line_total')];
-        $payload['aligns'] = ['center', 'left', 'left', 'right', 'right', 'right'];
+        $payload['columns'] = [
+            __('documents.invoice_sheet.sl'),
+            __('documents.invoice_sheet.product'),
+            __('documents.invoice_sheet.quantity'),
+            __('documents.invoice_sheet.rate'),
+            __('documents.invoice_sheet.amount'),
+        ];
+        $payload['aligns'] = ['center', 'center', 'center', 'center', 'center'];
 
         $subtotal = 0.0;
 
@@ -542,21 +564,25 @@ class DocumentDataFactory
             $payload['rows'][] = [
                 (string) ($index + 1),
                 $item->product->name ?? '—',
-                $item->product->sku ?? '—',
-                number_format((float) $item->quantity, 0),
-                number_format((float) $item->unit_price, 2),
-                number_format($lineTotal, 2),
+                'x '.self::formatQty((float) $item->quantity),
+                self::invoiceAmount((float) $item->unit_price),
+                self::invoiceAmount($lineTotal),
             ];
         }
 
+        $orderTotal = (float) $order->total;
         $payload['totals'] = [
-            [__('documents.totals.subtotal'), number_format($subtotal, 2).' '.$currency],
-            [__('documents.totals.order_total'), number_format((float) $order->total, 2).' '.$currency],
+            [__('documents.invoice_sheet.subtotal'), self::invoiceAmount($subtotal)],
+            [__('documents.invoice_sheet.discount'), self::invoiceAmount(max(0, $subtotal - $orderTotal))],
+            [__('documents.invoice_sheet.vat'), self::invoiceAmount(0)],
+            [__('documents.invoice_sheet.shipping'), self::invoiceAmount(0)],
         ];
 
         if ((float) $order->commission_total > 0) {
-            $payload['totals'][] = [__('documents.totals.commission'), number_format((float) $order->commission_total, 2).' '.$currency];
+            $payload['totals'][] = [__('documents.totals.commission'), self::invoiceAmount((float) $order->commission_total)];
         }
+
+        $payload['totals'][] = [__('documents.invoice_sheet.total'), trim($currency.' '.self::invoiceAmount($orderTotal))];
 
         $payload['notes'] = $order->notes;
         $payload['signatures'] = [
@@ -635,39 +661,31 @@ class DocumentDataFactory
         );
 
         $supplier = $order->supplier;
+        $payload['generated_at'] = $order->created_at ?? $payload['generated_at'];
+        $payload['details_title'] = __('documents.labels.order_details');
         $payload['parties'] = [[
-            'label' => __('documents.labels.supplier'),
+            'label' => __('documents.labels.vendor'),
             'name' => $supplier?->name ?? '—',
-            'lines' => array_values(array_filter([
-                $supplier?->contact_person,
-                $supplier?->phone,
-                $supplier?->email,
-                $supplier?->address,
-                $supplier?->tax_id ? 'BIN '.$supplier->tax_id : null,
-            ])),
+            'phone' => $supplier?->phone,
+            'email' => $supplier?->email,
+            'address' => $supplier?->address,
+            'lines' => [],
         ]];
 
         $payload['meta'] = [
-            [__('documents.labels.po_no'), $order->number],
-            [__('documents.labels.order_date'), optional($order->order_date)->format('d M Y') ?? '—'],
-            [__('documents.labels.expected_date'), optional($order->expected_date)->format('d M Y') ?? '—'],
-            [__('documents.labels.status'), self::labelStatus($order->status)],
+            [__('documents.labels.po_number'), $order->number],
+            [__('documents.labels.order_date_label'), optional($order->order_date)->format('j F, Y') ?? '—'],
+            [__('documents.labels.expected_delivery'), optional($order->expected_date)->format('j F, Y') ?? '—'],
         ];
 
-        $hasDiscount = $order->items->contains(fn ($item) => (float) $item->discount_percent > 0);
-        $hasVat = $order->items->contains(fn ($item) => (float) $item->vat_rate > 0);
-        $payload['columns'] = ['#', __('documents.columns.particulars'), __('documents.columns.qty'), __('documents.columns.uom'), __('documents.columns.rate')];
-        $payload['aligns'] = ['center', 'left', 'right', 'left', 'right'];
-        if ($hasDiscount) {
-            $payload['columns'][] = __('documents.columns.discount');
-            $payload['aligns'][] = 'right';
-        }
-        if ($hasVat) {
-            $payload['columns'][] = __('documents.columns.vat_rate');
-            $payload['aligns'][] = 'right';
-        }
-        $payload['columns'][] = __('documents.columns.amount');
-        $payload['aligns'][] = 'right';
+        $payload['columns'] = [
+            __('documents.invoice_sheet.sl'),
+            __('documents.invoice_sheet.product'),
+            __('documents.invoice_sheet.quantity'),
+            __('documents.invoice_sheet.rate'),
+            __('documents.invoice_sheet.amount'),
+        ];
+        $payload['aligns'] = ['center', 'center', 'center', 'center', 'center'];
 
         $subtotal = 0.0;
         $discountTotal = 0.0;
@@ -692,33 +710,24 @@ class DocumentDataFactory
 
             $particulars = self::lineParticulars($item->description, $item->product);
 
-            $row = [
+            $payload['rows'][] = [
                 (string) ($index + 1),
                 $particulars,
-                self::formatQty($qty),
-                self::productUom($item->product, $item->uom),
-                $unitPrice !== null ? self::money($unitPrice) : '—',
+                'x '.self::formatQty($qty),
+                $unitPrice !== null ? self::invoiceAmount($unitPrice) : '—',
+                self::invoiceAmount($lineTotal),
             ];
-            if ($hasDiscount) {
-                $row[] = self::formatQty($discountPercent).'%';
-            }
-            if ($hasVat) {
-                $row[] = self::formatQty($vatRate).'%';
-            }
-            $row[] = self::money($lineTotal);
-            $payload['rows'][] = $row;
         }
 
+        $grandTotal = $total > 0 ? $total : ($subtotal - $discountTotal + $vatTotal);
+        $currency = config('app.currency', 'BDT');
         $payload['totals'] = [
-            [__('documents.totals.subtotal'), self::moneyLabel($subtotal)],
+            [__('documents.invoice_sheet.subtotal'), self::invoiceAmount($subtotal)],
+            [__('documents.invoice_sheet.discount'), self::invoiceAmount($discountTotal)],
+            [__('documents.invoice_sheet.vat'), self::invoiceAmount($vatTotal)],
+            [__('documents.invoice_sheet.shipping'), self::invoiceAmount(0)],
+            [__('documents.invoice_sheet.total'), trim($currency.' '.self::invoiceAmount($grandTotal))],
         ];
-        if ($discountTotal > 0) {
-            $payload['totals'][] = [__('documents.totals.discount'), '- '.self::moneyLabel($discountTotal)];
-        }
-        if ($vatTotal > 0) {
-            $payload['totals'][] = [__('documents.totals.vat'), self::moneyLabel($vatTotal)];
-        }
-        $payload['totals'][] = [__('documents.totals.po_total'), self::moneyLabel($total > 0 ? $total : ($subtotal - $discountTotal + $vatTotal))];
 
         $payload['notes'] = $order->notes;
         $payload['signatures'] = [
@@ -972,16 +981,17 @@ class DocumentDataFactory
             __('documents.copy.office'),
             __('documents.copy.transport'),
         ];
+        $payload['generated_at'] = $delivery->created_at ?? $payload['generated_at'];
+        $payload['details_title'] = __('documents.labels.delivery_details');
 
         $deliverName = $order?->delivery_contact_name ?: ($agent?->name ?? '—');
         $payload['parties'] = [[
             'label' => __('documents.labels.deliver_to'),
             'name' => $deliverName,
-            'lines' => self::addressLines(
-                $order?->delivery_contact_phone ?: $agent?->phone,
-                $order?->delivery_address,
-                $agent?->area
-            ),
+            'phone' => $order?->delivery_contact_phone ?: $agent?->phone,
+            'email' => $agent?->email,
+            'address' => $order?->delivery_address ?: $agent?->area,
+            'lines' => [],
         ]];
         if ($agent?->name && $agent->name !== $deliverName) {
             array_unshift($payload['parties'], [
@@ -993,10 +1003,8 @@ class DocumentDataFactory
 
         $payload['meta'] = [
             [__('documents.labels.challan_no'), $payload['number']],
-            [__('documents.labels.delivery_no'), '#'.$delivery->id],
             [__('documents.labels.order_no'), $order ? '#'.$order->id : '—'],
-            [__('documents.labels.delivery_date'), optional($order?->delivery_date ?? $delivery->created_at)->format('d M Y') ?? '—'],
-            [__('documents.labels.status'), ucfirst(str_replace('_', ' ', $delivery->status ?? 'scheduled'))],
+            [__('documents.labels.delivery_date'), optional($order?->delivery_date ?? $delivery->created_at)->format('j F, Y') ?? '—'],
         ];
 
         $vehicle = $delivery->vehicle;
@@ -1014,15 +1022,15 @@ class DocumentDataFactory
         }
 
         $payload['columns'] = [
-            '#',
-            __('documents.columns.particulars'),
+            __('documents.invoice_sheet.sl'),
+            __('documents.invoice_sheet.product'),
             __('documents.columns.size'),
             __('documents.columns.uom'),
             __('documents.columns.qty_sent'),
             __('documents.columns.qty_received'),
             __('documents.columns.remarks'),
         ];
-        $payload['aligns'] = ['center', 'left', 'left', 'left', 'right', 'right', 'left'];
+        $payload['aligns'] = ['center', 'center', 'center', 'center', 'center', 'center', 'center'];
         $payload['widths'] = ['6%', '28%', '12%', '10%', '12%', '14%', '18%'];
 
         $items = $delivery->items->isNotEmpty()
@@ -1036,7 +1044,7 @@ class DocumentDataFactory
                     $item->product->name ?? '—',
                     self::productSize($item->product),
                     self::productUom($item->product),
-                    self::formatQty((float) $item->quantity),
+                    'x '.self::formatQty((float) $item->quantity),
                     '________',
                     '—',
                 ];
@@ -1054,7 +1062,7 @@ class DocumentDataFactory
                     $item->product->name ?? '—',
                     self::productSize($item->product),
                     self::productUom($item->product),
-                    self::formatQty((float) $item->qty_dispatched),
+                    'x '.self::formatQty((float) $item->qty_dispatched),
                     $received > 0 ? self::formatQty($received) : '________',
                     $remarks !== [] ? implode(' · ', $remarks) : '—',
                 ];
@@ -1182,6 +1190,30 @@ class DocumentDataFactory
         $payload['footer'] = __('documents.footer.pod');
 
         return $payload;
+    }
+
+    /**
+     * @param  array<int, mixed>  $extra
+     * @return array<int, string>
+     */
+    protected static function standardNotes(array $extra = []): array
+    {
+        $notes = [
+            __('documents.invoice_sheet.note_due'),
+            __('documents.invoice_sheet.note_check'),
+            __('documents.invoice_sheet.note_title'),
+            __('documents.invoice_sheet.note_ref'),
+        ];
+
+        foreach ($extra as $note) {
+            $note = trim(strip_tags((string) $note));
+            if ($note === '' || str_starts_with($note, 'Sample ') || in_array($note, $notes, true)) {
+                continue;
+            }
+            $notes[] = $note;
+        }
+
+        return $notes;
     }
 
     protected static function labelStatus(?string $status, string $fallback = 'draft'): string
