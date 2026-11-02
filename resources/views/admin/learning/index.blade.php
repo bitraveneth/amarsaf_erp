@@ -33,6 +33,29 @@
             </div>
         </header>
 
+        <section class="learning-troubleshoot" x-show="courseData('troubleshooting')" x-cloak>
+            <div class="learning-troubleshoot__head">
+                <h2 class="learning-academy__section-title" x-text="t(ui.troubleshoot_title)"></h2>
+                <p class="learning-troubleshoot__intro" x-text="t(ui.troubleshoot_intro)"></p>
+            </div>
+            <div class="learning-troubleshoot__grid">
+                <template x-for="trouble in (courseData('troubleshooting')?.troubles ?? [])" :key="trouble.id">
+                    <article class="learning-trouble-card">
+                        <h3 x-text="t(trouble.title)"></h3>
+                        <p class="learning-trouble-card__label" x-text="t(ui.when_label)"></p>
+                        <div class="learning-trouble-card__text" x-html="formatProse(t(trouble.when))"></div>
+                        <p class="learning-trouble-card__label" x-text="t(ui.why_label)"></p>
+                        <div class="learning-trouble-card__text" x-html="formatProse(t(trouble.why))"></div>
+                        <button type="button"
+                                class="learning-academy__btn learning-academy__btn--primary"
+                                @click="openCourse('troubleshooting', Math.max(0, lessons('troubleshooting').findIndex(lesson => lesson.id === ('trouble-' + trouble.id))))"
+                                x-text="t(ui.continue_course)">
+                        </button>
+                    </article>
+                </template>
+            </div>
+        </section>
+
         <template x-if="continueTarget()">
             <section class="learning-academy__continue learning-academy__continue--no-print">
                 <div class="learning-academy__continue-body">
@@ -267,6 +290,24 @@
                                         </template>
                                     </div>
                                 </section>
+                            </template>
+                        </div>
+                    </template>
+
+                    <template x-if="currentLesson()?.type === 'trouble'">
+                        <div class="learning-course__panel learning-trouble">
+                            <p class="learning-trouble__label" x-text="t(ui.when_label)"></p>
+                            <div class="learning-prose" x-html="'<p class=\'learning-prose__p\'>' + formatProse(t(currentLesson().when)) + '</p>'"></div>
+                            <p class="learning-trouble__label" x-text="t(ui.why_label)"></p>
+                            <div class="learning-prose" x-html="'<p class=\'learning-prose__p\'>' + formatProse(t(currentLesson().why)) + '</p>'"></div>
+                            <template x-if="currentLesson().fix">
+                                <div>
+                                    <p class="learning-trouble__label" x-text="t(ui.fix_label)"></p>
+                                    <div class="learning-prose" x-html="'<p class=\'learning-prose__p\'>' + formatProse(t(currentLesson().fix)) + '</p>'"></div>
+                                </div>
+                            </template>
+                            <template x-if="currentLesson().path">
+                                <a :href="currentLesson().path" class="learning-academy__btn learning-academy__btn--primary" x-text="t(ui.open_screen)"></a>
                             </template>
                         </div>
                     </template>

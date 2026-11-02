@@ -144,6 +144,17 @@ return [
             ['title' => ['en' => 'Contracts', 'bn' => 'চুক্তি'], 'path' => '/admin/contracts'],
         ],
     ],
+    'troubleshooting' => [
+        'roles' => ['all'],
+        'related_screens' => [
+            ['title' => ['en' => 'Profit and loss', 'bn' => 'লাভ-ক্ষতি'], 'path' => '/admin/reports/pl'],
+            ['title' => ['en' => 'Expenses', 'bn' => 'খরচ'], 'path' => '/admin/expenses'],
+            ['title' => ['en' => 'Customer invoices', 'bn' => 'গ্রাহক ইনভয়েস'], 'path' => '/admin/finance'],
+            ['title' => ['en' => 'Deliveries', 'bn' => 'ডেলিভারি'], 'path' => '/admin/deliveries'],
+            ['title' => ['en' => 'Purchase orders', 'bn' => 'ক্রয় অর্ডার'], 'path' => '/admin/purchase-orders'],
+            ['title' => ['en' => 'Goods receipts', 'bn' => 'GRN'], 'path' => '/admin/goods-receipts'],
+        ],
+    ],
     'reports' => [
         'roles' => ['all', 'admin', 'accounts_officer'],
         'related_screens' => [

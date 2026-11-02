@@ -417,7 +417,11 @@ export function learningHub(modules, ui, roles, initialModule, defaultRole, lear
                 const title = this.t(mod.title).toLowerCase();
                 const summary = this.t(mod.summary ?? { en: '', bn: '' }).toLowerCase();
                 const track = this.t(mod.course?.meta?.track ?? { en: '', bn: '' }).toLowerCase();
-                return title.includes(q) || summary.includes(q) || mod.slug.includes(q) || track.includes(q);
+                const troubleText = (mod.troubles ?? [])
+                    .map((item) => [item.title, item.when, item.why, item.fix].map((part) => this.t(part ?? { en: '', bn: '' })).join(' '))
+                    .join(' ')
+                    .toLowerCase();
+                return title.includes(q) || summary.includes(q) || troubleText.includes(q) || mod.slug.includes(q) || track.includes(q);
             });
         },
 
