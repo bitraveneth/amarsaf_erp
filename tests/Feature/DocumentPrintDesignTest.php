@@ -273,7 +273,7 @@ class DocumentPrintDesignTest extends TestCase
         $this->assertStringContainsString('SL', $html);
         $this->assertStringContainsString('Product description', $html);
         $this->assertStringContainsString('Generated:', $html);
-        $this->assertStringContainsString('Payment is due within [X] days of invoice date.', $html);
+        $this->assertStringContainsString('Payment is due within 7 days of invoice date.', $html);
         $this->assertStringContainsString('If you have any inquiries regarding this sales order', $html);
         $this->assertStringNotContainsString('class="doc-banner"', $html);
         $this->assertStringNotContainsString('class="doc-lines"', $html);

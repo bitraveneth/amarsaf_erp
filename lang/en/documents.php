@@ -195,7 +195,7 @@ return [
         'received' => 'Amount received',
         'balance' => 'Balance due',
         'notes' => 'Notes & payment terms',
-        'note_due' => 'Payment is due within [X] days of invoice date.',
+        'note_due' => 'Payment is due within 7 days of invoice date.',
         'shipping' => 'Shipping & handling',
         'inquiry_document' => 'If you have any inquiries regarding this :document, please call us at :phone',
         'inquiry_document_plain' => 'If you have any inquiries regarding this :document, please contact us.',
