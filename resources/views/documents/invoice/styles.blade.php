@@ -11,25 +11,25 @@
         border-collapse: collapse;
     }
     .inv-head td, .inv-intro td, .inv-bottom td { vertical-align: top; }
-    .inv-logo { display: block; height: 52px; width: auto; }
+    .inv-logo { display: block; height: 48px; width: auto; }
+    .inv-identity { padding-top: 26px; }
     .inv-company {
-        margin-top: 12px;
-        font-size: 16px;
+        margin: 0;
+        font-size: 15px;
         font-weight: 700;
-        letter-spacing: .01em;
         color: #111827;
     }
-    .inv-contact { width: auto; margin-top: 10px; border-collapse: collapse; }
-    .inv-contact td { vertical-align: top; font-size: 11px; color: #374151; line-height: 1.45; }
-    .inv-ico-cell { width: 22px; padding: 0 8px 10px 0; }
-    .inv-contact-text { padding: 0 0 10px 0; }
-    .inv-ico { width: 13px; height: 13px; margin-top: 1px; }
+    .inv-contact { width: auto; margin-top: 6px; border-collapse: collapse; }
+    .inv-contact td { vertical-align: top; font-size: 10px; color: #374151; line-height: 1.35; }
+    .inv-ico-cell { width: 18px; padding: 1px 6px 1px 0; }
+    .inv-contact-text { padding: 1px 0; }
+    .inv-ico { width: 12px; height: 12px; margin-top: 1px; }
     .inv-contact-line {
         text-align: left;
-        font-size: 11px;
+        font-size: 10px;
         color: #374151;
-        line-height: 1.5;
-        margin-top: 8px;
+        line-height: 1.35;
+        margin-top: 2px;
     }
     .inv-generated {
         margin-top: 8px;
@@ -51,7 +51,7 @@
         border-radius: 6px;
         vertical-align: middle;
     }
-    .inv-intro { margin-top: 26px; }
+    .inv-intro { margin-top: 22px; }
     .inv-kicker {
         font-size: 10px;
         font-weight: 700;

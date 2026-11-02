@@ -4,23 +4,25 @@
             @if(!empty($logoSrc))
                 <img src="{{ $logoSrc }}" alt="" class="inv-logo">
             @endif
-            @if(!empty($company['legal_name']))
-                <div class="inv-company">{{ $company['legal_name'] }}</div>
-            @endif
-            @if($contactLines !== [])
-                <table class="inv-contact">
-                    @foreach($contactLines as $line)
-                        <tr>
-                            <td class="inv-ico-cell">
-                                @if(!empty($line['icon']))
-                                    <img src="{{ $line['icon'] }}" alt="" class="inv-ico">
-                                @endif
-                            </td>
-                            <td class="inv-contact-text">{!! nl2br(e($line['text'])) !!}</td>
-                        </tr>
-                    @endforeach
-                </table>
-            @endif
+            <div class="inv-identity">
+                @if(!empty($company['legal_name']))
+                    <div class="inv-company">{{ $company['legal_name'] }}</div>
+                @endif
+                @if($contactLines !== [])
+                    <table class="inv-contact">
+                        @foreach($contactLines as $line)
+                            <tr>
+                                <td class="inv-ico-cell">
+                                    @if(!empty($line['icon']))
+                                        <img src="{{ $line['icon'] }}" alt="" class="inv-ico">
+                                    @endif
+                                </td>
+                                <td class="inv-contact-text">{!! nl2br(e($line['text'])) !!}</td>
+                            </tr>
+                        @endforeach
+                    </table>
+                @endif
+            </div>
         </td>
         <td style="width: 42%;">
             <div @class(['inv-title', 'inv-title-long' => mb_strlen($title) > 8])>{{ $title }}</div>
