@@ -101,6 +101,84 @@ class DocumentPrintDesignTest extends TestCase
         $this->assertStringContainsString('1,200.00', $report);
     }
 
+    public function test_customer_invoice_uses_the_designed_sheet(): void
+    {
+        $payload = [
+            'title' => 'Tax invoice',
+            'number' => 'INV-000001',
+            'status' => 'Issued',
+            'generated_at' => now(),
+            'sheet' => 'invoice',
+            'invoice' => [
+                'number' => 'INV-000001',
+                'issued' => '29 October, 2020',
+                'due' => '5 January, 2020',
+                'bill_to' => [
+                    'name' => 'Megumin Ryu',
+                    'phone' => '01712345678',
+                    'email' => 'megumin_ryu@mail.com',
+                    'address' => 'Main street',
+                ],
+                'contact' => ['+8801750720000', 'contact@amarsaf.com', 'Gokulkhali'],
+                'lines' => [[
+                    'sl' => '1',
+                    'description' => 'Drinking water',
+                    'qty' => 'x 2',
+                    'rate' => '540',
+                    'amount' => '1,080',
+                ]],
+                'totals' => [
+                    ['label' => 'Sub Total', 'amount' => '1,080'],
+                    ['label' => 'Discount (-)', 'amount' => '0'],
+                    ['label' => 'VAT (+)', 'amount' => '0'],
+                    ['label' => 'Invoice Total', 'amount' => '1,080'],
+                    ['label' => 'Paid Advance (-)', 'amount' => '0'],
+                ],
+                'grand' => ['label' => 'Total', 'amount' => 'BDT 1,080'],
+                'payments' => [
+                    ['label' => 'Account Name', 'value' => 'Sohag Food'],
+                    ['label' => 'Bank Name', 'value' => 'Eastern Bank PLC'],
+                ],
+                'notes' => ['Payment is due by the due date shown on this invoice.'],
+                'signatory' => [
+                    'name' => 'Authorized signatory',
+                    'title' => 'Managing Director',
+                    'company' => 'Sohag Food & Beverage Ltd.',
+                ],
+                'footer' => 'If you have any inquiries regarding this invoice, please call us at +8801750720000',
+            ],
+        ];
+
+        $html = view('documents.layouts.pdf', [
+            'payload' => $payload,
+            'company' => $this->company(),
+        ])->render();
+
+        $this->assertStringContainsString('class="inv inv-for-pdf"', $html);
+        $this->assertStringContainsString('INVOICE', $html);
+        $this->assertStringContainsString('Billed to', $html);
+        $this->assertStringContainsString('Megumin Ryu', $html);
+        $this->assertStringContainsString('Sub Total', $html);
+        $this->assertStringContainsString('inv-grand', $html);
+        $this->assertStringContainsString('Payment details', $html);
+        $this->assertStringContainsString('BDT 1,080', $html);
+        $this->assertStringNotContainsString('class="doc-banner"', $html);
+        $this->assertStringNotContainsString('class="doc-lines"', $html);
+
+        $pdf = PdfDocumentBuilder::loadView('documents.layouts.pdf', [
+            'payload' => $payload,
+            'company' => $this->company(),
+        ])->setPaper('a4');
+        $pdf->setOption('isFontSubsettingEnabled', false);
+
+        $text = $this->pdfText($pdf->output());
+        $this->assertStringContainsString('INVOICE', $text);
+        $this->assertStringContainsString('BILLED TO', $text);
+        $this->assertStringContainsString('Drinking water', $text);
+        $this->assertStringContainsString('Sub Total', $text);
+        $this->assertStringContainsString('PAYMENT DETAILS', $text);
+    }
+
     public function test_challan_pdf_contains_each_copy_label(): void
     {
         $pdf = PdfDocumentBuilder::loadView('documents.layouts.pdf', [

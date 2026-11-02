@@ -21,6 +21,13 @@ class SystemSettingController extends Controller
                 'company_email' => SystemSettings::get('company_email'),
                 'company_phone' => SystemSettings::get('company_phone'),
                 'company_address' => SystemSettings::get('company_address'),
+                'company_bank_account_name' => SystemSettings::get('company_bank_account_name'),
+                'company_bank_account_number' => SystemSettings::get('company_bank_account_number'),
+                'company_bank_name' => SystemSettings::get('company_bank_name'),
+                'company_bank_branch' => SystemSettings::get('company_bank_branch'),
+                'company_bank_routing' => SystemSettings::get('company_bank_routing'),
+                'invoice_signatory_name' => SystemSettings::get('invoice_signatory_name'),
+                'invoice_signatory_title' => SystemSettings::get('invoice_signatory_title'),
                 'currency_code' => SystemSettings::get('currency_code', config('app.currency', 'BDT')),
                 'currency_symbol' => SystemSettings::get('currency_symbol', '৳'),
                 'brand_primary_color' => SystemSettings::sanitizeHexColor(SystemSettings::get('brand_primary_color')) ?? '#5F4BFF',
@@ -69,6 +76,13 @@ class SystemSettingController extends Controller
             'company_email' => 'nullable|email|max:120',
             'company_phone' => 'nullable|string|max:40',
             'company_address' => 'nullable|string|max:500',
+            'company_bank_account_name' => 'nullable|string|max:160',
+            'company_bank_account_number' => 'nullable|string|max:80',
+            'company_bank_name' => 'nullable|string|max:160',
+            'company_bank_branch' => 'nullable|string|max:160',
+            'company_bank_routing' => 'nullable|string|max:40',
+            'invoice_signatory_name' => 'nullable|string|max:160',
+            'invoice_signatory_title' => 'nullable|string|max:160',
             'currency_code' => 'required|string|max:10',
             'currency_symbol' => 'nullable|string|max:10',
             'brand_primary_color' => ['required', 'regex:/^#?[0-9a-fA-F]{6}$/'],
@@ -104,6 +118,13 @@ class SystemSettingController extends Controller
             'company_email',
             'company_phone',
             'company_address',
+            'company_bank_account_name',
+            'company_bank_account_number',
+            'company_bank_name',
+            'company_bank_branch',
+            'company_bank_routing',
+            'invoice_signatory_name',
+            'invoice_signatory_title',
             'currency_code',
             'currency_symbol',
             'brand_primary_color',
@@ -217,7 +238,7 @@ class SystemSettingController extends Controller
                     return redirect()
                         ->route('admin.settings.index', ['tab' => 'database'])
                         ->withErrors([
-                            'backup' => $exception->getMessage() . ' Automatic rollback also failed. Safety backup: ' . $safetyBackup,
+                            'backup' => $exception->getMessage().' Automatic rollback also failed. Safety backup: '.$safetyBackup,
                         ]);
                 }
             }
@@ -249,7 +270,7 @@ class SystemSettingController extends Controller
 
         return redirect()
             ->route('admin.settings.index', ['tab' => 'database'])
-            ->with('status', 'Backup deleted: ' . basename($data['filename']));
+            ->with('status', 'Backup deleted: '.basename($data['filename']));
     }
 
     public function restoreBackup(Request $request, DatabaseBackupManager $backupManager)
@@ -272,7 +293,7 @@ class SystemSettingController extends Controller
                     return redirect()
                         ->route('admin.settings.index', ['tab' => 'database'])
                         ->withErrors([
-                            'backup' => $exception->getMessage() . ' Automatic rollback also failed. Safety backup: ' . $safetyBackup,
+                            'backup' => $exception->getMessage().' Automatic rollback also failed. Safety backup: '.$safetyBackup,
                         ]);
                 }
             }
@@ -284,6 +305,6 @@ class SystemSettingController extends Controller
 
         return redirect()
             ->route('admin.settings.index', ['tab' => 'database'])
-            ->with('status', 'Database restored from backup. A pre-restore safety backup was created as ' . $safetyBackup . '.');
+            ->with('status', 'Database restored from backup. A pre-restore safety backup was created as '.$safetyBackup.'.');
     }
 }

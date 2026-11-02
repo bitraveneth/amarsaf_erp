@@ -6,6 +6,9 @@
     <title>{{ $payload['title'] ?? 'Document' }} · {{ $payload['number'] ?? '' }}</title>
     <link rel="stylesheet" href="{{ asset('css/document-print.css') }}?v={{ @filemtime(public_path('css/document-print.css')) ?: 1 }}">
     @include('documents.partials.styles', compact('company'))
+    @if(($payload['sheet'] ?? '') === 'invoice')
+        @include('documents.invoice.styles')
+    @endif
     <style>
         .doc-preview-body .doc-copy-break {
             display: block;

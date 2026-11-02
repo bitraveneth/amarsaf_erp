@@ -18,7 +18,7 @@
                 $sheetPayload['subtitle'] = $copyLabel;
             }
         @endphp
-        @include('documents.partials.sheet', [
+        @include(($sheetPayload['sheet'] ?? '') === 'invoice' ? 'documents.invoice.sheet' : 'documents.partials.sheet', [
             'company' => $company,
             'payload' => $sheetPayload,
             'forPdf' => $forPdf ?? false,
