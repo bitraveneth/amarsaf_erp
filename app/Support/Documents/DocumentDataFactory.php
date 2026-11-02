@@ -16,7 +16,7 @@ class DocumentDataFactory
 {
     public static function build(string $type, object $model): array
     {
-        return match ($type) {
+        $payload = match ($type) {
             'invoice' => self::invoice(self::asInvoice($model)),
             'sales-order' => self::salesOrder(self::asOrder($model)),
             'picking-list' => self::pickingList(self::asOrder($model)),
@@ -29,6 +29,139 @@ class DocumentDataFactory
             'logistics-bill' => self::logisticsBill(self::asLogisticsBill($model)),
             default => throw new InvalidArgumentException("Unsupported document type [{$type}]."),
         };
+
+        if (($payload['sheet'] ?? '') === 'invoice') {
+            return $payload;
+        }
+
+        return self::designedSheet($payload);
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    public static function designedSheet(array $payload): array
+    {
+        $parties = array_values($payload['parties'] ?? []);
+        $primary = $parties[0] ?? ['label' => __('documents.labels.bill_to'), 'name' => '—', 'lines' => []];
+        $payments = [];
+
+        foreach (array_slice($parties, 1) as $party) {
+            $extra = array_values(array_filter($party['lines'] ?? []));
+            $payments[] = [
+                'label' => (string) ($party['label'] ?? __('documents.labels.ship_to')),
+                'value' => trim((string) ($party['name'] ?? '—').($extra !== [] ? ' · '.implode(', ', $extra) : '')),
+            ];
+        }
+
+        foreach ($payload['intro'] ?? [] as $band) {
+            foreach ($band['lines'] ?? [] as $line) {
+                $payments[] = self::detailRow((string) ($band['label'] ?? __('documents.labels.details')), (string) $line);
+            }
+        }
+
+        foreach ($payload['blocks'] ?? [] as $block) {
+            foreach ($block['lines'] ?? [] as $line) {
+                $payments[] = self::detailRow((string) ($block['label'] ?? __('documents.labels.details')), (string) $line);
+            }
+        }
+
+        $notes = $payload['notes'] ?? [];
+        if (is_string($notes)) {
+            $notes = trim(strip_tags($notes));
+            $notes = $notes === '' ? [] : [$notes];
+        }
+
+        $signatures = [];
+        foreach ($payload['signatures'] ?? [] as $signature) {
+            $label = is_array($signature) ? ($signature[0] ?? '') : (string) $signature;
+            if (is_string($label) && trim($label) !== '') {
+                $signatures[] = trim($label);
+            }
+        }
+
+        $totals = array_values($payload['totals'] ?? []);
+        $grandIndex = null;
+        foreach ($totals as $index => $row) {
+            $label = strtolower((string) ($row[0] ?? ''));
+            if (preg_match('/\b(total|outstanding|due)\b/', $label) === 1) {
+                $grandIndex = $index;
+            }
+        }
+        $grand = null;
+        if ($totals !== []) {
+            $grandIndex ??= count($totals) - 1;
+            $chosen = $totals[$grandIndex];
+            unset($totals[$grandIndex]);
+            $totals = array_values($totals);
+            $grand = [
+                'label' => (string) ($chosen[0] ?? __('documents.invoice_sheet.total')),
+                'amount' => (string) ($chosen[1] ?? ''),
+            ];
+        }
+
+        $detailLabels = [];
+        foreach (array_merge($payload['intro'] ?? [], $payload['blocks'] ?? []) as $band) {
+            $label = trim((string) ($band['label'] ?? ''));
+            if ($label !== '') {
+                $detailLabels[$label] = true;
+            }
+        }
+        $detailsLabel = count($parties) <= 1 && count($detailLabels) === 1
+            ? (string) array_key_first($detailLabels)
+            : __('documents.labels.details');
+
+        if (! is_array($notes)) {
+            $notes = [];
+        }
+
+        $payload['sheet'] = 'invoice';
+        $payload['invoice'] = [
+            'layout' => 'document',
+            'title' => (string) ($payload['title'] ?? __('documents.types.invoice')),
+            'number' => (string) ($payload['number'] ?? ''),
+            'bill_to' => [
+                'label' => (string) ($primary['label'] ?? __('documents.labels.bill_to')),
+                'name' => (string) ($primary['name'] ?? '—'),
+                'lines' => array_values(array_filter($primary['lines'] ?? [])),
+            ],
+            'meta' => array_map(fn ($row) => [
+                'label' => (string) ($row[0] ?? ''),
+                'value' => (string) ($row[1] ?? ''),
+            ], array_slice($payload['meta'] ?? [], 0, 8)),
+            'columns' => array_values($payload['columns'] ?? []),
+            'aligns' => array_values($payload['aligns'] ?? []),
+            'widths' => array_values($payload['widths'] ?? []),
+            'rows' => array_values($payload['rows'] ?? []),
+            'totals' => array_map(fn ($row) => [
+                'label' => (string) ($row[0] ?? ''),
+                'amount' => (string) ($row[1] ?? ''),
+            ], $totals),
+            'grand' => $grand,
+            'payments' => $payments,
+            'details_label' => $detailsLabel,
+            'notes' => array_values($notes),
+            'signatures' => $signatures,
+            'footer' => (string) ($payload['footer'] ?? ''),
+        ];
+
+        return $payload;
+    }
+
+    /**
+     * @return array{label: string, value: string}
+     */
+    protected static function detailRow(string $label, string $line): array
+    {
+        if (str_contains($line, ':')) {
+            [$parsedLabel, $value] = explode(':', $line, 2);
+            if (trim($parsedLabel) !== '' && trim($value) !== '') {
+                return ['label' => trim($parsedLabel), 'value' => trim($value)];
+            }
+        }
+
+        return ['label' => $label, 'value' => trim($line)];
     }
 
     protected static function base(string $title, string $number, ?string $status = null, ?string $subtitle = null): array
@@ -498,7 +631,7 @@ class DocumentDataFactory
         $payload = self::base(
             __('documents.types.purchase_order'),
             $order->number,
-            ucfirst($order->status ?? 'draft')
+            self::labelStatus($order->status)
         );
 
         $supplier = $order->supplier;
@@ -518,7 +651,7 @@ class DocumentDataFactory
             [__('documents.labels.po_no'), $order->number],
             [__('documents.labels.order_date'), optional($order->order_date)->format('d M Y') ?? '—'],
             [__('documents.labels.expected_date'), optional($order->expected_date)->format('d M Y') ?? '—'],
-            [__('documents.labels.status'), ucfirst($order->status ?? 'draft')],
+            [__('documents.labels.status'), self::labelStatus($order->status)],
         ];
 
         $hasDiscount = $order->items->contains(fn ($item) => (float) $item->discount_percent > 0);
@@ -1049,6 +1182,13 @@ class DocumentDataFactory
         $payload['footer'] = __('documents.footer.pod');
 
         return $payload;
+    }
+
+    protected static function labelStatus(?string $status, string $fallback = 'draft'): string
+    {
+        $label = trim(str_replace('_', ' ', (string) ($status ?: $fallback)));
+
+        return $label === '' ? ucfirst($fallback) : ucfirst($label);
     }
 
     protected static function money(float $amount): string

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Support\Documents\DocumentDataFactory;
 use App\Support\Documents\DocumentNumbers;
 use App\Support\PdfDocumentBuilder;
 use Carbon\Carbon;
@@ -220,6 +221,73 @@ class DocumentPrintDesignTest extends TestCase
         $this->assertStringNotContainsString('Saf ERP', $html);
         $this->assertStringNotContainsString('class="inv-company"', $html);
         $this->assertStringContainsString('SFIN2026101801', $html);
+    }
+
+    public function test_sales_order_and_challan_use_the_purple_sheet(): void
+    {
+        $salesOrder = DocumentDataFactory::designedSheet([
+            'title' => 'Sales order',
+            'number' => '#6',
+            'parties' => [
+                [
+                    'label' => 'Customer',
+                    'name' => 'Gulshan Trading',
+                    'lines' => ['01700000000'],
+                ],
+                [
+                    'label' => 'Ship to',
+                    'name' => 'Gulshan Trading',
+                    'lines' => ['Gokulkhali'],
+                ],
+            ],
+            'meta' => [['Order no', '#6']],
+            'columns' => ['#', 'Product', 'Amount'],
+            'aligns' => ['center', 'left', 'right'],
+            'rows' => [['1', 'Drinking water', '1,080.00']],
+            'totals' => [
+                ['Subtotal', '1,080.00 BDT'],
+                ['Order total', '1,080.00 BDT'],
+                ['Commission', '50.00 BDT'],
+            ],
+            'signatures' => [['Prepared by', ''], ['Customer signature', '']],
+            'footer' => 'Sales order footer',
+        ]);
+
+        $this->assertSame('invoice', $salesOrder['sheet']);
+        $this->assertSame('document', $salesOrder['invoice']['layout']);
+        $this->assertSame('Order total', $salesOrder['invoice']['grand']['label']);
+        $this->assertSame('Details', $salesOrder['invoice']['details_label']);
+        $this->assertSame('Commission', $salesOrder['invoice']['totals'][1]['label']);
+
+        $html = view('documents.layouts.pdf', [
+            'payload' => $salesOrder,
+            'company' => $this->company(),
+        ])->render();
+
+        $this->assertStringContainsString('class="inv-title inv-title-long"', $html);
+        $this->assertStringContainsString('Sales order', $html);
+        $this->assertStringContainsString('Gulshan Trading', $html);
+        $this->assertStringContainsString('Prepared by', $html);
+        $this->assertStringContainsString('Order total', $html);
+        $this->assertStringNotContainsString('class="doc-banner"', $html);
+        $this->assertStringNotContainsString('class="doc-lines"', $html);
+
+        $challan = DocumentDataFactory::designedSheet($this->challanPayload());
+        $challanHtml = view('documents.layouts.print', [
+            'type' => 'delivery-challan',
+            'id' => 9,
+            'payload' => $challan,
+            'company' => $this->company(),
+            'backUrl' => null,
+            'autoPrint' => false,
+        ])->render();
+
+        $this->assertSame(3, substr_count($challanHtml, 'class="inv-copy"'));
+        $this->assertStringContainsString('Customer copy', $challanHtml);
+        $this->assertStringContainsString('Transport copy', $challanHtml);
+        $this->assertStringContainsString('Driver', $challanHtml);
+        $this->assertStringNotContainsString('class="doc-banner"', $challanHtml);
+        $this->assertNull($challan['invoice']['grand']);
     }
 
     public function test_document_numbers_follow_the_date_standard(): void

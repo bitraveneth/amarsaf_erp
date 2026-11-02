@@ -293,7 +293,8 @@
                                     @endif
                                 </td>
                                 <td class="px-4 py-3 text-right">
-                                    <div class="flex flex-wrap items-center justify-end gap-2">
+                                    <div class="flex flex-nowrap items-center justify-end gap-1.5" style="flex-wrap: nowrap;">
+                                        <x-admin.document-link type="production-order" :id="$run->id" label="Order" />
                                         <a href="{{ $run->repeatCreateUrl() }}"
                                            class="erp-btn-action text-brand-700 dark:text-brand-300"
                                            title="Repeat this run with same settings">

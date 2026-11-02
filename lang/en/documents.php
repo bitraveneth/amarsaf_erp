@@ -30,6 +30,7 @@ return [
 
     'labels' => [
         'bill_to' => 'Bill to',
+        'details' => 'Details',
         'deliver_to' => 'Deliver to',
         'ship_to' => 'Ship to',
         'customer' => 'Customer',

@@ -55,8 +55,20 @@
         letter-spacing: 1.5px;
         color: #6A2ACD;
         text-align: right;
-        line-height: 1;
+        line-height: 1.05;
+        text-transform: uppercase;
     }
+    .inv-title-long { font-size: 22px; letter-spacing: .04em; }
+    .inv-copy {
+        margin-top: 6px;
+        text-align: right;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: .08em;
+        text-transform: uppercase;
+        color: #6A2ACD;
+    }
+    .inv-bill-line { font-size: 10px; color: #4b5563; line-height: 1.45; }
     .inv-meta { width: auto; margin-top: 12px; margin-left: auto; }
     .inv-meta td { font-size: 10px; padding: 2px 0; white-space: nowrap; }
     .inv-meta .lbl { color: #6b7280; text-align: left; padding-right: 28px; }
@@ -137,6 +149,8 @@
         color: #111827;
     }
     .inv-sign-meta { text-align: center; font-size: 9px; color: #4b5563; line-height: 1.35; }
+    .inv-signs { width: 100%; margin-top: 8px; border-collapse: collapse; }
+    .inv-signs td { width: 33%; padding: 0 10px; vertical-align: bottom; text-align: center; }
     .inv-footer {
         margin-top: 22px;
         background: #6A2ACD;

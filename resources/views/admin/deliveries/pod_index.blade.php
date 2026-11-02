@@ -287,15 +287,10 @@
                                         </div>
                                     </form>
                                 </td>
-                                <td class="px-4 py-3 text-right">
-                                    <div class="flex items-center justify-end gap-2">
-                                        <a href="{{ route('admin.deliveries.packing-slip', $delivery) }}" 
-                                           class="erp-btn-action">
-                                            <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                                            </svg>
-                                            Slip
-                                        </a>
+                                <td class="whitespace-nowrap px-4 py-3 text-right align-middle">
+                                    <div class="flex flex-nowrap items-center justify-end gap-1.5" style="flex-wrap: nowrap;">
+                                        <x-admin.document-link type="pod" :id="$delivery->id" label="POD" />
+                                        <x-admin.document-link type="delivery-challan" :id="$delivery->id" label="Challan" />
                                         
                                         @if(Route::has('admin.deliveries.edit'))
                                         <a href="{{ route('admin.deliveries.edit', $delivery) }}" 

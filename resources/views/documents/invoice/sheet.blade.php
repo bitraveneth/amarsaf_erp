@@ -8,6 +8,13 @@
     $notes = $invoice['notes'] ?? [];
     $signatory = $invoice['signatory'] ?? [];
     $contact = array_values(array_filter($invoice['contact'] ?? []));
+    if ($contact === []) {
+        $contact = array_values(array_filter([
+            $company['phone'] ?? null,
+            $company['email'] ?? null,
+            $company['address'] ?? null,
+        ]));
+    }
     $fullMark = public_path('images/brand/saf-logo-full-purple.png');
     $usingDefaultLogo = ! empty($company['logo_path'])
         && is_file($fullMark)
@@ -23,6 +30,9 @@
     }
 @endphp
 
+@if(($invoice['layout'] ?? '') === 'document')
+    @include('documents.invoice.document')
+@else
 <div @class(['inv', 'inv-for-pdf' => $forPdf ?? false])>
     <table class="inv-head">
         <tr>
@@ -168,3 +178,4 @@
 
     <div class="inv-footer">{{ $invoice['footer'] ?? '' }}</div>
 </div>
+@endif
