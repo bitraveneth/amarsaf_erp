@@ -11,8 +11,9 @@ use Illuminate\Support\Facades\Schema;
 /**
  * Production login accounts only — no employees, agents, or transactional demo data.
  *
- * Super Admin password: SEED_USER_PASSWORD (required when APP_ENV=production).
- * Other roles use fixed simple passwords defined below (change after first login).
+ * Passwords come from .env only (never commit real passwords):
+ * - SEED_USER_PASSWORD → super admin
+ * - SEED_PASSWORD_ADMIN, SEED_PASSWORD_ACCOUNTS, … → other roles
  */
 class ProductionUsersSeeder extends Seeder
 {
@@ -20,13 +21,11 @@ class ProductionUsersSeeder extends Seeder
     {
         $superPassword = (string) env('SEED_USER_PASSWORD', '');
 
-        if (app()->environment('production') && $superPassword === '') {
+        if ($superPassword === '') {
             $this->command?->warn('SEED_USER_PASSWORD is empty — skipping production users.');
 
             return;
         }
-
-        $superPassword = $superPassword !== '' ? $superPassword : 'password';
 
         $accounts = [
             [
@@ -39,59 +38,65 @@ class ProductionUsersSeeder extends Seeder
                 'email' => 'admin@saferpv.local',
                 'name' => 'Admin User',
                 'role' => 'admin',
-                'password' => 'OceanWave92',
+                'password' => (string) env('SEED_PASSWORD_ADMIN', ''),
             ],
             [
                 'email' => 'accounts@saferpv.local',
                 'name' => 'Accounts Officer',
                 'role' => 'accounts_officer',
-                'password' => 'LedgerFox47',
+                'password' => (string) env('SEED_PASSWORD_ACCOUNTS', ''),
             ],
             [
                 'email' => 'purchase@saferpv.local',
                 'name' => 'Purchase Executive',
                 'role' => 'purchase_executive',
-                'password' => 'CargoMint31',
+                'password' => (string) env('SEED_PASSWORD_PURCHASE', ''),
             ],
             [
                 'email' => 'warehouse@saferpv.local',
                 'name' => 'Warehouse Officer',
                 'role' => 'warehouse_officer',
-                'password' => 'ShelfBlue28',
+                'password' => (string) env('SEED_PASSWORD_WAREHOUSE', ''),
             ],
             [
                 'email' => 'production@saferpv.local',
                 'name' => 'Production Officer',
                 'role' => 'production_officer',
-                'password' => 'ForgeSun64',
+                'password' => (string) env('SEED_PASSWORD_PRODUCTION', ''),
             ],
             [
                 'email' => 'employee@saferpv.local',
                 'name' => 'Sales Officer',
                 'role' => 'sales_officer',
-                'password' => 'TrailGold55',
+                'password' => (string) env('SEED_PASSWORD_SALES', ''),
             ],
             [
                 'email' => 'sales.manager@saferpv.local',
                 'name' => 'Delivery Coordinator',
                 'role' => 'delivery_coordinator',
-                'password' => 'RouteMaple73',
+                'password' => (string) env('SEED_PASSWORD_DELIVERY', ''),
             ],
             [
                 'email' => 'logistics@saferpv.local',
                 'name' => 'Logistics Coordinator',
                 'role' => 'delivery_coordinator',
-                'password' => 'FleetAmber41',
+                'password' => (string) env('SEED_PASSWORD_LOGISTICS', ''),
             ],
             [
                 'email' => 'qc@saferpv.local',
                 'name' => 'QC Officer',
                 'role' => 'qc_officer',
-                'password' => 'CheckNova86',
+                'password' => (string) env('SEED_PASSWORD_QC', ''),
             ],
         ];
 
         foreach ($accounts as $account) {
+            if ($account['password'] === '') {
+                $this->command?->warn("Skipping {$account['email']} — password env is empty.");
+
+                continue;
+            }
+
             $user = User::updateOrCreate(
                 ['email' => $account['email']],
                 [
