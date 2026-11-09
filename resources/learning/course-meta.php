@@ -104,6 +104,15 @@ return [
             ['en' => 'Handle VAT, withholding, bank reconciliation, and supplier bills', 'bn' => 'VAT, উৎসে কর, ব্যাংক মিলকরণ ও সাপ্লায়ার বিল পরিচালনা'],
         ],
     ],
+    'accounting-health-check' => [
+        'track' => ['en' => 'Finance', 'bn' => 'অর্থ'],
+        'level' => ['en' => 'Beginner', 'bn' => 'প্রাথমিক'],
+        'duration_min' => 15,
+        'outcomes' => [
+            ['en' => 'Run a full accounting module self-test (expense → profit → cash → reverse)', 'bn' => 'পুরো অ্যাকাউন্টিং মডিউল সেলফ-টেস্ট চালান (খরচ → লাভ → নগদ → রিভার্স)'],
+            ['en' => 'Know pass/fail before trusting month-end reports', 'bn' => 'মাস শেষের রিপোর্ট বিশ্বাস করার আগে পাস/ফেল জানুন'],
+        ],
+    ],
     'profit-loss' => [
         'track' => ['en' => 'Finance', 'bn' => 'অর্থ'],
         'level' => ['en' => 'Intermediate', 'bn' => 'মধ্যম'],

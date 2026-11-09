@@ -140,7 +140,7 @@ class HierarchicalReportService
     protected function unclosedEarningsStart(Carbon $asOf): Carbon
     {
         $first = JournalEntry::query()
-            ->where('status', 'posted')
+            ->inLedger()
             ->whereDate('entry_date', '<=', $asOf->toDateString())
             ->min('entry_date');
 
@@ -379,7 +379,7 @@ class HierarchicalReportService
         $query = JournalEntryLine::query()
             ->whereIn('account_id', $accountIds)
             ->whereHas('journalEntry', function (Builder $q) use ($from, $to) {
-                $q->where('status', 'posted');
+                $q->inLedger();
                 if ($from) {
                     $q->whereDate('entry_date', '>=', $from->toDateString());
                 }

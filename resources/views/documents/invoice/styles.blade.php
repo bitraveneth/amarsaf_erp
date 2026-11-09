@@ -1,6 +1,14 @@
+@php
+    // Keep sales invoices on the designed portrait sheet. Landscape is only for
+    // wide report PDFs that explicitly pass orientation=landscape.
+    $orientation = ($orientation ?? 'portrait') === 'landscape' ? 'landscape' : 'portrait';
+    $isLandscape = $orientation === 'landscape';
+    $pageWidth = $isLandscape ? '297mm' : '210mm';
+    $pageHeight = $isLandscape ? '210mm' : '297mm';
+@endphp
 <style>
     /* Keep top/side margin on every page so continued tables are not flush to the edge. */
-    @page { size: A4; margin: 12mm 12mm 14mm; }
+    @page { size: A4 {{ $isLandscape ? 'landscape' : 'portrait' }}; margin: {{ $isLandscape ? '10mm 12mm 12mm' : '12mm 12mm 14mm' }}; }
     .inv {
         color: #1f2937;
         font-family: DejaVu Sans, Helvetica, Arial, sans-serif;
@@ -193,8 +201,8 @@
         margin: 0;
     }
     .doc-preview-body:has(.inv) .doc-preview-page {
-        width: 210mm;
-        max-width: 210mm;
+        width: {{ $pageWidth }};
+        max-width: {{ $pageWidth }};
         min-height: 0;
         margin: 16px auto 32px;
         padding: 0;
@@ -203,8 +211,8 @@
         box-shadow: none;
     }
     .doc-preview-body:has(.inv) .doc-copy {
-        width: 210mm;
-        min-height: 297mm;
+        width: {{ $pageWidth }};
+        min-height: {{ $pageHeight }};
         box-sizing: border-box;
         margin: 0 auto 16px;
         padding: 10mm 14mm 16mm;
@@ -226,8 +234,8 @@
             margin: 0;
         }
         .doc-preview-body:has(.inv) .doc-copy {
-            width: 210mm;
-            min-height: 297mm;
+            width: {{ $pageWidth }};
+            min-height: {{ $pageHeight }};
             margin: 0;
             box-shadow: none;
         }

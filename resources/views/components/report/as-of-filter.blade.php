@@ -14,6 +14,29 @@
     $preservedQuery = collect(request()->except([$name, 'page']))
         ->filter(fn ($param) => is_scalar($param) && $param !== '')
         ->all();
+
+    $today = now()->startOfDay();
+    $monthEnd = $today->copy()->startOfMonth()->subDay();
+    $quarterEnd = $today->copy()->startOfQuarter()->subDay();
+    $yearEnd = $today->copy()->startOfYear()->subDay();
+
+    // Jump-to mirrors the period calendar labels; open periods / Lifetime use today
+    // (full history through the snapshot). Closed-period ends jump to the prior close.
+    $asOfPresets = [
+        ['key' => 'today', 'label' => 'Today', 'date' => $today->toDateString()],
+        ['key' => 'month', 'label' => 'This month', 'date' => $today->toDateString()],
+        ['key' => 'quarter', 'label' => 'This quarter', 'date' => $today->toDateString()],
+        ['key' => 'year', 'label' => 'This year', 'date' => $today->toDateString()],
+        ['key' => 'lifetime', 'label' => 'Lifetime', 'date' => $today->toDateString()],
+        ['key' => 'month_end', 'label' => 'Month end', 'date' => $monthEnd->toDateString()],
+        ['key' => 'quarter_end', 'label' => 'Quarter end', 'date' => $quarterEnd->toDateString()],
+        ['key' => 'year_end', 'label' => 'Year end', 'date' => $yearEnd->toDateString()],
+    ];
+
+    $closedKeys = ['month_end', 'quarter_end', 'year_end'];
+    $activePreset = collect($asOfPresets)
+        ->first(fn ($preset) => $preset['date'] === $asOfValue && in_array($preset['key'], $closedKeys, true))['key']
+        ?? ($asOfValue === $today->toDateString() ? 'today' : null);
 @endphp
 
 <div {{ $attributes->merge(['class' => 'erp-dash-filter-compact relative']) }}
@@ -69,11 +92,9 @@
         <svg class="h-4 w-4 shrink-0 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
         </svg>
-        <span class="flex min-w-0 flex-col items-start leading-tight">
-            <span class="erp-dash-filter-compact__label">{{ $label }}</span>
-            <span class="erp-dash-filter-compact__dates">{{ $display }}</span>
-        </span>
-        <svg class="h-3.5 w-3.5 shrink-0 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <span class="erp-dash-filter-compact__label">{{ $label }}</span>
+        <span class="erp-dash-filter-compact__dates">{{ $display }}</span>
+        <svg class="h-4 w-4 shrink-0 text-gray-400 transition" :class="open && 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/>
         </svg>
     </button>
@@ -138,16 +159,10 @@
 
         <div class="erp-period-cal__side">
             <p class="erp-period-cal__side-label">Jump to</p>
-            <button type="submit" class="erp-period-cal__preset" @click="asOf = today">Today</button>
-            <button
-                type="submit"
-                class="erp-period-cal__preset"
-                @click="
-                    const d = parse(today);
-                    d.setDate(0);
-                    asOf = iso(d);
-                "
-            >Month end</button>
+            @foreach($asOfPresets as $preset)
+                <a href="{{ $actionBase . '?' . http_build_query(array_merge($preservedQuery, [$name => $preset['date']])) }}"
+                   class="erp-period-cal__preset {{ $activePreset === $preset['key'] ? 'is-active' : '' }}">{{ $preset['label'] }}</a>
+            @endforeach
             <a href="{{ $actionBase . ($preservedQuery ? '?' . http_build_query($preservedQuery) : '') }}" class="erp-period-cal__preset">Reset</a>
         </div>
     </div>

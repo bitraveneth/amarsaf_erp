@@ -12,7 +12,7 @@ class TallyExportService
     public function vouchers(Carbon $from, Carbon $to): Collection
     {
         return JournalEntry::with(['lines.account'])
-            ->where('status', 'posted')
+            ->inLedger()
             ->whereDate('entry_date', '>=', $from->toDateString())
             ->whereDate('entry_date', '<=', $to->toDateString())
             ->orderBy('entry_date')

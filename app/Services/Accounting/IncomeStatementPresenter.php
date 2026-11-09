@@ -243,7 +243,7 @@ class IncomeStatementPresenter
     protected function trustMeta(Carbon $from, Carbon $to): array
     {
         $lastJournal = \App\Models\JournalEntry::query()
-            ->where('status', 'posted')
+            ->inLedger()
             ->whereDate('entry_date', '>=', $from->toDateString())
             ->whereDate('entry_date', '<=', $to->toDateString())
             ->orderByDesc('entry_date')
@@ -693,7 +693,7 @@ class IncomeStatementPresenter
     {
         return JournalEntryLine::query()
             ->whereHas('journalEntry', function ($query) use ($from, $to) {
-                $query->where('status', 'posted')
+                $query->inLedger()
                     ->whereDate('entry_date', '>=', $from->toDateString())
                     ->whereDate('entry_date', '<=', $to->toDateString());
             })

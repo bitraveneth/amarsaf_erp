@@ -2,12 +2,22 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class JournalEntry extends Model
 {
+    /**
+     * Statuses that still affect GL balances.
+     * Reversed originals stay in the ledger; their reversing voucher offsets them.
+     * Drafts are excluded.
+     *
+     * @var list<string>
+     */
+    public const LEDGER_STATUSES = ['posted', 'reversed'];
+
     protected $fillable = [
         'number',
         'entry_date',
@@ -58,6 +68,14 @@ class JournalEntry extends Model
     public function isEditable(): bool
     {
         return $this->status === 'draft';
+    }
+
+    /**
+     * Journals that must be included when computing account balances / trial balance.
+     */
+    public function scopeInLedger(Builder $query): Builder
+    {
+        return $query->whereIn('status', self::LEDGER_STATUSES);
     }
 
     public function totalDebit(): float

@@ -190,11 +190,11 @@ class AgingReportService
         }
 
         $debits = (float) JournalEntryLine::where('account_id', $accountId)
-            ->whereHas('journalEntry', fn ($q) => $q->where('status', 'posted'))
+            ->whereHas('journalEntry', fn ($q) => $q->inLedger())
             ->sum('debit');
 
         $credits = (float) JournalEntryLine::where('account_id', $accountId)
-            ->whereHas('journalEntry', fn ($q) => $q->where('status', 'posted'))
+            ->whereHas('journalEntry', fn ($q) => $q->inLedger())
             ->sum('credit');
 
         $balance = $normalBalance === 'asset'

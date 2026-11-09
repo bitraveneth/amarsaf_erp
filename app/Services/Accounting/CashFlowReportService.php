@@ -17,7 +17,7 @@ class CashFlowReportService
         $periodLines = JournalEntryLine::query()
             ->whereIn('account_id', $accountIds)
             ->whereHas('journalEntry', function ($query) use ($from, $to) {
-                $query->where('status', 'posted')
+                $query->inLedger()
                     ->whereDate('entry_date', '>=', $from->toDateString())
                     ->whereDate('entry_date', '<=', $to->toDateString());
             })
@@ -34,7 +34,7 @@ class CashFlowReportService
             $lines = JournalEntryLine::query()
                 ->where('account_id', $account->id)
                 ->whereHas('journalEntry', function ($query) use ($from, $to) {
-                    $query->where('status', 'posted')
+                    $query->inLedger()
                         ->whereDate('entry_date', '>=', $from->toDateString())
                         ->whereDate('entry_date', '<=', $to->toDateString());
                 })
@@ -96,7 +96,7 @@ class CashFlowReportService
         $debits = (float) JournalEntryLine::query()
             ->whereIn('account_id', $accountIds)
             ->whereHas('journalEntry', function ($query) use ($before) {
-                $query->where('status', 'posted')
+                $query->inLedger()
                     ->whereDate('entry_date', '<', $before->toDateString());
             })
             ->sum('debit');
@@ -104,7 +104,7 @@ class CashFlowReportService
         $credits = (float) JournalEntryLine::query()
             ->whereIn('account_id', $accountIds)
             ->whereHas('journalEntry', function ($query) use ($before) {
-                $query->where('status', 'posted')
+                $query->inLedger()
                     ->whereDate('entry_date', '<', $before->toDateString());
             })
             ->sum('credit');
@@ -135,7 +135,7 @@ class CashFlowReportService
             $lines = JournalEntryLine::query()
                 ->whereIn('account_id', $accountIds)
                 ->whereHas('journalEntry', function ($query) use ($weekStart, $weekEnd) {
-                    $query->where('status', 'posted')
+                    $query->inLedger()
                         ->whereDate('entry_date', '>=', $weekStart->toDateString())
                         ->whereDate('entry_date', '<=', $weekEnd->toDateString());
                 })

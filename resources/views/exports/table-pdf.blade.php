@@ -15,11 +15,13 @@
 
     $notes = [];
     if ($truncated ?? false) {
-        $notes[] = 'PDF export is limited to the first 500 rows. Download CSV for the full '.number_format((int) $totalRows).' records.';
+        $notes[] = 'PDF export is limited to the first '.number_format((int) ($maxPdfRows ?? 200)).' rows. Download CSV for the full '.number_format((int) $totalRows).' records.';
     }
     if (! empty($note)) {
         $notes[] = (string) $note;
     }
+
+    $orientation = ($orientation ?? 'portrait') === 'landscape' ? 'landscape' : 'portrait';
 
     $aligns = $aligns ?? [];
     if ($aligns === [] && ! empty($columns)) {
@@ -33,6 +35,9 @@
                 || str_contains($label, 'amount')
                 || str_contains($label, 'balance')
                 || str_contains($label, 'total')
+                || str_contains($label, 'outstanding')
+                || str_contains($label, 'current')
+                || str_contains($label, 'days')
                 || str_contains($label, 'qty')
                 ? 'right'
                 : 'left';
@@ -51,6 +56,7 @@
         'title' => $shortTitle,
         'number' => $periodLabel ?: $generatedAt->format('d M Y'),
         'generated_at' => $generatedAt,
+        'orientation' => $orientation,
         'parties' => [[
             'label' => 'Report',
             'name' => $shortTitle,
@@ -69,4 +75,8 @@
         'footer' => __('documents.footer.report'),
     ]);
 @endphp
-@include('documents.layouts.pdf')
+@include('documents.layouts.pdf', [
+    'payload' => $payload,
+    'company' => $company,
+    'orientation' => $orientation,
+])

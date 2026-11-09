@@ -183,7 +183,8 @@
                                 </div>
                             </td>
                             <td class="whitespace-nowrap align-middle">
-                                <x-admin.document-link type="purchase-order" :id="$order->id" label="View" />
+                                {{-- Document sheet preview (not the same as Actions → View) --}}
+                                <x-admin.document-link type="purchase-order" :id="$order->id" label="PO" />
                             </td>
                             <td class="whitespace-nowrap align-middle text-right">
                                 <x-admin.action-group class="flex-nowrap" style="flex-wrap: nowrap; justify-content: flex-end;">

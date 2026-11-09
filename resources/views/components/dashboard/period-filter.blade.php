@@ -16,8 +16,17 @@
         ->filter(fn ($value) => is_scalar($value) && $value !== '')
         ->all();
     $presetOptions = collect($rangeOptions)->except('custom');
-    $fromValue = $from ?: now()->startOfMonth()->toDateString();
-    $toValue = $to ?: now()->toDateString();
+    // Lifetime uses a synthetic early from-date (2000-01-01) for queries only.
+    // Do not seed the calendar picker with year 2000 — clicking a day there and
+    // pressing Apply would create a custom range with no journals (all zeros).
+    $isLifetimeRange = in_array($range, ['lifetime', 'all'], true)
+        || ($from && \Illuminate\Support\Carbon::parse($from)->year <= 2000);
+    $fromValue = $isLifetimeRange
+        ? now()->startOfMonth()->toDateString()
+        : ($from ?: now()->startOfMonth()->toDateString());
+    $toValue = $isLifetimeRange
+        ? now()->toDateString()
+        : ($to ?: now()->toDateString());
 @endphp
 
 @if($variant === 'compact')
@@ -87,13 +96,11 @@
             <svg class="h-4 w-4 shrink-0 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
             </svg>
-            <span class="flex min-w-0 flex-col items-start leading-tight">
-                <span class="erp-dash-filter-compact__label">{{ $rangeLabel }}</span>
-                @if($periodLabel)
-                    <span class="erp-dash-filter-compact__dates">{{ $periodLabel }}</span>
-                @endif
-            </span>
-            <svg class="h-3.5 w-3.5 shrink-0 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <span class="erp-dash-filter-compact__label">{{ $rangeLabel }}</span>
+            @if($periodLabel)
+                <span class="erp-dash-filter-compact__dates">{{ $periodLabel }}</span>
+            @endif
+            <svg class="h-4 w-4 shrink-0 text-gray-400 transition" :class="open && 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/>
             </svg>
         </button>

@@ -321,6 +321,123 @@ MERMAID,
             ['en' => 'Switch to the **Tax & ledger reference** tab for full journal entries, chart of accounts, and advisor FAQs.', 'bn' => '**কর ও লেজার রেফারেন্স** ট্যাবে সম্পূর্ণ জার্নাল, চার্ট অফ অ্যাকাউন্টস ও FAQ দেখুন।'],
             ['en' => 'Never invoice before delivery — revenue and VAT should follow POD.', 'bn' => 'ডেলিভারির আগে ইনভয়েস নয় — আয় ও VAT POD-এর পর।'],
             ['en' => 'Close the accounting period after trial balance matches AR/AP aging.', 'bn' => 'ট্রায়াল ব্যালেন্স AR/AP aging-এর সাথে মিললে পিরিয়ড বন্ধ করুন।'],
+            ['en' => 'Open **Accounting module test** to manually check expense → profit → cash → journal reverse (pass/fail).', 'bn' => '**অ্যাকাউন্টিং মডিউল টেস্ট** কোর্সে খরচ → লাভ → নগদ → জার্নাল রিভার্স ম্যানুয়ালি চেক করুন (পাস/ফেল)।'],
+        ],
+    ],
+    [
+        'slug' => 'accounting-health-check',
+        'order' => 8.9,
+        'icon' => 'accounting',
+        'title' => [
+            'en' => 'Accounting module test',
+            'bn' => 'অ্যাকাউন্টিং মডিউল টেস্ট',
+        ],
+        'summary' => [
+            'en' => 'Manual test checklist for the whole accounting module: expense, dashboard net profit, income statement, cash/bank, journal reverse. Search “accounting test”. About 15 minutes.',
+            'bn' => 'পুরো অ্যাকাউন্টিং মডিউলের ম্যানুয়াল টেস্ট চেকলিস্ট: খরচ, ড্যাশবোর্ড নিট লাভ, আয় বিবৃতি, নগদ/ব্যাংক, জার্নাল রিভার্স। “অ্যাকাউন্টিং টেস্ট” খুঁজুন। প্রায় ১৫ মিনিট।',
+        ],
+        'flowchart' => [
+            'en' => <<<'MERMAID'
+flowchart TD
+    A["Note opening numbers"] --> B["Post test expense 1000"]
+    B --> C{"Dashboard expenses up and profit down?"}
+    C -->|No| X["Fail — check posting"]
+    C -->|Yes| D{"P and L and journal posted?"}
+    D -->|No| X
+    D -->|Yes| E{"Cash or bank down 1000?"}
+    E -->|No| X
+    E -->|Yes| F["Post then reverse a cash journal"]
+    F --> G{"Cash back to before?"}
+    G -->|No| X
+    G -->|Yes| H["Pass — books are linked"]
+MERMAID,
+            'bn' => <<<'MERMAID'
+flowchart TD
+    A["শুরুর সংখ্যা লিখুন"] --> B["টেস্ট খরচ ১০০০ পোস্ট"]
+    B --> C{"ড্যাশবোর্ডে খরচ বাড়ে লাভ কমে?"}
+    C -->|না| X["ফেল — পোস্টিং দেখুন"]
+    C -->|হ্যাঁ| D{"P and L ও জার্নাল পোস্ট?"}
+    D -->|না| X
+    D -->|হ্যাঁ| E{"নগদ বা ব্যাংক ১০০০ কমে?"}
+    E -->|না| X
+    E -->|হ্যাঁ| F["জার্নাল পোস্ট করে রিভার্স"]
+    F --> G{"নগদ আগের অবস্থায়?"}
+    G -->|না| X
+    G -->|হ্যাঁ| H["পাস — বই যুক্ত"]
+MERMAID,
+        ],
+        'steps' => [
+            [
+                'title' => ['en' => 'Write down today’s starting numbers', 'bn' => 'আজকের শুরুর সংখ্যা লিখুন'],
+                'body' => [
+                    'en' => 'Open Accounting dashboard for **This month**. Note **Expenses** and **Net profit**. Open Chart of accounts → Balances and note **Cash in hand** (or the bank you will pay from).',
+                    'bn' => 'Accounting dashboard-এ **This month** খুলুন। **Expenses** ও **Net profit** লিখুন। Chart of accounts → Balances-এ **Cash in hand** (বা যে ব্যাংক দিয়ে পেমেন্ট করবেন) লিখুন।',
+                ],
+                'path' => '/admin/accounting-dashboard',
+            ],
+            [
+                'title' => ['en' => 'Post one test expense (৳1,000)', 'bn' => 'একটি টেস্ট খরচ পোস্ট করুন (৳১,০০০)'],
+                'body' => [
+                    'en' => 'Expenses → Add. Date = today. Amount = 1000. Category = any mapped expense. Pay from **Cash** or **Bank**. Save. A journal must post with the save.',
+                    'bn' => 'Expenses → Add। তারিখ = আজ। পরিমাণ = ১০০০। ম্যাপ করা ক্যাটাগরি। **Cash** বা **Bank** দিয়ে পেমেন্ট। সেভ করুন। সেভের সাথে জার্নাল পোস্ট হতে হবে।',
+                ],
+                'path' => '/admin/expenses',
+            ],
+            [
+                'title' => ['en' => 'Check dashboard math', 'bn' => 'ড্যাশবোর্ডের হিসাব দেখুন'],
+                'body' => [
+                    'en' => 'Refresh Accounting dashboard (same period). **Pass:** Expenses +1,000 and Net profit −1,000. Formula: Net profit ≈ Sales − Expenses − Payroll. If only Expenses moved, refresh or confirm the expense date is inside the selected period.',
+                    'bn' => 'একই পিরিয়ডে ড্যাশবোর্ড রিফ্রেশ করুন। **পাস:** Expenses +১,০০০ এবং Net profit −১,০০০। সূত্র: Net profit ≈ Sales − Expenses − Payroll। শুধু Expenses বদলালে পিরিয়ড ও তারিখ মিলিয়ে দেখুন।',
+                ],
+                'path' => '/admin/accounting-dashboard',
+            ],
+            [
+                'title' => ['en' => 'Check formal P&L + journal', 'bn' => 'আনুষ্ঠানিক P&L ও জার্নাল দেখুন'],
+                'body' => [
+                    'en' => 'Open Income statement for the same period — OpEx (or that expense account) should include 1,000. Open Journal entries — find a **posted** expense voucher. **Fail** if dashboard moved but P&L did not (use Sync missing expenses / open period).',
+                    'bn' => 'একই পিরিয়ডে Income statement — OpEx বা সেই expense অ্যাকাউন্টে ১,০০০ থাকবে। Journal entries-এ **posted** expense ভাউচার খুঁজুন। ড্যাশবোর্ড বদলে P&L না বদলালে **ফেল** (Sync / খোলা মাস)।',
+                ],
+                'path' => '/admin/reports/pl',
+            ],
+            [
+                'title' => ['en' => 'Check cash / bank on COA', 'bn' => 'COA-তে নগদ / ব্যাংক দেখুন'],
+                'body' => [
+                    'en' => 'Chart of accounts → Balances. The cash/bank you paid from must be **1,000 lower**. Open General ledger for that account — you should see the expense journal line.',
+                    'bn' => 'Chart of accounts → Balances। যে cash/bank দিয়ে পেমেন্ট করেছেন তা **১,০০০ কম** হবে। সেই অ্যাকাউন্টের General ledger-এ expense জার্নাল লাইন দেখা যাবে।',
+                ],
+                'path' => '/admin/accounts',
+            ],
+            [
+                'title' => ['en' => 'Reverse test (catch bad reverses)', 'bn' => 'রিভার্স পরীক্ষা'],
+                'body' => [
+                    'en' => 'Journal entries → Create a small balanced journal that touches Cash (e.g. Dr Cash 500 / Cr Equity 500), post it, note cash, then **Reverse**. Cash must return to the amount **before** that journal — not stay negative.',
+                    'bn' => 'Journal entries → Cash স্পর্শ করে ছোট ভারসাম্যপূর্ণ জার্নাল (যেমন Dr Cash ৫০০ / Cr Equity ৫০০) পোস্ট করুন, নগদ দেখুন, তারপর **Reverse**। নগদ সেই জার্নালের **আগের** অঙ্কে ফিরবে — নেগেটিভ হয়ে থাকবে না।',
+                ],
+                'path' => '/admin/journals',
+            ],
+            [
+                'title' => ['en' => 'Optional: sales + receipt', 'bn' => 'ঐচ্ছিক: বিক্রয় + রসিদ'],
+                'body' => [
+                    'en' => 'Issue a small invoice → Sales up, Trade debtors up. Post a receipt → cash/bank up, debtors down, Cash collected up. This proves AR and bank are linked.',
+                    'bn' => 'ছোট ইনভয়েস → Sales ও Trade debtors বাড়ে। রসিদ → নগদ/ব্যাংক বাড়ে, debtors কমে, Cash collected বাড়ে।',
+                ],
+                'path' => '/admin/finance',
+            ],
+        ],
+        'examples' => [
+            [
+                'title' => ['en' => 'Pass card (write this down)', 'bn' => 'পাস কার্ড (লিখে রাখুন)'],
+                'body' => [
+                    'en' => "Expense 1,000 paid from cash today:\n• Dashboard Expenses +1,000\n• Dashboard Net profit −1,000\n• Income statement includes 1,000\n• Posted journal exists\n• Cash −1,000 on COA\n• After reverse of a test journal, cash back to prior\n\nIf any line fails, accounting is not safe for month-end yet.",
+                    'bn' => "আজ cash থেকে খরচ ১,০০০:\n• Dashboard Expenses +১,০০০\n• Net profit −১,০০০\n• Income statement-এ ১,০০০\n• Posted জার্নাল আছে\n• COA-তে Cash −১,০০০\n• টেস্ট জার্নাল রিভার্সের পর নগদ আগের অঙ্কে\n\nযেকোনো লাইন ফেল হলে মাস শেষের আগে হিসাব নিরাপদ নয়।",
+                ],
+            ],
+        ],
+        'tips' => [
+            ['en' => 'Use a **demo** company or a tiny test amount you can reverse — never invent fake expenses on live books without reversing.', 'bn' => '**ডেমো** বা ছোট টেস্ট অঙ্ক ব্যবহার করুন — লাইভে ভুয়া খরচ রেখে দিবেন না।'],
+            ['en' => 'Accounting dashboard is a quick estimate (invoices + expenses + payroll). Formal truth is **Income statement** + posted journals.', 'bn' => 'Accounting dashboard দ্রুত অনুমান। আনুষ্ঠানিক সত্য **Income statement** ও পোস্ট করা জার্নাল।'],
+            ['en' => 'Bank reconciliation only ticks matched receipts/payments — bank fees still need an Expense or journal first.', 'bn' => 'ব্যাংক রিকন শুধু মিল আছে এমন সারি টিক করে — ব্যাংক চার্জ আগে Expense বা জার্নালে আনতে হবে।'],
+            ['en' => 'If Lifetime looks empty after using the calendar, you may have Applied a day in year 2000 — pick Lifetime from Jump to again.', 'bn' => 'Lifetime খালি দেখালে ক্যালেন্ডারে ২০০০ সালের দিন Apply হয়ে থাকতে পারে — Jump to থেকে Lifetime আবার নিন।'],
         ],
     ],
     [

@@ -155,7 +155,7 @@ class PlDashboardPresenter
     protected function trustMeta(Carbon $from, Carbon $to): array
     {
         $lastJournal = JournalEntry::query()
-            ->where('status', 'posted')
+            ->inLedger()
             ->whereDate('entry_date', '>=', $from->toDateString())
             ->whereDate('entry_date', '<=', $to->toDateString())
             ->orderByDesc('entry_date')

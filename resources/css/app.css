@@ -2588,19 +2588,19 @@ pre[class*='language-'] {
   }
 
   .erp-dash-filter-compact__trigger {
-    @apply inline-flex max-w-full items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-theme-xs transition hover:border-gray-300 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:border-gray-600 dark:hover:bg-white/[0.03];
+    @apply inline-flex min-h-[2.625rem] max-w-full items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-theme-xs transition hover:border-gray-300 hover:bg-gray-50 hover:text-gray-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:border-gray-600 dark:hover:bg-white/[0.03];
   }
 
   .erp-dash-filter-compact__label {
-    @apply font-semibold text-gray-900 dark:text-white;
+    @apply shrink-0 font-semibold text-gray-900 dark:text-white;
   }
 
   .erp-dash-filter-compact__dates {
-    @apply text-xs font-normal text-gray-500 dark:text-gray-400;
+    @apply truncate text-sm font-medium text-gray-600 dark:text-gray-300;
   }
 
   .erp-dash-filter-compact__panel {
-    @apply absolute right-0 z-40 mt-2 w-72 rounded-xl border border-gray-200 bg-white p-4 shadow-lg dark:border-gray-700 dark:bg-gray-900;
+    @apply absolute right-0 top-full z-40 mt-2 w-72 rounded-xl border border-gray-200 bg-white p-4 shadow-lg dark:border-gray-700 dark:bg-gray-900;
   }
 
   .erp-period-cal {
@@ -4200,46 +4200,44 @@ pre[class*='language-'] {
   }
 
   .gl-ledger__entries-table {
-    --gl-col: 6.25rem;
-    --gl-fig-gap: 0.75rem;
+    --gl-date: 6.75rem;
+    --gl-je: 6.5rem;
+    --gl-amt: minmax(6.5rem, 8rem);
+    --gl-gap: 1rem;
     @apply overflow-x-auto rounded-2xl border border-gray-200 text-sm dark:border-gray-800;
   }
 
   .gl-ledger__head-row,
   .gl-ledger__row {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    column-gap: 1.25rem;
-    align-items: start;
-    @apply border-b border-gray-100 px-4 py-2.5 dark:border-gray-800/80 md:px-5;
+    grid-template-columns: var(--gl-date) var(--gl-je) minmax(10rem, 1.6fr) var(--gl-amt) var(--gl-amt) var(--gl-amt);
+    column-gap: var(--gl-gap);
+    align-items: center;
+    @apply border-b border-gray-100 px-4 py-3 dark:border-gray-800/80 md:px-5;
   }
 
   .gl-ledger__head-row {
-    @apply sticky top-0 z-10 border-b-2 border-gray-200 bg-gray-50/95 py-2 backdrop-blur-sm dark:border-gray-700 dark:bg-gray-800/90;
+    min-width: 46rem;
+    @apply sticky top-0 z-10 border-b-2 border-gray-200 bg-gray-50/95 py-2.5 backdrop-blur-sm dark:border-gray-700 dark:bg-gray-800/90;
   }
 
-  .gl-ledger__head-copy {
-    display: grid;
-    grid-template-columns: 5.25rem 6.25rem minmax(0, 1fr);
-    column-gap: 1rem;
-    align-items: center;
-  }
-
-  .gl-ledger__head-copy span {
-    @apply text-[10px] font-bold uppercase tracking-wide text-gray-400;
-  }
-
+  .gl-ledger__head-copy,
   .gl-ledger__head-figures,
+  .gl-ledger__row-copy,
   .gl-ledger__figures {
-    display: grid;
-    text-align: right;
-    font-variant-numeric: tabular-nums;
-    column-gap: var(--gl-fig-gap);
-    grid-template-columns: repeat(3, var(--gl-col));
+    display: contents;
   }
 
+  .gl-ledger__head-row > span,
+  .gl-ledger__head-copy span,
   .gl-ledger__head-figures span {
     @apply text-[10px] font-bold uppercase leading-tight tracking-wide text-gray-400;
+  }
+
+  .gl-ledger__head-figures span,
+  .gl-ledger__amt {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
   }
 
   .gl-ledger__row {
@@ -4251,21 +4249,16 @@ pre[class*='language-'] {
   }
 
   .gl-ledger__row--close {
-    @apply border-t-2 border-gray-200 bg-gray-50 py-3 dark:border-gray-700 dark:bg-gray-800/40;
-  }
-
-  .gl-ledger__row-copy {
-    display: grid;
-    grid-template-columns: 5.25rem 6.25rem minmax(0, 1fr);
-    column-gap: 1rem;
-    align-items: start;
-    min-width: 0;
+    @apply border-t-2 border-gray-200 bg-gray-50 py-3.5 dark:border-gray-700 dark:bg-gray-800/40;
   }
 
   .gl-ledger__row-copy--bookend {
-    grid-template-columns: auto minmax(0, 1fr);
-    column-gap: 0.75rem;
-    align-items: center;
+    display: contents;
+  }
+
+  .gl-ledger__bookend-copy {
+    grid-column: 2 / 4;
+    min-width: 0;
   }
 
   .gl-ledger__cell-journal {
@@ -4300,20 +4293,28 @@ pre[class*='language-'] {
     @apply font-semibold text-gray-900 dark:text-white;
   }
 
-  .gl-ledger__figures .is-dr {
+  .gl-ledger__amt .is-dr,
+  .gl-ledger__row .is-dr {
     @apply text-success-700 dark:text-success-300;
   }
 
-  .gl-ledger__figures .is-cr {
+  .gl-ledger__amt .is-cr,
+  .gl-ledger__row .is-cr {
     @apply text-orange-700 dark:text-orange-300;
   }
 
-  .gl-ledger__figures .is-accent {
+  .gl-ledger__amt.is-accent,
+  .gl-ledger__row .is-accent {
     @apply text-brand-700 dark:text-brand-300;
   }
 
-  .gl-ledger__figures .is-dash {
+  .gl-ledger__amt .is-dash,
+  .gl-ledger__row .is-dash {
     @apply text-gray-300 dark:text-gray-600;
+  }
+
+  .gl-ledger__body {
+    min-width: 46rem;
   }
 
   .gl-ledger__empty-row {

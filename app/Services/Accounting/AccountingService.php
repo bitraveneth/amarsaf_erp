@@ -221,6 +221,9 @@ class AccountingService
         })->all();
 
         return DB::transaction(function () use ($journal, $entryDate, $lines, $description) {
+            // Keep the original lines in the ledger (status becomes "reversed") and
+            // post an offsetting voucher. Balance queries use JournalEntry::inLedger()
+            // so original + reversal net to zero.
             $reversal = $this->post('reversal', $entryDate, $lines, [
                 'description' => $description,
                 'source_type' => JournalEntry::class,

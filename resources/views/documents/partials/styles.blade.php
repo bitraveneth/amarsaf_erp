@@ -1,12 +1,16 @@
 @php
     $brand = $company['primary'] ?? '#5F4BFF';
+    // Portrait defaults match the designed invoice/document sheets.
+    // Landscape tweaks apply only when report exports request landscape.
+    $orientation = ($orientation ?? 'portrait') === 'landscape' ? 'landscape' : 'portrait';
+    $isLandscape = $orientation === 'landscape';
 @endphp
 <style>
-    @page { size: A4; margin: 12mm; }
+    @page { size: A4 {{ $isLandscape ? 'landscape' : 'portrait' }}; margin: {{ $isLandscape ? '10mm 12mm' : '12mm' }}; }
     * { box-sizing: border-box; }
     body {
         font-family: DejaVu Sans, Helvetica, Arial, sans-serif;
-        font-size: 10px;
+        font-size: {{ $isLandscape ? '9px' : '10px' }};
         color: #111827;
         background: #ffffff;
         margin: 0;
@@ -87,8 +91,12 @@
         padding: 7px 6px;
         border: 1px solid {{ $brand }};
     }
-    .doc-lines td { padding: 6px; border: 1px solid #e5e7eb; vertical-align: top; font-size: 9px; }
+    .doc-lines td { padding: {{ $isLandscape ? '5px 4px' : '6px' }}; border: 1px solid #e5e7eb; vertical-align: top; font-size: {{ $isLandscape ? '8px' : '9px' }}; }
     .doc-lines tr.doc-lines-row--alt td { background: #f8f7ff; }
+    @if($isLandscape)
+    .doc-lines th.doc-align-right,
+    .doc-lines td.doc-align-right { white-space: nowrap; }
+    @endif
     .doc-empty { text-align: center; color: #6b7280; padding: 12px; }
     .doc-align-right { text-align: right; }
     .doc-align-center { text-align: center; }

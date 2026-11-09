@@ -126,6 +126,17 @@ return [
             ['title' => ['en' => 'Bank reconciliation', 'bn' => 'ব্যাংক মিলকরণ'], 'path' => '/admin/finance/reconciliation'],
         ],
     ],
+    'accounting-health-check' => [
+        'roles' => ['all', 'admin', 'accounts_officer'],
+        'related_screens' => [
+            ['title' => ['en' => 'Accounting dashboard', 'bn' => 'হিসাব ড্যাশবোর্ড'], 'path' => '/admin/accounting-dashboard'],
+            ['title' => ['en' => 'Expenses', 'bn' => 'খরচ'], 'path' => '/admin/expenses'],
+            ['title' => ['en' => 'Income statement', 'bn' => 'আয় বিবৃতি'], 'path' => '/admin/reports/pl'],
+            ['title' => ['en' => 'Journal entries', 'bn' => 'জার্নাল'], 'path' => '/admin/journals'],
+            ['title' => ['en' => 'Chart of accounts', 'bn' => 'চার্ট অফ অ্যাকাউন্টস'], 'path' => '/admin/accounts'],
+            ['title' => ['en' => 'Trial balance', 'bn' => 'ট্রায়াল ব্যালেন্স'], 'path' => '/admin/reports/trial-balance'],
+        ],
+    ],
     'ledger-mapping' => [
         'roles' => ['all', 'admin', 'accounts_officer'],
         'related_screens' => [

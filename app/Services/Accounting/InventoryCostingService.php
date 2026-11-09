@@ -303,7 +303,7 @@ class InventoryCostingService
         }
 
         $postedThrough = function ($query) use ($asOf) {
-            $query->where('status', 'posted')
+            $query->inLedger()
                 ->when($asOf, fn ($q) => $q->whereDate('entry_date', '<=', $asOf->toDateString()));
         };
 

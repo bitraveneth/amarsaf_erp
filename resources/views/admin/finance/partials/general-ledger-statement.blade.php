@@ -193,32 +193,24 @@
 
             <div class="gl-ledger__entries-table">
                 <div class="gl-ledger__head-row">
-                    <div class="gl-ledger__head-copy">
-                        <span>Date</span>
-                        <span>Journal</span>
-                        <span>Description</span>
-                    </div>
-                    <div class="gl-ledger__head-figures">
-                        <span>Debit</span>
-                        <span>Credit</span>
-                        <span>Balance</span>
-                    </div>
+                    <span>Date</span>
+                    <span>Journal</span>
+                    <span>Description</span>
+                    <span>Debit</span>
+                    <span>Credit</span>
+                    <span>Balance</span>
                 </div>
 
                 <div class="gl-ledger__body">
                     <div class="gl-ledger__row gl-ledger__row--bookend">
-                        <div class="gl-ledger__row-copy gl-ledger__row-copy--bookend">
-                            <span class="gl-ledger__entry-tag">Start</span>
-                            <div class="gl-ledger__bookend-copy">
-                                <p class="gl-ledger__entry-title">Opening balance</p>
-                                <p class="gl-ledger__entry-sub">Carried forward before {{ $from->format('d M Y') }}</p>
-                            </div>
+                        <span class="gl-ledger__entry-tag">Start</span>
+                        <div class="gl-ledger__bookend-copy">
+                            <p class="gl-ledger__entry-title">Opening balance</p>
+                            <p class="gl-ledger__entry-sub">Carried forward before {{ $from->format('d M Y') }}</p>
                         </div>
-                        <div class="gl-ledger__figures">
-                            <span class="gl-ledger__amt"><span class="is-dash">—</span></span>
-                            <span class="gl-ledger__amt"><span class="is-dash">—</span></span>
-                            <span class="gl-ledger__amt gl-ledger__amt--strong">{{ number_format($openingBalance, 2) }}</span>
-                        </div>
+                        <span class="gl-ledger__amt"><span class="is-dash">—</span></span>
+                        <span class="gl-ledger__amt"><span class="is-dash">—</span></span>
+                        <span class="gl-ledger__amt gl-ledger__amt--strong">{{ number_format($openingBalance, 2) }}</span>
                     </div>
 
                     @forelse($lines as $line)
@@ -231,36 +223,32 @@
                             data-search="{{ e($searchText) }}"
                             x-show="lineVisible($el.dataset.search)"
                         >
-                            <div class="gl-ledger__row-copy">
-                                <time class="gl-ledger__entry-date">
-                                    {{ $line['date'] instanceof \Illuminate\Support\Carbon ? $line['date']->format('d M Y') : $line['date'] }}
-                                </time>
-                                <div class="gl-ledger__cell-journal">
-                                    @if($line['journal'])
-                                        <a href="{{ route('admin.journals.show', $line['journal']) }}" class="gl-ledger__je">{{ $line['journal']->number }}</a>
-                                    @else
-                                        <span class="is-dash">—</span>
-                                    @endif
-                                </div>
-                                <p class="gl-ledger__entry-title">{{ $line['description'] ?? '—' }}</p>
+                            <time class="gl-ledger__entry-date">
+                                {{ $line['date'] instanceof \Illuminate\Support\Carbon ? $line['date']->format('d M Y') : $line['date'] }}
+                            </time>
+                            <div class="gl-ledger__cell-journal">
+                                @if($line['journal'])
+                                    <a href="{{ route('admin.journals.show', $line['journal']) }}" class="gl-ledger__je">{{ $line['journal']->number }}</a>
+                                @else
+                                    <span class="is-dash">—</span>
+                                @endif
                             </div>
-                            <div class="gl-ledger__figures">
-                                <span class="gl-ledger__amt">
-                                    @if($line['debit'] > 0)
-                                        <span class="is-dr">{{ number_format($line['debit'], 2) }}</span>
-                                    @else
-                                        <span class="is-dash">—</span>
-                                    @endif
-                                </span>
-                                <span class="gl-ledger__amt">
-                                    @if($line['credit'] > 0)
-                                        <span class="is-cr">{{ number_format($line['credit'], 2) }}</span>
-                                    @else
-                                        <span class="is-dash">—</span>
-                                    @endif
-                                </span>
-                                <span class="gl-ledger__amt gl-ledger__amt--strong">{{ number_format($line['balance'], 2) }}</span>
-                            </div>
+                            <p class="gl-ledger__entry-title">{{ $line['description'] ?? '—' }}</p>
+                            <span class="gl-ledger__amt">
+                                @if($line['debit'] > 0)
+                                    <span class="is-dr">{{ number_format($line['debit'], 2) }}</span>
+                                @else
+                                    <span class="is-dash">—</span>
+                                @endif
+                            </span>
+                            <span class="gl-ledger__amt">
+                                @if($line['credit'] > 0)
+                                    <span class="is-cr">{{ number_format($line['credit'], 2) }}</span>
+                                @else
+                                    <span class="is-dash">—</span>
+                                @endif
+                            </span>
+                            <span class="gl-ledger__amt gl-ledger__amt--strong">{{ number_format($line['balance'], 2) }}</span>
                         </div>
                     @empty
                         <div class="gl-ledger__empty-row">
@@ -273,18 +261,14 @@
 
                     @if($lines->isNotEmpty())
                         <div class="gl-ledger__row gl-ledger__row--bookend gl-ledger__row--close">
-                            <div class="gl-ledger__row-copy gl-ledger__row-copy--bookend">
-                                <span class="gl-ledger__entry-tag">End</span>
-                                <div class="gl-ledger__bookend-copy">
-                                    <p class="gl-ledger__entry-title">Period total</p>
-                                    <p class="gl-ledger__entry-sub">Movement through {{ $to->format('d M Y') }}</p>
-                                </div>
+                            <span class="gl-ledger__entry-tag">End</span>
+                            <div class="gl-ledger__bookend-copy">
+                                <p class="gl-ledger__entry-title">Period total</p>
+                                <p class="gl-ledger__entry-sub">Movement through {{ $to->format('d M Y') }}</p>
                             </div>
-                            <div class="gl-ledger__figures">
-                                <span class="gl-ledger__amt gl-ledger__amt--strong"><span class="is-dr">{{ number_format($periodDebit, 2) }}</span></span>
-                                <span class="gl-ledger__amt gl-ledger__amt--strong"><span class="is-cr">{{ number_format($periodCredit, 2) }}</span></span>
-                                <span class="gl-ledger__amt gl-ledger__amt--strong is-accent">{{ number_format($closingBalance, 2) }}</span>
-                            </div>
+                            <span class="gl-ledger__amt gl-ledger__amt--strong"><span class="is-dr">{{ number_format($periodDebit, 2) }}</span></span>
+                            <span class="gl-ledger__amt gl-ledger__amt--strong"><span class="is-cr">{{ number_format($periodCredit, 2) }}</span></span>
+                            <span class="gl-ledger__amt gl-ledger__amt--strong is-accent">{{ number_format($closingBalance, 2) }}</span>
                         </div>
                     @endif
                 </div>

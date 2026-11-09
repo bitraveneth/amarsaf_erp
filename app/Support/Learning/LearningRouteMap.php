@@ -56,6 +56,7 @@ class LearningRouteMap
         '/admin/journals' => 'accounting',
         '/admin/agent-advances' => 'accounting',
         '/admin/accounting-dashboard' => 'accounting',
+        '/admin/reports/trial-balance' => 'accounting-health-check',
         '/admin/reports/pl' => 'profit-loss',
         '/admin/reports' => 'reports',
         '/admin/export-center' => 'reports',

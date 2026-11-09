@@ -82,7 +82,7 @@ class ChartOfAccountsSummaryService
         $query = JournalEntryLine::query()
             ->selectRaw('account_id, COALESCE(SUM(debit), 0) as debit, COALESCE(SUM(credit), 0) as credit')
             ->whereHas('journalEntry', function (Builder $q) use ($from, $to) {
-                $q->where('status', 'posted');
+                $q->inLedger();
 
                 if ($from) {
                     $q->whereDate('entry_date', '>=', $from->toDateString());

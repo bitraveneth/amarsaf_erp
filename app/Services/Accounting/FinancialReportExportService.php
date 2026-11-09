@@ -108,7 +108,7 @@ class FinancialReportExportService
         $lines = JournalEntryLine::query()
             ->with(['journalEntry', 'account'])
             ->whereHas('journalEntry', function ($query) use ($from, $to) {
-                $query->where('status', 'posted')
+                $query->inLedger()
                     ->whereDate('entry_date', '>=', $from->toDateString())
                     ->whereDate('entry_date', '<=', $to->toDateString());
             })
@@ -159,6 +159,36 @@ class FinancialReportExportService
         return $rows->values();
     }
 
+    /**
+     * Compact aging PDF: one row per agent (matches the on-screen "By agent" table).
+     */
+    public function receivableAgingSummary(Request $request): Collection
+    {
+        $asOf = $this->resolveAsOf($request);
+        $report = app(AgingReportService::class)->receivableAging($asOf);
+        $bucketKeys = array_keys(AgingReportService::BUCKET_LABELS);
+
+        $rows = collect($report['byAgent'] ?? [])->map(function (array $group) use ($bucketKeys) {
+            $line = [$group['name'] ?? '—'];
+            foreach ($bucketKeys as $key) {
+                $line[] = $this->money((float) ($group['buckets'][$key] ?? 0));
+            }
+            $line[] = $this->money((float) ($group['total'] ?? 0));
+
+            return $line;
+        });
+
+        $totals = ['Total'];
+        foreach ($bucketKeys as $key) {
+            $totals[] = $this->money((float) ($report['buckets'][$key] ?? 0));
+        }
+        $totals[] = $this->money((float) ($report['subledgerTotal'] ?? 0));
+        $rows->push($totals);
+        $rows->push(['As of '.$asOf->format('d M Y'), '', '', '', '', '', '']);
+
+        return $rows->values();
+    }
+
     public function payableAging(Request $request): Collection
     {
         $asOf = $this->resolveAsOf($request);
@@ -180,6 +210,36 @@ class FinancialReportExportService
 
         $rows->push(['', '', '', '', '', '']);
         $rows->push(['As of', $asOf->format('d M Y'), '', '', 'Total outstanding', $this->money($report['subledgerTotal'] ?? 0)]);
+
+        return $rows->values();
+    }
+
+    /**
+     * Compact AP aging PDF: one row per supplier.
+     */
+    public function payableAgingSummary(Request $request): Collection
+    {
+        $asOf = $this->resolveAsOf($request);
+        $report = app(AgingReportService::class)->payableAging($asOf);
+        $bucketKeys = array_keys(AgingReportService::BUCKET_LABELS);
+
+        $rows = collect($report['bySupplier'] ?? [])->map(function (array $group) use ($bucketKeys) {
+            $line = [$group['name'] ?? '—'];
+            foreach ($bucketKeys as $key) {
+                $line[] = $this->money((float) ($group['buckets'][$key] ?? 0));
+            }
+            $line[] = $this->money((float) ($group['total'] ?? 0));
+
+            return $line;
+        });
+
+        $totals = ['Total'];
+        foreach ($bucketKeys as $key) {
+            $totals[] = $this->money((float) ($report['buckets'][$key] ?? 0));
+        }
+        $totals[] = $this->money((float) ($report['subledgerTotal'] ?? 0));
+        $rows->push($totals);
+        $rows->push(['As of '.$asOf->format('d M Y'), '', '', '', '', '', '']);
 
         return $rows->values();
     }
@@ -580,7 +640,7 @@ class FinancialReportExportService
         return JournalEntry::query()
             ->withSum('lines as debit_total', 'debit')
             ->withSum('lines as credit_total', 'credit')
-            ->where('status', 'posted')
+            ->inLedger()
             ->whereDate('entry_date', '>=', $from->toDateString())
             ->whereDate('entry_date', '<=', $to->toDateString())
             ->orderBy('entry_date')
@@ -738,14 +798,14 @@ class FinancialReportExportService
         $resolved = ExportDateRange::resolve($request);
 
         if ($resolved && $resolved['to']) {
-            return $resolved['to']->copy()->endOfDay();
+            return Carbon::instance($resolved['to']->copy()->endOfDay());
         }
 
         if ($resolved && $resolved['from']) {
-            return $resolved['from']->copy()->endOfDay();
+            return Carbon::instance($resolved['from']->copy()->endOfDay());
         }
 
-        return now()->endOfDay();
+        return Carbon::instance(now()->endOfDay());
     }
 
     protected function operatingExpensesTotal(Carbon $from, Carbon $to): float
@@ -803,7 +863,7 @@ class FinancialReportExportService
         return (float) JournalEntryLine::query()
             ->where('account_id', $accountId)
             ->whereHas('journalEntry', function ($query) use ($from, $to) {
-                $query->where('status', 'posted')
+                $query->inLedger()
                     ->when($from, fn ($q) => $q->whereDate('entry_date', '>=', $from->toDateString()))
                     ->whereDate('entry_date', '<=', $to->toDateString());
             })
@@ -815,7 +875,7 @@ class FinancialReportExportService
         return (float) JournalEntryLine::query()
             ->where('account_id', $accountId)
             ->whereHas('journalEntry', function ($query) use ($from, $to) {
-                $query->where('status', 'posted')
+                $query->inLedger()
                     ->when($from, fn ($q) => $q->whereDate('entry_date', '>=', $from->toDateString()))
                     ->whereDate('entry_date', '<=', $to->toDateString());
             })

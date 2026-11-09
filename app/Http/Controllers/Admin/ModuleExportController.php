@@ -43,13 +43,15 @@ class ModuleExportController extends Controller
     {
         abort_unless(in_array($format, ['csv', 'pdf'], true), 404);
 
-        $export = ModuleExportRegistry::resolve($module, $request);
+        $export = ModuleExportRegistry::resolve($module, $request, $format);
 
         if (! Permission::can($request->user(), $export['permission'])) {
             abort(403);
         }
 
         $disposition = $request->query('disposition') === 'inline' ? 'inline' : 'attachment';
+
+        $isAgingPdf = $format === 'pdf' && in_array($module, ['ar-aging', 'ap-aging'], true);
 
         return TabularExport::download(
             $format,
@@ -60,6 +62,11 @@ class ModuleExportController extends Controller
             $disposition,
             [
                 'periodLabel' => ExportDateRange::periodSummary($request),
+                // Wide bucket tables need landscape; portrait crushed the columns.
+                'orientation' => $isAgingPdf ? 'landscape' : null,
+                'note' => $isAgingPdf
+                    ? 'PDF shows aging by party. Download CSV for every open invoice or bill.'
+                    : null,
             ],
         );
     }

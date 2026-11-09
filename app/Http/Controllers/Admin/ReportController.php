@@ -49,14 +49,15 @@ class ReportController extends Controller
         $currencyCode = config('app.currency', 'BDT');
         $compareMode = $request->query('compare', 'prior');
         $statement = $reports->profitAndLoss($from, $to);
-        $periodLabel = $this->dashboardPeriodLabel($from, $to);
+        $periodLabel = $this->dashboardPeriodLabel($from, $to, $range);
 
         $priorStatement = null;
         $priorPeriodLabel = null;
-        if ($request->boolean('compare_enabled', true)) {
+        // Lifetime already covers all history — a "prior" window before 2000-01-01 is empty.
+        if ($request->boolean('compare_enabled', true) && $range !== 'lifetime') {
             [$priorFrom, $priorTo] = $this->resolvePriorPeriod($from, $to, $range, $compareMode);
             $priorStatement = $reports->profitAndLoss($priorFrom, $priorTo);
-            $priorPeriodLabel = $this->dashboardPeriodLabel($priorFrom, $priorTo);
+            $priorPeriodLabel = $this->dashboardPeriodLabel($priorFrom, $priorTo, $range);
         }
 
         $incomeStatement = $presenter->present(
@@ -489,7 +490,7 @@ class ReportController extends Controller
 
         $entries = \App\Models\JournalEntry::query()
             ->with(['lines.account'])
-            ->where('status', 'posted')
+            ->inLedger()
             ->whereDate('entry_date', '>=', $from->toDateString())
             ->whereDate('entry_date', '<=', $to->toDateString())
             ->orderByDesc('entry_date')
@@ -937,7 +938,7 @@ class ReportController extends Controller
                 ->with(['journalEntry', 'account'])
                 ->where('account_id', $selectedAccount->id)
                 ->whereHas('journalEntry', function ($query) use ($from, $to) {
-                    $query->where('status', 'posted')
+                    $query->inLedger()
                         ->whereDate('entry_date', '>=', $from->toDateString())
                         ->whereDate('entry_date', '<=', $to->toDateString());
                 })
@@ -995,7 +996,7 @@ class ReportController extends Controller
     {
         $accountIds = JournalEntryLine::query()
             ->whereHas('journalEntry', function ($query) use ($from, $to) {
-                $query->where('status', 'posted')
+                $query->inLedger()
                     ->whereDate('entry_date', '>=', $from->toDateString())
                     ->whereDate('entry_date', '<=', $to->toDateString());
             })
@@ -1032,7 +1033,7 @@ class ReportController extends Controller
         return (float) JournalEntryLine::query()
             ->where('account_id', $accountId)
             ->whereHas('journalEntry', function ($query) use ($from, $to) {
-                $query->where('status', 'posted')
+                $query->inLedger()
                     ->when($from, fn ($q) => $q->whereDate('entry_date', '>=', $from->toDateString()))
                     ->whereDate('entry_date', '<=', $to->toDateString());
             })
@@ -1044,7 +1045,7 @@ class ReportController extends Controller
         return (float) JournalEntryLine::query()
             ->where('account_id', $accountId)
             ->whereHas('journalEntry', function ($query) use ($from, $to) {
-                $query->where('status', 'posted')
+                $query->inLedger()
                     ->when($from, fn ($q) => $q->whereDate('entry_date', '>=', $from->toDateString()))
                     ->whereDate('entry_date', '<=', $to->toDateString());
             })

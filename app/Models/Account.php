@@ -139,7 +139,7 @@ class Account extends Model
         $query = JournalEntryLine::query()
             ->whereIn('account_id', $ids)
             ->whereHas('journalEntry', function (Builder $q) use ($from, $to) {
-                $q->where('status', 'posted');
+                $q->inLedger();
                 if ($from) {
                     $q->whereDate('entry_date', '>=', $from->toDateString());
                 }

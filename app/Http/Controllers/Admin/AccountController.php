@@ -22,7 +22,7 @@ class AccountController extends Controller
     public function index(Request $request, ChartOfAccountsExportService $coaExport, ChartOfAccountsSummaryService $coaSummary)
     {
         [$from, $to, $range] = $this->resolveDashboardPeriod($request);
-        $periodLabel = $this->dashboardPeriodLabel($from, $to);
+        $periodLabel = $this->dashboardPeriodLabel($from, $to, $range);
         $rangeOptions = $this->dashboardRangeOptions();
         $currencyCode = config('app.currency', 'BDT');
 
@@ -90,11 +90,15 @@ class AccountController extends Controller
                 'type' => $selectedType,
                 'root' => $selectedRoot,
             ],
-            $viewMode === 'balance' ? [
-                'range' => $range,
-                'from' => $from->toDateString(),
-                'to' => $to->toDateString(),
-            ] : []
+            $viewMode === 'balance' ? (
+                $range === 'lifetime'
+                    ? ['range' => 'lifetime']
+                    : [
+                        'range' => $range,
+                        'from' => $from->toDateString(),
+                        'to' => $to->toDateString(),
+                    ]
+            ) : []
         ));
 
         return view('admin.finance.accounts', compact(

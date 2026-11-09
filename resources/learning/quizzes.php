@@ -390,6 +390,47 @@ return [
             ],
         ],
     ],
+    'accounting-health-check' => [
+        'pass_percent' => 70,
+        'questions' => [
+            [
+                'id' => 'ah1',
+                'prompt' => ['en' => 'After a paid expense of 1,000 posts correctly, Net profit on the accounting dashboard should…', 'bn' => '১,০০০ পেইড খরচ ঠিকমতো পোস্ট হলে ড্যাশবোর্ডে Net profit…'],
+                'options' => [
+                    ['id' => 'a', 'text' => ['en' => 'Fall by about 1,000 (same period)', 'bn' => 'প্রায় ১,০০০ কমে (একই পিরিয়ড)']],
+                    ['id' => 'b', 'text' => ['en' => 'Rise by 1,000', 'bn' => '১,০০০ বাড়ে']],
+                    ['id' => 'c', 'text' => ['en' => 'Stay the same always', 'bn' => 'সবসময় একই থাকে']],
+                    ['id' => 'd', 'text' => ['en' => 'Only change next year', 'bn' => 'শুধু পরের বছর বদলায়']],
+                ],
+                'correct' => 'a',
+                'explain' => ['en' => 'Dashboard estimate: Net profit ≈ Sales − Expenses − Payroll.', 'bn' => 'ড্যাশবোর্ড: Net profit ≈ Sales − Expenses − Payroll।'],
+            ],
+            [
+                'id' => 'ah2',
+                'prompt' => ['en' => 'Dashboard moved but Income statement did not. Most likely…', 'bn' => 'ড্যাশবোর্ড বদলেছে কিন্তু Income statement নয়। সম্ভবত…'],
+                'options' => [
+                    ['id' => 'a', 'text' => ['en' => 'Expense row exists without a posted journal', 'bn' => 'খরচের সারি আছে কিন্তু পোস্ট করা জার্নাল নেই']],
+                    ['id' => 'b', 'text' => ['en' => 'VAT rate is 15%', 'bn' => 'VAT হার ১৫%']],
+                    ['id' => 'c', 'text' => ['en' => 'Warehouse is full', 'bn' => 'গুদাম পূর্ণ']],
+                    ['id' => 'd', 'text' => ['en' => 'Agent has no phone', 'bn' => 'এজেন্টের ফোন নেই']],
+                ],
+                'correct' => 'a',
+                'explain' => ['en' => 'P&L reads posted journals only. Sync or fix period/accounts.', 'bn' => 'P&L শুধু পোস্ট করা জার্নাল পড়ে। Sync বা পিরিয়ড/অ্যাকাউন্ট ঠিক করুন।'],
+            ],
+            [
+                'id' => 'ah3',
+                'prompt' => ['en' => 'After you Reverse a posted cash journal, cash should…', 'bn' => 'পোস্ট করা cash জার্নাল Reverse করলে নগদ…'],
+                'options' => [
+                    ['id' => 'a', 'text' => ['en' => 'Return to the balance before that journal', 'bn' => 'সেই জার্নালের আগের ব্যালেন্সে ফেরে']],
+                    ['id' => 'b', 'text' => ['en' => 'Stay permanently negative', 'bn' => 'স্থায়ীভাবে নেগেটিভ থাকে']],
+                    ['id' => 'c', 'text' => ['en' => 'Double the original effect', 'bn' => 'আসল প্রভাব দ্বিগুণ হয়']],
+                    ['id' => 'd', 'text' => ['en' => 'Delete the chart of accounts', 'bn' => 'চার্ট অফ অ্যাকাউন্টস মুছে যায়']],
+                ],
+                'correct' => 'a',
+                'explain' => ['en' => 'Original + reversing voucher must net to zero on the ledger.', 'bn' => 'আসল + রিভার্সিং ভাউচার লেজারে নেট শূন্য।'],
+            ],
+        ],
+    ],
     'accounting' => [
         'pass_percent' => 70,
         'questions' => [

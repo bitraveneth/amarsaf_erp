@@ -65,7 +65,7 @@ class ModuleExportRegistry
         return null;
     }
 
-    public static function resolve(string $slug, Request $request): array
+    public static function resolve(string $slug, Request $request, ?string $format = null): array
     {
         $slug = self::normalizeSlug($slug);
 
@@ -73,7 +73,18 @@ class ModuleExportRegistry
 
         abort_unless($definition, 404);
 
-        $builder = $definition['builder'];
+        $format = $format ?: (string) $request->route('format');
+
+        // DomPDF OOMs on thousands of invoice lines. PDF/print uses the compact
+        // agent/supplier summary; CSV keeps the full invoice/bill detail.
+        if ($format === 'pdf' && isset($definition['pdf_builder'], $definition['pdf_columns'])) {
+            $builder = $definition['pdf_builder'];
+            $columns = $definition['pdf_columns'];
+        } else {
+            $builder = $definition['builder'];
+            $columns = $definition['columns'];
+        }
+
         if (is_array($builder)) {
             [$class, $method] = $builder;
             $rows = app($class)->{$method}($request);
@@ -84,7 +95,7 @@ class ModuleExportRegistry
         return [
             'title' => $definition['title'] . self::titleRangeSuffix($request),
             'filename' => $definition['filename'] . ExportDateRange::filenameSuffix($request),
-            'columns' => $definition['columns'],
+            'columns' => $columns,
             'rows' => $rows,
             'permission' => $definition['permission'],
         ];
@@ -480,6 +491,8 @@ class ModuleExportRegistry
                 'permission' => 'reports.view',
                 'columns' => ['Invoice', 'Agent', 'Due date', 'Days past due', 'Bucket', 'Outstanding'],
                 'builder' => [FinancialReportExportService::class, 'receivableAging'],
+                'pdf_columns' => ['Agent', 'Current', '1–30 days', '31–60 days', '61–90 days', '90+ days', 'Total'],
+                'pdf_builder' => [FinancialReportExportService::class, 'receivableAgingSummary'],
             ],
             'ap-aging' => [
                 'route' => 'admin.reports.ap-aging',
@@ -488,6 +501,8 @@ class ModuleExportRegistry
                 'permission' => 'reports.view',
                 'columns' => ['Bill', 'Supplier', 'Due date', 'Days past due', 'Bucket', 'Outstanding'],
                 'builder' => [FinancialReportExportService::class, 'payableAging'],
+                'pdf_columns' => ['Supplier', 'Current', '1–30 days', '31–60 days', '61–90 days', '90+ days', 'Total'],
+                'pdf_builder' => [FinancialReportExportService::class, 'payableAgingSummary'],
             ],
             'vat-report' => [
                 'route' => 'admin.reports.vat',

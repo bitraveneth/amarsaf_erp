@@ -25,6 +25,10 @@ trait ResolvesDashboardPeriod
         $hasCustomDates = $request->filled('from') || $request->filled('to');
         $today = Carbon::today();
 
+        // Preset ranges (including lifetime) always win over leftover from/to
+        // query params so a prior custom pick cannot override "Lifetime".
+        $presetRanges = ['7d', 'month', 'quarter', 'year', 'lifetime', 'all'];
+
         if ($range === 'custom' || (! $range && $hasCustomDates)) {
             $from = $request->filled('from')
                 ? Carbon::parse($request->query('from'))->startOfDay()
@@ -38,6 +42,15 @@ trait ResolvesDashboardPeriod
             }
 
             return [$from, $to, 'custom'];
+        }
+
+        if ($range && ! in_array($range, $presetRanges, true) && $hasCustomDates) {
+            $range = 'custom';
+
+            return $this->resolveDashboardPeriod(
+                $request->duplicate(array_merge($request->query(), ['range' => 'custom'])),
+                $defaultRange
+            );
         }
 
         switch ($range) {

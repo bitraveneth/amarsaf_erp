@@ -77,17 +77,30 @@ class TabularExport
         string $disposition = 'attachment',
         array $options = [],
     ): \Illuminate\Http\Response {
+        // Designed DomPDF sheets are heavy; keep a ceiling and allow a temporary bump.
+        $previousMemoryLimit = ini_get('memory_limit');
+        if (function_exists('ini_set')) {
+            @ini_set('memory_limit', '256M');
+        }
+
         $truncated = false;
         $totalRows = count($rows);
+        $maxPdfRows = 200;
 
-        if ($totalRows > 500) {
-            $rows = array_slice($rows, 0, 500);
+        if ($totalRows > $maxPdfRows) {
+            $rows = array_slice($rows, 0, $maxPdfRows);
             $truncated = true;
         }
 
         $rows = array_map(function ($row) {
             return array_map(fn ($value) => self::stringify($value), array_values((array) $row));
         }, $rows);
+
+        // Only force landscape when asked (AR/AP aging) or the table is wider
+        // than 6 columns — same threshold as before. Invoices do not use this path.
+        $orientation = ($options['orientation'] ?? null) === 'landscape' || count($columns) > 6
+            ? 'landscape'
+            : 'portrait';
 
         $safeName = self::safeFilename($filename) . '.pdf';
         $pdf = \App\Support\PdfDocumentBuilder::loadView('exports.table-pdf', [
@@ -97,17 +110,25 @@ class TabularExport
             'generatedAt' => now(),
             'truncated' => $truncated,
             'totalRows' => $totalRows,
+            'maxPdfRows' => $maxPdfRows,
             'periodLabel' => $options['periodLabel'] ?? null,
             'meta' => $options['meta'] ?? [],
             'note' => $options['note'] ?? null,
+            'orientation' => $orientation,
             'company' => \App\Support\Documents\CompanyDocumentContext::make(),
-        ])->setPaper('a4', count($columns) > 6 ? 'landscape' : 'portrait');
+        ])->setPaper('a4', $orientation);
 
-        if ($disposition === 'inline') {
-            return $pdf->stream($safeName);
+        try {
+            if ($disposition === 'inline') {
+                return $pdf->stream($safeName);
+            }
+
+            return $pdf->download($safeName);
+        } finally {
+            if ($previousMemoryLimit !== false && function_exists('ini_set')) {
+                @ini_set('memory_limit', $previousMemoryLimit);
+            }
         }
-
-        return $pdf->download($safeName);
     }
 
     protected static function safeFilename(string $filename): string
