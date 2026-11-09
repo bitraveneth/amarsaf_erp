@@ -36,9 +36,30 @@ class FinanceController extends Controller
 
     public function index()
     {
-        $invoices = Invoice::with(['order.agent', 'receipts', 'creditNotes', 'advanceApplications'])->latest()->paginate(10);
+        $invoices = Invoice::with(['order.agent', 'receipts', 'creditNotes', 'advanceApplications'])
+            ->latest('issued_at')
+            ->latest('id')
+            ->paginate(20);
 
-        return view('admin.finance.index', compact('invoices'));
+        $totals = DB::table('invoices')
+            ->selectRaw('COUNT(*) as invoice_count')
+            ->selectRaw('COALESCE(SUM(net_total + vat_amount), 0) as gross_total')
+            ->selectRaw('COALESCE(SUM(CASE WHEN status = ? THEN 0 ELSE 1 END), 0) as open_count', ['paid'])
+            ->first();
+        $collected = (float) DB::table('receipts')->sum('amount')
+            + (float) DB::table('agent_advance_applications')->sum('amount');
+        $credits = (float) DB::table('credit_notes')->sum('amount');
+        $cash = (float) DB::table('invoices')->sum(DB::raw('net_total + vat_amount - withholding'));
+
+        $summary = [
+            'count' => (int) $totals->invoice_count,
+            'open' => (int) $totals->open_count,
+            'gross' => (float) $totals->gross_total,
+            'collected' => $collected,
+            'outstanding' => max(0, $cash - $collected - $credits),
+        ];
+
+        return view('admin.finance.index', compact('invoices', 'summary'));
     }
 
     public function show(Invoice $invoice)

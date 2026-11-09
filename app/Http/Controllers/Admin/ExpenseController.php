@@ -2,11 +2,14 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Admin\Concerns\ResolvesDashboardPeriod;
 use App\Http\Controllers\Controller;
 use App\Models\Account;
 use App\Models\Expense;
 use App\Models\ExpenseCategory;
 use App\Models\JournalEntry;
+use App\Models\PaymentInstrument;
+use App\Models\PaymentMethodCategory;
 use App\Notifications\SystemAlertNotification;
 use App\Services\Accounting\ExpensePostingService;
 use App\Services\Accounting\UnpostedExpenseNotice;
@@ -17,6 +20,8 @@ use Illuminate\Validation\Rule;
 
 class ExpenseController extends Controller
 {
+    use ResolvesDashboardPeriod;
+
     public function __construct(protected ExpensePostingService $posting)
     {
     }
@@ -28,14 +33,45 @@ class ExpenseController extends Controller
 
     public function index(Request $request)
     {
-        $from = $request->query('from')
-            ? Carbon::parse($request->query('from'))
-            : Carbon::now()->startOfMonth();
-        $to = $request->query('to')
-            ? Carbon::parse($request->query('to'))
-            : Carbon::now()->endOfMonth();
+        $rangeOptions = [
+            'today' => 'Today',
+            '7d' => 'This week',
+            'month' => 'This month',
+            'year' => 'This year',
+            'lifetime' => 'Lifetime',
+            'custom' => 'Custom range',
+        ];
 
-        $query = Expense::with('expenseCategory')->whereBetween('date', [$from, $to]);
+        $range = (string) $request->query('range', '');
+        if ($range === '' && ($request->filled('from') || $request->filled('to'))) {
+            $range = 'custom';
+        }
+        if (! array_key_exists($range, $rangeOptions)) {
+            $range = 'month';
+        }
+
+        $today = Carbon::today();
+        [$from, $to] = match ($range) {
+            'today' => [$today->copy(), $today->copy()],
+            '7d' => [$today->copy()->startOfWeek(), $today->copy()->endOfWeek()],
+            'year' => [$today->copy()->startOfYear(), $today->copy()->endOfYear()],
+            'lifetime' => [Carbon::parse('2000-01-01'), $today->copy()],
+            'custom' => [
+                $request->filled('from') ? Carbon::parse($request->query('from')) : $today->copy()->startOfMonth(),
+                $request->filled('to') ? Carbon::parse($request->query('to')) : $today->copy()->endOfMonth(),
+            ],
+            default => [$today->copy()->startOfMonth(), $today->copy()->endOfMonth()],
+        };
+
+        if ($from->gt($to)) {
+            [$from, $to] = [$to->copy(), $from->copy()];
+        }
+
+        $periodLabel = $range === 'lifetime'
+            ? 'Lifetime through ' . $to->format('d M Y')
+            : $this->dashboardPeriodLabel($from, $to);
+
+        $query = Expense::with('expenseCategory')->whereBetween('date', [$from->toDateString(), $to->toDateString()]);
 
         if ($category = $request->query('category')) {
             $query->where(function ($q) use ($category) {
@@ -49,15 +85,32 @@ class ExpenseController extends Controller
 
         $categories = ExpenseCategory::active()->ordered()->get();
 
-        return view('admin.finance.expenses.index', compact('expenses', 'from', 'to', 'total', 'categories'));
+        return view('admin.finance.expenses.index', compact(
+            'expenses',
+            'from',
+            'to',
+            'total',
+            'categories',
+            'range',
+            'rangeOptions',
+            'periodLabel',
+        ));
     }
 
     public function create()
     {
+        $defaultInstrument = PaymentInstrument::query()
+            ->active()
+            ->where('is_default', true)
+            ->whereHas('category', fn ($q) => $q->where('kind', PaymentMethodCategory::KIND_BANK))
+            ->first()
+            ?? PaymentInstrument::query()->active()->orderBy('id')->first();
+
         return view('admin.finance.expenses.create', [
             'expense' => new Expense([
                 'payment_type' => ExpenseCategory::PAYMENT_BANK,
-                'payment_account_key' => 'bank_default',
+                'payment_account_key' => $defaultInstrument?->slug ?? 'bank_brac',
+                'payment_instrument_id' => $defaultInstrument?->id,
             ]),
             ...$this->formOptions(),
         ]);
@@ -215,13 +268,29 @@ class ExpenseController extends Controller
             'amount' => 'required|numeric|min:0',
             'reference' => 'nullable|string|max:100',
             'status' => 'required|in:' . implode(',', self::VALID_STATUSES),
-            'payment_type' => 'required|in:bank,cash,payable',
-            'payment_account_key' => 'required|string|max:100',
+            'payment_type' => 'nullable|in:bank,cash,payable',
+            'payment_instrument_id' => [
+                Rule::requiredIf(fn () => $request->input('payment_type') !== ExpenseCategory::PAYMENT_PAYABLE),
+                'nullable',
+                'exists:payment_instruments,id',
+            ],
+            'payment_account_key' => 'nullable|string|max:100',
             'analytic_label' => 'nullable|string|max:100',
         ]);
 
         $category = ExpenseCategory::findOrFail($data['expense_category_id']);
         $data['category'] = $category->code;
+
+        if (($data['payment_type'] ?? null) === ExpenseCategory::PAYMENT_PAYABLE) {
+            $data['payment_instrument_id'] = null;
+            $data['payment_account_key'] = $data['payment_account_key'] ?? 'bank_default';
+            $data['payment_type'] = ExpenseCategory::PAYMENT_PAYABLE;
+        } else {
+            $instrument = PaymentInstrument::with('category')->findOrFail($data['payment_instrument_id']);
+            $data['payment_instrument_id'] = $instrument->id;
+            $data['payment_type'] = $instrument->category?->postingPaymentType() ?? ExpenseCategory::PAYMENT_BANK;
+            $data['payment_account_key'] = $instrument->slug;
+        }
 
         return $data;
     }
@@ -231,13 +300,10 @@ class ExpenseController extends Controller
         return [
             'expenseCategories' => ExpenseCategory::active()->ordered()->with('account')->get(),
             'expenseAccounts' => Account::postable()->where('type', 'expense')->orderBy('code')->get(),
-            'paymentAccountKeys' => [
-                'bank_default' => 'Default bank (BRAC)',
-                'bank_brac' => 'BRAC Bank',
-                'bank_scb' => 'SCB Bank',
-                'cash_in_hand' => 'Cash in hand',
-                'petty_cash' => 'Petty cash',
-            ],
+            'paymentCategories' => PaymentMethodCategory::active()
+                ->ordered()
+                ->with(['instruments' => fn ($q) => $q->active()->ordered()->with('account')])
+                ->get(),
         ];
     }
 

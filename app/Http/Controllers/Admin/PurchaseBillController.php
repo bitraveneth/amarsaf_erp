@@ -29,7 +29,31 @@ class PurchaseBillController extends Controller
     public function index()
     {
         $bills = PurchaseBill::with('supplier', 'payments')->latest('bill_date')->paginate(15);
-        return view('admin.bills.index', compact('bills'));
+
+        $paidByBill = DB::table('bill_payments')
+            ->select('purchase_bill_id', DB::raw('SUM(amount) as paid'))
+            ->groupBy('purchase_bill_id');
+
+        $stats = DB::table('purchase_bills as b')
+            ->leftJoinSub($paidByBill, 'p', 'p.purchase_bill_id', '=', 'b.id')
+            ->selectRaw(
+                'COUNT(*) as bill_count,
+                COALESCE(SUM(GREATEST((b.net_total + b.vat_amount) - COALESCE(p.paid, 0), 0)), 0) as outstanding,
+                COALESCE(SUM(COALESCE(p.paid, 0)), 0) as paid,
+                SUM(CASE WHEN b.status != ? AND b.due_date IS NOT NULL AND b.due_date < ? AND (b.net_total + b.vat_amount) > COALESCE(p.paid, 0) THEN 1 ELSE 0 END) as overdue,
+                SUM(CASE WHEN (b.net_total + b.vat_amount) > COALESCE(p.paid, 0) THEN 1 ELSE 0 END) as due_count',
+                ['paid', now()->toDateString()]
+            )
+            ->first();
+
+        return view('admin.bills.index', compact('bills', 'stats'));
+    }
+
+    public function show(PurchaseBill $bill)
+    {
+        $bill->load(['supplier', 'warehouse', 'items.product', 'payments']);
+
+        return view('admin.bills.show', compact('bill'));
     }
 
     public function create()
@@ -199,16 +223,17 @@ class PurchaseBillController extends Controller
 
         $amount = isset($data['amount']) ? (float) $data['amount'] : (float) $bill->outstanding;
 
+        $backToBill = $request->input('redirect') === 'show';
+        $redirectTo = fn () => $backToBill
+            ? redirect()->route('admin.bills.show', $bill)
+            : redirect()->route('admin.bills.index');
+
         if ($amount <= 0) {
-            return redirect()
-                ->route('admin.bills.index')
-                ->with('error', 'This bill is already fully paid.');
+            return $redirectTo()->with('error', 'This bill is already fully paid.');
         }
 
         if ($amount > $bill->outstanding + 0.00001) {
-            return redirect()
-                ->route('admin.bills.index')
-                ->withErrors(['amount' => 'Payment amount exceeds the remaining amount due for this bill.']);
+            return $redirectTo()->withErrors(['amount' => 'Payment amount exceeds the remaining amount due for this bill.']);
         }
 
         $this->recordBillPayment(
@@ -218,7 +243,7 @@ class PurchaseBillController extends Controller
             $data['method'] ?? null
         );
 
-        return redirect()->route('admin.bills.index')->with('status', 'Bill payment recorded.');
+        return $redirectTo()->with('status', 'Bill payment recorded.');
     }
 
     public function storeBatchPayment(Request $request)

@@ -106,9 +106,55 @@ class UnpostedExpenseNoticeTest extends TestCase
 
         $html = view('components.layout.ledger-gap-banner', ['notice' => $notice])->render();
         $this->assertStringContainsString('not in the profit and loss ledger', $html);
-        $this->assertStringContainsString('Sync missing expenses', $html);
-        $this->assertStringContainsString('Facebook ads', $html);
-        $this->assertStringContainsString('name="scope" value="missing"', $html);
+        $this->assertStringContainsString('Review expenses', $html);
+        $this->assertStringContainsString(route('admin.expenses.index'), $html);
+        $this->assertStringNotContainsString('Facebook ads', $html);
+        $this->assertStringNotContainsString('name="scope" value="missing"', $html);
+    }
+
+    public function test_sales_and_warehouse_staff_do_not_see_the_ledger_gap_banner(): void
+    {
+        $this->account('marketing_expense', 'Marketing expense', 'expense');
+        $this->account('bank_brac', 'BRAC Bank', 'asset');
+
+        Expense::create([
+            'date' => '2026-11-02',
+            'category' => 'Marketing',
+            'description' => 'Facebook ads',
+            'amount' => 30000,
+            'status' => 'recorded',
+            'payment_type' => 'bank',
+            'payment_account_key' => 'bank_default',
+        ]);
+
+        $notice = app(UnpostedExpenseNotice::class)->summary();
+
+        foreach (['admin', 'accounts_officer'] as $role) {
+            $this->actingAs(User::create([
+                'name' => $role,
+                'email' => $role.'@example.com',
+                'password' => 'secret',
+                'role' => $role,
+            ]));
+
+            $html = view('components.layout.ledger-gap-banner', ['notice' => $notice])->render();
+
+            $this->assertStringContainsString('not in the profit and loss ledger', $html);
+        }
+
+        foreach (['sales_officer', 'warehouse_officer', 'purchase_executive', 'production_officer'] as $role) {
+            $this->actingAs(User::create([
+                'name' => $role,
+                'email' => $role.'@example.com',
+                'password' => 'secret',
+                'role' => $role,
+            ]));
+
+            $html = view('components.layout.ledger-gap-banner', ['notice' => $notice])->render();
+
+            $this->assertStringNotContainsString('not in the profit and loss ledger', $html);
+            $this->assertStringNotContainsString('Sync missing expenses', $html);
+        }
     }
 
     public function test_sync_posts_the_missing_expense_and_the_banner_goes_away(): void

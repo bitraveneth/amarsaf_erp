@@ -36,7 +36,7 @@ class AccountController extends Controller
         $selectedType = $coaExport->normalizeType($request->query('type'));
         $viewMode = in_array($request->query('view'), ['structure', 'balance'], true)
             ? $request->query('view')
-            : 'structure';
+            : 'balance';
 
         $allAccounts = Account::query()->orderBy('code')->get();
         $accountMap = $allAccounts->keyBy('id');

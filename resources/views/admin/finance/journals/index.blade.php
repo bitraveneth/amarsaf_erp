@@ -79,5 +79,18 @@
     @if($entries instanceof \Illuminate\Contracts\Pagination\Paginator && $entries->hasPages())
         <div class="mt-4">{{ $entries->links() }}</div>
     @endif
+
+    <x-admin.quick-guide
+        title="How to use the journal list"
+        lead="Every posted voucher from invoices, expenses, bills, payroll, and manual entries appears here."
+        :steps="[
+            ['title' => 'Filter by date & status', 'body' => 'Draft, posted, or reversed for the period you are reviewing.'],
+            ['title' => 'Open a journal', 'body' => 'See lines, print PDF, or reverse a posted voucher if needed.'],
+            ['title' => 'New journal', 'body' => 'Manual entry for openings and adjustments — has a guided example on the form.'],
+            ['title' => 'Prefer modules first', 'body' => 'Day-to-day sales, expenses, and bills should create journals automatically.'],
+        ]"
+        note="Posted journals cannot be edited. Reverse and create a correcting entry instead."
+        :open="false"
+    />
 </div>
 @endsection

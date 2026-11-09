@@ -23,7 +23,13 @@ class ExpensePostingService
             return;
         }
 
-        $expense->loadMissing(['expenseCategory.account', 'expenseCategory.payableAccount', 'accountOverride']);
+        $expense->loadMissing([
+            'expenseCategory.account',
+            'expenseCategory.payableAccount',
+            'accountOverride',
+            'paymentInstrument.account',
+            'paymentInstrument.category',
+        ]);
 
         $expenseAccountKey = $this->expenseAccountKey($expense);
         $creditKey = $this->creditAccountKey($expense);
@@ -83,11 +89,21 @@ class ExpensePostingService
             return 'trade_creditors';
         }
 
-        if ($paymentType === ExpenseCategory::PAYMENT_CASH) {
-            return $expense->payment_account_key ?: 'cash_in_hand';
+        $instrument = $expense->paymentInstrument;
+        if ($instrument?->ledgerSlug()) {
+            return $instrument->ledgerSlug();
         }
 
-        return $expense->payment_account_key ?: 'bank_default';
+        $key = $expense->payment_account_key;
+        if ($key === 'bank_default') {
+            $key = 'bank_brac';
+        }
+
+        if ($paymentType === ExpenseCategory::PAYMENT_CASH) {
+            return $key ?: 'cash_in_hand';
+        }
+
+        return $key ?: 'bank_brac';
     }
 
     protected function legacyCategoryKey(?string $category): string

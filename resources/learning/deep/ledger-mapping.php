@@ -126,8 +126,8 @@ MERMAID,
             ],
             'type' => 'mapping_table',
             'intro' => [
-                'en' => 'Configure at Accounting → Expense category mapping (`/admin/expense-categories`). User also picks payment: bank, cash, or accrued.',
-                'bn' => 'Accounting → Expense category mapping (`/admin/expense-categories`)। ব্যবহারকারী payment: bank, cash, বা accrued বেছে নেয়।',
+                'en' => 'Configure from Expenses → Category mapping (`/admin/expense-categories`). User also picks payment: bank, cash, or accrued.',
+                'bn' => 'Expenses → Category mapping (`/admin/expense-categories`)। ব্যবহারকারী payment: bank, cash, বা accrued বেছে নেয়।',
             ],
             'rows' => [
                 ['action' => ['en' => 'General', 'bn' => 'General'], 'when' => ['en' => 'Paid', 'bn' => 'Paid'], 'debit' => ['en' => 'Selling & distribution', 'bn' => 'Selling & distribution'], 'credit' => ['en' => 'Bank', 'bn' => 'Bank']],

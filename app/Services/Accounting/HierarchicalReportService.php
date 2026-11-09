@@ -3,6 +3,7 @@
 namespace App\Services\Accounting;
 
 use App\Models\Account;
+use App\Models\JournalEntry;
 use App\Models\JournalEntryLine;
 use App\Models\LogisticsBill;
 use App\Models\SalaryDistribution;
@@ -99,17 +100,53 @@ class HierarchicalReportService
             'equity' => $this->sectionTree('equity', $asOf),
         ];
 
+        // Until year-end close moves P&L into retained earnings, fold
+        // unclosed income/expense into equity so Assets = Liabilities + Equity.
+        $earningsFrom = $this->unclosedEarningsStart($asOf);
+        $currentEarnings = $this->profitAndLoss($earningsFrom, $asOf)['netProfit'];
+        if (abs($currentEarnings) >= 0.01) {
+            $sections['equity']['rows']->push([
+                'id' => null,
+                'code' => '',
+                'name' => $currentEarnings >= 0 ? 'Current year earnings' : 'Current year loss',
+                'slug' => 'current_year_earnings',
+                'level' => 1,
+                'is_group' => false,
+                'type' => 'equity',
+                'amount' => round($currentEarnings, 2),
+                'is_subtotal' => false,
+            ]);
+            $sections['equity']['total'] = round($sections['equity']['total'] + $currentEarnings, 2);
+        }
+
         $totalAssets = $sections['assets']['total'];
         $totalLiabilities = $sections['liabilities']['total'];
         $totalEquity = $sections['equity']['total'];
 
         return [
             'sections' => $sections,
+            'current_earnings' => round($currentEarnings, 2),
             'total_assets' => $totalAssets,
             'total_liabilities' => $totalLiabilities,
             'total_equity' => $totalEquity,
             'total_liabilities_equity' => round($totalLiabilities + $totalEquity, 2),
         ];
+    }
+
+    /**
+     * Start date for unclosed P&L rolled into equity. Uses all posted activity
+     * through $asOf until a year-end close moves balances into retained earnings.
+     */
+    protected function unclosedEarningsStart(Carbon $asOf): Carbon
+    {
+        $first = JournalEntry::query()
+            ->where('status', 'posted')
+            ->whereDate('entry_date', '<=', $asOf->toDateString())
+            ->min('entry_date');
+
+        return $first
+            ? Carbon::parse($first)->startOfDay()
+            : $asOf->copy()->startOfYear();
     }
 
     public function profitAndLoss(Carbon $from, Carbon $to): array

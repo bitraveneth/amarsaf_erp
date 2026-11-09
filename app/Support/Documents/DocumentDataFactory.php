@@ -9,6 +9,7 @@ use App\Models\Invoice;
 use App\Models\LogisticsBill;
 use App\Models\Order;
 use App\Models\ProductionRun;
+use App\Models\PurchaseBill;
 use App\Models\PurchaseOrder;
 use Illuminate\Support\Facades\Schema;
 use InvalidArgumentException;
@@ -28,6 +29,7 @@ class DocumentDataFactory
             'packing-slip' => self::packingSlip(self::asDelivery($model)),
             'pod' => self::pod(self::asDelivery($model)),
             'logistics-bill' => self::logisticsBill(self::asLogisticsBill($model)),
+            'purchase-bill' => self::purchaseBill(self::asPurchaseBill($model)),
             default => throw new InvalidArgumentException("Unsupported document type [{$type}]."),
         };
 
@@ -828,6 +830,95 @@ class DocumentDataFactory
         return $payload;
     }
 
+    protected static function purchaseBill(PurchaseBill $bill): array
+    {
+        $bill->load(['supplier', 'warehouse', 'items.product', 'payments']);
+
+        $currency = config('app.currency', 'BDT');
+        $grossTotal = (float) $bill->gross_total;
+        $paidTotal = (float) $bill->paid_total;
+        $outstanding = (float) $bill->outstanding;
+
+        $supplier = $bill->supplier;
+        $supplierLines = array_values(array_filter([
+            $supplier?->contact_person,
+            $supplier?->phone,
+            $supplier?->email,
+            $supplier?->tax_id ? 'BIN '.$supplier->tax_id : null,
+            $supplier?->address,
+        ]));
+
+        $payload = self::base(
+            __('documents.types.purchase_bill'),
+            $bill->number,
+            ucfirst(str_replace('_', ' ', $bill->status ?? 'open')),
+            __('documents.copy.office')
+        );
+
+        $payload['details_title'] = __('documents.labels.bill_details');
+        $payload['parties'] = [[
+            'label' => __('documents.labels.supplier'),
+            'name' => $supplier?->name ?? '—',
+            'phone' => $supplier?->phone,
+            'email' => $supplier?->email,
+            'address' => $supplier?->address,
+            'lines' => $supplierLines,
+        ]];
+
+        $payload['meta'] = array_values(array_filter([
+            [__('documents.labels.bill_no'), $bill->number],
+            [__('documents.labels.bill_date'), optional($bill->bill_date)->format('d M Y') ?? '—'],
+            $bill->due_date ? [__('documents.labels.due_date'), $bill->due_date->format('d M Y')] : null,
+            $bill->warehouse ? [__('documents.labels.warehouse'), $bill->warehouse->name] : null,
+            [__('documents.labels.status'), ucfirst(str_replace('_', ' ', $bill->status ?? 'open'))],
+        ]));
+
+        $payload['columns'] = [
+            __('documents.invoice_sheet.sl'),
+            __('documents.invoice_sheet.product'),
+            __('documents.invoice_sheet.quantity'),
+            __('documents.invoice_sheet.rate'),
+            __('documents.columns.vat_rate'),
+            __('documents.invoice_sheet.amount'),
+        ];
+        $payload['aligns'] = ['center', 'left', 'right', 'right', 'right', 'right'];
+
+        foreach ($bill->items as $index => $item) {
+            $particulars = self::lineParticulars($item->description, $item->product);
+            $payload['rows'][] = [
+                (string) ($index + 1),
+                $particulars,
+                self::formatQty((float) $item->quantity),
+                self::invoiceAmount((float) $item->unit_price),
+                number_format((float) $item->vat_rate, 2).'%',
+                self::invoiceAmount((float) $item->line_total),
+            ];
+        }
+
+        $payload['totals'] = [
+            [__('documents.totals.net'), number_format((float) $bill->net_total, 2).' '.$currency],
+            [__('documents.totals.vat'), number_format((float) $bill->vat_amount, 2).' '.$currency],
+            [__('documents.totals.gross'), number_format($grossTotal, 2).' '.$currency],
+        ];
+
+        if ($paidTotal > 0) {
+            $payload['totals'][] = [__('documents.totals.paid'), '- '.number_format($paidTotal, 2).' '.$currency];
+        }
+
+        if ($outstanding > 0) {
+            $payload['totals'][] = [__('documents.totals.outstanding'), number_format($outstanding, 2).' '.$currency];
+        }
+
+        $payload['signatures'] = [
+            [__('documents.signatures.prepared'), ''],
+            [__('documents.signatures.approved'), ''],
+            [__('documents.signatures.supplier'), ''],
+        ];
+        $payload['footer'] = __('documents.footer.purchase_bill');
+
+        return $payload;
+    }
+
     protected static function grn(GoodsReceipt $receipt): array
     {
         $receipt->load(['supplier', 'warehouse', 'items.product', 'items.batch', 'purchaseOrder', 'creator']);
@@ -1367,6 +1458,15 @@ class DocumentDataFactory
     {
         if (! $model instanceof LogisticsBill) {
             throw new InvalidArgumentException('Expected LogisticsBill model.');
+        }
+
+        return $model;
+    }
+
+    protected static function asPurchaseBill(object $model): PurchaseBill
+    {
+        if (! $model instanceof PurchaseBill) {
+            throw new InvalidArgumentException('Expected PurchaseBill model.');
         }
 
         return $model;

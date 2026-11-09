@@ -57,6 +57,7 @@ use App\Http\Controllers\Admin\SupplierReturnController;
 use App\Http\Controllers\Admin\CampaignController;
 use App\Http\Controllers\Admin\ExpenseCategoryController;
 use App\Http\Controllers\Admin\ExpenseController;
+use App\Http\Controllers\Admin\PaymentMethodController;
 use App\Http\Controllers\Admin\EmployeeLocationController;
 use App\Http\Controllers\Admin\MenuController;
 use App\Http\Controllers\Admin\ErpAssistantController;
@@ -523,6 +524,8 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::get('finance/reconciliation/sample.csv', [BankReconciliationController::class, 'sample'])->middleware('perm:accounting.manage')->name('finance.reconciliation.sample');
     Route::post('finance/reconciliation/import', [BankReconciliationController::class, 'import'])->middleware('perm:accounting.manage')->name('finance.reconciliation.import');
     Route::post('finance/reconciliation', [BankReconciliationController::class, 'update'])->middleware('perm:accounting.manage')->name('finance.reconciliation.update');
+    Route::post('finance/reconciliation/receipts/{receipt}', [BankReconciliationController::class, 'toggleReceipt'])->middleware('perm:accounting.manage')->name('finance.reconciliation.receipt');
+    Route::post('finance/reconciliation/payments/{payment}', [BankReconciliationController::class, 'togglePayment'])->middleware('perm:accounting.manage')->name('finance.reconciliation.payment');
     Route::get('reports/income-statement', [ReportController::class, 'profitAndLoss'])->middleware('perm:reports.view')->name('reports.pl');
     Route::get('reports/pl', fn (\Illuminate\Http\Request $request) => redirect()->route('admin.reports.pl', $request->query(), 301));
     Route::get('reports/operations', [ReportController::class, 'operationsHub'])->middleware('perm:reports.view')->name('reports.operations');
@@ -598,6 +601,11 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::delete('expenses/{expense}', [ExpenseController::class, 'destroy'])->middleware('perm:accounting.manage')->name('expenses.destroy');
     Route::get('expense-categories', [ExpenseCategoryController::class, 'index'])->middleware('perm:accounting.manage')->name('expense-categories.index');
     Route::patch('expense-categories/{expenseCategory}', [ExpenseCategoryController::class, 'update'])->middleware('perm:accounting.manage')->name('expense-categories.update');
+    Route::get('payment-methods', [PaymentMethodController::class, 'index'])->middleware('perm:accounting.manage')->name('payment-methods.index');
+    Route::post('payment-methods/categories', [PaymentMethodController::class, 'storeCategory'])->middleware('perm:accounting.manage')->name('payment-methods.categories.store');
+    Route::patch('payment-methods/categories/{paymentMethodCategory}', [PaymentMethodController::class, 'updateCategory'])->middleware('perm:accounting.manage')->name('payment-methods.categories.update');
+    Route::post('payment-methods/categories/{paymentMethodCategory}/instruments', [PaymentMethodController::class, 'storeInstrument'])->middleware('perm:accounting.manage')->name('payment-methods.instruments.store');
+    Route::patch('payment-methods/instruments/{paymentInstrument}', [PaymentMethodController::class, 'updateInstrument'])->middleware('perm:accounting.manage')->name('payment-methods.instruments.update');
     Route::get('accounts', [AccountController::class, 'index'])->middleware('perm:accounting.manage')->name('accounts.index');
     Route::get('accounts/create', [AccountController::class, 'create'])->middleware('perm:accounting.manage')->name('accounts.create');
     Route::post('accounts', [AccountController::class, 'store'])->middleware('perm:accounting.manage')->name('accounts.store');
@@ -606,6 +614,8 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::patch('accounts/{account}', [AccountController::class, 'update'])->middleware('perm:accounting.manage')->name('accounts.update');
     Route::delete('accounts/{account}', [AccountController::class, 'destroy'])->middleware('perm:accounting.manage')->name('accounts.destroy');
 
+    Route::get('ledger-gaps', [\App\Http\Controllers\Admin\AccountingWorkspaceController::class, 'gaps'])->middleware('perm:accounting.manage')->name('ledger-gaps.index');
+    Route::get('accounting-activity', [\App\Http\Controllers\Admin\AccountingWorkspaceController::class, 'activity'])->middleware('perm:accounting.manage')->name('accounting-activity.index');
     Route::get('journals', [JournalEntryController::class, 'index'])->middleware('perm:accounting.manage')->name('journals.index');
     Route::get('journals/create', [JournalEntryController::class, 'create'])->middleware('perm:accounting.manage')->name('journals.create');
     Route::post('journals', [JournalEntryController::class, 'store'])->middleware('perm:accounting.manage')->name('journals.store');
@@ -622,10 +632,12 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::get('agent-advances', [AgentAdvanceController::class, 'index'])->middleware('perm:accounting.manage')->name('agent-advances.index');
     Route::get('agent-advances/create', [AgentAdvanceController::class, 'create'])->middleware('perm:accounting.manage')->name('agent-advances.create');
     Route::post('agent-advances', [AgentAdvanceController::class, 'store'])->middleware('perm:accounting.manage')->name('agent-advances.store');
+    Route::get('agent-advances/{advance}', [AgentAdvanceController::class, 'show'])->middleware('perm:accounting.manage')->name('agent-advances.show');
 
     Route::get('bills', [PurchaseBillController::class, 'index'])->middleware('perm:accounting.manage')->name('bills.index');
     Route::get('bills/create', [PurchaseBillController::class, 'create'])->middleware('perm:accounting.manage')->name('bills.create');
     Route::post('bills', [PurchaseBillController::class, 'store'])->middleware('perm:accounting.manage')->name('bills.store');
+    Route::get('bills/{bill}', [PurchaseBillController::class, 'show'])->middleware('perm:accounting.manage')->name('bills.show');
     Route::get('bills/{bill}/edit', [PurchaseBillController::class, 'edit'])->middleware('perm:accounting.manage')->name('bills.edit');
     Route::put('bills/{bill}', [PurchaseBillController::class, 'update'])->middleware('perm:accounting.manage')->name('bills.update');
     Route::delete('bills/{bill}', [PurchaseBillController::class, 'destroy'])->middleware('perm:accounting.manage')->name('bills.destroy');

@@ -11,11 +11,14 @@
         $breadcrumb = $crumbs->isNotEmpty() ? $crumbs->implode(' › ') : null;
     }
 
+    $activeIds = collect($activeAccountIds ?? [])->map(fn ($id) => (int) $id)->all();
+
     $accountsForPicker = ($accountOptions ?? collect())->map(fn ($account) => [
         'id' => $account->id,
         'code' => $account->code,
         'name' => $account->name,
         'label' => $account->code . ' — ' . $account->name,
+        'active' => in_array((int) $account->id, $activeIds, true),
     ])->values()->all();
 
     $quickAccounts = ($activeAccounts ?? collect())->take(10)->map(fn ($row) => [
@@ -79,7 +82,7 @@
                 </div>
             </div>
 
-            <div class="gl-ledger__picker">
+            <div class="gl-ledger__picker print:hidden">
                 <form
                     x-ref="accountForm"
                     method="GET"
@@ -95,17 +98,20 @@
                 </form>
 
                 <div class="gl-ledger__search-wrap">
-                    <label class="sr-only" for="gl-ledger-search">Search accounts</label>
-                    <input
-                        id="gl-ledger-search"
-                        type="search"
-                        class="gl-ledger__search"
-                        placeholder="Switch account — search by code or name"
-                        x-model="query"
-                        @focus="pickerOpen = true"
-                        @click="pickerOpen = true"
-                        autocomplete="off"
+                    <button
+                        type="button"
+                        class="gl-ledger__search gl-ledger__search--trigger"
+                        @click="togglePicker()"
+                        :aria-expanded="pickerOpen.toString()"
                     >
+                        <span class="gl-ledger__search-code">{{ $selectedAccount->code }}</span>
+                        <span class="gl-ledger__search-name">{{ $selectedAccount->name }}</span>
+                        <span class="gl-ledger__search-hint">{{ count($accountsForPicker) }} ledgers · type to search</span>
+                        <svg class="gl-ledger__search-caret" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/>
+                        </svg>
+                    </button>
+
                     <div
                         class="gl-ledger__search-panel"
                         x-show="pickerOpen"
@@ -113,8 +119,20 @@
                         x-transition
                         @click.outside="pickerOpen = false"
                     >
+                        <div class="gl-ledger__search-panel-head">
+                            <label class="sr-only" for="gl-ledger-search">Search accounts</label>
+                            <input
+                                id="gl-ledger-search"
+                                x-ref="ledgerSearch"
+                                type="search"
+                                class="gl-ledger__search-input"
+                                placeholder="Search by code or name"
+                                x-model="query"
+                                autocomplete="off"
+                            >
+                        </div>
                         <template x-if="filteredAccounts.length === 0">
-                            <p class="gl-ledger__search-empty">No accounts match your search.</p>
+                            <p class="gl-ledger__search-empty">No ledgers match your search.</p>
                         </template>
                         <ul class="gl-ledger__search-list">
                             <template x-for="account in filteredAccounts" :key="account.id">
@@ -127,6 +145,7 @@
                                     >
                                         <span class="gl-ledger__search-code" x-text="account.code"></span>
                                         <span class="gl-ledger__search-name" x-text="account.name"></span>
+                                        <span class="gl-ledger__search-badge" x-show="account.active">Posted</span>
                                     </button>
                                 </li>
                             </template>
@@ -272,11 +291,31 @@
             </div>
         </section>
     @else
-        <div class="gl-ledger__empty gl-ledger__empty--page">
-            <x-admin.empty-state
-                title="No ledger data yet"
-                description="Post journals from invoices, expenses, or payroll — or run php artisan db:seed to load demo data."
-            />
+        <div class="gl-ledger__empty gl-ledger__empty--page print:hidden">
+            @if(($accountOptions ?? collect())->isNotEmpty())
+                <x-admin.empty-state
+                    title="Choose a ledger"
+                    description="Search any postable account from the Ledger control above, or pick one with postings below."
+                />
+                @if(($activeAccounts ?? collect())->isNotEmpty())
+                    <div class="gl-ledger__quick mt-4 justify-center">
+                        @foreach(($activeAccounts ?? collect())->take(12) as $quick)
+                            <a
+                                href="{{ route('admin.reports.general-ledger', array_merge($periodParams, ['account_id' => $quick['account']->id])) }}"
+                                class="gl-ledger__quick-btn"
+                            >
+                                <span class="gl-ledger__quick-code">{{ $quick['account']->code }}</span>
+                                <span class="gl-ledger__quick-lines">{{ $quick['line_count'] }}</span>
+                            </a>
+                        @endforeach
+                    </div>
+                @endif
+            @else
+                <x-admin.empty-state
+                    title="No ledger data yet"
+                    description="Post journals from invoices, expenses, or payroll — or run php artisan db:seed to load demo data."
+                />
+            @endif
         </div>
     @endif
 </article>

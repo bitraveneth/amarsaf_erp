@@ -20,6 +20,7 @@ return [
         'packing_slip' => 'Packing slip',
         'pod' => 'Proof of delivery',
         'logistics_bill' => 'Logistics bill',
+        'purchase_bill' => 'Purchase bill',
     ],
 
     'copy' => [
@@ -57,6 +58,7 @@ return [
         'po_no' => 'PO no.',
         'bill_no' => 'Bill no.',
         'bill_date' => 'Bill date',
+        'bill_details' => 'Bill details',
         'service_type' => 'Service type',
         'trip_date' => 'Trip date',
         'expected_date' => 'Expected date',
@@ -221,5 +223,6 @@ return [
         'packing_slip' => 'Check contents against this packing slip on receipt.',
         'pod' => 'Signed proof of delivery for dispatch records.',
         'logistics_bill' => 'Carrier invoice for hired transport and freight services.',
+        'purchase_bill' => 'Accounts payable purchase bill for supplier goods or services.',
     ],
 ];

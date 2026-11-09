@@ -102,7 +102,7 @@ return [
         ['term' => ['en' => 'Withholding tax', 'bn' => 'Withholding'], 'def' => ['en' => 'Tax deducted at source on payments — tracked in receivable until claimed.', 'bn' => 'উৎসে কর — আদায় পর্যন্ত receivable-এ।']],
         ['term' => ['en' => 'Journal entry', 'bn' => 'Journal'], 'def' => ['en' => 'Double-entry posting: debits must equal credits.', 'bn' => 'ডাবল-এন্ট্রি — ডেবিট = ক্রেডিট।']],
         ['term' => ['en' => 'Accounting period', 'bn' => 'Period'], 'def' => ['en' => 'Closed month — prevents backdated changes after lock.', 'bn' => 'বন্ধ মাস — লকের পর পিছনের তারিখে পরিবর্তন নয়।']],
-        ['term' => ['en' => 'Bank reconciliation', 'bn' => 'ব্যাংক মিলকরণ'], 'def' => ['en' => 'Match bank statement lines to receipts, payments, and expenses in the ledger.', 'bn' => 'ব্যাংক স্টেটমেন্ট লাইন রসিদ, পেমেন্ট ও খরচের সাথে মিলান।']],
+        ['term' => ['en' => 'Bank reconciliation', 'bn' => 'ব্যাংক মিলকরণ'], 'def' => ['en' => 'Confirm each receipt or payment against the bank. Click Reconcile on the row when it appears on the statement; Undo if marked by mistake. CSV import is optional.', 'bn' => 'প্রতিটি রসিদ বা পেমেন্ট ব্যাংকের সাথে নিশ্চিত করুন। স্টেটমেন্টে দেখামাত্র সারিতে Reconcile চাপুন; ভুল হলে Undo। CSV আমদানি ঐচ্ছিক।']],
     ],
     'profit-loss' => [
         ['term' => ['en' => 'Net sales', 'bn' => 'Net sales'], 'def' => ['en' => 'Sales Revenue minus returns in the period — excl. VAT.', 'bn' => 'Sales Revenue − returns — VAT বাদে।']],

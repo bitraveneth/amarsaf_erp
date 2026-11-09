@@ -23,7 +23,14 @@ export function registerGeneralLedger(Alpine) {
         },
 
         get selectedAccount() {
-            return this.accounts.find((account) => account.id === this.selectedId) ?? null;
+            return this.accounts.find((account) => Number(account.id) === Number(this.selectedId)) ?? null;
+        },
+
+        togglePicker() {
+            this.pickerOpen = !this.pickerOpen;
+            if (this.pickerOpen) {
+                this.$nextTick(() => this.$refs.ledgerSearch?.focus());
+            }
         },
 
         pickAccount(id) {

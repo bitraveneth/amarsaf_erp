@@ -88,5 +88,18 @@
             </div>
         </div>
     </x-dashboard.panel>
+
+    <x-admin.quick-guide
+        title="How to read the balance sheet"
+        lead="A snapshot of what the company owns and owes on the as-of date. Assets should equal liabilities + equity."
+        :steps="[
+            ['title' => 'Set as-of date', 'body' => 'Balances include all posted journals up to that day.'],
+            ['title' => 'Read assets', 'body' => 'Cash, bank, receivables, inventory — debit-normal balances.'],
+            ['title' => 'Read liabilities & equity', 'body' => 'Payables, VAT, retained earnings, and current year earnings/loss.'],
+            ['title' => 'Check the equation', 'body' => 'Footer shows Assets = Liabilities + Equity. Investigate if it does not match.'],
+        ]"
+        note="Current year earnings are folded into equity until year-end close moves them into retained earnings."
+        :open="false"
+    />
 </x-report.page>
 @endsection

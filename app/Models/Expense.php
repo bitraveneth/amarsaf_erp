@@ -25,6 +25,7 @@ class Expense extends Model
         'status',
         'payment_type',
         'payment_account_key',
+        'payment_instrument_id',
         'analytic_label',
     ];
 
@@ -41,6 +42,11 @@ class Expense extends Model
     public function accountOverride(): BelongsTo
     {
         return $this->belongsTo(Account::class, 'account_id');
+    }
+
+    public function paymentInstrument(): BelongsTo
+    {
+        return $this->belongsTo(PaymentInstrument::class);
     }
 
     public static function normalizeStatus(?string $status): string

@@ -49,12 +49,18 @@ class ModuleExportController extends Controller
             abort(403);
         }
 
+        $disposition = $request->query('disposition') === 'inline' ? 'inline' : 'attachment';
+
         return TabularExport::download(
             $format,
             $export['title'],
             $export['filename'],
             $export['columns'],
-            $export['rows']
+            $export['rows'],
+            $disposition,
+            [
+                'periodLabel' => ExportDateRange::periodSummary($request),
+            ],
         );
     }
 

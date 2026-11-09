@@ -7,7 +7,9 @@
 @endphp
 
 <div class="flex flex-wrap items-center gap-2 print-hidden">
-    <span class="text-xs font-medium text-gray-500 dark:text-gray-400">{{ $label }}</span>
+    @if($label !== '')
+        <span class="text-xs font-medium text-gray-500 dark:text-gray-400">{{ $label }}</span>
+    @endif
     <a href="{{ $csvUrl }}" class="erp-btn-secondary text-sm">CSV</a>
     <a href="{{ $pdfUrl }}" class="erp-btn-secondary text-sm">PDF</a>
 </div>

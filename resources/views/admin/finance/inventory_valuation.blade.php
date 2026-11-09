@@ -18,9 +18,12 @@
     :period="$periodLabel"
 >
     <x-slot:actions>
-        <x-report.header-actions>
+        <x-report.header-actions
+            :as-of-action="route('admin.reports.inventory-valuation')"
+            :as-of="$asOf->toDateString()"
+        >
             <x-report.hub-link category="operations" />
-            <x-report.export-actions module="inventory-valuation" />
+            <x-report.export-actions module="inventory-valuation" :as-of="$asOf" />
         </x-report.header-actions>
     </x-slot:actions>
 
@@ -134,8 +137,8 @@
     @if($rows->isEmpty())
         <x-dashboard.panel title="No stock on hand">
             <x-admin.empty-state
-                title="No inventory valuations yet"
-                description="Post a GRN with unit cost or confirm production to build valuation records."
+                title="No inventory on hand for this date"
+                description="Try another as-of date, or post a GRN / production receipt so stock and costing rows exist."
             />
         </x-dashboard.panel>
     @endif

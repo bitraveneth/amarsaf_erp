@@ -157,11 +157,7 @@ class AppServiceProvider extends ServiceProvider
         try {
             $user = auth()->user();
 
-            if (! $user) {
-                return null;
-            }
-
-            if (! Permission::can($user, 'reports.view') && ! Permission::can($user, 'accounting.manage')) {
+            if (! $user || ! $user->hasAnyRole(['super_admin', 'admin', 'accounts_officer'])) {
                 return null;
             }
 

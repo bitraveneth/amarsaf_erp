@@ -41,7 +41,7 @@ return [
                 'bn' => "লাভ-ক্ষতি শুধু **পোস্ট করা জার্নাল** পড়ে। খরচের তালিকায় খরচ থাকতে পারে, কিন্তু পোস্ট করা ভাউচার নাও থাকতে পারে।\n\nএমন হয় যখন সারিটি ডেমো ডেটা, অথবা ফর্ম স্বয়ংক্রিয় পোস্ট শুরুর আগে সেভ হয়েছে। এমনও হয় যখন কেউ ভাউচার **রিভার্স** করে, **ড্রাফট** কখনো পোস্ট হয়নি, খরচের তারিখ **বন্ধ মাসে**, অথবা খরচের অ্যাকাউন্ট বা ব্যাংক/নগদ অ্যাকাউন্ট **নেই**।\n\nনতুন খরচ এখন সেই সেভেই পোস্ট হয়। পোস্ট ব্যর্থ হলে অর্ধেক সেভ করা খরচ থেকে যায় না।",
             ],
             'fix' => [
-                'en' => 'Read the banner. It names the reason. If the month is open and both accounts exist, use **Sync missing expenses**. If the month is closed, reopen that month first. If an account is missing, create it, then sync again.',
+                'en' => 'Open **Expenses** from the ledger notice, then use **Sync missing expenses**. If the month is closed, reopen that month first. If an account is missing, create it, then sync again.',
                 'bn' => 'ব্যানার পড়ুন। সেখানে কারণ লেখা থাকে। মাস খোলা থাকলে এবং দুটি অ্যাকাউন্ট থাকলে **Sync missing expenses** ব্যবহার করুন। মাস বন্ধ থাকলে আগে সেই মাস খুলুন। অ্যাকাউন্ট না থাকলে তৈরি করে আবার সিঙ্ক করুন।',
             ],
             'path' => '/admin/reports/pl',

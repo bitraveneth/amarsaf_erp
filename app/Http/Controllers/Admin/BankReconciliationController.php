@@ -32,7 +32,7 @@ class BankReconciliationController extends Controller
             '1m' => 'Last 1 month',
             '3m' => 'Last 3 months',
             '1y' => 'Last 1 year',
-            'all' => 'All time',
+            'all' => 'Lifetime',
             'custom' => 'Custom range',
         ];
 
@@ -166,6 +166,38 @@ class BankReconciliationController extends Controller
                 'to' => $to->toDateString(),
             ])
             ->with('status', 'Bank reconciliation updated.');
+    }
+
+    public function toggleReceipt(Request $request, Receipt $receipt)
+    {
+        [$from, $to, $range] = $this->resolvePeriod($request);
+        $receipt->update(['reconciled' => ! $receipt->reconciled]);
+
+        return redirect()
+            ->route('admin.finance.reconciliation', [
+                'range' => $range,
+                'from' => $from->toDateString(),
+                'to' => $to->toDateString(),
+            ])
+            ->with('status', $receipt->reconciled
+                ? 'Receipt marked reconciled.'
+                : 'Receipt marked pending again.');
+    }
+
+    public function togglePayment(Request $request, BillPayment $payment)
+    {
+        [$from, $to, $range] = $this->resolvePeriod($request);
+        $payment->update(['reconciled' => ! $payment->reconciled]);
+
+        return redirect()
+            ->route('admin.finance.reconciliation', [
+                'range' => $range,
+                'from' => $from->toDateString(),
+                'to' => $to->toDateString(),
+            ])
+            ->with('status', $payment->reconciled
+                ? 'Payment marked reconciled.'
+                : 'Payment marked pending again.');
     }
 
     protected function resolvePeriod(Request $request): array

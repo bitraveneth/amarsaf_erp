@@ -31,6 +31,7 @@ class FleetExpense extends Model
         'status',
         'payment_type',
         'payment_account_key',
+        'payment_instrument_id',
         'fuel_litres',
         'fuel_rate',
         'odometer_km',
@@ -72,5 +73,10 @@ class FleetExpense extends Model
     public function deliveryRoute(): BelongsTo
     {
         return $this->belongsTo(DeliveryRoute::class);
+    }
+
+    public function paymentInstrument(): BelongsTo
+    {
+        return $this->belongsTo(PaymentInstrument::class);
     }
 }

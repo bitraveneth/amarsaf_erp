@@ -2,57 +2,100 @@
 
 @section('content')
 @php
+    $ccy = $currencyCode ?? config('app.currency', 'BDT');
     $totalSales = $rows->sum('sales');
     $totalCommission = $rows->sum('commission');
+    $avgRate = $totalSales > 0 ? round(($totalCommission / $totalSales) * 100, 2) : 0;
 @endphp
 
-<x-report.page eyebrow="Sales reports" title="Commission summary" subtitle="Agent sales and commission for the selected month." :period="$month->format('F Y')">
+<x-report.page
+    eyebrow="Sales reports"
+    title="Commission summary"
+    subtitle="Agent sales and commission for the selected period."
+    :period="$periodLabel"
+>
     <x-slot:actions>
-        <x-report.header-actions>
+        <x-report.header-actions
+            :range-action="route('admin.reports.commissions')"
+            :range="$range"
+            :from="request('from', $from->toDateString())"
+            :to="request('to', $to->toDateString())"
+            :range-options="$rangeOptions"
+            :period-label="$periodLabel"
+        >
             <x-report.hub-link category="sales" />
-            <form method="GET" class="flex items-center gap-2">
-                <input type="month" name="month" value="{{ $month->format('Y-m') }}" class="erp-input !h-9 !w-auto" onchange="this.form.submit()">
-            </form>
-            <x-report.export-actions module="commission-summary" :export-query="['month' => $month->format('Y-m')]" />
+            <x-report.export-actions module="commission-summary" :from="$from" :to="$to" />
         </x-report.header-actions>
     </x-slot:actions>
+
     <x-slot:kpis>
-        <x-dashboard.kpi label="Total sales" :value="number_format($totalSales, 2)" :hint="$rows->count() . ' agents'" />
-        <x-dashboard.kpi label="Total commission" tone="brand" :value="number_format($totalCommission, 2)" hint="For {{ $month->format('F Y') }}" />
+        <x-dashboard.kpi
+            label="Total sales"
+            :value="$ccy . ' ' . number_format($totalSales, 0)"
+            :hint="$rows->count() . ' ' . Str::plural('agent', $rows->count())"
+        />
+        <x-dashboard.kpi
+            label="Total commission"
+            tone="brand"
+            :value="$ccy . ' ' . number_format($totalCommission, 0)"
+            :hint="'For ' . $periodLabel"
+        />
+        <x-dashboard.kpi
+            label="Avg. rate"
+            :value="$avgRate . '%'"
+            hint="Commission ÷ sales"
+        />
     </x-slot:kpis>
-    <x-dashboard.panel title="By agent" :subtitle="'Commission month: ' . $month->format('F Y')">
-        <x-report.table>
-            <thead>
-                <tr class="border-b border-gray-100 dark:border-gray-800">
-                    <x-report.th>Agent</x-report.th>
-                    <x-report.th align="right">Sales</x-report.th>
-                    <x-report.th align="right">Commission</x-report.th>
-                    <x-report.th align="right">Rate</x-report.th>
-                </tr>
-            </thead>
-            <tbody>
-                @forelse($rows as $row)
-                    <tr class="border-b border-gray-50 dark:border-gray-800/60">
-                        <td class="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">{{ $row['agent']->name }}</td>
-                        <td class="px-4 py-3 text-right text-sm tabular-nums text-gray-700 dark:text-gray-200">{{ number_format($row['sales'], 2) }}</td>
-                        <td class="px-4 py-3 text-right text-sm font-semibold tabular-nums text-gray-900 dark:text-white">{{ number_format($row['commission'], 2) }}</td>
-                        <td class="px-4 py-3 text-right text-sm tabular-nums text-gray-700 dark:text-gray-200">{{ $row['rate'] }}%</td>
+
+    <div class="erp-table-card">
+        <div class="erp-table-card-header">
+            <div>
+                <h2 class="erp-h3">By agent</h2>
+                <p class="erp-caption">{{ $periodLabel }}</p>
+            </div>
+            <p class="erp-caption">{{ number_format($rows->count()) }} agents</p>
+        </div>
+        <div class="erp-table-wrap">
+            <table class="erp-table w-full" style="width: 100%;">
+                <thead>
+                    <tr>
+                        <th>Agent</th>
+                        <th class="is-right">Sales</th>
+                        <th class="is-right">Commission</th>
+                        <th class="is-right">Rate</th>
                     </tr>
-                @empty
-                    <tr><td colspan="4" class="px-4 py-8"><x-admin.empty-state title="No commission activity for this month" /></td></tr>
-                @endforelse
-            </tbody>
-            @if($rows->isNotEmpty())
-                <tfoot>
-                    <tr class="bg-gray-50 font-semibold dark:bg-gray-800/50">
-                        <td class="px-4 py-3 text-right text-sm text-gray-900 dark:text-white">Totals</td>
-                        <td class="px-4 py-3 text-right text-sm tabular-nums text-gray-900 dark:text-white">{{ number_format($totalSales, 2) }}</td>
-                        <td class="px-4 py-3 text-right text-sm tabular-nums text-gray-900 dark:text-white">{{ number_format($totalCommission, 2) }}</td>
-                        <td></td>
-                    </tr>
-                </tfoot>
-            @endif
-        </x-report.table>
-    </x-dashboard.panel>
+                </thead>
+                <tbody>
+                    @forelse($rows as $row)
+                        <tr>
+                            <td class="erp-body-strong">{{ $row['agent']->name }}</td>
+                            <td class="is-right"><span class="erp-table-num">{{ $ccy }} {{ number_format($row['sales'], 2) }}</span></td>
+                            <td class="is-right"><span class="erp-table-num">{{ $ccy }} {{ number_format($row['commission'], 2) }}</span></td>
+                            <td class="is-right"><span class="erp-table-num">{{ number_format($row['rate'], 2) }}%</span></td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="4">
+                                <x-admin.empty-state
+                                    title="No commission activity"
+                                    description="Try another period, or confirm delivered orders with invoices in range."
+                                />
+                            </td>
+                        </tr>
+                    @endforelse
+                </tbody>
+                @if($rows->isNotEmpty())
+                    <tfoot>
+                        <tr>
+                            <td class="erp-body-strong">Totals</td>
+                            <td class="is-right"><span class="erp-table-num">{{ $ccy }} {{ number_format($totalSales, 2) }}</span></td>
+                            <td class="is-right"><span class="erp-table-num">{{ $ccy }} {{ number_format($totalCommission, 2) }}</span></td>
+                            <td class="is-right"><span class="erp-table-num">{{ number_format($avgRate, 2) }}%</span></td>
+                        </tr>
+                    </tfoot>
+                @endif
+            </table>
+        </div>
+    </div>
 </x-report.page>
 @endsection

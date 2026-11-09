@@ -5,6 +5,8 @@ namespace App\Services\Accounting;
 use App\Models\InventoryValuation;
 use App\Models\JournalEntryLine;
 use App\Models\Product;
+use App\Models\StockEntry;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
 class InventoryCostingService
@@ -127,9 +129,9 @@ class InventoryCostingService
         return $this->productLedgers->inventoryAccountKey($product);
     }
 
-    public function valuationReport(): Collection
+    public function valuationReport(?Carbon $asOf = null): Collection
     {
-        return InventoryValuation::with(['product', 'warehouse'])
+        $rows = InventoryValuation::with(['product', 'warehouse'])
             ->where('quantity_on_hand', '>', 0)
             ->orderBy('warehouse_id')
             ->orderBy('product_id')
@@ -144,17 +146,29 @@ class InventoryCostingService
                     'inventory_account' => $this->inventoryAccountFor($row->product),
                 ];
             });
+
+        if ($rows->isNotEmpty()) {
+            return $rows;
+        }
+
+        // Demo / legacy stock often lives in stock_entries without costing rows.
+        return $this->valuationReportFromStockEntries($asOf);
     }
 
-    public function operationalStockValue(): float
+    public function operationalStockValue(?Carbon $asOf = null): float
     {
-        return (float) InventoryValuation::sum('total_value');
+        $fromValuations = (float) InventoryValuation::sum('total_value');
+        if ($fromValuations > 0) {
+            return $fromValuations;
+        }
+
+        return round((float) $this->valuationReportFromStockEntries($asOf)->sum('total_value'), 2);
     }
 
-    public function ledgerInventoryBalance(): float
+    public function ledgerInventoryBalance(?Carbon $asOf = null): float
     {
         return round(
-            $this->ledgerBalanceForKeys(['raw_materials', 'finished_goods', 'wip']),
+            $this->ledgerBalanceForKeys(['raw_materials', 'finished_goods', 'wip'], $asOf),
             2
         );
     }
@@ -168,9 +182,9 @@ class InventoryCostingService
      *     rows: Collection
      * }
      */
-    public function valuationSummary(): array
+    public function valuationSummary(?Carbon $asOf = null): array
     {
-        $rows = $this->valuationReport();
+        $rows = $this->valuationReport($asOf);
         $catalog = $this->inventoryCategoryCatalog();
 
         foreach ($catalog as $key => $category) {
@@ -185,12 +199,12 @@ class InventoryCostingService
         }
 
         foreach ($catalog as $key => $category) {
-            $catalog[$key]['gl'] = $this->ledgerBalanceForKeys([$key]);
-            $catalog[$key]['variance'] = round($category['operational'] - $catalog[$key]['gl'], 2);
+            $catalog[$key]['gl'] = $this->ledgerBalanceForKeys([$key], $asOf);
+            $catalog[$key]['variance'] = round($catalog[$key]['operational'] - $catalog[$key]['gl'], 2);
         }
 
-        $operationalValue = $this->operationalStockValue();
-        $ledgerValue = $this->ledgerInventoryBalance();
+        $operationalValue = round((float) $rows->sum('total_value'), 2);
+        $ledgerValue = $this->ledgerInventoryBalance($asOf);
 
         return [
             'categories' => $catalog,
@@ -199,6 +213,34 @@ class InventoryCostingService
             'variance' => round($operationalValue - $ledgerValue, 2),
             'rows' => $rows,
         ];
+    }
+
+    protected function valuationReportFromStockEntries(?Carbon $asOf = null): Collection
+    {
+        $entries = StockEntry::with(['product', 'warehouse'])
+            ->where('status', 'available')
+            ->where('quantity', '>', 0)
+            ->when($asOf, fn ($q) => $q->whereDate('created_at', '<=', $asOf->toDateString()))
+            ->orderBy('warehouse_id')
+            ->orderBy('product_id')
+            ->get()
+            ->groupBy(fn (StockEntry $entry) => $entry->product_id . ':' . $entry->warehouse_id);
+
+        return $entries->map(function (Collection $group) {
+            /** @var StockEntry $first */
+            $first = $group->first();
+            $quantity = round((float) $group->sum('quantity'), 4);
+            $unitCost = $this->fallbackUnitCost((int) $first->product_id);
+
+            return [
+                'product' => $first->product,
+                'warehouse' => $first->warehouse,
+                'quantity' => $quantity,
+                'avg_unit_cost' => $unitCost,
+                'total_value' => round($quantity * $unitCost, 2),
+                'inventory_account' => $this->inventoryAccountFor($first->product),
+            ];
+        })->filter(fn (array $row) => $row['quantity'] > 0)->values();
     }
 
     protected function inventoryCategoryCatalog(): array
@@ -244,7 +286,7 @@ class InventoryCostingService
         return 'finished_goods';
     }
 
-    protected function ledgerBalanceForKeys(array $keys): float
+    protected function ledgerBalanceForKeys(array $keys, ?Carbon $asOf = null): float
     {
         $slugs = collect($keys)
             ->map(fn (string $key) => config("accounting.accounts.{$key}"))
@@ -260,12 +302,17 @@ class InventoryCostingService
             return 0.0;
         }
 
+        $postedThrough = function ($query) use ($asOf) {
+            $query->where('status', 'posted')
+                ->when($asOf, fn ($q) => $q->whereDate('entry_date', '<=', $asOf->toDateString()));
+        };
+
         $debits = (float) JournalEntryLine::whereIn('account_id', $accountIds)
-            ->whereHas('journalEntry', fn ($q) => $q->where('status', 'posted'))
+            ->whereHas('journalEntry', $postedThrough)
             ->sum('debit');
 
         $credits = (float) JournalEntryLine::whereIn('account_id', $accountIds)
-            ->whereHas('journalEntry', fn ($q) => $q->where('status', 'posted'))
+            ->whereHas('journalEntry', $postedThrough)
             ->sum('credit');
 
         return round($debits - $credits, 2);

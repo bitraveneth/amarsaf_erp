@@ -534,9 +534,12 @@ class MenuHelper
                             ['name' => 'Agent advances', 'path' => '/admin/agent-advances', 'permission' => 'accounting.manage'],
                             ['name' => 'Purchase bills', 'path' => '/admin/bills', 'permission' => 'accounting.manage'],
                             ['name' => 'Expenses', 'path' => '/admin/expenses', 'permission' => 'accounting.manage'],
+                            ['name' => 'Payment methods', 'path' => '/admin/payment-methods', 'permission' => 'accounting.manage'],
+                            ['name' => 'Ledger gaps', 'path' => '/admin/ledger-gaps', 'permission' => 'accounting.manage'],
                             ['name' => 'Salary distributions', 'path' => '/admin/salary-distributions', 'permission' => 'accounting.manage'],
                             ['name' => 'Chart of accounts', 'path' => '/admin/accounts', 'permission' => 'accounting.manage'],
                             ['name' => 'Journal entries', 'path' => '/admin/journals', 'permission' => 'accounting.manage'],
+                            ['name' => 'Accounting activity', 'path' => '/admin/accounting-activity', 'permission' => 'accounting.manage'],
                             ['name' => 'Accounting periods', 'path' => '/admin/accounting-periods', 'permission' => 'accounting.manage'],
                             ['name' => 'Bank reconciliation', 'path' => '/admin/finance/reconciliation', 'permission' => 'accounting.manage'],
                         ],
@@ -767,6 +770,25 @@ class MenuHelper
         return $groups;
     }
 
+    protected static function placeAccountingLink(\Illuminate\Support\Collection $subItems, array $link, string $afterPath): \Illuminate\Support\Collection
+    {
+        $subItems = $subItems
+            ->reject(fn (array $sub) => trim($sub['path'] ?? '') === $link['path'])
+            ->values();
+
+        $index = $subItems->search(fn (array $sub) => trim($sub['path'] ?? '') === $afterPath);
+
+        if ($index === false) {
+            $subItems->push($link);
+
+            return $subItems->values();
+        }
+
+        $subItems->splice($index + 1, 0, [$link]);
+
+        return $subItems->values();
+    }
+
     protected static function ensurePhase1AccountingLinks(array $groups): array
     {
         foreach ($groups as &$group) {
@@ -783,8 +805,33 @@ class MenuHelper
                         $subItems->push($link);
                     }
 
+                    $subItems = self::placeAccountingLink($subItems, [
+                        'name' => 'Ledger gaps',
+                        'path' => '/admin/ledger-gaps',
+                        'permission' => 'accounting.manage',
+                    ], '/admin/expenses');
+                    $subItems = self::placeAccountingLink($subItems, [
+                        'name' => 'Accounting activity',
+                        'path' => '/admin/accounting-activity',
+                        'permission' => 'accounting.manage',
+                    ], '/admin/journals');
+                    $subItems = self::placeAccountingLink($subItems, [
+                        'name' => 'Payment methods',
+                        'path' => '/admin/payment-methods',
+                        'permission' => 'accounting.manage',
+                    ], '/admin/expenses');
+
                     $item['subItems'] = $subItems
                         ->reject(fn (array $sub) => str_contains(trim($sub['path'] ?? ''), 'module=tally-xml'))
+                        // Category mapping lives under Expenses, not the Accounting root menu.
+                        ->reject(fn (array $sub) => trim($sub['path'] ?? '') === '/admin/expense-categories')
+                        ->map(function (array $sub) {
+                            if (trim($sub['path'] ?? '') === '/admin/payment-methods') {
+                                $sub['name'] = 'Payment methods';
+                            }
+
+                            return $sub;
+                        })
                         ->unique(fn (array $sub) => mb_strtolower(trim(($sub['name'] ?? '') . '|' . ($sub['path'] ?? ''))))
                         ->values()
                         ->all();

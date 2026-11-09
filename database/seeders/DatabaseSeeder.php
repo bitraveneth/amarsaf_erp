@@ -90,6 +90,7 @@ class DatabaseSeeder extends Seeder
             SafErpSalesDemoTimelineSeeder::class,
 
             ExpensesModuleSeeder::class,
+            \Database\Seeders\Accounting\PaymentMethodSeeder::class,
             SalaryDistributionsModuleSeeder::class,
             PayrollModuleSeeder::class,
             BankReconciliationModuleSeeder::class,

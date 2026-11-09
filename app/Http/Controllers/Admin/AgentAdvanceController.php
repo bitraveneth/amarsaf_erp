@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Agent;
 use App\Models\AgentAdvance;
+use App\Models\JournalEntry;
 use App\Services\Accounting\AccountingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -26,9 +27,75 @@ class AgentAdvanceController extends Controller
             ->paginate(15)
             ->withQueryString();
 
-        $agents = Agent::orderBy('name')->get();
+        $agents = Agent::orderBy('name')->get(['id', 'name', 'phone', 'area', 'zone']);
 
-        return view('admin.agent-advances.index', compact('advances', 'agents'));
+        $summaryQuery = AgentAdvance::query()
+            ->when($request->query('agent_id'), function ($query, $agentId) {
+                $query->where('agent_id', $agentId);
+            });
+
+        $summary = [
+            'count' => (clone $summaryQuery)->count(),
+            'amount' => (float) (clone $summaryQuery)->sum('amount'),
+            'applied' => (float) (clone $summaryQuery)->sum('applied_amount'),
+        ];
+        $summary['available'] = max(0, $summary['amount'] - $summary['applied']);
+
+        return view('admin.agent-advances.index', compact('advances', 'agents', 'summary'));
+    }
+
+    public function show(AgentAdvance $advance)
+    {
+        $advance->load(['agent', 'applications.invoice']);
+
+        $journal = JournalEntry::with('lines.account')
+            ->where('source_type', AgentAdvance::class)
+            ->where('source_id', $advance->id)
+            ->latest('id')
+            ->first();
+
+        $agentAdvances = AgentAdvance::with(['applications.invoice'])
+            ->when($advance->agent_id, fn ($query) => $query->where('agent_id', $advance->agent_id), fn ($query) => $query->whereKey($advance->id))
+            ->orderBy('advanced_at')
+            ->orderBy('id')
+            ->get();
+
+        $history = $agentAdvances->flatMap(function (AgentAdvance $item) use ($advance) {
+            $rows = [[
+                'at' => $item->advanced_at,
+                'advance' => $item,
+                'current' => $item->id === $advance->id,
+                'event' => 'Advance received',
+                'detail' => collect([
+                    $item->payment_method ? ucfirst(str_replace('_', ' ', $item->payment_method)) : null,
+                    $item->reference,
+                ])->filter()->implode(' · '),
+                'invoice' => null,
+                'amount' => (float) $item->amount,
+                'direction' => 'in',
+            ]];
+
+            foreach ($item->applications as $application) {
+                $rows[] = [
+                    'at' => $application->applied_at,
+                    'advance' => $item,
+                    'current' => $item->id === $advance->id,
+                    'event' => 'Applied to invoice',
+                    'detail' => $application->invoice?->number,
+                    'invoice' => $application->invoice,
+                    'amount' => (float) $application->amount,
+                    'direction' => 'out',
+                ];
+            }
+
+            return $rows;
+        })->sortBy(function (array $row) {
+            $date = $row['at'] ? $row['at']->format('Y-m-d') : '0000-00-00';
+
+            return $date.'-'.str_pad((string) $row['advance']->id, 6, '0', STR_PAD_LEFT).'-'.($row['direction'] === 'in' ? '0' : '1');
+        })->values();
+
+        return view('admin.agent-advances.show', compact('advance', 'journal', 'agentAdvances', 'history'));
     }
 
     public function create(Request $request)

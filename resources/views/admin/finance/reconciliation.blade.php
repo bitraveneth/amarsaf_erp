@@ -4,7 +4,6 @@
 @php
     $currencyCode = config('app.currency', 'BDT');
     $periodLabel = $from->format('d M Y').' – '.$to->format('d M Y');
-    $totalReceipts = $receipts->count();
     $reconciledCount = $receipts->where('reconciled', true)->count();
     $pendingCount = $receipts->where('reconciled', false)->count();
     $pendingAmount = (float) $receipts->where('reconciled', false)->sum('amount');
@@ -15,11 +14,12 @@
     $suggestedCount = count($suggestedReceiptIds) + count($suggestedPaymentIds);
     $importPreview = $importResults['preview'] ?? [];
     $isEmpty = $receipts->isEmpty() && $billPayments->isEmpty();
-    $sampleUrl = route('admin.finance.reconciliation.sample', [
+    $periodQuery = [
         'range' => $range,
         'from' => $from->toDateString(),
         'to' => $to->toDateString(),
-    ]);
+    ];
+    $sampleUrl = route('admin.finance.reconciliation.sample', $periodQuery);
 @endphp
 
 <div class="space-y-6" data-tour="reconciliation-overview-header">
@@ -31,11 +31,11 @@
                 <div class="mt-1 flex items-center gap-2">
                     <h1 class="erp-h1">Bank reconciliation</h1>
                     <x-admin.help-tip label="What is bank reconciliation?">
-                        Tick receipts and supplier payments that appear on the bank statement.
+                        Click Reconcile on a receipt or payment when it appears on the bank statement.
                         That confirms cash in the ERP matches the bank. It does not post a new journal.
                     </x-admin.help-tip>
                 </div>
-                <p class="erp-page-subtitle">Match the bank statement to money already recorded in Saf ERP.</p>
+                <p class="erp-page-subtitle">Match the bank statement to money already recorded in Saf ERP — one line at a time.</p>
             </div>
         </div>
         <div class="flex flex-wrap items-center gap-2">
@@ -54,16 +54,16 @@
 
     <div class="grid gap-3 sm:grid-cols-3">
         <div class="rounded-xl border border-gray-200 bg-white px-4 py-3 dark:border-gray-800 dark:bg-gray-900">
-            <p class="erp-eyebrow">1. Import</p>
-            <p class="erp-caption mt-1">Upload the bank CSV, or download a demo file first.</p>
+            <p class="erp-eyebrow">1. Import (optional)</p>
+            <p class="erp-caption mt-1">Upload a bank CSV to highlight likely matches.</p>
         </div>
         <div class="rounded-xl border border-gray-200 bg-white px-4 py-3 dark:border-gray-800 dark:bg-gray-900">
-            <p class="erp-eyebrow">2. Review</p>
-            <p class="erp-caption mt-1">Saf ticks likely matches. You confirm or untick.</p>
+            <p class="erp-eyebrow">2. Reconcile each line</p>
+            <p class="erp-caption mt-1">Use the button on each row when you see it on the bank.</p>
         </div>
         <div class="rounded-xl border border-gray-200 bg-white px-4 py-3 dark:border-gray-800 dark:bg-gray-900">
-            <p class="erp-eyebrow">3. Save</p>
-            <p class="erp-caption mt-1">Checked lines become Reconciled for this period.</p>
+            <p class="erp-eyebrow">3. Done</p>
+            <p class="erp-caption mt-1">No batch save needed — each click updates immediately.</p>
         </div>
     </div>
 
@@ -78,7 +78,7 @@
                         Saf matches amount and a date within 3 days. Invoice or bill number in Reference improves the match.
                     </x-admin.help-tip>
                 </div>
-                <p class="erp-caption mt-1">CSV from your bank, or a demo file built from this company’s unreconciled lines.</p>
+                <p class="erp-caption mt-1">Optional. CSV from your bank, or a demo file built from this company’s unreconciled lines.</p>
             </div>
         </div>
         <div class="erp-dash-panel__body space-y-4">
@@ -92,18 +92,13 @@
                     <input type="file" name="statement" accept=".csv,text/csv,.txt" required class="erp-input">
                 </label>
                 <div class="flex flex-wrap items-center gap-2">
-                    <a href="{{ $sampleUrl }}" class="erp-btn-secondary">
-                        Download demo statement
-                    </a>
+                    <a href="{{ $sampleUrl }}" class="erp-btn-secondary">Download demo statement</a>
                     <button type="submit" class="erp-btn-primary">Import &amp; match</button>
                 </div>
             </form>
             @error('statement')
                 <p class="erp-form-error">{{ $message }}</p>
             @enderror
-            <p class="erp-caption">
-                Demo file includes real unmatched receipts and payments, plus two bank-only lines (charge and interest) that should stay unmatched.
-            </p>
         </div>
     </section>
 
@@ -113,8 +108,7 @@
                 <div class="flex items-center gap-2">
                     <h2 class="erp-h3">Import result</h2>
                     <x-admin.help-tip label="Suggested match">
-                        A suggested match is pre-ticked below. It is not saved until you click Save.
-                        Unmatched statement lines (bank charges, interest) stay on this list only.
+                        Suggested rows are marked below. Click Reconcile on each row to confirm — nothing is saved until you click.
                     </x-admin.help-tip>
                 </div>
                 <p class="erp-caption mt-1">
@@ -175,7 +169,7 @@
         <x-admin.stat-card
             label="Suggested from CSV"
             :value="$suggestedCount"
-            hint="Pre-ticked until you save"
+            hint="Click Reconcile on those rows"
         />
         <x-admin.stat-card
             label="Reconciled receipts"
@@ -188,45 +182,37 @@
     @if($isEmpty)
         <x-admin.empty-state
             title="Nothing in this period"
-            description="No receipts or supplier payments in this date range. Try Last 3 months or All time, or download the demo statement anyway."
+            description="No receipts or supplier payments in this date range. Try Last 3 months or Lifetime, or download the demo statement anyway."
         >
             <x-slot:action>
                 <a href="{{ route('admin.finance.reconciliation', ['range' => '3m']) }}" class="erp-btn-primary">Show last 3 months</a>
             </x-slot:action>
         </x-admin.empty-state>
     @else
-        <form id="reconciliation-form" action="{{ route('admin.finance.reconciliation.update') }}" method="POST" class="space-y-6">
-            @csrf
-            <input type="hidden" name="range" value="{{ $range }}">
-            <input type="hidden" name="from" value="{{ $from->toDateString() }}">
-            <input type="hidden" name="to" value="{{ $to->toDateString() }}">
-
+        <div class="space-y-6">
             <div class="erp-table-card">
                 <div class="erp-table-card-header flex flex-wrap items-center justify-between gap-2">
                     <div>
                         <div class="flex items-center gap-2">
                             <h2 class="erp-table-card-title">Customer receipts</h2>
-                            <x-admin.help-tip class="erp-help-tip--up" label="Receipt tick box">
-                                Tick when this receipt appears as a credit on the bank statement.
-                                Pending means it is in the ERP but not yet confirmed on the bank.
+                            <x-admin.help-tip class="erp-help-tip--up" label="Reconcile button">
+                                Click Reconcile when this receipt appears as a credit on the bank statement.
+                                Undo if you marked it by mistake.
                             </x-admin.help-tip>
                         </div>
                         <p class="erp-table-card-description">{{ $pendingCount }} pending in this period</p>
                     </div>
-                    <span class="erp-badge-neutral" id="selected-count">0 of {{ $totalReceipts }} selected</span>
                 </div>
                 <div class="erp-table-wrap">
                     <table class="erp-table">
                         <thead>
                             <tr>
-                                <th class="w-12">
-                                    <input type="checkbox" id="select-all" class="erp-form-check-input" aria-label="Select all receipts">
-                                </th>
                                 <th>Date</th>
                                 <th>Invoice</th>
                                 <th class="is-right">Amount</th>
                                 <th>Method</th>
                                 <th>Status</th>
+                                <th class="is-right">Action</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -235,17 +221,6 @@
                                     $isSuggested = in_array($receipt->id, $suggestedReceiptIds, true);
                                 @endphp
                                 <tr>
-                                    <td>
-                                        <input type="hidden" name="visible_receipts[]" value="{{ $receipt->id }}">
-                                        <input
-                                            type="checkbox"
-                                            name="reconciled[]"
-                                            value="{{ $receipt->id }}"
-                                            @checked($receipt->reconciled || $isSuggested)
-                                            class="receipt-checkbox erp-form-check-input"
-                                            aria-label="Reconcile receipt {{ $receipt->id }}"
-                                        >
-                                    </td>
                                     <td class="erp-table-cell whitespace-nowrap">{{ $receipt->received_at?->format('d M Y') }}</td>
                                     <td>
                                         @if($receipt->invoice)
@@ -269,6 +244,19 @@
                                             <span class="erp-badge-warning">Pending</span>
                                         @endif
                                     </td>
+                                    <td class="is-right">
+                                        <form method="POST" action="{{ route('admin.finance.reconciliation.receipt', $receipt) }}" class="inline">
+                                            @csrf
+                                            <input type="hidden" name="range" value="{{ $range }}">
+                                            <input type="hidden" name="from" value="{{ $from->toDateString() }}">
+                                            <input type="hidden" name="to" value="{{ $to->toDateString() }}">
+                                            @if($receipt->reconciled)
+                                                <button type="submit" class="erp-btn-secondary erp-btn--sm">Undo</button>
+                                            @else
+                                                <button type="submit" class="erp-btn-primary erp-btn--sm">Reconcile</button>
+                                            @endif
+                                        </form>
+                                    </td>
                                 </tr>
                             @empty
                                 <tr>
@@ -286,9 +274,8 @@
                 <div class="erp-table-card-header">
                     <div class="flex items-center gap-2">
                         <h2 class="erp-table-card-title">Supplier payments</h2>
-                        <x-admin.help-tip class="erp-help-tip--up" label="Payment tick box">
-                            Tick when this bill payment appears as a debit on the bank statement.
-                            Outflows use a negative amount in the CSV.
+                        <x-admin.help-tip class="erp-help-tip--up" label="Payment reconcile">
+                            Click Reconcile when this bill payment appears as a debit on the bank statement.
                         </x-admin.help-tip>
                     </div>
                     <p class="erp-table-card-description">{{ $pendingPaymentCount }} pending outflow(s)</p>
@@ -297,12 +284,12 @@
                     <table class="erp-table">
                         <thead>
                             <tr>
-                                <th class="w-12">Match</th>
                                 <th>Date</th>
                                 <th>Bill</th>
                                 <th>Supplier</th>
                                 <th class="is-right">Amount</th>
                                 <th>Status</th>
+                                <th class="is-right">Action</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -311,16 +298,6 @@
                                     $isSuggestedPayment = in_array($payment->id, $suggestedPaymentIds, true);
                                 @endphp
                                 <tr>
-                                    <td>
-                                        <input
-                                            type="checkbox"
-                                            name="reconciled_payments[]"
-                                            value="{{ $payment->id }}"
-                                            @checked($payment->reconciled || $isSuggestedPayment)
-                                            class="payment-checkbox erp-form-check-input"
-                                            aria-label="Reconcile payment {{ $payment->id }}"
-                                        >
-                                    </td>
                                     <td class="erp-table-cell whitespace-nowrap">{{ $payment->paid_at?->format('d M Y') }}</td>
                                     <td>
                                         <span class="erp-table-link">{{ $payment->bill?->number ?? '—' }}</span>
@@ -337,6 +314,19 @@
                                             <span class="erp-badge-warning">Pending</span>
                                         @endif
                                     </td>
+                                    <td class="is-right">
+                                        <form method="POST" action="{{ route('admin.finance.reconciliation.payment', $payment) }}" class="inline">
+                                            @csrf
+                                            <input type="hidden" name="range" value="{{ $range }}">
+                                            <input type="hidden" name="from" value="{{ $from->toDateString() }}">
+                                            <input type="hidden" name="to" value="{{ $to->toDateString() }}">
+                                            @if($payment->reconciled)
+                                                <button type="submit" class="erp-btn-secondary erp-btn--sm">Undo</button>
+                                            @else
+                                                <button type="submit" class="erp-btn-primary erp-btn--sm">Reconcile</button>
+                                            @endif
+                                        </form>
+                                    </td>
                                 </tr>
                             @empty
                                 <tr>
@@ -350,37 +340,41 @@
                 </div>
             </div>
 
-            <div class="erp-form-actions rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
-                <p class="erp-caption mr-auto">Only lines in {{ $periodLabel }} are updated when you save.</p>
-                <button type="submit" class="erp-btn-primary">Save reconciliation</button>
-            </div>
-        </form>
+            <p class="erp-caption">Showing {{ $periodLabel }}. Each Reconcile / Undo click saves that line immediately.</p>
+        </div>
     @endif
+
+    <x-admin.quick-guide
+        title="How bank reconciliation works"
+        lead="Confirm that money already in Saf ERP also appears on the bank statement. This does not post a new journal."
+        :steps="[
+            ['title' => 'Pick the period', 'body' => 'Show the same dates as the bank statement you are checking.'],
+            ['title' => 'Optional: import CSV', 'body' => 'Upload the bank file to mark Suggested matches on receipts and payments.'],
+            ['title' => 'Click Reconcile on each line', 'body' => 'When you see that receipt or payment on the bank, click Reconcile — it saves immediately.'],
+            ['title' => 'Undo if needed', 'body' => 'Marked by mistake? Click Undo on that row.'],
+        ]"
+        :examples="[
+            [
+                'eyebrow' => 'Receipts',
+                'title' => 'Money in',
+                'bullets' => [
+                    'Customer receipt on the list = credit on the bank',
+                    'Suggested badge means CSV matched amount/date',
+                    'Status becomes Reconciled after you click',
+                ],
+            ],
+            [
+                'eyebrow' => 'Payments',
+                'title' => 'Money out',
+                'bullets' => [
+                    'Supplier bill payment = debit on the bank',
+                    'CSV uses a negative amount for outflows',
+                    'Bank charges with no ERP match stay unmatched',
+                ],
+            ],
+        ]"
+        note="You do not need a full batch save. Reconcile one line when you see it — useful for daily work, not only month-end."
+        :open="false"
+    />
 </div>
-
-@push('scripts')
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        const selectAll = document.getElementById('select-all');
-        const receiptBoxes = document.querySelectorAll('.receipt-checkbox');
-        const selectedCount = document.getElementById('selected-count');
-        const totalReceipts = {{ $totalReceipts }};
-
-        function updateCount() {
-            if (!selectedCount) return;
-            selectedCount.textContent = `${document.querySelectorAll('.receipt-checkbox:checked').length} of ${totalReceipts} selected`;
-        }
-
-        if (selectAll) {
-            selectAll.addEventListener('change', function () {
-                receiptBoxes.forEach((box) => { box.checked = selectAll.checked; });
-                updateCount();
-            });
-        }
-
-        receiptBoxes.forEach((box) => box.addEventListener('change', updateCount));
-        updateCount();
-    });
-</script>
-@endpush
 @endsection

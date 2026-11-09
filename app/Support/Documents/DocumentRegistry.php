@@ -8,6 +8,7 @@ use App\Models\Invoice;
 use App\Models\LogisticsBill;
 use App\Models\Order;
 use App\Models\ProductionRun;
+use App\Models\PurchaseBill;
 use App\Models\PurchaseOrder;
 use Illuminate\Support\Facades\Route;
 use InvalidArgumentException;
@@ -85,6 +86,13 @@ class DocumentRegistry
             'back_route' => 'admin.logistics-bills.show',
             'filename' => 'logistics-bill',
         ],
+        'purchase-bill' => [
+            'model' => PurchaseBill::class,
+            'permission' => 'accounting.manage',
+            'view' => 'documents.types.purchase-bill',
+            'back_route' => 'admin.bills.show',
+            'filename' => 'purchase-bill',
+        ],
     ];
 
     public static function get(string $type): array
@@ -127,6 +135,7 @@ class DocumentRegistry
             'sales-order', 'picking-list' => 'order-' . $model->getKey(),
             'delivery-challan', 'packing-slip', 'pod' => 'delivery-' . $model->getKey(),
             'logistics-bill' => $model->document_number ?? (string) $model->getKey(),
+            'purchase-bill' => $model->number ?? (string) $model->getKey(),
             default => (string) $model->getKey(),
         };
 

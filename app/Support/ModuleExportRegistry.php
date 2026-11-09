@@ -92,13 +92,13 @@ class ModuleExportRegistry
 
     protected static function titleRangeSuffix(Request $request): string
     {
-        $resolved = ExportDateRange::resolve($request);
+        $summary = ExportDateRange::periodSummary($request);
 
-        if (! $resolved) {
+        if ($summary === '' || $summary === 'All records') {
             return '';
         }
 
-        return ' (' . $resolved['label'] . ')';
+        return ' (' . $summary . ')';
     }
 
     public static function definitions(): array

@@ -1,10 +1,11 @@
 <style>
-    @page { size: A4; margin: 0; }
+    /* Keep top/side margin on every page so continued tables are not flush to the edge. */
+    @page { size: A4; margin: 12mm 12mm 14mm; }
     .inv {
         color: #1f2937;
         font-family: DejaVu Sans, Helvetica, Arial, sans-serif;
     }
-    .inv-for-pdf { padding: 10mm 14mm 16mm; }
+    .inv-for-pdf { padding: 0; }
     .inv-accent { color: #6A2ACD; }
     .inv-head, .inv-intro, .inv-lines, .inv-bottom, .inv-bill, .inv-meta, .inv-pay, .inv-contact {
         width: 100%;

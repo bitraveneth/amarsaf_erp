@@ -54,11 +54,15 @@ class ChartOfAccountsDemoJournalSeeder extends Seeder
 
     protected function seedOpeningBalances(AccountingService $accounting, Carbon $date): void
     {
+        // Large opening bank float so payroll/expense cash-outs in the demo year
+        // do not drive the BRAC bank ledger into credit (negative asset) before
+        // sales receipts are posted through the full invoice→journal path.
         $this->post($accounting, $date, 'Demo opening balances — chart of accounts', [
-            ['account_key' => 'bank_brac', 'debit' => 850000, 'credit' => 0],
+            ['account_key' => 'bank_brac', 'debit' => 25000000, 'credit' => 0],
+            ['account_key' => 'bank_scb', 'debit' => 1500000, 'credit' => 0],
             ['account_key' => 'raw_materials', 'debit' => 320000, 'credit' => 0],
             ['account_key' => 'finished_goods', 'debit' => 210000, 'credit' => 0],
-            ['account_key' => 'retained_earnings', 'debit' => 0, 'credit' => 1380000],
+            ['account_key' => 'retained_earnings', 'debit' => 0, 'credit' => 27030000],
         ]);
     }
 

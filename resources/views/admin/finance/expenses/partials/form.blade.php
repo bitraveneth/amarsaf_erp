@@ -53,30 +53,39 @@
             @error('amount')<p class="text-theme-xs text-error-600">{{ $message }}</p>@enderror
         </div>
 
-        <div class="flex flex-col gap-1.5">
-            <label for="payment_type" class="text-theme-sm font-medium text-gray-700 dark:text-gray-300">
-                Payment <span class="text-error-500">*</span>
+        <div class="flex flex-col gap-1.5 md:col-span-2">
+            <label for="payment_instrument_id" class="text-theme-sm font-medium text-gray-700 dark:text-gray-300">
+                Paid from <span class="text-error-500">*</span>
             </label>
-            @php $paymentType = old('payment_type', $expense->payment_type ?? 'bank'); @endphp
-            <select id="payment_type" name="payment_type" required class="erp-input">
-                <option value="bank" @selected($paymentType === 'bank')>Paid from bank</option>
-                <option value="cash" @selected($paymentType === 'cash')>Paid from cash</option>
-                <option value="payable" @selected($paymentType === 'payable')>Accrued / payable</option>
-            </select>
-            @error('payment_type')<p class="text-theme-xs text-error-600">{{ $message }}</p>@enderror
-        </div>
-
-        <div class="flex flex-col gap-1.5">
-            <label for="payment_account_key" class="text-theme-sm font-medium text-gray-700 dark:text-gray-300">
-                Bank / cash account
-            </label>
-            @php $paymentKey = old('payment_account_key', $expense->payment_account_key ?? 'bank_default'); @endphp
-            <select id="payment_account_key" name="payment_account_key" required class="erp-input">
-                @foreach($paymentAccountKeys ?? [] as $key => $label)
-                    <option value="{{ $key }}" @selected($paymentKey === $key)>{{ $label }}</option>
+            @php
+                $selectedInstrument = (int) old('payment_instrument_id', $expense->payment_instrument_id);
+                $paymentType = old('payment_type', $expense->payment_type ?? 'bank');
+                $payableSelected = $paymentType === 'payable' && ! $selectedInstrument;
+            @endphp
+            <select id="payment_instrument_id" name="payment_instrument_id" class="erp-input">
+                @foreach($paymentCategories ?? [] as $paymentCategory)
+                    <optgroup label="{{ $paymentCategory->name }}">
+                        @foreach($paymentCategory->instruments as $instrument)
+                            <option value="{{ $instrument->id }}" @selected($selectedInstrument === (int) $instrument->id)>
+                                {{ $instrument->label() }}
+                                @if($instrument->account) → {{ $instrument->account->code }} @endif
+                            </option>
+                        @endforeach
+                    </optgroup>
                 @endforeach
             </select>
-            @error('payment_account_key')<p class="text-theme-xs text-error-600">{{ $message }}</p>@enderror
+            <label class="mt-2 inline-flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                <input type="checkbox" id="payment_payable_toggle" value="1" @checked($payableSelected)
+                       onchange="const sel=document.getElementById('payment_instrument_id'); const type=document.getElementById('payment_type'); if(this.checked){ type.value='payable'; sel.required=false; } else { type.value='bank'; sel.required=true; }">
+                Accrued / payable instead (no cash out yet)
+            </label>
+            <input type="hidden" id="payment_type" name="payment_type" value="{{ $payableSelected ? 'payable' : 'bank' }}">
+            <p class="erp-caption mt-1">
+                Manage banks, wallets, and cash in
+                <a href="{{ route('admin.payment-methods.index') }}" class="erp-link">Payment methods</a>.
+            </p>
+            @error('payment_instrument_id')<p class="text-theme-xs text-error-600">{{ $message }}</p>@enderror
+            @error('payment_type')<p class="text-theme-xs text-error-600">{{ $message }}</p>@enderror
         </div>
 
         <div class="flex flex-col gap-1.5">

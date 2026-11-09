@@ -69,6 +69,29 @@
             </div>
         </form>
     </section>
+
+    <x-admin.quick-guide
+        title="How salary distributions work"
+        lead="One distribution = one employee for one pay period. Saving posts a payroll journal (debit salaries, credit bank)."
+        :steps="[
+            ['title' => 'Select employee', 'body' => 'Must be an active employee with payroll data.'],
+            ['title' => 'Set the period', 'body' => 'Period start and end define which month the cost hits.'],
+            ['title' => 'Enter pay components', 'body' => 'Base, bonus, TA, DA, and other allowances as needed.'],
+            ['title' => 'Save distribution', 'body' => 'Posts to the ledger when configured — then it shows on payroll reports.'],
+        ]"
+        :examples="[
+            [
+                'eyebrow' => 'Ledger effect',
+                'title' => 'Typical payroll voucher',
+                'bullets' => [
+                    'Debit: Salaries & wages (total pay)',
+                    'Credit: Bank account used for payout',
+                    'Duplicate employee + period is blocked',
+                ],
+            ],
+        ]"
+        note="Use this screen for payroll, not a manual journal, so reports and uniqueness rules stay correct."
+    />
 </div>
 @endsection
 

@@ -1,4 +1,4 @@
-@props(['nodes', 'depth' => 0, 'ancestorIds' => [], 'showBalance' => false, 'showParent' => false])
+@props(['nodes', 'depth' => 0, 'ancestorIds' => [], 'showBalance' => false, 'showParent' => false, 'showSlug' => true])
 
 @foreach($nodes as $node)
     @php
@@ -41,7 +41,7 @@
                 @else
                     <span class="inline-block h-5 w-5 shrink-0" aria-hidden="true"></span>
                 @endif
-                <span class="text-sm font-medium text-gray-900 dark:text-white">{{ $node->name }}</span>
+                <a href="{{ route('admin.accounts.show', $node) }}" class="erp-table-link min-w-0 truncate">{{ $node->name }}</a>
             </div>
         </td>
         @if($showParent)
@@ -57,23 +57,25 @@
                 <span class="text-xs font-medium text-emerald-600">Ledger</span>
             @endif
         </td>
-        <td class="px-5 py-3 text-xs text-gray-500 dark:text-gray-400">{{ $node->slug ?: '—' }}</td>
+        @if($showSlug)
+            <td class="truncate text-xs text-gray-500 dark:text-gray-400">{{ $node->slug ?: '—' }}</td>
+        @endif
         @if($showBalance)
-            <td class="px-5 py-3 text-right font-mono text-sm text-gray-900 dark:text-white">
+            <td class="is-right whitespace-nowrap">
                 @php
                     $rowBalance = isset($coaSummary, $balancePeriod, $balanceClosing)
                         ? $coaSummary->rollupBalance($node, $balancePeriod, $balanceClosing)
                         : 0;
                 @endphp
                 @if(abs($rowBalance) >= 0.01)
-                    {{ number_format($rowBalance, 2) }}
+                    <span class="erp-table-num">{{ $currencyCode ?? 'BDT' }} {{ number_format($rowBalance, 2) }}</span>
                 @else
-                    <span class="text-gray-400">—</span>
+                    <span class="erp-caption">—</span>
                 @endif
             </td>
         @endif
-        <td class="px-5 py-3 text-right">
-            <div class="erp-action-group justify-end">
+        <td class="px-5 py-3 text-right whitespace-nowrap">
+            <div class="erp-action-group flex-nowrap justify-end">
                 @if($node->is_group)
                     <a href="{{ route('admin.accounts.create', ['parent_id' => $node->id]) }}" class="erp-btn-action">Add child</a>
                 @endif
@@ -93,6 +95,7 @@
             'ancestorIds' => $childAncestorIds,
             'showBalance' => $showBalance,
             'showParent' => $showParent,
+            'showSlug' => $showSlug,
         ])
     @endif
 @endforeach

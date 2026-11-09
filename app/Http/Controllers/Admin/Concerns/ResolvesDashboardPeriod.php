@@ -14,6 +14,7 @@ trait ResolvesDashboardPeriod
             'month' => 'This month',
             'quarter' => 'This quarter',
             'year' => 'This year',
+            'lifetime' => 'Lifetime',
             'custom' => 'Custom range',
         ];
     }
@@ -52,13 +53,19 @@ trait ResolvesDashboardPeriod
                 $from = $today->copy()->startOfYear();
                 $to = $today->copy()->endOfDay();
                 break;
+            case 'lifetime':
+            case 'all':
+                $from = Carbon::parse('2000-01-01')->startOfDay();
+                $to = $today->copy()->endOfDay();
+                $range = 'lifetime';
+                break;
             case 'month':
                 $from = $today->copy()->startOfMonth();
                 $to = $today->copy()->endOfDay();
                 $range = 'month';
                 break;
             default:
-                $range = in_array($defaultRange, ['7d', 'month', 'quarter', 'year'], true)
+                $range = in_array($defaultRange, ['7d', 'month', 'quarter', 'year', 'lifetime'], true)
                     ? $defaultRange
                     : 'month';
 
@@ -71,8 +78,12 @@ trait ResolvesDashboardPeriod
         return [$from, $to, $range];
     }
 
-    protected function dashboardPeriodLabel(Carbon $from, Carbon $to): string
+    protected function dashboardPeriodLabel(Carbon $from, Carbon $to, ?string $range = null): string
     {
+        if (in_array($range, ['lifetime', 'all'], true) || $from->year <= 2000) {
+            return 'Lifetime through ' . $to->format('d M Y');
+        }
+
         return $from->format('d M Y') . ' – ' . $to->format('d M Y');
     }
 

@@ -38,6 +38,19 @@
             </div>
         </form>
     </section>
+
+    <x-admin.quick-guide
+        title="How expense updates work"
+        lead="Changing category, amount, or payment rewrites the linked journal while the accounting period is open."
+        :steps="[
+            ['title' => 'Edit the fields you need', 'body' => 'Date, category, amount, and payment type all affect the voucher.'],
+            ['title' => 'Ledger override (optional)', 'body' => 'Only use when the category default account is wrong for this one line.'],
+            ['title' => 'Update expense', 'body' => 'Reposts the voucher so P&L and bank stay in sync.'],
+            ['title' => 'Closed months', 'body' => 'If the date is in a closed period, reopen the month before changing the posting.'],
+        ]"
+        note="Posted expenses should not be deleted casually — prefer correcting the amount or reversing through accounting controls."
+        :open="false"
+    />
 </div>
 @endsection
 

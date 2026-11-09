@@ -67,9 +67,9 @@
             </div>
         </div>
         
-        <div class="flex items-center gap-3">
+        <div class="flex flex-wrap items-center justify-end gap-2">
             <a href="{{ route('admin.finance.index') }}" 
-               class="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white/80 backdrop-blur-sm px-5 py-2.5 text-sm font-medium text-gray-700 shadow-xs hover:bg-white hover:shadow-sm dark:border-gray-700 dark:bg-gray-900/80 dark:text-gray-300 dark:hover:bg-gray-900 transition-all duration-200">
+               class="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white/80 backdrop-blur-sm px-4 py-2.5 text-sm font-medium text-gray-700 shadow-xs hover:bg-white hover:shadow-sm dark:border-gray-700 dark:bg-gray-900/80 dark:text-gray-300 dark:hover:bg-gray-900 transition-all duration-200">
                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
                 </svg>
@@ -77,16 +77,8 @@
             </a>
             <x-admin.document-actions type="invoice" :id="$invoice->id" />
             <button type="button" 
-                    onclick="window.print()"
-                    class="print-hidden inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white/80 backdrop-blur-sm px-5 py-2.5 text-sm font-medium text-gray-700 shadow-xs hover:bg-white hover:shadow-sm dark:border-gray-700 dark:bg-gray-900/80 dark:text-gray-300 dark:hover:bg-gray-900 transition-all duration-200">
-                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2z" />
-                </svg>
-                Quick print
-            </button>
-            <button type="button" 
                     id="btn-open-credit-modal"
-                    class="inline-flex items-center gap-2 rounded-xl border border-orange-200 bg-orange-50 px-5 py-2.5 text-sm font-medium text-orange-700 shadow-xs hover:bg-orange-100 dark:border-orange-800 dark:bg-orange-900/30 dark:text-orange-400 dark:hover:bg-orange-900/50 transition-all">
+                    class="inline-flex items-center gap-2 rounded-xl border border-orange-200 bg-orange-50 px-4 py-2.5 text-sm font-medium text-orange-700 shadow-xs hover:bg-orange-100 dark:border-orange-800 dark:bg-orange-900/30 dark:text-orange-400 dark:hover:bg-orange-900/50 transition-all">
                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
                 </svg>
@@ -94,7 +86,7 @@
             </button>
             <button type="button" 
                     id="btn-open-receipt-modal"
-                    class="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-brand-500 to-brand-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md hover:from-brand-600 hover:to-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500/50 transition-all duration-200">
+                    class="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-brand-500 to-brand-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md hover:from-brand-600 hover:to-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500/50 transition-all duration-200">
                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33" />
                 </svg>
@@ -587,10 +579,51 @@
     <link rel="stylesheet" href="{{ asset('css/invoice-print.css') }}?v={{ filemtime(public_path('css/invoice-print.css')) }}">
     <style>
         .erp-assistant-root { display: none !important; }
-        .finance-v3-preview .doc-preview-page { margin-top: 0; }
+        /* Fit A4 invoice sheet into the admin content column (avoids overflow-x-clip cropping). */
+        .finance-v3-preview {
+            width: 100%;
+            max-width: 100%;
+            overflow: hidden;
+            border-radius: 1rem;
+            background: #eef1f6;
+            padding: 1rem 0.75rem 1.25rem;
+        }
+        .dark .finance-v3-preview {
+            background: #111827;
+        }
+        .finance-v3-preview .doc-preview-page {
+            width: 100% !important;
+            max-width: 48rem !important;
+            min-height: 0 !important;
+            margin: 0 auto !important;
+            padding: 0 !important;
+            background: transparent !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
+        }
+        .finance-v3-preview .doc-copy {
+            width: 100% !important;
+            min-height: 0 !important;
+            margin: 0 auto 1rem !important;
+            padding: 1.25rem 1.35rem 2rem !important;
+            box-sizing: border-box;
+            box-shadow: 0 12px 40px rgba(15, 23, 42, 0.12);
+        }
+        .finance-v3-preview .inv-title {
+            font-size: clamp(1.75rem, 4.5vw, 2.5rem);
+        }
+        .finance-v3-preview .inv-title-stack {
+            font-size: clamp(1.6rem, 4vw, 2.35rem);
+        }
         @media print {
             @page { size: A4; margin: 0; }
             .print-invoice > *:not(.finance-v3-preview) { display: none !important; }
+            .finance-v3-preview {
+                background: transparent !important;
+                padding: 0 !important;
+                border-radius: 0 !important;
+                overflow: visible !important;
+            }
             .finance-v3-preview,
             .finance-v3-preview .doc-preview-page,
             .finance-v3-preview .doc-copy {
@@ -598,6 +631,10 @@
                 max-width: none !important;
                 margin: 0 !important;
                 box-shadow: none !important;
+            }
+            .finance-v3-preview .doc-copy {
+                min-height: 297mm !important;
+                padding: 10mm 14mm 16mm !important;
             }
         }
     </style>

@@ -90,7 +90,7 @@ class DocumentPrintDesignTest extends TestCase
             'company' => $this->company(),
         ])->render();
 
-        foreach ([$invoice, $purchaseOrder, $report] as $html) {
+        foreach ([$invoice, $purchaseOrder] as $html) {
             $this->assertStringContainsString('doc-banner', $html);
             $this->assertStringContainsString('doc-lines', $html);
             $this->assertStringContainsString('Sohag Food', $html);
@@ -99,9 +99,11 @@ class DocumentPrintDesignTest extends TestCase
         $this->assertStringContainsString('INV-000001', $invoice);
         $this->assertStringContainsString('Payment details', $invoice);
         $this->assertStringContainsString('PO-000001', $purchaseOrder);
+        $this->assertStringContainsString('class="inv inv-for-pdf"', $report);
         $this->assertStringContainsString('Balance sheet', $report);
         $this->assertStringContainsString('Statement', $report);
         $this->assertStringContainsString('1,200.00', $report);
+        $this->assertStringContainsString('Sohag Food', $report);
     }
 
     public function test_customer_invoice_uses_the_designed_sheet(): void

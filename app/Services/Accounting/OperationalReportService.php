@@ -319,6 +319,9 @@ class OperationalReportService
             ->get();
 
         $podComplete = $deliveries->where('status', 'delivered')->count();
+        $inTransit = $deliveries->where('status', 'in_transit')->count();
+        $scheduled = $deliveries->whereIn('status', ['scheduled', 'pending', 'confirmed'])->count();
+        $failed = $deliveries->whereIn('status', ['failed', 'cancelled', 'returned'])->count();
 
         return [
             'from' => $from,
@@ -328,6 +331,10 @@ class OperationalReportService
             'totals' => [
                 'count' => $deliveries->count(),
                 'pod_complete' => $podComplete,
+                'in_transit' => $inTransit,
+                'scheduled' => $scheduled,
+                'failed' => $failed,
+                'open' => max(0, $deliveries->count() - $podComplete - $failed),
                 'pod_rate' => $deliveries->count() > 0 ? round(($podComplete / $deliveries->count()) * 100, 1) : 0,
             ],
         ];
@@ -348,6 +355,9 @@ class OperationalReportService
             ->orderBy('paid_at')
             ->get();
 
+        $receiptsReconciled = $receipts->where('reconciled', true)->count();
+        $paymentsReconciled = $payments->where('reconciled', true)->count();
+
         return [
             'from' => $from,
             'to' => $to,
@@ -356,15 +366,19 @@ class OperationalReportService
             'totals' => [
                 'receipts_count' => $receipts->count(),
                 'receipts_total' => round((float) $receipts->sum('amount'), 2),
+                'receipts_reconciled' => $receiptsReconciled,
+                'receipts_open' => $receipts->count() - $receiptsReconciled,
                 'payments_count' => $payments->count(),
                 'payments_total' => round((float) $payments->sum('amount'), 2),
+                'payments_reconciled' => $paymentsReconciled,
+                'payments_open' => $payments->count() - $paymentsReconciled,
                 'net' => round((float) $receipts->sum('amount') - (float) $payments->sum('amount'), 2),
             ],
         ];
     }
 
     /**
-     * @return array{from: Carbon, to: Carbon, agent: ?Agent, rows: Collection, opening: float, closing: float}
+     * @return array{from: Carbon, to: Carbon, agent: ?Agent, rows: Collection, opening: float, closing: float, summary: array}
      */
     public function customerStatement(Carbon $from, Carbon $to, ?int $agentId): array
     {
@@ -372,37 +386,84 @@ class OperationalReportService
         $rows = collect();
 
         if ($agent) {
-            $invoices = Invoice::with('receipts')
+            $invoices = Invoice::with(['receipts', 'creditNotes', 'advanceApplications.advance', 'order'])
                 ->whereHas('order', fn ($q) => $q->where('agent_id', $agent->id))
                 ->whereDate('issued_at', '<=', $to->toDateString())
                 ->orderBy('issued_at')
                 ->get();
 
             foreach ($invoices as $invoice) {
+                $invoiceHref = route('admin.finance.show', $invoice);
+                $invoiceRef = $invoice->number ?? ('INV-' . $invoice->id);
+
                 if ($invoice->issued_at && $invoice->issued_at->between($from, $to)) {
+                    $gross = (float) $invoice->net_total + (float) $invoice->vat_amount - (float) $invoice->withholding;
                     $rows->push([
                         'date' => $invoice->issued_at,
                         'type' => 'Invoice',
-                        'reference' => $invoice->number ?? $invoice->id,
-                        'debit' => (float) $invoice->net_total + (float) $invoice->vat_amount - (float) $invoice->withholding,
+                        'type_key' => 'invoice',
+                        'reference' => $invoiceRef,
+                        'detail' => trim(($invoice->order_id ? 'Order #' . $invoice->order_id : '') . ($invoice->status ? ' · ' . ucfirst($invoice->status) : ''), ' ·'),
+                        'href' => $invoiceHref,
+                        'debit' => $gross,
                         'credit' => 0.0,
                     ]);
                 }
 
                 foreach ($invoice->receipts as $receipt) {
                     if ($receipt->received_at && $receipt->received_at->between($from, $to)) {
+                        $method = $receipt->payment_method ? str_replace('_', ' ', $receipt->payment_method) : null;
                         $rows->push([
                             'date' => $receipt->received_at,
                             'type' => 'Receipt',
-                            'reference' => $receipt->reference ?? $receipt->id,
+                            'type_key' => 'receipt',
+                            'reference' => $invoiceRef,
+                            'detail' => trim(ucfirst((string) $method) . ($receipt->notes ? ' · ' . $receipt->notes : ''), ' ·'),
+                            'href' => $invoiceHref,
                             'debit' => 0.0,
                             'credit' => (float) $receipt->amount,
                         ]);
                     }
                 }
+
+                foreach ($invoice->creditNotes as $credit) {
+                    if ($credit->issued_at && $credit->issued_at->between($from, $to)) {
+                        $rows->push([
+                            'date' => $credit->issued_at,
+                            'type' => 'Credit note',
+                            'type_key' => 'credit',
+                            'reference' => $credit->number ?? $invoiceRef,
+                            'detail' => $credit->reason ?: ('Against ' . $invoiceRef),
+                            'href' => $invoiceHref,
+                            'debit' => 0.0,
+                            'credit' => (float) $credit->amount,
+                        ]);
+                    }
+                }
+
+                foreach ($invoice->advanceApplications as $application) {
+                    if ($application->applied_at && $application->applied_at->between($from, $to)) {
+                        $advanceRef = $application->advance
+                            ? ('Advance #' . $application->advance->id)
+                            : 'Advance applied';
+                        $rows->push([
+                            'date' => $application->applied_at,
+                            'type' => 'Advance applied',
+                            'type_key' => 'advance',
+                            'reference' => $invoiceRef,
+                            'detail' => $advanceRef,
+                            'href' => $invoiceHref,
+                            'debit' => 0.0,
+                            'credit' => (float) $application->amount,
+                        ]);
+                    }
+                }
             }
 
-            $rows = $rows->sortBy('date')->values();
+            $rows = $rows->sortBy([
+                ['date', 'asc'],
+                ['type', 'asc'],
+            ])->values();
         }
 
         $opening = $agent
@@ -412,21 +473,38 @@ class OperationalReportService
                 ->sum(fn (Invoice $i) => (float) $i->outstanding)
             : 0.0;
 
-        $movement = (float) $rows->sum('debit') - (float) $rows->sum('credit');
+        $balance = $opening;
+        $rows = $rows->map(function (array $row) use (&$balance) {
+            $balance = round($balance + (float) $row['debit'] - (float) $row['credit'], 2);
+            $row['balance'] = $balance;
+
+            return $row;
+        });
+
+        $invoiced = round((float) $rows->where('type_key', 'invoice')->sum('debit'), 2);
+        $collected = round((float) $rows->whereIn('type_key', ['receipt', 'advance'])->sum('credit'), 2);
+        $credits = round((float) $rows->where('type_key', 'credit')->sum('credit'), 2);
+        $closing = round($opening + (float) $rows->sum('debit') - (float) $rows->sum('credit'), 2);
 
         return [
             'from' => $from,
             'to' => $to,
             'agent' => $agent,
-            'agents' => Agent::orderBy('name')->get(['id', 'name']),
+            'agents' => Agent::orderBy('name')->get(['id', 'name', 'phone', 'area']),
             'rows' => $rows,
             'opening' => round($opening, 2),
-            'closing' => round($opening + $movement, 2),
+            'closing' => $closing,
+            'summary' => [
+                'movements' => $rows->count(),
+                'invoiced' => $invoiced,
+                'collected' => $collected,
+                'credits' => $credits,
+            ],
         ];
     }
 
     /**
-     * @return array{from: Carbon, to: Carbon, supplier: ?Supplier, rows: Collection, opening: float, closing: float}
+     * @return array{from: Carbon, to: Carbon, supplier: ?Supplier, rows: Collection, opening: float, closing: float, summary: array}
      */
     public function supplierStatement(Carbon $from, Carbon $to, ?int $supplierId): array
     {
@@ -441,22 +519,32 @@ class OperationalReportService
                 ->get();
 
             foreach ($bills as $bill) {
+                $billHref = route('admin.bills.show', $bill);
+                $billRef = $bill->number ?? ('BILL-' . $bill->id);
+
                 if ($bill->bill_date && $bill->bill_date->between($from, $to)) {
                     $rows->push([
                         'date' => $bill->bill_date,
                         'type' => 'Bill',
-                        'reference' => $bill->number ?? $bill->id,
-                        'debit' => (float) $bill->net_total,
+                        'type_key' => 'bill',
+                        'reference' => $billRef,
+                        'detail' => trim(($bill->status ? ucfirst((string) $bill->status) : '') . (isset($bill->due_date) && $bill->due_date ? ' · Due ' . $bill->due_date->format('d M Y') : ''), ' ·'),
+                        'href' => $billHref,
+                        'debit' => (float) $bill->gross_total,
                         'credit' => 0.0,
                     ]);
                 }
 
                 foreach ($bill->payments as $payment) {
                     if ($payment->paid_at && $payment->paid_at->between($from, $to)) {
+                        $method = $payment->method ? str_replace('_', ' ', $payment->method) : null;
                         $rows->push([
                             'date' => $payment->paid_at,
                             'type' => 'Payment',
-                            'reference' => $payment->reference ?? $payment->id,
+                            'type_key' => 'payment',
+                            'reference' => $payment->batch_reference ?: $billRef,
+                            'detail' => trim(ucfirst((string) $method) . ' · Against ' . $billRef, ' ·'),
+                            'href' => $billHref,
                             'debit' => 0.0,
                             'credit' => (float) $payment->amount,
                         ]);
@@ -464,7 +552,10 @@ class OperationalReportService
                 }
             }
 
-            $rows = $rows->sortBy('date')->values();
+            $rows = $rows->sortBy([
+                ['date', 'asc'],
+                ['type', 'asc'],
+            ])->values();
         }
 
         $opening = $supplier
@@ -474,30 +565,39 @@ class OperationalReportService
                 ->sum(fn (PurchaseBill $b) => (float) $b->outstanding)
             : 0.0;
 
-        $movement = (float) $rows->sum('debit') - (float) $rows->sum('credit');
+        $balance = $opening;
+        $rows = $rows->map(function (array $row) use (&$balance) {
+            $balance = round($balance + (float) $row['debit'] - (float) $row['credit'], 2);
+            $row['balance'] = $balance;
+
+            return $row;
+        });
+
+        $billed = round((float) $rows->where('type_key', 'bill')->sum('debit'), 2);
+        $paid = round((float) $rows->where('type_key', 'payment')->sum('credit'), 2);
+        $closing = round($opening + (float) $rows->sum('debit') - (float) $rows->sum('credit'), 2);
 
         return [
             'from' => $from,
             'to' => $to,
             'supplier' => $supplier,
-            'suppliers' => Supplier::orderBy('name')->get(['id', 'name']),
+            'suppliers' => Supplier::orderBy('name')->get(['id', 'name', 'phone', 'email']),
             'rows' => $rows,
             'opening' => round($opening, 2),
-            'closing' => round($opening + $movement, 2),
+            'closing' => $closing,
+            'summary' => [
+                'movements' => $rows->count(),
+                'billed' => $billed,
+                'paid' => $paid,
+            ],
         ];
     }
 
     /**
      * @return array{month: Carbon, rows: Collection}
      */
-    public function commissionSummary(Request $request): array
+    public function commissionSummary(Carbon $from, Carbon $to): array
     {
-        $month = $request->query('month')
-            ? Carbon::parse($request->query('month') . '-01')
-            : Carbon::now()->startOfMonth();
-
-        $from = $month->copy()->startOfMonth();
-        $to = $month->copy()->endOfMonth();
         $calculator = app(CommissionCalculator::class);
 
         $agents = Agent::query()
@@ -536,7 +636,6 @@ class OperationalReportService
         }
 
         return [
-            'month' => $month,
             'from' => $from,
             'to' => $to,
             'rows' => $rows->sortByDesc('commission')->values(),

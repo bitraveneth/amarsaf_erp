@@ -69,10 +69,22 @@ class FleetExpensePostingService
     {
         $paymentType = $expense->payment_type ?: ExpenseCategory::PAYMENT_BANK;
 
+        if ($paymentType === ExpenseCategory::PAYMENT_PAYABLE) {
+            return 'trade_creditors';
+        }
+
+        $expense->loadMissing(['paymentInstrument.account', 'paymentInstrument.category']);
+        if ($expense->paymentInstrument?->ledgerSlug()) {
+            return $expense->paymentInstrument->ledgerSlug();
+        }
+
+        $key = $expense->payment_account_key === 'bank_default'
+            ? 'bank_brac'
+            : $expense->payment_account_key;
+
         return match ($paymentType) {
-            ExpenseCategory::PAYMENT_PAYABLE => 'trade_creditors',
-            ExpenseCategory::PAYMENT_CASH => $expense->payment_account_key ?: 'cash_in_hand',
-            default => $expense->payment_account_key ?: 'bank_default',
+            ExpenseCategory::PAYMENT_CASH => $key ?: 'cash_in_hand',
+            default => $key ?: 'bank_brac',
         };
     }
 }

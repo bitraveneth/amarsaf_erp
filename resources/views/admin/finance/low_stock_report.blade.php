@@ -1,41 +1,98 @@
 @extends('layouts.app')
 
 @section('content')
-<x-report.page eyebrow="Inventory & production" title="Low stock alert" subtitle="Products at or below reorder level." :period="$periodLabel">
+@php
+    $critical = $rows->filter(fn ($row) => $row['available'] <= 0)->count();
+    $totalGap = $rows->sum('gap');
+@endphp
+
+<x-report.page
+    eyebrow="Inventory reports"
+    title="Low stock alert"
+    subtitle="Products at or below reorder level — prioritise replenishment."
+    :period="$periodLabel"
+>
     <x-slot:actions>
         <x-report.header-actions>
             <x-report.hub-link category="operations" />
+            <a href="{{ route('admin.inventory.low-stock') }}" class="erp-btn-secondary">Inventory low stock</a>
             <x-report.export-actions module="low-stock-report" />
         </x-report.header-actions>
     </x-slot:actions>
+
     <x-slot:kpis>
-        <x-dashboard.kpi label="SKUs below reorder" tone="warning" :value="(string) $count" hint="Needs replenishment" />
+        <x-dashboard.kpi
+            label="SKUs below reorder"
+            tone="warning"
+            :value="(string) $count"
+            hint="Needs replenishment"
+        />
+        <x-dashboard.kpi
+            label="Out of stock"
+            :tone="$critical > 0 ? 'danger' : 'success'"
+            :value="(string) $critical"
+            hint="Available qty is zero"
+        />
+        <x-dashboard.kpi
+            label="Total shortage"
+            tone="warning"
+            :value="number_format($totalGap, 0)"
+            hint="Units below reorder across SKUs"
+        />
     </x-slot:kpis>
-    <x-dashboard.panel title="Products">
-        <x-report.table>
-            <thead>
-                <tr class="border-b border-gray-100 dark:border-gray-800">
-                    <x-report.th>Product</x-report.th>
-                    <x-report.th>SKU</x-report.th>
-                    <x-report.th align="right">Available</x-report.th>
-                    <x-report.th align="right">Reorder</x-report.th>
-                    <x-report.th align="right">Shortage</x-report.th>
-                </tr>
-            </thead>
-            <tbody>
-                @forelse($rows as $row)
-                    <tr class="border-b border-gray-50 dark:border-gray-800/60">
-                        <td class="px-4 py-3 text-sm text-gray-900 dark:text-white">{{ $row['product']->name }}</td>
-                        <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-200">{{ $row['product']->sku }}</td>
-                        <td class="px-4 py-3 text-right text-sm tabular-nums text-gray-700 dark:text-gray-200">{{ number_format($row['available'], 0) }}</td>
-                        <td class="px-4 py-3 text-right text-sm tabular-nums text-gray-700 dark:text-gray-200">{{ number_format($row['reorder_level'], 0) }}</td>
-                        <td class="px-4 py-3 text-right text-sm tabular-nums text-error-600">{{ number_format($row['gap'], 0) }}</td>
+
+    <div class="erp-table-card">
+        <div class="erp-table-card-header">
+            <div>
+                <h2 class="erp-h3">Products to reorder</h2>
+                <p class="erp-caption">Sorted by biggest shortage first</p>
+            </div>
+            <p class="erp-caption">{{ number_format($count) }} SKUs</p>
+        </div>
+        <div class="erp-table-wrap">
+            <table class="erp-table w-full" style="width: 100%;">
+                <thead>
+                    <tr>
+                        <th>Product</th>
+                        <th>SKU</th>
+                        <th class="is-right">Available</th>
+                        <th class="is-right">Reorder</th>
+                        <th class="is-right">Shortage</th>
+                        <th>Status</th>
                     </tr>
-                @empty
-                    <tr><td colspan="5" class="px-4 py-8"><x-admin.empty-state title="All products above reorder level" /></td></tr>
-                @endforelse
-            </tbody>
-        </x-report.table>
-    </x-dashboard.panel>
+                </thead>
+                <tbody>
+                    @forelse($rows as $row)
+                        @php
+                            $out = $row['available'] <= 0;
+                            $badge = $out ? 'erp-badge-warning' : 'erp-badge-brand';
+                            $label = $out ? 'Out of stock' : 'Below reorder';
+                        @endphp
+                        <tr>
+                            <td>
+                                <a href="{{ route('admin.products.show', $row['product']) }}" class="erp-table-link">{{ $row['product']->name }}</a>
+                            </td>
+                            <td class="erp-table-cell">{{ $row['product']->sku ?: '—' }}</td>
+                            <td class="is-right"><span class="erp-table-num">{{ number_format($row['available'], 0) }}</span></td>
+                            <td class="is-right"><span class="erp-table-num">{{ number_format($row['reorder_level'], 0) }}</span></td>
+                            <td class="is-right">
+                                <span class="erp-table-num text-error-600 dark:text-error-400">{{ number_format($row['gap'], 0) }}</span>
+                            </td>
+                            <td><span class="{{ $badge }}">{{ $label }}</span></td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="6">
+                                <x-admin.empty-state
+                                    title="All products above reorder level"
+                                    description="Nothing urgent right now. Revisit after the next sales or production cycle."
+                                />
+                            </td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </div>
 </x-report.page>
 @endsection

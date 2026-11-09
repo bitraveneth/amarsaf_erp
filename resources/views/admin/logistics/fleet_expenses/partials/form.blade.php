@@ -36,22 +36,32 @@
         @error('amount')<p class="mt-1 text-sm text-error-600">{{ $message }}</p>@enderror
     </div>
 
-    <div>
-        <label for="payment_type" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Payment</label>
-        <select id="payment_type" name="payment_type" class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-white">
-            <option value="bank" @selected(old('payment_type', $expense->payment_type ?? 'bank') === 'bank')>Paid from bank</option>
-            <option value="cash" @selected(old('payment_type', $expense->payment_type ?? '') === 'cash')>Cash</option>
-            <option value="payable" @selected(old('payment_type', $expense->payment_type ?? '') === 'payable')>Pay later (AP)</option>
-        </select>
-    </div>
-
-    <div>
-        <label for="payment_account_key" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Pay from account</label>
-        <select id="payment_account_key" name="payment_account_key" class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-white">
-            @foreach($paymentAccountKeys as $key => $label)
-                <option value="{{ $key }}" @selected(old('payment_account_key', $expense->payment_account_key ?? 'bank_default') === $key)>{{ $label }}</option>
+    <div class="md:col-span-2">
+        <label for="payment_instrument_id" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Paid from</label>
+        @php
+            $selectedInstrument = (int) old('payment_instrument_id', $expense->payment_instrument_id ?? 0);
+            $payableSelected = old('payment_type', $expense->payment_type ?? 'bank') === 'payable' && ! $selectedInstrument;
+        @endphp
+        <select id="payment_instrument_id" name="payment_instrument_id" class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-white">
+            @foreach($paymentCategories ?? [] as $paymentCategory)
+                <optgroup label="{{ $paymentCategory->name }}">
+                    @foreach($paymentCategory->instruments as $instrument)
+                        <option value="{{ $instrument->id }}" @selected($selectedInstrument === (int) $instrument->id)>
+                            {{ $instrument->label() }}
+                        </option>
+                    @endforeach
+                </optgroup>
             @endforeach
         </select>
+        <label class="mt-2 inline-flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+            <input type="checkbox" value="1" @checked($payableSelected)
+                   onchange="const type=document.getElementById('fleet_payment_type'); type.value=this.checked?'payable':'bank';">
+            Pay later (AP)
+        </label>
+        <input type="hidden" id="fleet_payment_type" name="payment_type" value="{{ $payableSelected ? 'payable' : 'bank' }}">
+        <p class="mt-1 text-xs text-gray-500">
+            <a href="{{ route('admin.payment-methods.index') }}" class="text-brand-600 hover:underline">Payment methods</a>
+        </p>
     </div>
 
     <div>

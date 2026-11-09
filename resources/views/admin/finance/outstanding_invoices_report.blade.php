@@ -1,45 +1,111 @@
 @extends('layouts.app')
 
 @section('content')
-<x-report.page eyebrow="Sales reports" title="Outstanding invoices" subtitle="Open customer balances as of the selected date." :period="'As of ' . $asOf->format('d M Y')">
+@php
+    $ccy = $currencyCode ?? config('app.currency', 'BDT');
+    $overdueCount = $rows->filter(fn ($row) => (int) ($row[4] ?? 0) > 0)->count();
+@endphp
+
+<x-report.page
+    eyebrow="Sales reports"
+    title="Outstanding invoices"
+    subtitle="Open customer balances as of the selected date."
+    :period="'As of ' . $asOf->format('d M Y')"
+>
     <x-slot:actions>
-        <x-report.header-actions :as-of-action="route('admin.reports.outstanding-invoices')" :as-of="$asOf->toDateString()">
+        <x-report.header-actions
+            :as-of-action="route('admin.reports.outstanding-invoices')"
+            :as-of="$asOf->toDateString()"
+        >
             <x-report.hub-link category="sales" />
+            <a href="{{ route('admin.finance.index') }}" class="erp-btn-secondary">Customer invoices</a>
             <x-report.export-actions module="outstanding-invoices" :as-of="$asOf" />
         </x-report.header-actions>
     </x-slot:actions>
+
     <x-slot:kpis>
-        <x-dashboard.kpi label="Total outstanding" tone="warning" :value="$currencyCode . ' ' . number_format($totalOutstanding, 2)" :hint="$rows->count() . ' invoices'" />
+        <x-dashboard.kpi
+            label="Total outstanding"
+            tone="warning"
+            :value="$ccy . ' ' . number_format($totalOutstanding, 0)"
+            :hint="$rows->count() . ' open ' . Str::plural('invoice', $rows->count())"
+        />
+        <x-dashboard.kpi
+            label="Overdue invoices"
+            :tone="$overdueCount > 0 ? 'danger' : 'success'"
+            :value="(string) $overdueCount"
+            hint="Past due date as of snapshot"
+        />
+        <x-dashboard.kpi
+            label="As of"
+            :value="$asOf->format('d M Y')"
+            hint="Change date in the header calendar"
+        />
     </x-slot:kpis>
-    <x-dashboard.panel title="Open invoices" :subtitle="'As of ' . $asOf->format('d M Y')">
-        <x-report.table>
-            <thead>
-                <tr class="border-b border-gray-100 dark:border-gray-800">
-                    <x-report.th>Invoice</x-report.th>
-                    <x-report.th>Agent</x-report.th>
-                    <x-report.th>Issued</x-report.th>
-                    <x-report.th>Due</x-report.th>
-                    <x-report.th align="right">Days</x-report.th>
-                    <x-report.th align="right">Outstanding</x-report.th>
-                    <x-report.th>Status</x-report.th>
-                </tr>
-            </thead>
-            <tbody>
-                @forelse($rows as $row)
-                    <tr class="border-b border-gray-50 dark:border-gray-800/60">
-                        <td class="px-4 py-3 text-sm font-mono text-gray-600 dark:text-gray-300">{{ $row[0] }}</td>
-                        <td class="px-4 py-3 text-sm text-gray-900 dark:text-white">{{ $row[1] }}</td>
-                        <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-200">{{ $row[2] }}</td>
-                        <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-200">{{ $row[3] }}</td>
-                        <td class="px-4 py-3 text-right text-sm tabular-nums text-gray-700 dark:text-gray-200">{{ $row[4] }}</td>
-                        <td class="px-4 py-3 text-right text-sm font-semibold tabular-nums text-gray-900 dark:text-white">{{ $row[7] }}</td>
-                        <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-200">{{ $row[8] }}</td>
+
+    <div class="erp-table-card">
+        <div class="erp-table-card-header">
+            <div>
+                <h2 class="erp-h3">Open invoices</h2>
+                <p class="erp-caption">As of {{ $asOf->format('d M Y') }}</p>
+            </div>
+            <p class="erp-caption">{{ number_format($rows->count()) }} invoices</p>
+        </div>
+        <div class="erp-table-wrap">
+            <table class="erp-table w-full" style="width: 100%;">
+                <thead>
+                    <tr>
+                        <th>Invoice</th>
+                        <th>Agent</th>
+                        <th>Issued</th>
+                        <th>Due</th>
+                        <th class="is-right">Days past due</th>
+                        <th class="is-right">Outstanding</th>
+                        <th>Status</th>
                     </tr>
-                @empty
-                    <tr><td colspan="7" class="px-4 py-8"><x-admin.empty-state title="No outstanding invoices" /></td></tr>
-                @endforelse
-            </tbody>
-        </x-report.table>
-    </x-dashboard.panel>
+                </thead>
+                <tbody>
+                    @forelse($rows as $row)
+                        @php
+                            $days = (int) ($row[4] ?? 0);
+                            $overdue = $days > 0;
+                            $status = strtolower((string) ($row[8] ?? ''));
+                            $badge = match (true) {
+                                $overdue => 'erp-badge-warning',
+                                $status === 'adjusted' => 'erp-badge-brand',
+                                default => 'erp-badge-neutral',
+                            };
+                        @endphp
+                        <tr @class(['bg-error-50/40 dark:bg-error-500/5' => $overdue])>
+                            <td class="erp-table-cell font-medium">{{ $row[0] }}</td>
+                            <td class="erp-body-strong">{{ $row[1] }}</td>
+                            <td class="erp-table-cell whitespace-nowrap">{{ $row[2] }}</td>
+                            <td class="erp-table-cell whitespace-nowrap">{{ $row[3] }}</td>
+                            <td class="is-right">
+                                <span @class(['erp-table-num', 'text-error-600 dark:text-error-400' => $overdue])>
+                                    {{ $row[4] }}
+                                </span>
+                            </td>
+                            <td class="is-right"><span class="erp-table-num">{{ $row[7] }}</span></td>
+                            <td>
+                                <span class="{{ $badge }}">
+                                    {{ $overdue ? 'Overdue' : $row[8] }}
+                                </span>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="7">
+                                <x-admin.empty-state
+                                    title="No outstanding invoices"
+                                    description="All customer invoices are settled as of this date."
+                                />
+                            </td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </div>
 </x-report.page>
 @endsection

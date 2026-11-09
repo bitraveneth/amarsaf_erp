@@ -6,21 +6,21 @@
         eyebrow="Sales"
         title="Sales dashboard"
         subtitle="Commercial performance across invoices, collections, agents, and products."
-        :period="$periodLabel"
     >
         <x-slot:actions>
             <a href="{{ route('admin.orders.create') }}" class="erp-btn-primary">New order</a>
             <a href="{{ route('admin.orders.index') }}" class="erp-btn-secondary">All orders</a>
+            <x-dashboard.period-filter
+                variant="compact"
+                :action="route('admin.sales.dashboard')"
+                :range="$range"
+                :from="request('from', $from->toDateString())"
+                :to="request('to', $to->toDateString())"
+                :range-options="$rangeOptions"
+                :period-label="$periodLabel"
+            />
         </x-slot:actions>
     </x-dashboard.hero>
-
-    <x-dashboard.period-filter
-        :action="route('admin.sales.dashboard')"
-        :range="$range"
-        :from="request('from', $from->toDateString())"
-        :to="request('to', $to->toDateString())"
-        :range-options="$rangeOptions"
-    />
 
     <div class="erp-dash-kpi-grid">
         <x-dashboard.kpi label="Invoices" :value="number_format($totalInvoices)" hint="Issued in selected period" />

@@ -19,120 +19,47 @@
     ]));
 @endphp
 
-<div class="space-y-6">
-    <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div>
-            <h1 class="text-2xl font-semibold text-gray-900 dark:text-white">Chart of accounts</h1>
-            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                @if($isBalanceView)
-                    Ledger balances for the selected period. Only <strong>ledger</strong> rows accept postings.
-                @else
-                    Account hierarchy by type, parent, and child. Only <strong>ledger</strong> rows accept postings.
-                @endif
-            </p>
-        </div>
-        <a href="{{ route('admin.accounts.create') }}"
-           class="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-600">
-            + Add account
-        </a>
-    </div>
-
-    <div class="flex flex-wrap items-center justify-between gap-3">
-        <div class="flex flex-wrap gap-2">
-            <a href="{{ route('admin.accounts.index', $structureQuery) }}"
-               class="rounded-lg px-4 py-2 text-sm font-semibold {{ !$isBalanceView ? 'bg-brand-500 text-white' : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300' }}">
-                Structure
-            </a>
-            <a href="{{ route('admin.accounts.index', $balanceQuery) }}"
-               class="rounded-lg px-4 py-2 text-sm font-semibold {{ $isBalanceView ? 'bg-brand-500 text-white' : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300' }}">
-                Balances
-            </a>
-        </div>
-        @if($isBalanceView)
+<div class="erp-page">
+    <x-admin.page-header
+        title="Chart of accounts"
+        :subtitle="$isBalanceView
+            ? 'Closing and period balances. Only ledger rows accept postings.'
+            : 'Account hierarchy. Switch to Balances to see amounts.'"
+    >
+        <x-slot:actions>
+            <a href="{{ route('admin.accounts.index', $structureQuery) }}" class="{{ $isBalanceView ? 'erp-btn-secondary' : 'erp-btn-primary' }}">Structure</a>
+            <a href="{{ route('admin.accounts.index', $balanceQuery) }}" class="{{ $isBalanceView ? 'erp-btn-primary' : 'erp-btn-secondary' }}">Balances</a>
             @include('admin.finance.partials.accounts-page-export', [
-                'module' => 'coa-balance',
-                'label' => 'Export balances',
+                'module' => $isBalanceView ? 'coa-balance' : 'coa-structure',
+                'label' => '',
                 'exportQuery' => $filterQuery,
             ])
-        @else
-            @include('admin.finance.partials.accounts-page-export', [
-                'module' => 'coa-structure',
-                'label' => 'Export structure',
-                'exportQuery' => $filterQuery,
-            ])
-        @endif
-    </div>
+            <a href="{{ route('admin.accounts.create') }}" class="erp-btn-primary">Add account</a>
+            @if($isBalanceView)
+                <x-dashboard.period-filter
+                    variant="compact"
+                    :action="route('admin.accounts.index')"
+                    :range="$range"
+                    :from="$from->toDateString()"
+                    :to="$to->toDateString()"
+                    :range-options="$rangeOptions"
+                    :period-label="$periodLabel"
+                />
+            @endif
+        </x-slot:actions>
+    </x-admin.page-header>
 
-    @if($isBalanceView)
-        <form method="GET" action="{{ route('admin.accounts.index') }}" class="rounded-2xl border border-gray-200 bg-white p-4 shadow-theme-xs dark:border-gray-800 dark:bg-gray-900">
-            <input type="hidden" name="view" value="balance">
-            @if($selectedType)
-                <input type="hidden" name="type" value="{{ $selectedType }}">
-            @endif
-            @if($selectedRoot)
-                <input type="hidden" name="root" value="{{ $selectedRoot }}">
-            @endif
-            <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
-                <div>
-                    <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Reporting period</p>
-                    <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">{{ $periodLabel }}</p>
-                </div>
-                <span class="rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700 dark:bg-brand-500/10 dark:text-brand-300">
-                    {{ $rangeOptions[$range] ?? 'Custom range' }}
-                </span>
-            </div>
-            <div class="grid gap-3 md:grid-cols-4">
-                <div class="erp-field">
-                    <label class="erp-label" for="coa-range">Range</label>
-                    <select id="coa-range" name="range" class="erp-input">
-                        @foreach($rangeOptions as $value => $label)
-                            <option value="{{ $value }}" @selected($range === $value)>{{ $label }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="erp-field">
-                    <label class="erp-label" for="coa-from">From</label>
-                    <input id="coa-from" type="date" name="from" value="{{ $from->toDateString() }}" class="erp-input">
-                </div>
-                <div class="erp-field">
-                    <label class="erp-label" for="coa-to">To</label>
-                    <input id="coa-to" type="date" name="to" value="{{ $to->toDateString() }}" class="erp-input">
-                </div>
-                <div class="flex items-end gap-2">
-                    <a href="{{ route('admin.accounts.index', array_filter(['view' => 'balance', 'type' => $selectedType, 'root' => $selectedRoot])) }}" class="erp-btn-secondary">Reset</a>
-                    <button type="submit" class="erp-btn-primary">Apply</button>
-                </div>
-            </div>
-        </form>
-    @else
-        <div class="grid gap-4 sm:grid-cols-3">
-            <div class="rounded-2xl border border-gray-200 bg-white p-4 shadow-theme-xs dark:border-gray-800 dark:bg-gray-900">
-                <p class="text-xs font-semibold uppercase text-gray-500">Total accounts</p>
-                <p class="mt-2 text-3xl font-bold text-gray-900 dark:text-white">{{ $stats['total'] }}</p>
-            </div>
-            <div class="rounded-2xl border border-gray-200 bg-white p-4 shadow-theme-xs dark:border-gray-800 dark:bg-gray-900">
-                <p class="text-xs font-semibold uppercase text-gray-500">Groups</p>
-                <p class="mt-2 text-3xl font-bold text-brand-600">{{ $stats['groups'] }}</p>
-            </div>
-            <div class="rounded-2xl border border-gray-200 bg-white p-4 shadow-theme-xs dark:border-gray-800 dark:bg-gray-900">
-                <p class="text-xs font-semibold uppercase text-gray-500">Ledgers</p>
-                <p class="mt-2 text-3xl font-bold text-emerald-600">{{ $stats['ledgers'] }}</p>
-            </div>
+    @if(!$isBalanceView)
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <x-admin.stat-card label="Accounts" :value="number_format($stats['total'])" />
+            <x-admin.stat-card label="Groups" :value="number_format($stats['groups'])" />
+            <x-admin.stat-card label="Ledgers" :value="number_format($stats['ledgers'])" tone="success" />
         </div>
     @endif
 
     @include('admin.finance.partials.accounts-type-cards')
 
-    @if($isBalanceView)
-        <div class="rounded-2xl border border-gray-200 bg-white px-5 py-4 shadow-theme-xs dark:border-gray-800 dark:bg-gray-900">
-            <p class="text-xs font-semibold uppercase text-gray-500">Net assets</p>
-            <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-white">{{ $currencyCode }} {{ number_format($netAssets, 0) }}</p>
-            <p class="text-xs text-gray-500 dark:text-gray-400">Assets minus liabilities · closing as of {{ $to->format('d M Y') }}</p>
-        </div>
-    @endif
-
-    <div
-        class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-theme-xs dark:border-gray-800 dark:bg-gray-900"
+    <div class="erp-table-card"
         x-data="{
             expanded: {},
             groupIds: @js($groupIds ?? []),
@@ -145,38 +72,60 @@
             collapseAll() { this.expanded = {}; },
         }"
     >
-        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 px-4 py-3 dark:border-gray-800">
-            <p class="text-sm font-medium text-gray-700 dark:text-gray-300">
-                @if($isBalanceView)
-                    Account tree · {{ $periodLabel }}
-                @else
-                    Account tree · parent / child hierarchy
-                @endif
-                @if($selectedType)
-                    · {{ $typeLabels[$selectedType] ?? ucfirst($selectedType) }}
-                @endif
-            </p>
+        <div class="erp-table-card-header flex flex-wrap items-end justify-between gap-3">
+            <div>
+                <h2 class="erp-h3">Account tree</h2>
+                <p class="erp-caption">
+                    @if($isBalanceView)
+                        {{ $periodLabel }}
+                        · Net assets {{ $currencyCode }} {{ number_format($netAssets, 0) }}
+                    @else
+                        Parent and child hierarchy
+                    @endif
+                    @if($selectedType)
+                        · {{ $typeLabels[$selectedType] ?? ucfirst($selectedType) }}
+                    @endif
+                </p>
+            </div>
             <div class="flex flex-wrap gap-2">
-                <button type="button" class="erp-btn-action" @click="expandAll()">Expand all</button>
-                <button type="button" class="erp-btn-action" @click="collapseAll()">Collapse all</button>
+                <button type="button" class="erp-btn-secondary !px-3 !py-1.5 !text-sm" @click="expandAll()">Expand all</button>
+                <button type="button" class="erp-btn-secondary !px-3 !py-1.5 !text-sm" @click="collapseAll()">Collapse all</button>
             </div>
         </div>
-        <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-800">
-                <thead class="bg-gray-50 dark:bg-gray-800/60">
+        <div class="erp-table-wrap">
+            <table class="erp-table w-full" style="table-layout: fixed; width: 100%;">
+                <colgroup>
+                    <col style="width: 6rem">
+                    <col>
+                    @if(!$isBalanceView)
+                        <col style="width: 11rem">
+                    @endif
+                    <col style="width: 7rem">
+                    <col style="width: 6rem">
+                    @if(!$isBalanceView)
+                        <col style="width: 9rem">
+                    @endif
+                    @if($isBalanceView)
+                        <col style="width: 16rem">
+                    @endif
+                    <col style="width: 23rem">
+                </colgroup>
+                <thead>
                     <tr>
-                        <th class="px-5 py-3 text-left text-xs font-semibold uppercase text-gray-500">Code</th>
-                        <th class="px-5 py-3 text-left text-xs font-semibold uppercase text-gray-500">Account</th>
+                        <th>Code</th>
+                        <th>Account</th>
                         @if(!$isBalanceView)
-                            <th class="px-5 py-3 text-left text-xs font-semibold uppercase text-gray-500">Parent</th>
+                            <th>Parent</th>
                         @endif
-                        <th class="px-5 py-3 text-left text-xs font-semibold uppercase text-gray-500">Type</th>
-                        <th class="px-5 py-3 text-left text-xs font-semibold uppercase text-gray-500">Kind</th>
-                        <th class="px-5 py-3 text-left text-xs font-semibold uppercase text-gray-500">Slug</th>
+                        <th>Type</th>
+                        <th>Kind</th>
+                        @if(!$isBalanceView)
+                            <th>Slug</th>
+                        @endif
                         @if($isBalanceView)
-                            <th class="px-5 py-3 text-right text-xs font-semibold uppercase text-gray-500">Balance</th>
+                            <th class="is-right">Balance</th>
                         @endif
-                        <th class="px-5 py-3 text-right text-xs font-semibold uppercase text-gray-500">Actions</th>
+                        <th class="is-right">Actions</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
@@ -185,10 +134,11 @@
                             'nodes' => collect([$root]),
                             'showBalance' => $isBalanceView,
                             'showParent' => !$isBalanceView,
+                            'showSlug' => !$isBalanceView,
                         ])
                     @empty
                         <tr>
-                            <td colspan="{{ $isBalanceView ? 7 : 7 }}" class="px-6 py-12 text-center text-sm text-gray-500">
+                            <td colspan="{{ $isBalanceView ? 6 : 7 }}" class="px-6 py-12 text-center text-sm text-gray-500">
                                 No accounts match this filter.
                             </td>
                         </tr>
@@ -197,5 +147,29 @@
             </table>
         </div>
     </div>
+
+    <x-admin.quick-guide
+        title="How the chart of accounts works"
+        lead="Groups organise the tree. Only ledger (non-group) accounts can be posted to by journals and documents."
+        :steps="[
+            ['title' => 'Structure vs Balances', 'body' => 'Structure shows hierarchy. Balances shows amounts for the selected period.'],
+            ['title' => 'Filter by type', 'body' => 'Assets, liabilities, equity, income, expense — or a report root.'],
+            ['title' => 'Add account', 'body' => 'Create a group or a postable ledger under the right parent.'],
+            ['title' => 'Expand the tree', 'body' => 'Open groups to reach ledgers like Bank – BRAC or Trade debtors.'],
+        ]"
+        :examples="[
+            [
+                'eyebrow' => 'Remember',
+                'title' => 'Where amounts come from',
+                'bullets' => [
+                    'Balances are from posted journal lines',
+                    'Expenses, invoices, bills, and payroll post into these ledgers',
+                    'Manual journals are for openings and rare adjustments',
+                ],
+            ],
+        ]"
+        note="Do not post to group accounts. If AccountResolver cannot find a slug, check the ledger slug on the account."
+        :open="false"
+    />
 </div>
 @endsection

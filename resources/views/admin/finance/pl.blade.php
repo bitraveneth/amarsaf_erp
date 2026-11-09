@@ -109,5 +109,18 @@
         'trust' => $trust,
         'currencyCode' => $ccy,
     ])
+
+    <x-admin.quick-guide
+        title="How to read profit & loss"
+        lead="Income statement from posted ledger accounts for the selected period — revenue, costs, and net profit."
+        :steps="[
+            ['title' => 'Set the period', 'body' => 'Only journals dated in this range feed the statement.'],
+            ['title' => 'Read top to bottom', 'body' => 'Revenue → manufacturing / COGS → gross profit → operating expenses → net profit.'],
+            ['title' => 'Watch unposted notices', 'body' => 'If expenses or payroll are not in the ledger, sync or post them first.'],
+            ['title' => 'Compare prior period', 'body' => 'Use compare when you want this month vs last month (or prior range).'],
+        ]"
+        note="P&L ignores draft journals and unposted expenses. Trial balance must be balanced for reliable results."
+        :open="false"
+    />
 </x-report.page>
 @endsection

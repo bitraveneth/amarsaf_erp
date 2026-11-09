@@ -8,13 +8,20 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class TabularExport
 {
-    public static function download(string $format, string $title, string $filename, array $columns, iterable $rows): StreamedResponse|\Illuminate\Http\Response
-    {
+    public static function download(
+        string $format,
+        string $title,
+        string $filename,
+        array $columns,
+        iterable $rows,
+        string $disposition = 'attachment',
+        array $options = [],
+    ): StreamedResponse|\Illuminate\Http\Response {
         $normalizedRows = self::normalizeRows($rows);
 
         return match ($format) {
             'csv' => self::csv($filename, $columns, $normalizedRows),
-            'pdf' => self::pdf($title, $filename, $columns, $normalizedRows),
+            'pdf' => self::pdf($title, $filename, $columns, $normalizedRows, $disposition, $options),
             default => abort(404),
         };
     }
@@ -62,8 +69,14 @@ class TabularExport
         ]);
     }
 
-    protected static function pdf(string $title, string $filename, array $columns, array $rows): \Illuminate\Http\Response
-    {
+    protected static function pdf(
+        string $title,
+        string $filename,
+        array $columns,
+        array $rows,
+        string $disposition = 'attachment',
+        array $options = [],
+    ): \Illuminate\Http\Response {
         $truncated = false;
         $totalRows = count($rows);
 
@@ -76,6 +89,7 @@ class TabularExport
             return array_map(fn ($value) => self::stringify($value), array_values((array) $row));
         }, $rows);
 
+        $safeName = self::safeFilename($filename) . '.pdf';
         $pdf = \App\Support\PdfDocumentBuilder::loadView('exports.table-pdf', [
             'title' => $title,
             'columns' => $columns,
@@ -83,10 +97,17 @@ class TabularExport
             'generatedAt' => now(),
             'truncated' => $truncated,
             'totalRows' => $totalRows,
+            'periodLabel' => $options['periodLabel'] ?? null,
+            'meta' => $options['meta'] ?? [],
+            'note' => $options['note'] ?? null,
             'company' => \App\Support\Documents\CompanyDocumentContext::make(),
         ])->setPaper('a4', count($columns) > 6 ? 'landscape' : 'portrait');
 
-        return $pdf->download(self::safeFilename($filename) . '.pdf');
+        if ($disposition === 'inline') {
+            return $pdf->stream($safeName);
+        }
+
+        return $pdf->download($safeName);
     }
 
     protected static function safeFilename(string $filename): string

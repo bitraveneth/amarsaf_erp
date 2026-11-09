@@ -4,12 +4,16 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\DeliveryRoute;
+use App\Models\ExpenseCategory;
 use App\Models\FleetExpense;
+use App\Models\PaymentInstrument;
+use App\Models\PaymentMethodCategory;
 use App\Models\Vehicle;
 use App\Services\Accounting\FleetExpensePostingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class FleetExpenseController extends Controller
 {
@@ -149,8 +153,13 @@ class FleetExpenseController extends Controller
             'description' => 'nullable|string|max:255',
             'reference' => 'nullable|string|max:100',
             'status' => 'required|in:recorded,reviewed',
-            'payment_type' => 'required|in:bank,cash,payable',
-            'payment_account_key' => 'required|string|max:100',
+            'payment_type' => 'nullable|in:bank,cash,payable',
+            'payment_instrument_id' => [
+                Rule::requiredIf(fn () => $request->input('payment_type') !== ExpenseCategory::PAYMENT_PAYABLE),
+                'nullable',
+                'exists:payment_instruments,id',
+            ],
+            'payment_account_key' => 'nullable|string|max:100',
             'fuel_litres' => 'nullable|numeric|min:0',
             'fuel_rate' => 'nullable|numeric|min:0',
             'odometer_km' => 'nullable|integer|min:0',
@@ -168,6 +177,17 @@ class FleetExpenseController extends Controller
 
         $data['analytic_label'] = 'vehicle:' . $data['vehicle_id'];
 
+        if (($data['payment_type'] ?? null) === ExpenseCategory::PAYMENT_PAYABLE) {
+            $data['payment_instrument_id'] = null;
+            $data['payment_account_key'] = $data['payment_account_key'] ?? 'bank_default';
+            $data['payment_type'] = ExpenseCategory::PAYMENT_PAYABLE;
+        } else {
+            $instrument = PaymentInstrument::with('category')->findOrFail($data['payment_instrument_id']);
+            $data['payment_instrument_id'] = $instrument->id;
+            $data['payment_type'] = $instrument->category?->postingPaymentType() ?? ExpenseCategory::PAYMENT_BANK;
+            $data['payment_account_key'] = $instrument->slug;
+        }
+
         return $data;
     }
 
@@ -177,13 +197,10 @@ class FleetExpenseController extends Controller
             'vehicles' => Vehicle::orderBy('name')->get(),
             'routes' => DeliveryRoute::orderBy('name')->get(),
             'types' => FleetExpense::types(),
-            'paymentAccountKeys' => [
-                'bank_default' => 'Default bank',
-                'bank_brac' => 'BRAC Bank',
-                'bank_scb' => 'SCB Bank',
-                'cash_in_hand' => 'Cash in hand',
-                'petty_cash' => 'Petty cash',
-            ],
+            'paymentCategories' => PaymentMethodCategory::active()
+                ->ordered()
+                ->with(['instruments' => fn ($q) => $q->active()->ordered()->with('account')])
+                ->get(),
         ];
     }
 }

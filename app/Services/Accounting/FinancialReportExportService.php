@@ -491,7 +491,8 @@ class FinancialReportExportService
 
     public function commissionSummary(Request $request): Collection
     {
-        $data = app(OperationalReportService::class)->commissionSummary($request);
+        [$from, $to] = $this->resolvePeriod($request);
+        $data = app(OperationalReportService::class)->commissionSummary($from, $to);
 
         return $data['rows']->map(fn (array $row) => [
             $row['agent']->code ?? $row['agent']->id,

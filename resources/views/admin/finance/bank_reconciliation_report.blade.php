@@ -1,68 +1,173 @@
 @extends('layouts.app')
 
 @section('content')
-<x-report.page eyebrow="Accountant tools" title="Bank reconciliation" subtitle="Customer receipts and supplier payments in the period." :period="$periodLabel">
+@php
+    $ccy = $currencyCode ?? config('app.currency', 'BDT');
+    $openCount = ($totals['receipts_open'] ?? 0) + ($totals['payments_open'] ?? 0);
+@endphp
+
+<x-report.page
+    eyebrow="Accountant tools"
+    title="Bank reconciliation"
+    subtitle="Customer receipts and supplier payments for the selected period."
+    :period="$periodLabel"
+>
     <x-slot:actions>
-        <x-report.header-actions :range-action="route('admin.reports.bank-reconciliation')" :range="$range" :from="request('from', $from->toDateString())" :to="request('to', $to->toDateString())" :range-options="$rangeOptions" :period-label="$periodLabel">
+        <x-report.header-actions
+            :range-action="route('admin.reports.bank-reconciliation')"
+            :range="$range"
+            :from="request('from', $from->toDateString())"
+            :to="request('to', $to->toDateString())"
+            :range-options="$rangeOptions"
+            :period-label="$periodLabel"
+        >
             <x-report.hub-link category="accountant" />
-            <a href="{{ route('admin.finance.reconciliation') }}" class="erp-btn-secondary">Reconcile</a>
+            <a href="{{ route('admin.finance.reconciliation', request()->only(['range', 'from', 'to'])) }}" class="erp-btn-primary">Reconcile</a>
             <x-report.export-actions module="bank-reconciliation" :from="$from" :to="$to" />
         </x-report.header-actions>
     </x-slot:actions>
+
     <x-slot:kpis>
-        <x-dashboard.kpi label="Receipts in" tone="success" :value="$currencyCode . ' ' . number_format($totals['receipts_total'], 2)" :hint="$totals['receipts_count'] . ' receipts'" />
-        <x-dashboard.kpi label="Payments out" tone="warning" :value="$currencyCode . ' ' . number_format($totals['payments_total'], 2)" :hint="$totals['payments_count'] . ' payments'" />
-        <x-dashboard.kpi label="Net movement" :value="$currencyCode . ' ' . number_format($totals['net'], 2)" hint="Receipts minus payments" />
+        <x-dashboard.kpi
+            label="Receipts in"
+            tone="success"
+            :value="$ccy . ' ' . number_format($totals['receipts_total'], 0)"
+            :hint="$totals['receipts_count'] . ' receipts · ' . ($totals['receipts_reconciled'] ?? 0) . ' matched'"
+        />
+        <x-dashboard.kpi
+            label="Payments out"
+            tone="warning"
+            :value="$ccy . ' ' . number_format($totals['payments_total'], 0)"
+            :hint="$totals['payments_count'] . ' payments · ' . ($totals['payments_reconciled'] ?? 0) . ' matched'"
+        />
+        <x-dashboard.kpi
+            label="Net movement"
+            :value="$ccy . ' ' . number_format($totals['net'], 0)"
+            hint="Receipts minus payments"
+        />
+        <x-dashboard.kpi
+            label="Still open"
+            :tone="$openCount > 0 ? 'warning' : 'success'"
+            :value="(string) $openCount"
+            hint="Not yet reconciled"
+        />
     </x-slot:kpis>
-    <div class="grid gap-6 lg:grid-cols-2">
-        <x-dashboard.panel title="Receipts" subtitle="Customer collections in period">
-            <x-report.table>
-                <thead>
-                    <tr class="border-b border-gray-100 dark:border-gray-800">
-                        <x-report.th>Date</x-report.th>
-                        <x-report.th>Reference</x-report.th>
-                        <x-report.th>Customer</x-report.th>
-                        <x-report.th align="right">Amount</x-report.th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse($receipts as $receipt)
-                        <tr class="border-b border-gray-50 dark:border-gray-800/60">
-                            <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-200">{{ $receipt->received_at?->format('d M Y') }}</td>
-                            <td class="px-4 py-3 text-sm text-gray-900 dark:text-white">{{ $receipt->reference ?? '—' }}</td>
-                            <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-200">{{ $receipt->invoice?->order?->agent?->name ?? '—' }}</td>
-                            <td class="px-4 py-3 text-right text-sm tabular-nums font-medium text-gray-900 dark:text-white">{{ number_format((float) $receipt->amount, 2) }}</td>
+
+    <div class="grid gap-6 xl:grid-cols-2">
+        <div class="erp-table-card">
+            <div class="erp-table-card-header">
+                <div>
+                    <h2 class="erp-h3">Receipts</h2>
+                    <p class="erp-caption">Customer collections in period</p>
+                </div>
+                <p class="erp-caption">{{ number_format($totals['receipts_count']) }}</p>
+            </div>
+            <div class="erp-table-wrap">
+                <table class="erp-table w-full" style="width: 100%;">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Invoice / customer</th>
+                            <th>Method</th>
+                            <th>Status</th>
+                            <th class="is-right">Amount</th>
                         </tr>
-                    @empty
-                        <tr><td colspan="4" class="px-4 py-8"><x-admin.empty-state title="No receipts in this period" /></td></tr>
-                    @endforelse
-                </tbody>
-            </x-report.table>
-        </x-dashboard.panel>
-        <x-dashboard.panel title="Payments" subtitle="Supplier bill payments in period">
-            <x-report.table>
-                <thead>
-                    <tr class="border-b border-gray-100 dark:border-gray-800">
-                        <x-report.th>Date</x-report.th>
-                        <x-report.th>Reference</x-report.th>
-                        <x-report.th>Supplier</x-report.th>
-                        <x-report.th align="right">Amount</x-report.th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse($payments as $payment)
-                        <tr class="border-b border-gray-50 dark:border-gray-800/60">
-                            <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-200">{{ $payment->paid_at?->format('d M Y') }}</td>
-                            <td class="px-4 py-3 text-sm text-gray-900 dark:text-white">{{ $payment->reference ?? $payment->bill?->bill_number ?? '—' }}</td>
-                            <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-200">{{ $payment->bill?->supplier?->name ?? '—' }}</td>
-                            <td class="px-4 py-3 text-right text-sm tabular-nums font-medium text-gray-900 dark:text-white">{{ number_format((float) $payment->amount, 2) }}</td>
+                    </thead>
+                    <tbody>
+                        @forelse($receipts as $receipt)
+                            @php
+                                $invoice = $receipt->invoice;
+                                $agentName = $invoice?->order?->agent?->name;
+                                $method = $receipt->payment_method
+                                    ? ucfirst(str_replace('_', ' ', $receipt->payment_method))
+                                    : '—';
+                            @endphp
+                            <tr>
+                                <td class="whitespace-nowrap">{{ $receipt->received_at?->format('d M Y') ?? '—' }}</td>
+                                <td>
+                                    @if($invoice)
+                                        <a href="{{ route('admin.finance.show', $invoice) }}" class="erp-table-link">{{ $invoice->number ?? ('#' . $invoice->id) }}</a>
+                                    @else
+                                        <span>—</span>
+                                    @endif
+                                    <p class="erp-caption">{{ $agentName ?: 'No agent' }}</p>
+                                </td>
+                                <td>{{ $method }}</td>
+                                <td>
+                                    <span class="{{ $receipt->reconciled ? 'erp-badge-success' : 'erp-badge-warning' }}">
+                                        {{ $receipt->reconciled ? 'Matched' : 'Open' }}
+                                    </span>
+                                </td>
+                                <td class="is-right"><span class="erp-table-num">{{ number_format((float) $receipt->amount, 2) }}</span></td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="5">
+                                    <x-admin.empty-state title="No receipts in this period" />
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="erp-table-card">
+            <div class="erp-table-card-header">
+                <div>
+                    <h2 class="erp-h3">Payments</h2>
+                    <p class="erp-caption">Supplier bill payments in period</p>
+                </div>
+                <p class="erp-caption">{{ number_format($totals['payments_count']) }}</p>
+            </div>
+            <div class="erp-table-wrap">
+                <table class="erp-table w-full" style="width: 100%;">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Bill / supplier</th>
+                            <th>Method</th>
+                            <th>Status</th>
+                            <th class="is-right">Amount</th>
                         </tr>
-                    @empty
-                        <tr><td colspan="4" class="px-4 py-8"><x-admin.empty-state title="No payments in this period" /></td></tr>
-                    @endforelse
-                </tbody>
-            </x-report.table>
-        </x-dashboard.panel>
+                    </thead>
+                    <tbody>
+                        @forelse($payments as $payment)
+                            @php
+                                $bill = $payment->bill;
+                                $method = $payment->method
+                                    ? ucfirst(str_replace('_', ' ', $payment->method))
+                                    : '—';
+                            @endphp
+                            <tr>
+                                <td class="whitespace-nowrap">{{ $payment->paid_at?->format('d M Y') ?? '—' }}</td>
+                                <td>
+                                    @if($bill)
+                                        <a href="{{ route('admin.bills.show', $bill) }}" class="erp-table-link">{{ $bill->number ?? ('#' . $bill->id) }}</a>
+                                    @else
+                                        <span>{{ $payment->batch_reference ?: '—' }}</span>
+                                    @endif
+                                    <p class="erp-caption">{{ $bill?->supplier?->name ?: 'No supplier' }}</p>
+                                </td>
+                                <td>{{ $method }}</td>
+                                <td>
+                                    <span class="{{ $payment->reconciled ? 'erp-badge-success' : 'erp-badge-warning' }}">
+                                        {{ $payment->reconciled ? 'Matched' : 'Open' }}
+                                    </span>
+                                </td>
+                                <td class="is-right"><span class="erp-table-num">{{ number_format((float) $payment->amount, 2) }}</span></td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="5">
+                                    <x-admin.empty-state title="No payments in this period" />
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
 </x-report.page>
 @endsection

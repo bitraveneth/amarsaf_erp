@@ -22,6 +22,12 @@
             :range-options="$rangeOptions"
             :period-label="$periodLabel"
         >
+            <x-report.account-filter
+                :action="route('admin.reports.general-ledger')"
+                :accounts="$accountOptions ?? []"
+                :selected="$selectedAccount"
+                :active-ids="$activeAccountIds ?? []"
+            />
             <x-report.hub-link category="accountant" />
             <x-report.export-actions module="general-ledger" :from="$from" :to="$to" :export-query="array_filter(['account_id' => optional($selectedAccount)->id])" />
         </x-report.header-actions>
@@ -40,6 +46,7 @@
         'selectedAccount' => $selectedAccount,
         'accountOptions' => $accountOptions ?? collect(),
         'activeAccounts' => $activeAccounts ?? collect(),
+        'activeAccountIds' => $activeAccountIds ?? [],
         'lines' => $lines,
         'from' => $from,
         'to' => $to,

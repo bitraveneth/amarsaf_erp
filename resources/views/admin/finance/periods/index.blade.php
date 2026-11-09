@@ -52,5 +52,18 @@
             </table>
         </x-admin.table-card>
     @endforeach
+
+    <x-admin.quick-guide
+        title="How accounting periods work"
+        lead="Closing a month blocks new journal posts into that date range — protects month-end numbers."
+        :steps="[
+            ['title' => 'Finish postings first', 'body' => 'Expenses, invoices, bills, payroll, and reconciliations for that month.'],
+            ['title' => 'Check trial balance', 'body' => 'Books should show Balanced for the period.'],
+            ['title' => 'Close the period', 'body' => 'Prevents accidental back-dated journals into a finished month.'],
+            ['title' => 'Reopen only if needed', 'body' => 'Use Reopen for a genuine correction, then close again.'],
+        ]"
+        note="Manual journals, expense sync, and payroll posting all respect closed periods."
+        :open="false"
+    />
 </div>
 @endsection

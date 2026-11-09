@@ -111,6 +111,58 @@ function formatCurrency(value, currencyCode) {
     return `${currencyCode} ${amount.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
 }
 
+function formatAxisCurrency(value, currencyCode) {
+    const amount = Number(value || 0);
+    const abs = Math.abs(amount);
+    const trim = (scaled, digits) => {
+        const text = scaled.toFixed(digits);
+        return digits === 0 ? text : text.replace(/\.0$/, '');
+    };
+
+    if (abs >= 1_000_000_000) {
+        return `${currencyCode} ${trim(amount / 1_000_000_000, 1)}B`;
+    }
+    if (abs >= 1_000_000) {
+        return `${currencyCode} ${trim(amount / 1_000_000, abs >= 10_000_000 ? 0 : 1)}M`;
+    }
+    if (abs >= 10_000) {
+        return `${currencyCode} ${trim(amount / 1_000, 0)}K`;
+    }
+
+    return formatCurrency(amount, currencyCode);
+}
+
+function formatCompactCurrency(value, currencyCode) {
+    const amount = Number(value || 0);
+    const abs = Math.abs(amount);
+    const trim = (scaled, digits) => scaled.toFixed(digits).replace(/\.0+$/, '');
+
+    if (abs >= 1_000_000_000) {
+        return `${currencyCode} ${trim(amount / 1_000_000_000, 2)}B`;
+    }
+    if (abs >= 1_000_000) {
+        return `${currencyCode} ${trim(amount / 1_000_000, 2)}M`;
+    }
+
+    return formatCurrency(amount, currencyCode);
+}
+
+function donutValueFontSize(text) {
+    const length = String(text).replace(/\s/g, '').length;
+
+    if (length <= 7) {
+        return '22px';
+    }
+    if (length <= 10) {
+        return '18px';
+    }
+    if (length <= 12) {
+        return '16px';
+    }
+
+    return '13px';
+}
+
 function renderDonut(el, labels, values, currencyCode) {
     if (!el || !window.ApexCharts) {
         return;
@@ -119,6 +171,8 @@ function renderDonut(el, labels, values, currencyCode) {
     const theme = chartTheme();
     const hasData = values.some((value) => Number(value) > 0);
     const total = values.reduce((sum, value) => sum + Number(value || 0), 0);
+    const totalLabel = formatCompactCurrency(total, currencyCode);
+    const totalFontSize = donutValueFontSize(totalLabel);
 
     const chart = new window.ApexCharts(el, {
         ...baseChartOptions('donut', CHART_HEIGHT),
@@ -142,11 +196,11 @@ function renderDonut(el, labels, values, currencyCode) {
                         },
                         value: {
                             show: true,
-                            fontSize: '22px',
+                            fontSize: totalFontSize,
                             fontWeight: 600,
                             color: theme.totalColor,
                             offsetY: -8,
-                            formatter: (val) => formatCurrency(val, currencyCode),
+                            formatter: (val) => formatCompactCurrency(val, currencyCode),
                         },
                         total: {
                             show: true,
@@ -154,7 +208,7 @@ function renderDonut(el, labels, values, currencyCode) {
                             fontSize: '13px',
                             fontWeight: 500,
                             color: theme.labelColor,
-                            formatter: () => formatCurrency(total, currencyCode),
+                            formatter: () => totalLabel,
                         },
                     },
                 },
@@ -211,7 +265,7 @@ function renderCashBar(el, labels, values, currencyCode) {
             title: { text: undefined },
             labels: {
                 style: { fontSize: '12px', colors: theme.foreColor, fontFamily: window.erpUiFontStack },
-                formatter: (val) => formatCurrency(val, currencyCode),
+                formatter: (val) => formatAxisCurrency(val, currencyCode),
             },
         },
         legend: { show: false },

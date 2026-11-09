@@ -53,5 +53,18 @@
         'periodLabel' => $periodLabel,
         'currencyCode' => $currencyCode,
     ])
+
+    <x-admin.quick-guide
+        title="How to use trial balance"
+        lead="Lists every account with opening, period movement, and closing. Period debits must equal period credits."
+        :steps="[
+            ['title' => 'Choose the period', 'body' => 'Opening is before From; period columns are activity inside the range.'],
+            ['title' => 'Confirm Balanced', 'body' => 'KPI shows Balanced when debit totals equal credit totals.'],
+            ['title' => 'Drill odd accounts', 'body' => 'Open General ledger for an account if a balance looks wrong.'],
+            ['title' => 'Before month-end', 'body' => 'Fix out-of-balance books before closing the accounting period.'],
+        ]"
+        note="Out of balance usually means a bad journal, a failed post, or viewing a partial date window incorrectly."
+        :open="false"
+    />
 </x-report.page>
 @endsection

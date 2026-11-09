@@ -346,8 +346,42 @@ return [
         'menu' => ['en' => 'Accounting → Bank reconciliation', 'bn' => 'Accounting → Bank reconciliation'],
         'path' => '/admin/finance/reconciliation',
         'highlights' => [
-            ['label' => ['en' => 'Statement vs ledger', 'bn' => 'স্টেটমেন্ট বনাম লেজার'], 'desc' => ['en' => 'Match bank lines to receipts, payments, and expenses.', 'bn' => 'ব্যাংক লাইন রসিদ, পেমেন্ট ও খরচের সাথে মিলান।']],
-            ['label' => ['en' => 'Unmatched', 'bn' => 'অমিল'], 'desc' => ['en' => 'Investigate missing receipts or duplicate payments.', 'bn' => 'হারানো রসিদ বা ডুপ্লিকেট পেমেন্ট খুঁজুন।']],
+            ['label' => ['en' => 'Reconcile per row', 'bn' => 'সারি অনুযায়ী মিলান'], 'desc' => ['en' => 'Click Reconcile (or Undo) on each receipt or payment — it saves that line immediately.', 'bn' => 'প্রতি রসিদ/পেমেন্টে Reconcile বা Undo — সাথে সাথে সেভ হয়।']],
+            ['label' => ['en' => 'Optional CSV', 'bn' => 'ঐচ্ছিক CSV'], 'desc' => ['en' => 'Import a bank statement to mark suggested matches, then confirm with Reconcile.', 'bn' => 'ব্যাংক স্টেটমেন্ট আমদানি করে সাজেশন দেখুন, তারপর Reconcile দিয়ে নিশ্চিত করুন।']],
+        ],
+    ],
+    '/admin/journals' => [
+        'title' => ['en' => 'Journal entries', 'bn' => 'জার্নাল এন্ট্রি'],
+        'menu' => ['en' => 'Accounting → Journals', 'bn' => 'Accounting → Journals'],
+        'path' => '/admin/journals',
+        'highlights' => [
+            ['label' => ['en' => 'Posted vouchers', 'bn' => 'পোস্ট করা ভাউচার'], 'desc' => ['en' => 'Browse posted and draft journals. Open one to print or reverse.', 'bn' => 'পোস্ট ও ড্রাফট জার্নাল দেখুন। প্রিন্ট বা রিভার্স করতে খুলুন।']],
+            ['label' => ['en' => 'New manual journal', 'bn' => 'নতুন ম্যানুয়াল জার্নাল'], 'desc' => ['en' => 'Use for openings, corrections, and adjustments with no other screen.', 'bn' => 'ওপেনিং, সংশোধন ও যেখানে অন্য স্ক্রিন নেই।']],
+        ],
+    ],
+    '/admin/journals/create' => [
+        'title' => ['en' => 'New manual journal', 'bn' => 'নতুন ম্যানুয়াল জার্নাল'],
+        'menu' => ['en' => 'Accounting → Journals → New', 'bn' => 'Accounting → Journals → New'],
+        'path' => '/admin/journals/create',
+        'highlights' => [
+            ['label' => ['en' => 'Debits = credits', 'bn' => 'ডেবিট = ক্রেডিট'], 'desc' => ['en' => 'Each line is debit or credit. Difference must be 0.00 before Save & post.', 'bn' => 'প্রতি লাইন ডেবিট বা ক্রেডিট। পোস্টের আগে পার্থক্য ০.০০।']],
+            ['label' => ['en' => 'Quick guide', 'bn' => 'কুইক গাইড'], 'desc' => ['en' => 'Examples under the form show rent and multi-line expense payments.', 'bn' => 'ফর্মের নিচে ভাড়া ও মাল্টি-লাইন খরচের উদাহরণ আছে।']],
+        ],
+    ],
+    '/admin/reports/customer-statement' => [
+        'title' => ['en' => 'Customer statement', 'bn' => 'গ্রাহক স্টেটমেন্ট'],
+        'menu' => ['en' => 'Reports → Customer statement', 'bn' => 'Reports → Customer statement'],
+        'path' => '/admin/reports/customer-statement',
+        'highlights' => [
+            ['label' => ['en' => 'Choose an agent', 'bn' => 'এজেন্ট বেছে নিন'], 'desc' => ['en' => 'Search or pick an agent first — then opening, invoices, receipts, and running balance appear.', 'bn' => 'আগে এজেন্ট খুঁজুন বা বেছে নিন — তারপর ওপেনিং, ইনভয়েস, রসিদ ও রানিং ব্যালেন্স।']],
+        ],
+    ],
+    '/admin/reports/supplier-statement' => [
+        'title' => ['en' => 'Supplier statement', 'bn' => 'সাপ্লায়ার স্টেটমেন্ট'],
+        'menu' => ['en' => 'Reports → Supplier statement', 'bn' => 'Reports → Supplier statement'],
+        'path' => '/admin/reports/supplier-statement',
+        'highlights' => [
+            ['label' => ['en' => 'Choose a supplier', 'bn' => 'সাপ্লায়ার বেছে নিন'], 'desc' => ['en' => 'Search or pick a supplier first — then bills, payments, and running balance appear.', 'bn' => 'আগে সাপ্লায়ার বেছে নিন — তারপর বিল, পেমেন্ট ও রানিং ব্যালেন্স।']],
         ],
     ],
     '/admin/export-center' => [

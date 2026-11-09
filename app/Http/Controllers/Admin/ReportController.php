@@ -388,12 +388,15 @@ class ReportController extends Controller
 
     public function commissionsReport(Request $request, OperationalReportService $reports)
     {
-        $data = $reports->commissionSummary($request);
+        [$from, $to, $range] = $this->resolveDashboardPeriod($request);
+        $data = $reports->commissionSummary($from, $to);
         $currencyCode = config('app.currency', 'BDT');
 
         return view('admin.finance.commissions_report', array_merge($data, [
+            'range' => $range,
+            'rangeOptions' => $this->dashboardRangeOptions(),
+            'periodLabel' => $this->dashboardPeriodLabel($from, $to),
             'currencyCode' => $currencyCode,
-            'periodLabel' => $data['from']->format('d M Y') . ' – ' . $data['to']->format('d M Y'),
         ]));
     }
 
@@ -485,13 +488,21 @@ class ReportController extends Controller
         [$from, $to, $range] = $this->resolveDashboardPeriod($request);
 
         $entries = \App\Models\JournalEntry::query()
-            ->with('lines')
+            ->with(['lines.account'])
             ->where('status', 'posted')
             ->whereDate('entry_date', '>=', $from->toDateString())
             ->whereDate('entry_date', '<=', $to->toDateString())
             ->orderByDesc('entry_date')
             ->orderByDesc('id')
             ->get();
+
+        $debitTotal = round((float) $entries->sum(fn ($entry) => $entry->lines->sum('debit')), 2);
+        $creditTotal = round((float) $entries->sum(fn ($entry) => $entry->lines->sum('credit')), 2);
+        $lineCount = (int) $entries->sum(fn ($entry) => $entry->lines->count());
+        $byType = $entries
+            ->groupBy(fn ($entry) => $entry->journal_type ?: 'other')
+            ->map->count()
+            ->sortDesc();
 
         return view('admin.finance.journal_register', [
             'from' => $from,
@@ -500,6 +511,11 @@ class ReportController extends Controller
             'rangeOptions' => $this->dashboardRangeOptions(),
             'periodLabel' => $this->dashboardPeriodLabel($from, $to),
             'entries' => $entries,
+            'debitTotal' => $debitTotal,
+            'creditTotal' => $creditTotal,
+            'lineCount' => $lineCount,
+            'byType' => $byType,
+            'currencyCode' => config('app.currency', 'BDT'),
         ]);
     }
 
@@ -891,10 +907,19 @@ class ReportController extends Controller
             ]);
         }
 
-        $accountOptions = $activeAccounts->pluck('account');
+        $accountOptions = Account::query()
+            ->postable()
+            ->orderBy('code')
+            ->get(['id', 'code', 'name', 'type']);
+
         if ($selectedAccount && ! $accountOptions->pluck('id')->contains($selectedAccount->id)) {
             $accountOptions = $accountOptions->prepend($selectedAccount)->values();
         }
+
+        $activeAccountIds = $activeAccounts
+            ->map(fn (array $row) => (int) $row['account']->id)
+            ->values()
+            ->all();
 
         $lines = collect();
         $runningBalance = 0.0;
@@ -952,6 +977,7 @@ class ReportController extends Controller
             'selectedAccount' => $selectedAccount,
             'accountOptions' => $accountOptions,
             'activeAccounts' => $activeAccounts,
+            'activeAccountIds' => $activeAccountIds,
             'autoSelectedAccount' => $autoSelectedAccount,
             'lines' => $lines,
             'openingBalance' => $openingBalance,
@@ -1027,8 +1053,11 @@ class ReportController extends Controller
 
     public function inventoryValuation(Request $request)
     {
-        $summary = app(InventoryCostingService::class)->valuationSummary();
-        $asOf = Carbon::today();
+        $asOf = $request->filled('as_of')
+            ? Carbon::parse($request->input('as_of'))->endOfDay()
+            : Carbon::today()->endOfDay();
+
+        $summary = app(InventoryCostingService::class)->valuationSummary($asOf);
         $periodLabel = 'As of ' . $asOf->format('d M Y');
 
         return view('admin.finance.inventory_valuation', array_merge($summary, [

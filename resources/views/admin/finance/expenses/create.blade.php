@@ -36,5 +36,40 @@
             </div>
         </form>
     </section>
+
+    <x-admin.quick-guide
+        title="How to record an expense"
+        lead="Saving an expense also posts a journal voucher to the ledger (debit expense, credit bank/cash/payable)."
+        :steps="[
+            ['title' => 'Pick the date', 'body' => 'Use the date the cost was incurred or paid.'],
+            ['title' => 'Choose a category', 'body' => 'Category maps to the expense ledger (e.g. utilities → utilities expense).'],
+            ['title' => 'Enter amount & payment', 'body' => 'Bank, cash, or accrued payable. Bank/cash account is required when not payable.'],
+            ['title' => 'Save expense', 'body' => 'Creates the expense row and posts it to P&L and the payment account.'],
+        ]"
+        :examples="[
+            [
+                'eyebrow' => 'Example',
+                'title' => 'Factory electricity from BRAC',
+                'caption' => 'Category Utilities · Paid from bank',
+                'headers' => ['Field', 'Enter'],
+                'rows' => [
+                    ['Date', 'Bill date'],
+                    ['Category', 'Utilities'],
+                    ['Amount', '12,000.00'],
+                    ['Payment', 'Paid from bank → BRAC'],
+                ],
+            ],
+            [
+                'eyebrow' => 'Ledger effect',
+                'title' => 'What gets posted',
+                'bullets' => [
+                    'Debit: Utilities expense 12,000',
+                    'Credit: Bank – BRAC 12,000',
+                    'Shows on Expense summary and Profit & loss after save',
+                ],
+            ],
+        ]"
+        note="If a banner says expenses are missing from the ledger, use Sync missing expenses on the expenses list. Prefer this screen over a manual journal for normal costs."
+    />
 </div>
 @endsection

@@ -7,6 +7,33 @@ Version tags follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [4.0.0] - 2026-11-09
+
+V4 accounting and reports. Payment methods, clearer finance screens, ledger gaps, and redesigned operational reports.
+
+### Added
+
+- Payment methods (Bank / Mobile / Cash) with auto-created ledger accounts and richer bank detail fields.
+- Ledger gaps workspace and accounting activity views for unposted operational rows.
+- Purchase bill show/print path and agent advance show page.
+- Collapsible Quick tips on the accounting dashboard so period profit, Today, sales, outstanding, and collected are easier to tell apart.
+- Visual as-of calendar for snapshot reports (inventory valuation, AR/AP-style as-of filters).
+- Inventory valuation fallback from available stock when costing rows are empty.
+
+### Changed
+
+- Accounting menu: **Payment methods** (was Banks & payment methods). Expense category mapping moved under Expenses.
+- Salary distributions, purchase bills, agent advances, and many finance list pages use a cleaner KPI + table layout.
+- Sales and operations reports redesigned: delivery performance, low stock, manufacturing schedule, batch trace, sales register, outstanding invoices, sales targets, commissions.
+- Commissions and other period reports use the shared right-side period calendar.
+- Lifetime range supported on dashboard period filters where appropriate; as-of calendars stay single-date.
+- P&L quick-guide title no longer double-escapes “profit & loss”.
+
+### Notes for deploy
+
+- Branch: `v4`. See [`docs/v4-demo-deploy.md`](docs/v4-demo-deploy.md).
+- Demo may be fully reseeded. Live company: `migrate --force` only — never `migrate:fresh`.
+
 ## [3.0.0] - 2026-11-02
 
 V3 commercial documents. Invoices, purchase orders, sales orders, delivery challans, and the other printable sheets share one purple A4 layout.

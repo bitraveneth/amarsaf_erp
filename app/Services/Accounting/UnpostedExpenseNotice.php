@@ -213,10 +213,10 @@ class UnpostedExpenseNotice
         $parts = [];
 
         if ($groups['never_posted'] !== []) {
-            $parts[] = 'Profit and loss only reads posted journals. '
-                .(count($groups['never_posted']) === 1 ? 'This expense was' : 'These expenses were')
-                .' stored in the expense list without a journal voucher. That happens with demo data and with records saved before saving an expense also posted it. '
-                .'A new expense posts automatically when you save it. Sync writes the missing voucher.';
+            $parts[] = (count($groups['never_posted']) === 1 ? 'This expense is' : 'These expenses are')
+                .' saved without a journal voucher. Sync posts '
+                .(count($groups['never_posted']) === 1 ? 'it' : 'them')
+                .' to the ledger.';
         }
 
         if ($groups['reversed'] !== []) {

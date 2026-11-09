@@ -2,11 +2,19 @@
 
 @section('content')
 <div class="space-y-6">
-    <div>
-        <h1 class="text-2xl font-semibold text-gray-900 dark:text-white">Expense category mapping</h1>
-        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            Each category links to a ledger in the chart of accounts. Expenses use this mapping when posting journals.
-        </p>
+    <div class="flex flex-wrap items-start justify-between gap-3">
+        <div>
+            <p class="text-sm text-gray-500 dark:text-gray-400">
+                <a href="{{ route('admin.expenses.index') }}" class="erp-link">Expenses</a>
+                <span class="mx-1.5 text-gray-300 dark:text-gray-600">/</span>
+                Category mapping
+            </p>
+            <h1 class="mt-1 text-2xl font-semibold text-gray-900 dark:text-white">Expense category mapping</h1>
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                Each category links to a ledger in the chart of accounts. Expenses use this mapping when posting journals.
+            </p>
+        </div>
+        <a href="{{ route('admin.expenses.index') }}" class="erp-btn-secondary">Back to expenses</a>
     </div>
 
     @if(session('status'))

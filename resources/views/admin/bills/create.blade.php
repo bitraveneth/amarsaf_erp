@@ -313,6 +313,40 @@
             </div>
         </form>
     </div>
+
+    <x-admin.quick-guide
+        title="How to record a purchase bill"
+        lead="A purchase bill books what you owe the supplier (accounts payable) and input VAT when applicable."
+        :steps="[
+            ['title' => 'Select the supplier', 'body' => 'Use an existing supplier so AP aging and statements stay linked.'],
+            ['title' => 'Enter bill date & due date', 'body' => 'Due date drives overdue status on the bills list.'],
+            ['title' => 'Add line items', 'body' => 'Product/service, qty, rate, and tax. Totals update in the summary.'],
+            ['title' => 'Save bill', 'body' => 'Creates the AP document. Pay later from the bill row or bill screen.'],
+        ]"
+        :examples="[
+            [
+                'eyebrow' => 'Example',
+                'title' => 'Raw materials bill',
+                'headers' => ['Field', 'Enter'],
+                'rows' => [
+                    ['Supplier', 'Your packaging supplier'],
+                    ['Bill date', 'Invoice date from supplier'],
+                    ['Lines', 'Bottles / caps with qty and rate'],
+                    ['VAT', 'Follows the tax class on the line'],
+                ],
+            ],
+            [
+                'eyebrow' => 'Next step',
+                'title' => 'Paying the bill',
+                'bullets' => [
+                    'Open the bill or use Pay bill on the list',
+                    'Choose bank account and payment date',
+                    'Outstanding drops; supplier statement updates',
+                ],
+            ],
+        ]"
+        note="Goods receipts (GRN) can link stock to a bill. Paying a bill is separate from recording the bill."
+    />
 </div>
 
 @endsection

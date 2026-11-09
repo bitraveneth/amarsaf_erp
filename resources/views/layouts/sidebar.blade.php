@@ -76,7 +76,10 @@
     <x-layout.sidebar-brand />
 
     <!-- Navigation Menu -->
-    <div class="app-sidebar__body flex-1 min-h-0 flex flex-col overflow-y-auto duration-300 ease-linear custom-scrollbar">
+    <div
+        class="app-sidebar__body flex-1 min-h-0 flex flex-col overflow-y-auto duration-300 ease-linear custom-scrollbar"
+        data-sidebar-scroll
+    >
         <nav class="app-sidebar__nav mb-6 px-3 pt-2" :class="isSidebarVisible() ? 'xl:px-4' : 'xl:px-2'">
             <div class="flex flex-col gap-5">
                 @foreach ($menuGroups as $groupIndex => $menuGroup)
@@ -204,9 +207,9 @@
                                         <div x-show="open && isSidebarVisible()"
                                              x-transition:enter="transition-all ease-out duration-200"
                                              x-transition:enter-start="opacity-0 max-h-0 -translate-y-1"
-                                             x-transition:enter-end="opacity-100 max-h-64 translate-y-0"
+                                             x-transition:enter-end="opacity-100 max-h-[min(70vh,36rem)] translate-y-0"
                                              x-transition:leave="transition-all ease-in duration-150"
-                                             x-transition:leave-start="opacity-100 max-h-64 translate-y-0"
+                                             x-transition:leave-start="opacity-100 max-h-[min(70vh,36rem)] translate-y-0"
                                              x-transition:leave-end="opacity-0 max-h-0 -translate-y-1"
                                                 class="overflow-hidden">
                                             <ul class="mt-2 space-y-1 ml-9">

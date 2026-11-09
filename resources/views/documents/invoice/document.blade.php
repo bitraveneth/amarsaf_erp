@@ -83,7 +83,7 @@
         <thead>
             <tr>
                 @foreach($columns as $index => $column)
-                    <th class="inv-center" @if(!empty($widths[$index])) style="width: {{ $widths[$index] }};" @endif>{{ $heading($column) }}</th>
+                    <th class="{{ $alignClass($aligns[$index] ?? null) ?: 'inv-center' }}" @if(!empty($widths[$index])) style="width: {{ $widths[$index] }};" @endif>{{ $heading($column) }}</th>
                 @endforeach
             </tr>
         </thead>
@@ -91,7 +91,7 @@
             @forelse($rows as $row)
                 <tr @class(['inv-alt' => $loop->iteration % 2 === 0])>
                     @foreach($columns as $index => $column)
-                        <td class="inv-center">{{ $row[$index] ?? '' }}</td>
+                        <td class="{{ $alignClass($aligns[$index] ?? null) ?: 'inv-center' }}">{{ $row[$index] ?? '' }}</td>
                     @endforeach
                 </tr>
             @empty

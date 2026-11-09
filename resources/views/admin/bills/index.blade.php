@@ -1,331 +1,181 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="space-y-6">
-    <!-- Header -->
-    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-            <div class="flex items-center gap-3">
-                <h1 class="text-2xl font-semibold text-gray-900 dark:text-white">
-                    Purchase Bills
-                </h1>
-                <span class="inline-flex items-center rounded-full bg-brand-50 px-3 py-1 text-xs font-medium text-brand-700 dark:bg-brand-500/20 dark:text-brand-400">
-                    Accounts Payable
-                </span>
-            </div>
-            <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                Track supplier bills and payments.
-            </p>
-        </div>
-        <a href="{{ route('admin.bills.create') }}" 
-           class="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-semibold text-white shadow-theme-sm hover:bg-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500/50">
-            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-            </svg>
-            Add Bill
-        </a>
-    </div>
+@php
+    $currency = config('app.currency', 'BDT');
+    $statusLabels = [
+        'open' => 'Open',
+        'part_paid' => 'Part paid',
+        'paid' => 'Paid',
+    ];
+@endphp
+<div class="erp-page">
+    <x-admin.page-header
+        title="Purchase bills"
+        subtitle="Supplier bills and the balance still to pay."
+    >
+        <x-slot:actions>
+            <a href="{{ route('admin.bills.create') }}" class="erp-btn-primary">Add bill</a>
+        </x-slot:actions>
+    </x-admin.page-header>
 
-    <!-- Status Message -->
+    <x-dashboard.snapshot-kpis
+        :show-header="false"
+        title="Purchase bills"
+        :cards="[
+            [
+                'label' => 'Bills',
+                'numeric' => number_format((int) $stats->bill_count),
+                'caption' => 'Supplier bills',
+                'href' => route('admin.bills.index'),
+                'tone' => 'brand',
+                'valueTone' => 'neutral',
+                'icon' => 'orders',
+            ],
+            [
+                'label' => 'Outstanding',
+                'numeric' => number_format((float) $stats->outstanding, 2),
+                'currency' => $currency,
+                'caption' => ((int) $stats->due_count) . ' ' . Str::plural('bill', (int) $stats->due_count) . ' still due',
+                'href' => route('admin.bills.index'),
+                'tone' => 'orange',
+                'valueTone' => 'warning',
+                'icon' => 'receivables',
+            ],
+            [
+                'label' => 'Paid',
+                'numeric' => number_format((float) $stats->paid, 2),
+                'currency' => $currency,
+                'caption' => 'Settled on these bills',
+                'href' => route('admin.bills.index'),
+                'tone' => 'success',
+                'valueTone' => 'neutral',
+                'icon' => 'revenue',
+            ],
+            [
+                'label' => 'Overdue',
+                'numeric' => number_format((int) $stats->overdue),
+                'caption' => 'Past the due date',
+                'href' => route('admin.bills.index'),
+                'tone' => ((int) $stats->overdue > 0) ? 'error' : 'blue',
+                'valueTone' => ((int) $stats->overdue > 0) ? 'danger' : 'neutral',
+                'icon' => 'returns',
+            ],
+        ]"
+    />
 
     @if($bills->isNotEmpty())
-        @php
-            $totalOutstanding = $bills->where('status', '!=', 'paid')->sum(function($bill) {
-                return ($bill->net_total + $bill->vat_amount) - $bill->payments->sum('amount');
-            });
-            $totalDue = $bills->where('status', '!=', 'paid')->count();
-            $totalPaid = $bills->sum(function($bill) {
-                return $bill->payments->sum('amount');
-            });
-        @endphp
-
-        <!-- Summary Cards -->
-        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <div class="rounded-xl bg-white p-5 border border-gray-200 shadow-theme-xs dark:border-gray-800 dark:bg-gray-900">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Total Bills</p>
-                        <p class="mt-2 text-2xl font-semibold text-gray-900 dark:text-white">{{ $bills->total() }}</p>
-                    </div>
-                    <div class="rounded-lg bg-brand-50 p-2.5 dark:bg-brand-500/10">
-                        <svg class="h-5 w-5 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                        </svg>
-                    </div>
+            <div class="erp-table-card">
+                <div class="erp-table-card-header">
+                    <h2 class="erp-h3">Bill register</h2>
+                    <p class="erp-caption">{{ $bills->total() }} {{ Str::plural('bill', $bills->total()) }}. Open a bill to see lines, or pay the balance from the row.</p>
                 </div>
-            </div>
-
-            <div class="rounded-xl bg-white p-5 border border-gray-200 shadow-theme-xs dark:border-gray-800 dark:bg-gray-900">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Outstanding</p>
-                        <p class="mt-2 text-2xl font-semibold text-gray-900 dark:text-white">BDT {{ number_format($totalOutstanding, 2) }}</p>
-                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ $totalDue }} {{ Str::plural('bill', $totalDue) }} due</p>
-                    </div>
-                    <div class="rounded-lg bg-orange-50 p-2.5 dark:bg-orange-500/10">
-                        <svg class="h-5 w-5 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                        </svg>
-                    </div>
-                </div>
-            </div>
-
-            <div class="rounded-xl bg-white p-5 border border-gray-200 shadow-theme-xs dark:border-gray-800 dark:bg-gray-900">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Total Paid</p>
-                        <p class="mt-2 text-2xl font-semibold text-success-600 dark:text-success-400">BDT {{ number_format($totalPaid, 2) }}</p>
-                    </div>
-                    <div class="rounded-lg bg-success-50 p-2.5 dark:bg-success-500/10">
-                        <svg class="h-5 w-5 text-success-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-5m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                        </svg>
-                    </div>
-                </div>
-            </div>
-
-            <div class="rounded-xl bg-white p-5 border border-gray-200 shadow-theme-xs dark:border-gray-800 dark:bg-gray-900">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Overdue</p>
-                        @php
-                            $overdueCount = $bills->where('status', '!=', 'paid')
-                                ->filter(fn($bill) => $bill->due_date && $bill->due_date->isPast())
-                                ->count();
-                        @endphp
-                        <p class="mt-2 text-2xl font-semibold {{ $overdueCount > 0 ? 'text-error-600 dark:text-error-500' : 'text-gray-900 dark:text-white' }}">
-                            {{ $overdueCount }}
-                        </p>
-                    </div>
-                    <div class="rounded-lg {{ $overdueCount > 0 ? 'bg-error-50 dark:bg-error-500/10' : 'bg-gray-100 dark:bg-gray-800' }}">
-                        <svg class="h-5 w-5 {{ $overdueCount > 0 ? 'text-error-500' : 'text-gray-500 dark:text-gray-400' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                        </svg>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Bills Table -->
-        <form action="{{ route('admin.bills.batch-pay') }}" method="POST" id="batch-pay-form">
-            @csrf
-            <div class="mb-4 flex flex-col gap-3 rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900 sm:flex-row sm:items-end sm:justify-between">
-                <div>
-                    <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Batch supplier payment</h3>
-                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Select unpaid bills below and pay the remaining balance in one journal batch.</p>
-                </div>
-                <div class="flex flex-wrap items-end gap-3">
-                    <div>
-                        <label class="mb-1 block text-xs font-medium text-gray-500">Paid on</label>
-                        <input type="date" name="paid_at" value="{{ now()->toDateString() }}" class="rounded-lg border-gray-300 text-sm dark:border-gray-700 dark:bg-gray-800">
-                    </div>
-                    <div>
-                        <label class="mb-1 block text-xs font-medium text-gray-500">Method</label>
-                        <input type="text" name="method" placeholder="Bank transfer" class="rounded-lg border-gray-300 text-sm dark:border-gray-700 dark:bg-gray-800">
-                    </div>
-                    <div>
-                        <label class="mb-1 block text-xs font-medium text-gray-500">Batch ref</label>
-                        <input type="text" name="batch_reference" placeholder="Auto-generated" class="rounded-lg border-gray-300 text-sm dark:border-gray-700 dark:bg-gray-800">
-                    </div>
-                    <button type="submit" class="rounded-lg bg-brand-500 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-600">Pay selected bills</button>
-                </div>
-            </div>
-        <div class="rounded-2xl border border-gray-200 bg-white shadow-theme-sm dark:border-gray-800 dark:bg-gray-900 overflow-hidden">
-            <div class="border-b border-gray-100 px-6 py-4 dark:border-gray-800">
-                <div class="flex items-center justify-between">
-                    <h3 class="text-lg font-medium text-gray-900 dark:text-white">Bill Register</h3>
-                    <span class="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-300">
-                        {{ $bills->count() }} {{ Str::plural('bill', $bills->count()) }} shown
-                    </span>
-                </div>
-            </div>
-            <div class="overflow-x-auto">
-                <table class="w-full">
-                    <thead class="bg-gray-50 dark:bg-gray-800/50">
-                        <tr>
-                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-700 dark:text-gray-300 w-10">Pay</th>
-                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-700 dark:text-gray-300">Bill #</th>
-                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-700 dark:text-gray-300">Supplier</th>
-                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-700 dark:text-gray-300">Date</th>
-                            <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-700 dark:text-gray-300">Net Total</th>
-                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-700 dark:text-gray-300">Status</th>
-                            <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-700 dark:text-gray-300">Paid</th>
-                            <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-700 dark:text-gray-300">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
-                        @foreach($bills as $bill)
-                            @php
-                                $paid = $bill->payments->sum('amount');
-                                $total = $bill->net_total + $bill->vat_amount;
-                                $due = $total - $paid;
-                                $isOverdue = $bill->due_date && $bill->due_date->isPast() && $bill->status !== 'paid';
-                                
-                                $statusColors = [
-                                    'draft' => 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400',
-                                    'sent' => 'bg-blue-light-100 text-blue-light-700 dark:bg-blue-light-500/20 dark:text-blue-light-400',
-                                    'received' => 'bg-brand-100 text-brand-700 dark:bg-brand-500/20 dark:text-brand-400',
-                                    'paid' => 'bg-success-100 text-success-700 dark:bg-success-500/20 dark:text-success-400',
-                                    'cancelled' => 'bg-error-100 text-error-700 dark:bg-error-500/20 dark:text-error-400',
-                                ];
-                                $statusColor = $statusColors[$bill->status] ?? 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400';
-                            @endphp
-                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50 {{ $isOverdue ? 'bg-error-50/30 dark:bg-error-500/5' : '' }}">
-                                <td class="px-4 py-3">
-                                    @if($due > 0 && $bill->status !== 'paid')
-                                        <input type="checkbox" name="bill_ids[]" value="{{ $bill->id }}" form="batch-pay-form" class="bill-select h-4 w-4 rounded border-gray-300 text-brand-500">
-                                    @endif
-                                </td>
-                                <td class="px-4 py-3">
-                                    <div class="flex items-center gap-2">
-                                        <span class="font-mono text-sm font-medium text-gray-900 dark:text-white">
-                                            {{ $bill->number }}
-                                        </span>
-                                        @if($bill->reference)
-                                            <span class="text-xs text-gray-500 dark:text-gray-400">
-                                                Ref: {{ $bill->reference }}
-                                            </span>
+                <div class="erp-table-wrap">
+                    <table class="erp-table w-full">
+                        <thead>
+                            <tr>
+                                <th>Bill</th>
+                                <th>Supplier</th>
+                                <th>Date</th>
+                                <th class="is-right">Total</th>
+                                <th>Status</th>
+                                <th class="is-right">Paid</th>
+                                <th class="is-right">Pay</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($bills as $bill)
+                                @php
+                                    $paid = (float) $bill->paid_total;
+                                    $total = (float) $bill->gross_total;
+                                    $due = (float) $bill->outstanding;
+                                    $isOverdue = $bill->due_date && $bill->due_date->isPast() && $due > 0;
+                                    $status = $bill->status;
+                                    $badge = match ($status) {
+                                        'paid' => 'erp-badge-success',
+                                        'part_paid' => 'erp-badge-warning',
+                                        default => 'erp-badge-brand',
+                                    };
+                                @endphp
+                                <tr
+                                    class="cursor-pointer {{ $isOverdue ? 'bg-error-50/40 dark:bg-error-500/5' : '' }}"
+                                    onclick="if (!event.target.closest('a,button,input,label,select,form')) window.location = this.dataset.href"
+                                    data-href="{{ route('admin.bills.show', $bill) }}"
+                                >
+                                    <td>
+                                        <a href="{{ route('admin.bills.show', $bill) }}" class="erp-table-link">{{ $bill->number }}</a>
+                                    </td>
+                                    <td>
+                                        <p class="erp-body-strong">{{ $bill->supplier->name }}</p>
+                                        @if($bill->supplier->tax_id)
+                                            <p class="erp-caption">Tax {{ $bill->supplier->tax_id }}</p>
                                         @endif
-                                    </div>
-                                </td>
-                                <td class="px-4 py-3">
-                                    <div class="flex items-center">
-                                        <div class="flex-shrink-0 h-8 w-8 rounded-full bg-brand-100 dark:bg-brand-500/20 flex items-center justify-center">
-                                            <span class="text-xs font-medium text-brand-700 dark:text-brand-400">
-                                                {{ substr($bill->supplier->name, 0, 1) }}
-                                            </span>
-                                        </div>
-                                        <div class="ml-3">
-                                            <p class="text-sm font-medium text-gray-900 dark:text-white">
-                                                {{ $bill->supplier->name }}
-                                            </p>
-                                            @if($bill->supplier->tax_id)
-                                                <p class="text-xs text-gray-500 dark:text-gray-400">
-                                                    TAX: {{ $bill->supplier->tax_id }}
-                                                </p>
-                                            @endif
-                                        </div>
-                                    </div>
-                                </td>
-                                <td class="px-4 py-3">
-                                    <div class="text-sm">
-                                        <p class="font-medium text-gray-900 dark:text-white">
-                                            {{ $bill->bill_date->format('d M Y') }}
-                                        </p>
+                                    </td>
+                                    <td>
+                                        <p class="erp-table-cell">{{ $bill->bill_date->format('d M Y') }}</p>
                                         @if($bill->due_date)
-                                            <p class="text-xs {{ $isOverdue ? 'text-error-600 dark:text-error-500' : 'text-gray-500 dark:text-gray-400' }}">
-                                                Due: {{ $bill->due_date->format('d M Y') }}
-                                                @if($isOverdue)
-                                                    <span class="ml-1">(Overdue)</span>
-                                                @endif
+                                            <p class="erp-caption {{ $isOverdue ? 'text-error-600 dark:text-error-400' : '' }}">
+                                                Due {{ $bill->due_date->format('d M Y') }}{{ $isOverdue ? ' · overdue' : '' }}
                                             </p>
                                         @endif
-                                    </div>
-                                </td>
-                                <td class="px-4 py-3 text-right">
-                                    <span class="text-sm font-semibold text-gray-900 dark:text-white">
-                                        BDT {{ number_format($total, 2) }}
-                                    </span>
-                                </td>
-                                <td class="px-4 py-3">
-                                    <span class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium {{ $statusColor }}">
-                                        <svg class="h-1.5 w-1.5 fill-current" viewBox="0 0 6 6">
-                                            <circle cx="3" cy="3" r="3" />
-                                        </svg>
-                                        {{ ucfirst($bill->status) }}
-                                    </span>
-                                    @if($due > 0 && $bill->status !== 'paid')
-                                        <span class="ml-2 text-xs text-gray-500 dark:text-gray-400">
-                                            Due: BDT {{ number_format($due, 2) }}
-                                        </span>
-                                    @endif
-                                </td>
-                                <td class="px-4 py-3 text-right">
-                                    <span class="text-sm font-medium {{ $paid >= $total ? 'text-success-600 dark:text-success-400' : 'text-gray-700 dark:text-gray-300' }}">
-                                        BDT {{ number_format($paid, 2) }}
-                                    </span>
-                                    @if($paid > 0 && $paid < $total)
-                                        <span class="ml-2 text-xs text-gray-500 dark:text-gray-400">
-                                            ({{ round(($paid / $total) * 100) }}%)
-                                        </span>
-                                    @endif
-                                </td>
-                                <td class="px-4 py-3 text-right">
-                                    <div class="flex items-center justify-end gap-2">
-                                        @if($bill->status !== 'paid' && Route::has('admin.bills.pay'))
+                                    </td>
+                                    <td class="is-right">
+                                        <span class="erp-table-num">{{ $currency }} {{ number_format($total, 2) }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="{{ $badge }}">{{ $statusLabels[$status] ?? ucfirst(str_replace('_', ' ', $status)) }}</span>
+                                        @if($due > 0)
+                                            <p class="erp-caption mt-1">Due {{ $currency }} {{ number_format($due, 2) }}</p>
+                                        @endif
+                                    </td>
+                                    <td class="is-right">
+                                        <span class="erp-table-num">{{ $currency }} {{ number_format($paid, 2) }}</span>
+                                    </td>
+                                    <td class="is-right">
+                                        @if($due > 0)
                                             <form action="{{ route('admin.bills.pay', $bill) }}" method="POST" class="inline">
                                                 @csrf
-                                                <button type="submit" 
-                                                        class="erp-btn-action">
-                                                    <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
-                                                    </svg>
-                                                    Pay Full
-                                                </button>
+                                                <button type="submit" class="erp-btn-primary !px-3 !py-1.5 !text-sm">Pay bill</button>
                                             </form>
-                                        @endif
-
-                                        @if(Route::has('admin.bills.edit'))
-                                            <a href="{{ route('admin.bills.edit', $bill) }}" 
-                                               class="erp-btn-action">
-                                                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                        @else
+                                            <span class="inline-flex items-center gap-1.5 rounded-lg border border-success-200 bg-success-50 px-2.5 py-1.5 text-sm font-medium text-success-700 dark:border-success-500/30 dark:bg-success-500/10 dark:text-success-300">
+                                                <svg class="h-3.5 w-3.5 shrink-0" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                                    <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd" />
                                                 </svg>
-                                                Edit
-                                            </a>
+                                                Paid
+                                            </span>
                                         @endif
-
-                                        @if(Route::has('admin.bills.destroy'))
-                                            <form action="{{ route('admin.bills.destroy', $bill) }}" 
-                                                  method="POST" 
-                                                  onsubmit="return confirm('Are you sure you want to delete this bill?');"
-                                                  class="inline">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" 
-                                                        class="erp-btn-action-danger">
-                                                    <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                                                    </svg>
-                                                    Delete
-                                                </button>
-                                            </form>
-                                        @endif
-                                    </div>
-                                </td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
             </div>
-        </div>
-        </form>
 
-        <!-- Pagination -->
-        <div class="mt-6">
-            {{ $bills->links() }}
-        </div>
+        <div>{{ $bills->links() }}</div>
     @else
-        <!-- Empty State -->
-        <div class="rounded-2xl border border-gray-200 bg-white p-12 text-center shadow-theme-sm dark:border-gray-800 dark:bg-gray-900">
-            <div class="mx-auto w-24 h-24 mb-4 text-gray-300 dark:text-gray-700">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" 
-                          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                </svg>
-            </div>
-            <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">No purchase bills</h3>
-            <p class="text-gray-600 dark:text-gray-400 mb-6 max-w-md mx-auto">
-                No purchase bills have been recorded yet. Add your first bill to start tracking supplier payments.
-            </p>
-            <a href="{{ route('admin.bills.create') }}" 
-               class="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-semibold text-white shadow-theme-sm hover:bg-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500/50">
-                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                </svg>
-                Add Bill
-            </a>
-        </div>
+        <x-admin.empty-state
+            title="No purchase bills"
+            description="Add a supplier bill to start tracking what is still unpaid."
+        >
+            <x-slot:action>
+                <a href="{{ route('admin.bills.create') }}" class="erp-btn-primary">Add bill</a>
+            </x-slot:action>
+        </x-admin.empty-state>
     @endif
+
+    <x-admin.quick-guide
+        title="How purchase bills work"
+        lead="Bills are what you owe suppliers. Outstanding = bill total minus payments."
+        :steps="[
+            ['title' => 'Add bill', 'body' => 'Record the supplier invoice with lines and VAT.'],
+            ['title' => 'Review outstanding', 'body' => 'KPIs show still due, paid, and overdue counts.'],
+            ['title' => 'Pay from the row', 'body' => 'Use Pay bill when money leaves the bank — no need to open the bill first.'],
+            ['title' => 'Check statements', 'body' => 'Supplier statement shows running balance for one supplier.'],
+        ]"
+        note="Part-paid bills stay open until the remaining balance is settled."
+        :open="false"
+    />
 </div>
 @endsection

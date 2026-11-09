@@ -12,6 +12,7 @@ use App\Models\Receipt;
 use App\Models\SalaryDistribution;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class AccountingDashboardController extends Controller
 {
@@ -76,6 +77,36 @@ class AccountingDashboardController extends Controller
         $collectionRate = $netSales > 0 ? ($collected / $netSales) * 100 : 0;
         $cashGap = $collected - ($totalExpenses + $totalPayroll);
 
+        $today = Carbon::today();
+        $todayInvoices = Invoice::query()
+            ->select(['id', 'issued_at', 'net_total', 'vat_amount', 'withholding'])
+            ->with('creditNotes')
+            ->whereDate('issued_at', $today->toDateString())
+            ->get();
+        $todaySales = round((float) $todayInvoices->sum(function (Invoice $invoice) use ($today) {
+            return $invoice->netSalesAfterCreditsInRange($today->copy()->startOfDay(), $today->copy()->endOfDay());
+        }), 2);
+        $todayCosts = (float) Expense::whereDate('date', $today->toDateString())
+            ->whereIn('status', [Expense::STATUS_RECORDED, Expense::STATUS_REVIEWED, 'paid', 'overdue'])
+            ->sum('amount')
+            + (float) CustomerGift::whereDate('date', $today->toDateString())
+                ->whereIn('status', [CustomerGift::STATUS_GIVEN, 'delivered'])
+                ->sum('amount');
+        $todayProfit = $todaySales - $todayCosts;
+
+        $paidByBill = DB::table('bill_payments')
+            ->select('purchase_bill_id', DB::raw('SUM(amount) as paid'))
+            ->groupBy('purchase_bill_id');
+        $billStats = DB::table('purchase_bills as b')
+            ->leftJoinSub($paidByBill, 'p', 'p.purchase_bill_id', '=', 'b.id')
+            ->selectRaw(
+                'COALESCE(SUM(GREATEST((b.net_total + b.vat_amount) - COALESCE(p.paid, 0), 0)), 0) as outstanding,
+                SUM(CASE WHEN (b.net_total + b.vat_amount) > COALESCE(p.paid, 0) THEN 1 ELSE 0 END) as due_count,
+                SUM(CASE WHEN b.status != ? AND b.due_date IS NOT NULL AND b.due_date < ? AND (b.net_total + b.vat_amount) > COALESCE(p.paid, 0) THEN 1 ELSE 0 END) as overdue',
+                ['paid', $today->toDateString()]
+            )
+            ->first();
+
         $chart = \App\Support\DashboardChartBuilder::revenueAndCollectionsSeries($from, $to);
 
         return view('admin.accounting.dashboard', [
@@ -96,6 +127,11 @@ class AccountingDashboardController extends Controller
             'netProfitEstimate' => $netProfitEstimate,
             'collectionRate' => $collectionRate,
             'cashGap' => $cashGap,
+            'todaySales' => $todaySales,
+            'todayProfit' => $todayProfit,
+            'dueBills' => (float) ($billStats->outstanding ?? 0),
+            'dueBillCount' => (int) ($billStats->due_count ?? 0),
+            'overdueBillCount' => (int) ($billStats->overdue ?? 0),
             'chartLabels' => $chart['labels'],
             'chartRevenue' => $chart['values'],
             'chartCollections' => $chart['secondary'],

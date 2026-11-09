@@ -96,6 +96,34 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
 
+    // Keep the sidebar scrolled to the same place after navigation / refresh.
+    const sidebarScroll = document.querySelector('[data-sidebar-scroll]');
+    if (sidebarScroll) {
+        const scrollKey = 'erp.sidebar.scrollTop';
+        const restoreScroll = () => {
+            const saved = Number(sessionStorage.getItem(scrollKey) || '0');
+            if (Number.isFinite(saved) && saved > 0) {
+                sidebarScroll.scrollTop = saved;
+            }
+        };
+
+        restoreScroll();
+        window.requestAnimationFrame(restoreScroll);
+
+        sidebarScroll.addEventListener('scroll', () => {
+            sessionStorage.setItem(scrollKey, String(sidebarScroll.scrollTop));
+        }, { passive: true });
+
+        document.addEventListener('click', (event) => {
+            const link = event.target instanceof Element
+                ? event.target.closest('.app-sidebar a[href]')
+                : null;
+            if (link) {
+                sessionStorage.setItem(scrollKey, String(sidebarScroll.scrollTop));
+            }
+        }, true);
+    }
+
     // Sidebar groups
     const toggles = document.querySelectorAll('[data-collapse-toggle]');
 
